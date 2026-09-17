@@ -10,10 +10,9 @@
 </head>
 <body>
   <div class="pixel-wall" aria-hidden="true" id="pixelWall"></div>
-
   <div class="site-shell">
     <header class="topbar">
-      <a class="brand" href="#game" aria-label="EIXO">EIXO</a>
+      <a class="brand" href="#game">EIXO</a>
       <nav class="nav" aria-label="Navegação principal">
         <a class="nav-link active" href="#game" data-i18n="play">JOGAR</a>
         <a class="nav-link" href="#ranking" data-i18n="ranking">RANKING</a>
@@ -24,7 +23,7 @@
         <button class="country-button" id="countryButton" type="button" aria-haspopup="listbox" aria-expanded="false">
           <span id="countryFlag">🇵🇹</span><span id="countryName">PORTUGAL</span><span class="chevron">▼</span>
         </button>
-        <div class="country-menu" id="countryMenu" role="listbox" aria-label="Idioma e país"></div>
+        <div class="country-menu" id="countryMenu" role="listbox" aria-label="País"></div>
       </div>
     </header>
 
@@ -36,7 +35,6 @@
           <div class="game-message" id="gameMessage" data-i18n="instruction">CLICA QUANDO O PONTO ESTIVER NO CENTRO</div>
           <div class="game-feedback" id="feedback" aria-live="polite"></div>
         </div>
-
         <div class="game-actions">
           <button class="action primary" id="playButton" type="button"><span data-i18n="play">JOGAR</span><b>▶</b></button>
           <a class="action blue" href="#ranking"><span>▮▮</span><span data-i18n="ranking">RANKING</span></a>
@@ -46,33 +44,66 @@
 
       <section class="boards" id="ranking">
         <article class="board">
-          <div class="board-title"><span>🌐</span><span data-i18n="worldTop">TOP MUNDIAL</span></div>
-          <ol id="worldRanking"></ol>
-          <a class="board-more" href="#ranking" data-i18n="fullRanking">VER RANKING COMPLETO</a>
+          <div class="board-title"><span id="nationalFlag">🇵🇹</span><span id="nationalTitle">TOP PORTUGAL</span></div>
+          <ol id="nationalRanking"><li class="loading-row">A CARREGAR...</li></ol>
+          <button class="board-more" id="nationalFullButton" type="button" data-i18n="fullRanking">VER RANKING COMPLETO</button>
         </article>
         <article class="board">
-          <div class="board-title"><span id="nationalFlag">🇵🇹</span><span id="nationalTitle">TOP PORTUGAL</span></div>
-          <ol id="nationalRanking"></ol>
-          <a class="board-more" href="#ranking" data-i18n="fullRanking">VER RANKING COMPLETO</a>
+          <div class="board-title"><span>🌐</span><span data-i18n="worldTop">TOP MUNDIAL</span></div>
+          <ol id="worldRanking"><li class="loading-row">A CARREGAR...</li></ol>
+          <button class="board-more" id="worldFullButton" type="button" data-i18n="fullRanking">VER RANKING COMPLETO</button>
         </article>
       </section>
 
       <section class="pixel-showcase" id="rooms">
+        <div class="mini-art art-city"><div class="pixel-icon">🏰</div><span>PORTUGAL</span></div>
+        <div class="mini-art art-lighthouse"><div class="pixel-icon">🔦</div><span>GOOD VIBES</span></div>
+        <div class="mini-art art-cat"><div class="pixel-icon">🐈</div><span>EVERY PIXEL COUNTS</span></div>
+        <div class="mini-art art-game"><div class="pixel-icon">🎮</div><span>GAME<br>EXPLORE<br>DISCOVER</span></div>
+        <div class="mini-art art-sun"><div class="pixel-icon">🌴</div><span>KEEP PLAYING</span></div>
         <div class="showcase-title">PIXELS<br>CONNECT</div>
-        <div class="mini-art art-city">🏰<br><span>PORTUGAL</span></div>
-        <div class="mini-art art-lighthouse">🔦<br><span>GOOD VIBES</span></div>
-        <div class="mini-art art-cat">🐈<br><span>EVERY PIXEL COUNTS</span></div>
-        <div class="mini-art art-game">🎮<br><span>GAME<br>EXPLORE<br>DISCOVER</span></div>
-        <div class="mini-art art-sun">🌴</div>
       </section>
 
-      <section class="about" id="about">
-        <span class="about-icon">◆</span>
-        <div><strong>EIXO</strong><span data-i18n="aboutText"> — um jogo simples de reflexos. Acerta no centro, soma pontos e sobe no ranking.</span></div>
-      </section>
+      <section class="about" id="about"><span class="about-icon">◆</span><div><strong>EIXO</strong><span data-i18n="aboutText"> — um jogo simples de reflexos. Acerta no centro, soma pontos e sobe no ranking.</span></div></section>
     </main>
+    <footer class="footer"><span>© EIXO</span><span>SMALL PIXELS · BIG IDEAS</span><span>2026</span></footer>
+  </div>
 
-    <footer class="footer"><span>© EIXO</span><span>SMALL PIXELS · BIG IDEAS</span><span>PT • 2026</span></footer>
+  <div class="modal-backdrop hidden" id="onboardingModal">
+    <div class="modal-card onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+      <div class="modal-pixel-corner">◆</div>
+      <h2 id="onboardingTitle">BEM-VINDO AO EIXO</h2>
+      <p id="onboardingText">Primeiro escolhe o país onde jogas.</p>
+      <label class="field-label" for="countrySelect">PAÍS</label>
+      <select id="countrySelect" class="pixel-input"></select>
+      <button class="modal-button primary" id="countryContinue" type="button">CONTINUAR ▶</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="nameModal">
+    <div class="modal-card onboarding-card" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
+      <div class="modal-pixel-corner">◆</div>
+      <h2 id="nameTitle">ESCOLHE O TEU NOME</h2>
+      <p id="nameText">Este nome ficará associado à tua conta e não poderá ser usado por outra pessoa.</p>
+      <label class="field-label" for="nameInput">NOME DO JOGADOR</label>
+      <input id="nameInput" class="pixel-input" type="text" maxlength="16" autocomplete="off" spellcheck="false" placeholder="EX: BALA">
+      <div class="name-rules">3–16 CARACTERES · LETRAS E NÚMEROS · SEM ESPAÇOS OU SÍMBOLOS</div>
+      <div class="form-error" id="nameError"></div>
+      <button class="modal-button primary" id="nameContinue" type="button">CRIAR JOGADOR ▶</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="rankingModal">
+    <div class="modal-card ranking-modal" role="dialog" aria-modal="true" aria-labelledby="rankingModalTitle">
+      <button class="modal-close" id="rankingClose" type="button" aria-label="Fechar">✕</button>
+      <h2 id="rankingModalTitle">RANKING</h2>
+      <div class="ranking-tabs">
+        <button class="ranking-tab active" id="modalCountryTab" type="button">🇵🇹 PORTUGAL</button>
+        <button class="ranking-tab" id="modalWorldTab" type="button">🌐 MUNDIAL</button>
+      </div>
+      <div class="full-ranking-table-wrap"><ol class="full-ranking-list" id="fullRankingList"></ol></div>
+      <div class="pagination"><button id="prevPage" type="button">◀</button><span id="pageInfo">1 / 1</span><button id="nextPage" type="button">▶</button></div>
+    </div>
   </div>
 
   <script src="game.js"></script>
