@@ -59,7 +59,7 @@ async function initDb() {
     country CHAR(2) NOT NULL, token_hash CHAR(64) NOT NULL, best_score INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
-  // Development phase: each deployment/restart starts with a completely clean ranking and account list.
+  // Development phase: every server start/deployment begins with an empty account and ranking database.
   await pool.query('TRUNCATE TABLE players');
   dbReady = true;
   console.log('PostgreSQL ranking database ready. Development reset applied.');
@@ -152,7 +152,8 @@ function serveFile(res, filePath) {
   fs.stat(filePath, (statError, stats) => {
     if (statError || !stats.isFile()) return json(res, 404, { error:'Not found' });
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream', 'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600' });
+    const cacheControl = ['.html','.js','.css'].includes(ext) ? 'no-store, no-cache, must-revalidate' : 'public, max-age=3600';
+    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream', 'Cache-Control': cacheControl });
     fs.createReadStream(filePath).pipe(res);
   });
 }
