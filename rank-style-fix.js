@@ -15,4 +15,5 @@
  function refresh(){document.querySelectorAll('.rank-player-name,.name-preview').forEach(letters);const select=document.getElementById('customizeColor');if(select){[...select.options].forEach(o=>{if(o.dataset.colorNameDone==='1')return;const key=String(o.value).toLowerCase();o.textContent=colorNames[key]||o.textContent;o.style.color=key==='rainbow'?'#b66cff':key;o.dataset.colorNameDone='1'});const key=String(select.value).toLowerCase();select.style.color=key==='rainbow'?'#b66cff':key;}flags();}
  document.addEventListener('change',e=>{if(e.target?.id==='customizeColor')refresh()});new MutationObserver(refresh).observe(document.body,{childList:true,subtree:true});refresh();
  const loader=document.createElement('script');loader.src='i18n-fix.js?v=20260917';document.head.appendChild(loader);
+ const loader2=document.createElement('script');loader2.src='customize-i18n.js?v=20260917';document.head.appendChild(loader2);
 })();
