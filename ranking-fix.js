@@ -21,8 +21,16 @@
     return String(value).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
   }
 
+  function registeredCountry() {
+    try {
+      const player = JSON.parse(localStorage.getItem('eixo_player') || 'null');
+      if (player?.country) return String(player.country).toUpperCase();
+    } catch (_) {}
+    return (localStorage.getItem('eixo_country') || 'PT').toUpperCase();
+  }
+
   async function load() {
-    const code = (localStorage.getItem('eixo_country') || 'PT').toUpperCase();
+    const code = registeredCountry();
     try {
       const [worldRes, countryRes] = await Promise.all([
         fetch('/api/rankings?page=1', { cache:'no-store' }),
