@@ -2,15 +2,12 @@
 (function () {
   const fallback = 'en';
 
-  // Languages with a complete UI translation available in country-languages.js/game.js.
-  // Countries not listed here intentionally fall back to English.
   const supported = new Set([
     'pt','en','es','fr','de','it','ja','ko','zh','ru','pl','nl','tr','ar',
     'sv','no','da','fi','el','cs','sk','hu','ro','bg','hr','sr','sl','uk','he',
     'id','ms','th','vi'
   ]);
 
-  // Keep multilingual countries on a predictable default language.
   const defaults = {
     PT:'pt', BR:'pt',
     ES:'es', AR:'es', CL:'es', CO:'es', PE:'es', MX:'es', UY:'es', PY:'es', BO:'es', EC:'es', CR:'es', PA:'es', DO:'es', GT:'es', HN:'es', SV:'es', NI:'es', CU:'es',
@@ -26,12 +23,14 @@
   };
 
   Object.keys(countryNames).forEach(code => {
-    if (Object.prototype.hasOwnProperty.call(defaults, code)) {
-      languageByCountry[code] = supported.has(defaults[code]) ? defaults[code] : fallback;
-    } else if (!supported.has(languageByCountry[code])) {
-      languageByCountry[code] = fallback;
-    }
+    if (Object.prototype.hasOwnProperty.call(defaults, code)) languageByCountry[code] = defaults[code];
+    else languageByCountry[code] = fallback;
   });
+
+  function effectiveLanguage(code) {
+    const wanted = languageByCountry[code] || fallback;
+    return (supported.has(wanted) && translations[wanted]) ? wanted : fallback;
+  }
 
   function localizedRegion(code, lang) {
     try {
@@ -44,11 +43,21 @@
 
   window.eixoLocalizedCountryName = localizedRegion;
 
-  const originalFill = window.fillCountryControls;
+  function selectCountry(code) {
+    if (!countryNames[code]) return;
+    currentCountryCode = code;
+    localStorage.setItem('eixo_country', code);
+    countrySelect.value = code;
+    countryMenu.classList.remove('open');
+    countryButton.setAttribute('aria-expanded', 'false');
+    window.applyLanguage();
+    if (typeof window.eixoRefreshRankings === 'function') window.eixoRefreshRankings();
+    if (typeof window.loadTopRankings === 'function') window.loadTopRankings();
+  }
+
   function fillLocalizedCountryControls() {
-    const lang = (languageByCountry[currentCountryCode] || fallback);
-    const selectedLang = supported.has(lang) ? lang : fallback;
-    const label = code => `${country(code).flag} ${localizedRegion(code, selectedLang)}`;
+    const lang = effectiveLanguage(currentCountryCode || 'PT');
+    const label = code => `${country(code).flag} ${localizedRegion(code, lang)}`;
 
     if (countrySelect) {
       countrySelect.innerHTML = countryCodes.map(code => `<option value="${code}">${label(code)}</option>`).join('');
@@ -57,23 +66,24 @@
     if (countryMenu) {
       countryMenu.innerHTML = countryCodes.map(code => `<button class="country-option" type="button" data-country="${code}">${label(code)}</button>`).join('');
       countryMenu.querySelectorAll('.country-option').forEach(btn => {
-        btn.addEventListener('click', () => changeCountry(btn.dataset.country));
+        btn.addEventListener('click', () => selectCountry(btn.dataset.country));
       });
     }
   }
 
   window.fillCountryControls = fillLocalizedCountryControls;
+  window.changeCountry = selectCountry;
 
   const originalApply = window.applyLanguage;
   window.applyLanguage = function () {
     originalApply();
-    const lang = supported.has(languageByCountry[currentCountryCode]) ? languageByCountry[currentCountryCode] : fallback;
+    const lang = effectiveLanguage(currentCountryCode || 'PT');
     const c = country(currentCountryCode || 'PT');
     const name = localizedRegion(c.code, lang);
     document.documentElement.lang = lang;
     document.documentElement.dir = (lang === 'ar' || lang === 'he') ? 'rtl' : 'ltr';
     document.getElementById('countryName').textContent = name;
-    document.getElementById('nationalTitle').textContent = `${getLang().worldTop === 'WORLD TOP' || lang === 'en' ? 'TOP' : 'TOP'} ${name}`;
+    document.getElementById('nationalTitle').textContent = `TOP ${name}`;
     document.getElementById('modalCountryTab').textContent = `${c.flag} ${name}`;
     fillLocalizedCountryControls();
 
@@ -81,7 +91,6 @@
     if (intro && getLang().aboutText) intro.textContent = getLang().aboutText;
   };
 
-  // Rebuild once after the language layer is installed.
-  if (typeof originalFill === 'function') fillLocalizedCountryControls();
-  if (typeof originalApply === 'function') window.applyLanguage();
+  fillLocalizedCountryControls();
+  window.applyLanguage();
 })();
