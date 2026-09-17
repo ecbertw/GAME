@@ -1,9 +1,4 @@
-/* Development reset: bump this version whenever the code is updated. */
+// EIXO no longer resets accounts when frontend code changes.
 (function () {
-  const VERSION = '2026-09-17-ui-language-ranking-2';
-  const KEY = 'eixo_dev_version';
-  if (localStorage.getItem(KEY) === VERSION) return;
-  localStorage.removeItem('eixo_player');
-  localStorage.removeItem('eixo_country');
-  localStorage.setItem(KEY, VERSION);
+  try { localStorage.setItem('eixo_state_version', '2026-09-17-persistent'); } catch (_) {}
 })();
