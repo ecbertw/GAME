@@ -51,6 +51,7 @@ function tokenHash(token) { return crypto.createHash('sha256').update(token).dig
 function publicPlayer(p) { return { id: p.id, name: p.name, country: p.country, bestScore: Number(p.bestScore || 0) }; }
 
 async function initDb() {
+  memoryPlayers.clear();
   if (!pg || !DATABASE_URL) return;
   const pool = new pg.Pool({ connectionString: DATABASE_URL, ssl: DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false }, max: 5 });
   global.db = pool;
@@ -174,5 +175,10 @@ const server = http.createServer(async (req, res) => {
   } catch (error) { console.error(error); json(res, 500, { error:'Internal server error' }); }
 });
 
-initDb().catch(error => { console.error('Database initialization failed:', error.message); dbReady = false; });
-server.listen(PORT, HOST, () => console.log(`EIXO server listening on ${HOST}:${PORT}`));
+// Initialize the database BEFORE accepting requests. This prevents the first player
+// from being stored in temporary memory while PostgreSQL is still initializing.
+(async () => {
+  try { await initDb(); }
+  catch (error) { console.error('Database initialization failed:', error.message); dbReady = false; }
+  server.listen(PORT, HOST, () => console.log(`EIXO server listening on ${HOST}:${PORT}`));
+})();
