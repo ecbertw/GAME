@@ -1,343 +1,77 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-
-const PORT = Number(process.env.PORT) || 3000;
-const HOST = '0.0.0.0';
-const ROOT = __dirname;
-const DATABASE_URL = process.env.DATABASE_URL;
-
-const MIME_TYPES = {
-  '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8',
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
-  '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon'
-};
-
-const countries = new Set([
-  'AF','AL','DZ','AD','AO','AG','AR','AM','AU','AT','AZ','BS','BH','BD','BB','BY','BE','BZ','BJ','BT','BO','BA','BW','BR','BN','BG','BF','BI','CV','KH','CM','CA','CF','TD','CL','CN','CO','KM','CG','CD','CR','CI','HR','CU','CY','CZ','DK','DJ','DM','DO','EC','EG','SV','GQ','ER','EE','SZ','ET','FJ','FI','FR','GA','GM','GE','DE','GH','GR','GD','GT','GN','GW','GY','HT','HN','HU','IS','IN','ID','IR','IQ','IE','IL','IT','JM','JP','JO','KZ','KE','KI','KP','KR','KW','KG','LA','LV','LB','LS','LR','LY','LI','LT','LU','MG','MW','MY','MV','ML','MT','MH','MR','MU','MX','FM','MD','MC','MN','ME','MA','MZ','MM','NA','NR','NP','NL','NZ','NI','NE','NG','MK','NO','OM','PK','PW','PA','PG','PY','PE','PH','PL','PT','QA','RO','RU','RW','KN','LC','VC','WS','SM','ST','SA','SN','RS','SC','SL','SG','SK','SI','SB','SO','ZA','SS','ES','LK','SD','SR','SE','CH','SY','TJ','TZ','TH','TL','TG','TO','TT','TN','TR','TM','TV','UG','UA','AE','GB','US','UY','UZ','VU','VA','VE','VN','YE','ZM','ZW','PS','XK'
-]);
-
-let pg = null;
-let dbReady = false;
-try {
-  if (DATABASE_URL) {
-    pg = require('pg');
-    pg.types.setTypeParser(20, value => Number(value));
-  }
-} catch (error) {
-  console.error('PostgreSQL module unavailable:', error.message);
+const http=require('http');
+const fs=require('fs');
+const path=require('path');
+const crypto=require('crypto');
+const PORT=Number(process.env.PORT)||3000;
+const HOST='0.0.0.0';
+const ROOT=__dirname;
+const DATABASE_URL=process.env.DATABASE_URL;
+const MIME_TYPES={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.webp':'image/webp','.ico':'image/x-icon'};
+const countries=new Set('AF AL DZ AD AO AG AR AM AU AT AZ BS BH BD BB BY BE BZ BJ BT BO BA BW BR BN BG BF BI CV KH CM CA CF TD CL CN CO KM CG CD CR CI HR CU CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GA GM GE DE GH GR GD GT GN GW GY HT HN HU IS IN ID IR IQ IE IL IT JM JP JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MG MW MY MV ML MT MH MR MU MX FM MD MC MN ME MA MZ MM NA NR NP NL NZ NI NE NG MK NO OM PK PW PA PG PY PE PH PL PT QA RO RU RW KN LC VC WS SM ST SA SN RS SC SL SG SK SI SB SO ZA SS ES LK SD SR SE CH SY TJ TZ TH TL TG TO TT TN TR TM TV UG UA AE GB US UY UZ VU VA VE VN YE ZM ZW PS XK'.split(' '));
+let pg=null,dbReady=false;
+try{if(DATABASE_URL){pg=require('pg');pg.types.setTypeParser(20,v=>Number(v));}}catch(e){console.error('PostgreSQL unavailable:',e.message);}
+const memoryPlayers=new Map(),memoryRooms=new Map(),memoryMembers=new Map(),memoryMessages=[];
+const WORLD_COLORS=['#39d98a','#3b82f6','#f59e0b'];
+const COUNTRY_TOP_COLORS=['#ffd43b','#b66cff','#ff7a2f'];
+const COUNTRY_OTHER_COLORS=['#00d4ff','#ff4fd8','#ffffff'];
+const ALL_COLORS=['#ffffff','#ff4d4d','#ff7a2f','#ffd43b','#7bdc5a','#39d98a','#00d4ff','#3b82f6','#6f5cff','#b66cff','#ff4fd8','#ff6b9d','#a8e063','#00f0ff','#f97316','#facc15','#94a3b8','#e2e8f0','#22c55e','#ef4444'];
+const EFFECTS=['none','bounce','glow','wave','shake','float','pulse','jelly'];
+function normalizeName(v){return String(v||'').trim().toUpperCase();}
+function validName(v){return /^[A-Za-z0-9]{3,16}$/.test(v);}
+function validCountry(v){return countries.has(String(v||'').toUpperCase());}
+function validRoomName(v){return /^[\p{L}\p{N}][\p{L}\p{N} _-]{1,23}$/u.test(String(v||'').trim());}
+function validRoomSize(v){return Number.isInteger(Number(v))&&Number(v)>=1&&Number(v)<=8;}
+function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(payload));}
+function body(req){return new Promise((resolve,reject)=>{let raw='';req.on('data',c=>{raw+=c;if(raw.length>30000)req.destroy();});req.on('end',()=>{try{resolve(raw?JSON.parse(raw):{});}catch(e){reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
+function tokenHash(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
+function publicPlayer(p){return{id:p.id,name:p.name,country:p.country,bestScore:Number(p.bestScore||0),visualName:p.visualName||p.name,nameColor:p.nameColor||'#ffffff',nameEffect:p.nameEffect||'none'};}
+function code(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<6;i++)s+=a[crypto.randomInt(a.length)];return s;}
+function publicRoom(r,count){return{id:r.id,code:r.code,name:r.name,maxPlayers:Number(r.max_players??r.maxPlayers),memberCount:Number(count),ownerName:r.owner_name||r.ownerName||''};}
+async function initDb(){
+  memoryPlayers.clear();memoryRooms.clear();memoryMembers.clear();
+  if(!pg||!DATABASE_URL)return;
+  const pool=new pg.Pool({connectionString:DATABASE_URL,ssl:DATABASE_URL.includes('localhost')?false:{rejectUnauthorized:false},max:5});global.db=pool;
+  await pool.query(`CREATE TABLE IF NOT EXISTS players(id UUID PRIMARY KEY,name VARCHAR(16) NOT NULL,name_key VARCHAR(16) UNIQUE NOT NULL,country CHAR(2) NOT NULL,token_hash CHAR(64) NOT NULL,best_score INTEGER NOT NULL DEFAULT 0,visual_name VARCHAR(16),name_color VARCHAR(20) NOT NULL DEFAULT '#ffffff',name_effect VARCHAR(20) NOT NULL DEFAULT 'none',created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await pool.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS visual_name VARCHAR(16), ADD COLUMN IF NOT EXISTS name_color VARCHAR(20) NOT NULL DEFAULT '#ffffff', ADD COLUMN IF NOT EXISTS name_effect VARCHAR(20) NOT NULL DEFAULT 'none'`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,max_players INTEGER NOT NULL CHECK(max_players BETWEEN 1 AND 8),owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS room_members(room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(room_id,player_id))`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS messages(id UUID PRIMARY KEY,type VARCHAR(20) NOT NULL,name VARCHAR(80),email VARCHAR(200),subject VARCHAR(160),message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await pool.query(`UPDATE players SET visual_name=name WHERE visual_name IS NULL`);
+  dbReady=true;console.log('PostgreSQL database ready. Existing accounts/rankings/rooms preserved.');
 }
-
-const memoryPlayers = new Map();
-const memoryRooms = new Map();
-const memoryRoomMembers = new Map();
-
-function normalizeName(name) { return String(name || '').trim().toUpperCase(); }
-function validName(name) { return /^[A-Za-z0-9]{3,16}$/.test(name); }
-function validCountry(country) { return countries.has(String(country || '').toUpperCase()); }
-function validRoomName(name) { return /^[\p{L}\p{N}][\p{L}\p{N} _-]{1,23}$/u.test(String(name || '').trim()); }
-function validRoomSize(value) { return Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 8; }
-function json(res, status, payload) {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-  res.end(JSON.stringify(payload));
+async function authenticate(id,token){if(!id||!token)return null;const h=tokenHash(token);if(dbReady){const r=await global.db.query('SELECT id,name,country,best_score AS "bestScore",token_hash,visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect" FROM players WHERE id=$1',[id]);const p=r.rows[0];return p&&p.token_hash===h?p:null;}const p=memoryPlayers.get(id);return p&&p.tokenHash===h?p:null;}
+async function registerPlayer(name,country){const clean=String(name).trim(),key=normalizeName(clean);if(!validName(clean))throw Object.assign(new Error('Nome inválido. Use 3–16 letras ou números, sem espaços ou símbolos.'),{status:400});if(!validCountry(country))throw Object.assign(new Error('País inválido.'),{status:400});const id=crypto.randomUUID(),token=crypto.randomBytes(32).toString('hex');if(dbReady){try{const r=await global.db.query('INSERT INTO players(id,name,name_key,country,token_hash,visual_name) VALUES($1,$2,$3,$4,$5,$2) RETURNING id,name,country,best_score AS "bestScore",visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect"',[id,clean,key,String(country).toUpperCase(),tokenHash(token)]);return{player:publicPlayer(r.rows[0]),token};}catch(e){if(e.code==='23505')throw Object.assign(new Error('Esse nome já está a ser utilizado.'),{status:409});throw e;}}for(const p of memoryPlayers.values())if(p.nameKey===key)throw Object.assign(new Error('Esse nome já está a ser utilizado.'),{status:409});const p={id,name:clean,nameKey:key,country:String(country).toUpperCase(),tokenHash:tokenHash(token),bestScore:0,visualName:clean,nameColor:'#ffffff',nameEffect:'none'};memoryPlayers.set(id,p);return{player:publicPlayer(p),token};}
+async function submitScore(id,token,score){const p=await authenticate(id,token);if(!p)throw Object.assign(new Error('Sessão inválida.'),{status:401});const v=Math.floor(Number(score));if(!Number.isFinite(v))throw Object.assign(new Error('Pontuação inválida.'),{status:400});const value=Math.max(0,Math.min(100000,v));if(dbReady){const r=await global.db.query('UPDATE players SET best_score=GREATEST(best_score,$1),updated_at=NOW() WHERE id=$2 RETURNING id,name,country,best_score AS "bestScore",visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect"',[value,id]);return publicPlayer(r.rows[0]);}p.bestScore=Math.max(p.bestScore,value);return publicPlayer(p);}
+async function getAllPlayers(){if(dbReady){const r=await global.db.query('SELECT id,name,country,best_score AS score,visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect",updated_at AS "updatedAt",created_at AS "createdAt" FROM players');return r.rows;}return[...memoryPlayers.values()].map(p=>({id:p.id,name:p.name,country:p.country,score:p.bestScore,visualName:p.visualName,nameColor:p.nameColor,nameEffect:p.nameEffect,updatedAt:0,createdAt:0}));}
+function rankPlayers(rows){return rows.slice().sort((a,b)=>Number(b.score)-Number(a.score)||new Date(a.updatedAt||0)-new Date(b.updatedAt||0)||new Date(a.createdAt||0)-new Date(b.createdAt||0).map?0:0;}
+async function ranked(){const rows=await getAllPlayers();rows.sort((a,b)=>Number(b.score)-Number(a.score)||String(a.updatedAt).localeCompare(String(b.updatedAt)));const world=new Map(rows.map((p,i)=>[p.id,i+1]));const countryMaps=new Map();for(const p of rows){if(!countryMaps.has(p.country))countryMaps.set(p.country,[]);countryMaps.get(p.country).push(p);}const cr=new Map();for(const list of countryMaps.values())list.forEach((p,i)=>cr.set(p.id,i+1));return{rows,world,country:cr};}
+async function rankings(country,page=1){const safe=Math.max(1,Math.floor(Number(page)||1)),offset=(safe-1)*25,r=await ranked();let list=country?r.rows.filter(p=>p.country===country.toUpperCase()):r.rows;const total=list.length;list=list.slice(offset,offset+25).map(p=>({...p,score:Number(p.score||0),worldRank:r.world.get(p.id),countryRank:r.country.get(p.id)}));return{players:list,total,page:safe,pages:Math.max(1,Math.ceil(total/25))};}
+async function roomAuth(id,token){const p=await authenticate(id,token);if(!p)throw Object.assign(new Error('Sessão inválida.'),{status:401});return p;}
+async function createRoom(id,token,name,maxPlayers){const p=await roomAuth(id,token),n=String(name||'').trim(),size=Number(maxPlayers);if(!validRoomName(n))throw Object.assign(new Error('Nome da sala inválido. Use 2–24 letras, números, espaços, hífen ou underscore.'),{status:400});if(!validRoomSize(size))throw Object.assign(new Error('A sala deve ter entre 1 e 8 jogadores.'),{status:400});if(dbReady){for(let i=0;i<10;i++){const rid=crypto.randomUUID(),c=code(),client=await global.db.connect();try{await client.query('BEGIN');const r=await client.query('INSERT INTO rooms(id,code,name,max_players,owner_id) VALUES($1,$2,$3,$4,$5) RETURNING id,code,name,max_players',[rid,c,n,size,id]);await client.query('INSERT INTO room_members(room_id,player_id) VALUES($1,$2)',[rid,id]);await client.query('COMMIT');return publicRoom({...r.rows[0],owner_name:p.name},1);}catch(e){try{await client.query('ROLLBACK')}catch(_){}if(e.code!=='23505')throw e;}finally{client.release();}}}let c=code();while([...memoryRooms.values()].some(r=>r.code===c))c=code();const r={id:crypto.randomUUID(),code:c,name:n,maxPlayers:size,ownerId:id,ownerName:p.name};memoryRooms.set(r.id,r);memoryMembers.set(r.id,new Set([id]));return publicRoom(r,1);}
+async function listRooms(id,token){await roomAuth(id,token);if(dbReady){const r=await global.db.query(`SELECT r.id,r.code,r.name,r.max_players,r.owner_id,p.name owner_name,COUNT(rm.player_id)::int member_count FROM rooms r JOIN room_members mine ON mine.room_id=r.id AND mine.player_id=$1 JOIN players p ON p.id=r.owner_id LEFT JOIN room_members rm ON rm.room_id=r.id GROUP BY r.id,p.name ORDER BY r.created_at DESC`,[id]);return r.rows.map(x=>publicRoom(x,x.member_count));}const out=[];for(const r of memoryRooms.values()){const m=memoryMembers.get(r.id)||new Set();if(m.has(id))out.push(publicRoom(r,m.size));}return out;}
+async function joinRoom(id,token,codeInput){await roomAuth(id,token);const c=String(codeInput||'').trim().toUpperCase();if(!/^[A-Z0-9]{5,6}$/.test(c))throw Object.assign(new Error('Código de sala inválido.'),{status:400});if(dbReady){const client=await global.db.connect();try{await client.query('BEGIN');const q=await client.query('SELECT r.id,r.code,r.name,r.max_players,r.owner_id,p.name owner_name FROM rooms r JOIN players p ON p.id=r.owner_id WHERE r.code=$1 FOR UPDATE',[c]);const r=q.rows[0];if(!r)throw Object.assign(new Error('Sala não encontrada.'),{status:404});const mine=await client.query('SELECT 1 FROM room_members WHERE room_id=$1 AND player_id=$2',[r.id,id]);const count=await client.query('SELECT COUNT(*)::int count FROM room_members WHERE room_id=$1',[r.id]);if(!mine.rowCount&&count.rows[0].count>=r.max_players)throw Object.assign(new Error('Esta sala já está cheia.'),{status:409});if(!mine.rowCount)await client.query('INSERT INTO room_members(room_id,player_id) VALUES($1,$2)',[r.id,id]);await client.query('COMMIT');return publicRoom(r,count.rows[0].count+(mine.rowCount?0:1));}catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e;}finally{client.release();}}const r=[...memoryRooms.values()].find(x=>x.code===c);if(!r)throw Object.assign(new Error('Sala não encontrada.'),{status:404});const m=memoryMembers.get(r.id)||new Set();if(!m.has(id)&&m.size>=r.maxPlayers)throw Object.assign(new Error('Esta sala já está cheia.'),{status:409});m.add(id);memoryMembers.set(r.id,m);return publicRoom(r,m.size);}
+async function leaveRoom(id,token,roomId){await roomAuth(id,token);if(dbReady){await global.db.query('DELETE FROM room_members WHERE room_id=$1 AND player_id=$2',[roomId,id]);return{ok:true};}const m=memoryMembers.get(roomId);if(m)m.delete(id);return{ok:true};}
+async function roomRankings(id,token,roomId){await roomAuth(id,token);if(dbReady){const r=await global.db.query(`SELECT p.id,p.name,p.country,p.best_score AS score,p.visual_name AS "visualName",p.name_color AS "nameColor",p.name_effect AS "nameEffect" FROM players p JOIN room_members rm ON rm.player_id=p.id WHERE rm.room_id=$1 ORDER BY p.best_score DESC,p.updated_at ASC,p.created_at ASC`,[roomId]);return r.rows.map((p,i)=>({...p,roomRank:i+1}));}const m=memoryMembers.get(roomId)||new Set(),arr=[...m].map(x=>memoryPlayers.get(x)).filter(Boolean).sort((a,b)=>b.bestScore-a.bestScore);return arr.map((p,i)=>({id:p.id,name:p.name,country:p.country,score:p.bestScore,visualName:p.visualName,nameColor:p.nameColor,nameEffect:p.nameEffect,roomRank:i+1}));}
+function paletteFor(rank){if(rank.worldRank===1)return ALL_COLORS;if(rank.worldRank===2||rank.worldRank===3)return WORLD_COLORS;if(rank.countryRank===1)return COUNTRY_TOP_COLORS;if(rank.countryRank===2||rank.countryRank===3)return COUNTRY_OTHER_COLORS;return[];}
+async function customize(id,token,data){await roomAuth(id,token);const r=await ranked(),p=r.rows.find(x=>x.id===id);if(!p)throw Object.assign(new Error('Jogador não encontrado.'),{status:404});const worldRank=r.world.get(id),countryRank=r.country.get(id),allowed=paletteFor({worldRank,countryRank});let color=String(data.color||p.nameColor||'#ffffff').toLowerCase();if(!allowed.map(x=>x.toLowerCase()).includes(color))throw Object.assign(new Error('Essa cor não está disponível para a tua posição.'),{status:403});let effect=String(data.effect||p.nameEffect||'none');if(!EFFECTS.includes(effect))throw Object.assign(new Error('Efeito inválido.'),{status:400});let visual=String(data.visualName||p.visualName||p.name).trim();if(worldRank===1){if(!validName(visual))throw Object.assign(new Error('O nome visual só pode ter 3–16 letras ou números.'),{status:400});}else visual=p.visualName||p.name;if(worldRank!==1)effect='none';if(dbReady){const q=await global.db.query('UPDATE players SET visual_name=$1,name_color=$2,name_effect=$3,updated_at=NOW() WHERE id=$4 RETURNING id,name,country,best_score AS "bestScore",visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect"',[visual,color,effect,id]);return{player:publicPlayer(q.rows[0]),worldRank,countryRank};}const m=memoryPlayers.get(id);m.visualName=visual;m.nameColor=color;m.nameEffect=effect;return{player:publicPlayer(m),worldRank,countryRank};}
+async function saveMessage(type,data){const name=String(data.name||'').trim().slice(0,80),email=String(data.email||'').trim().slice(0,200),subject=String(data.subject||'').trim().slice(0,160),message=String(data.message||'').trim().slice(0,10000);if(!message)throw Object.assign(new Error('Escreve uma mensagem antes de enviar.'),{status:400});if(dbReady){await global.db.query('INSERT INTO messages(id,type,name,email,subject,message) VALUES($1,$2,$3,$4,$5,$6)',[crypto.randomUUID(),type,name,email,subject,message]);}else memoryMessages.push({id:crypto.randomUUID(),type,name,email,subject,message,createdAt:new Date().toISOString()});return{ok:true};}
+async function handleApi(req,res,url){
+ try{
+  if(req.method==='GET'&&url.pathname==='/api/rankings'){const c=url.searchParams.get('country')||'';if(c&&!validCountry(c))return json(res,400,{error:'País inválido.'});return json(res,200,{country:c||null,...await rankings(c||null,url.searchParams.get('page')||1)});}
+  if(req.method==='POST'&&url.pathname==='/api/players'){const d=await body(req);return json(res,201,await registerPlayer(d.name,d.country));}
+  if(req.method==='POST'&&url.pathname==='/api/scores'){const d=await body(req);return json(res,200,{player:await submitScore(d.id,d.token,d.score)});}
+  if(req.method==='GET'&&url.pathname==='/api/me'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
+  if(req.method==='POST'&&url.pathname==='/api/profile/customize'){const d=await body(req);return json(res,200,await customize(d.id,d.token,d));}
+  if(req.method==='POST'&&url.pathname==='/api/rooms'){const d=await body(req);return json(res,201,{room:await createRoom(d.id,d.token,d.name,d.maxPlayers)});}
+  if(req.method==='GET'&&url.pathname==='/api/rooms'){return json(res,200,{rooms:await listRooms(url.searchParams.get('id'),url.searchParams.get('token'))});}
+  if(req.method==='POST'&&url.pathname==='/api/rooms/join'){const d=await body(req);return json(res,200,{room:await joinRoom(d.id,d.token,d.code)});}
+  if(req.method==='POST'&&url.pathname==='/api/rooms/leave'){const d=await body(req);return json(res,200,await leaveRoom(d.id,d.token,d.roomId));}
+  if(req.method==='GET'&&url.pathname==='/api/rooms/rankings'){return json(res,200,{players:await roomRankings(url.searchParams.get('id'),url.searchParams.get('token'),url.searchParams.get('roomId'))});}
+  if(req.method==='POST'&&url.pathname==='/api/contact'){const d=await body(req);return json(res,201,await saveMessage('contact',d));}
+  if(req.method==='POST'&&url.pathname==='/api/bugs'){const d=await body(req);return json(res,201,await saveMessage('bug',d));}
+  return json(res,404,{error:'API endpoint not found.'});
+ }catch(e){return json(res,e.status||500,{error:e.message||'Erro no servidor.'});}
 }
-function body(req) {
-  return new Promise((resolve, reject) => {
-    let raw = '';
-    req.on('data', chunk => { raw += chunk; if (raw.length > 10000) req.destroy(); });
-    req.on('end', () => { try { resolve(raw ? JSON.parse(raw) : {}); } catch { reject(new Error('Invalid JSON')); } });
-    req.on('error', reject);
-  });
-}
-function tokenHash(token) { return crypto.createHash('sha256').update(token).digest('hex'); }
-function publicPlayer(p) { return { id: p.id, name: p.name, country: p.country, bestScore: Number(p.bestScore || 0) }; }
-
-function makeRoomCode() {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) code += alphabet[crypto.randomInt(alphabet.length)];
-  return code;
-}
-function publicRoom(row, memberCount) {
-  return {
-    id: row.id,
-    code: row.code,
-    name: row.name,
-    maxPlayers: Number(row.max_players ?? row.maxPlayers),
-    memberCount: Number(memberCount),
-    ownerName: row.owner_name || row.ownerName || ''
-  };
-}
-
-async function initDb() {
-  memoryPlayers.clear();
-  memoryRooms.clear();
-  memoryRoomMembers.clear();
-  if (!pg || !DATABASE_URL) return;
-  const pool = new pg.Pool({ connectionString: DATABASE_URL, ssl: DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false }, max: 5 });
-  global.db = pool;
-  await pool.query(`CREATE TABLE IF NOT EXISTS players (
-    id UUID PRIMARY KEY, name VARCHAR(16) NOT NULL, name_key VARCHAR(16) UNIQUE NOT NULL,
-    country CHAR(2) NOT NULL, token_hash CHAR(64) NOT NULL, best_score INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-  )`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS rooms (
-    id UUID PRIMARY KEY, code VARCHAR(6) UNIQUE NOT NULL, name VARCHAR(24) NOT NULL,
-    max_players INTEGER NOT NULL CHECK (max_players BETWEEN 1 AND 8), owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-  )`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS room_members (
-    room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
-    player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (room_id, player_id)
-  )`);
-  // Development phase: every server start/deployment begins with empty accounts, rankings and rooms.
-  await pool.query('TRUNCATE TABLE room_members, rooms, players');
-  dbReady = true;
-  console.log('PostgreSQL database ready. Development reset applied to players, rankings and rooms.');
-}
-
-async function registerPlayer(name, country) {
-  const cleanName = String(name).trim();
-  const nameKey = normalizeName(cleanName);
-  if (!validName(cleanName)) throw Object.assign(new Error('Nome inválido. Use 3–16 letras ou números, sem espaços ou símbolos.'), { status: 400 });
-  if (!validCountry(country)) throw Object.assign(new Error('País inválido.'), { status: 400 });
-  const id = crypto.randomUUID();
-  const token = crypto.randomBytes(32).toString('hex');
-  if (dbReady) {
-    try {
-      const result = await global.db.query('INSERT INTO players (id,name,name_key,country,token_hash) VALUES ($1,$2,$3,$4,$5) RETURNING id,name,country,best_score', [id, cleanName, nameKey, country.toUpperCase(), tokenHash(token)]);
-      return { player: publicPlayer({ ...result.rows[0], bestScore: result.rows[0].best_score }), token };
-    } catch (error) {
-      if (error.code === '23505') throw Object.assign(new Error('Esse nome já está a ser utilizado.'), { status: 409 });
-      throw error;
-    }
-  }
-  for (const p of memoryPlayers.values()) if (p.nameKey === nameKey) throw Object.assign(new Error('Esse nome já está a ser utilizado.'), { status: 409 });
-  const player = { id, name: cleanName, nameKey, country: country.toUpperCase(), tokenHash: tokenHash(token), bestScore: 0 };
-  memoryPlayers.set(id, player);
-  return { player: publicPlayer(player), token };
-}
-
-async function authenticate(id, token) {
-  if (!id || !token) return null;
-  const hash = tokenHash(token);
-  if (dbReady) {
-    const result = await global.db.query('SELECT id,name,country,best_score AS "bestScore",token_hash FROM players WHERE id=$1', [id]);
-    const p = result.rows[0];
-    return p && p.token_hash === hash ? p : null;
-  }
-  const p = memoryPlayers.get(id);
-  return p && p.tokenHash === hash ? p : null;
-}
-
-async function submitScore(id, token, score) {
-  const player = await authenticate(id, token);
-  if (!player) throw Object.assign(new Error('Sessão inválida.'), { status: 401 });
-  const value = Math.max(0, Math.min(100000, Math.floor(Number(score))));
-  if (!Number.isFinite(value)) throw Object.assign(new Error('Pontuação inválida.'), { status: 400 });
-  if (dbReady) {
-    const result = await global.db.query('UPDATE players SET best_score=GREATEST(best_score,$1), updated_at=NOW() WHERE id=$2 RETURNING id,name,country,best_score AS "bestScore"', [value, id]);
-    return publicPlayer(result.rows[0]);
-  }
-  player.bestScore = Math.max(player.bestScore, value);
-  return publicPlayer(player);
-}
-
-async function rankings(country, page = 1) {
-  const safePage = Math.max(1, Math.floor(Number(page) || 1));
-  const offset = (safePage - 1) * 25;
-  if (dbReady) {
-    const where = country ? 'WHERE country=$1' : '';
-    const args = country ? [country.toUpperCase(), 25, offset] : [25, offset];
-    const result = await global.db.query(`SELECT name,country,best_score AS score FROM players ${where} ORDER BY best_score DESC, updated_at ASC, created_at ASC LIMIT $${country ? 2 : 1} OFFSET $${country ? 3 : 2}`, args);
-    const count = await global.db.query(`SELECT COUNT(*)::int AS total FROM players ${where}`, country ? [country.toUpperCase()] : []);
-    return { players: result.rows, total: count.rows[0].total, page: safePage, pages: Math.max(1, Math.ceil(count.rows[0].total / 25)) };
-  }
-  let values = [...memoryPlayers.values()].filter(p => !country || p.country === country.toUpperCase());
-  values.sort((a,b) => b.bestScore - a.bestScore);
-  return { players: values.slice(offset, offset + 25).map(p => ({ name:p.name, country:p.country, score:p.bestScore })), total: values.length, page:safePage, pages:Math.max(1, Math.ceil(values.length / 25)) };
-}
-
-async function createRoom(id, token, name, maxPlayers) {
-  const player = await authenticate(id, token);
-  if (!player) throw Object.assign(new Error('Sessão inválida.'), { status: 401 });
-  const cleanName = String(name || '').trim();
-  const size = Number(maxPlayers);
-  if (!validRoomName(cleanName)) throw Object.assign(new Error('Nome da sala inválido. Use 2–24 letras, números, espaços, hífen ou underscore.'), { status: 400 });
-  if (!validRoomSize(size)) throw Object.assign(new Error('A sala deve ter entre 1 e 8 jogadores.'), { status: 400 });
-
-  if (dbReady) {
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const roomId = crypto.randomUUID();
-      const code = makeRoomCode();
-      try {
-        const client = await global.db.connect();
-        try {
-          await client.query('BEGIN');
-          const result = await client.query('INSERT INTO rooms (id,code,name,max_players,owner_id) VALUES ($1,$2,$3,$4,$5) RETURNING id,code,name,max_players', [roomId, code, cleanName, size, id]);
-          await client.query('INSERT INTO room_members (room_id,player_id) VALUES ($1,$2)', [roomId, id]);
-          await client.query('COMMIT');
-          return publicRoom({ ...result.rows[0], owner_name: player.name }, 1);
-        } catch (error) {
-          try { await client.query('ROLLBACK'); } catch (_) {}
-          if (error.code === '23505') continue;
-          throw error;
-        } finally { client.release(); }
-      } catch (error) {
-        if (error.code === '23505' && attempt < 7) continue;
-        throw error;
-      }
-    }
-  }
-
-  let code = makeRoomCode();
-  while ([...memoryRooms.values()].some(r => r.code === code)) code = makeRoomCode();
-  const room = { id: crypto.randomUUID(), code, name: cleanName, maxPlayers: size, ownerId: id, ownerName: player.name };
-  memoryRooms.set(room.id, room);
-  memoryRoomMembers.set(room.id, new Set([id]));
-  return publicRoom(room, 1);
-}
-
-async function listRooms(id, token) {
-  const player = await authenticate(id, token);
-  if (!player) throw Object.assign(new Error('Sessão inválida.'), { status: 401 });
-  if (dbReady) {
-    const result = await global.db.query(`SELECT r.id,r.code,r.name,r.max_players,r.owner_id,p.name AS owner_name,COUNT(rm.player_id)::int AS member_count
-      FROM rooms r JOIN room_members mine ON mine.room_id=r.id AND mine.player_id=$1
-      JOIN players p ON p.id=r.owner_id LEFT JOIN room_members rm ON rm.room_id=r.id
-      GROUP BY r.id,p.name ORDER BY r.created_at DESC`, [id]);
-    return result.rows.map(row => publicRoom(row, row.member_count));
-  }
-  const rooms = [];
-  for (const room of memoryRooms.values()) {
-    const members = memoryRoomMembers.get(room.id) || new Set();
-    if (members.has(id)) rooms.push(publicRoom(room, members.size));
-  }
-  return rooms;
-}
-
-async function joinRoom(id, token, codeInput) {
-  const player = await authenticate(id, token);
-  if (!player) throw Object.assign(new Error('Sessão inválida.'), { status: 401 });
-  const code = String(codeInput || '').trim().toUpperCase();
-  if (!/^[A-Z0-9]{5,6}$/.test(code)) throw Object.assign(new Error('Código de sala inválido.'), { status: 400 });
-
-  if (dbReady) {
-    const client = await global.db.connect();
-    try {
-      await client.query('BEGIN');
-      const roomResult = await client.query('SELECT r.id,r.code,r.name,r.max_players,r.owner_id,p.name AS owner_name FROM rooms r JOIN players p ON p.id=r.owner_id WHERE r.code=$1 FOR UPDATE', [code]);
-      const room = roomResult.rows[0];
-      if (!room) throw Object.assign(new Error('Sala não encontrada.'), { status: 404 });
-      const memberResult = await client.query('SELECT 1 FROM room_members WHERE room_id=$1 AND player_id=$2', [room.id, id]);
-      if (memberResult.rowCount) {
-        const count = await client.query('SELECT COUNT(*)::int AS count FROM room_members WHERE room_id=$1', [room.id]);
-        await client.query('COMMIT');
-        return publicRoom(room, count.rows[0].count);
-      }
-      const count = await client.query('SELECT COUNT(*)::int AS count FROM room_members WHERE room_id=$1', [room.id]);
-      if (count.rows[0].count >= room.max_players) throw Object.assign(new Error('Esta sala já está cheia.'), { status: 409 });
-      await client.query('INSERT INTO room_members (room_id,player_id) VALUES ($1,$2)', [room.id, id]);
-      await client.query('COMMIT');
-      return publicRoom(room, count.rows[0].count + 1);
-    } catch (error) {
-      try { await client.query('ROLLBACK'); } catch (_) {}
-      throw error;
-    } finally { client.release(); }
-  }
-
-  const room = [...memoryRooms.values()].find(r => r.code === code);
-  if (!room) throw Object.assign(new Error('Sala não encontrada.'), { status: 404 });
-  const members = memoryRoomMembers.get(room.id) || new Set();
-  if (!members.has(id) && members.size >= room.maxPlayers) throw Object.assign(new Error('Esta sala já está cheia.'), { status: 409 });
-  members.add(id); memoryRoomMembers.set(room.id, members);
-  return publicRoom(room, members.size);
-}
-
-async function leaveRoom(id, token, roomId) {
-  const player = await authenticate(id, token);
-  if (!player) throw Object.assign(new Error('Sessão inválida.'), { status: 401 });
-  if (!roomId) throw Object.assign(new Error('Sala inválida.'), { status: 400 });
-  if (dbReady) {
-    await global.db.query('DELETE FROM room_members WHERE room_id=$1 AND player_id=$2', [roomId, id]);
-    return { ok: true };
-  }
-  const members = memoryRoomMembers.get(roomId);
-  if (members) members.delete(id);
-  return { ok: true };
-}
-
-async function handleApi(req, res, url) {
-  if (req.method === 'GET' && url.pathname === '/api/rankings') {
-    const country = url.searchParams.get('country') || '';
-    if (country && !validCountry(country)) return json(res, 400, { error: 'País inválido.' });
-    return json(res, 200, { country: country || null, ...(await rankings(country || null, url.searchParams.get('page') || 1)) });
-  }
-  if (req.method === 'POST' && url.pathname === '/api/players') {
-    try { const data = await body(req); return json(res, 201, await registerPlayer(data.name, data.country)); }
-    catch (error) { return json(res, error.status || 500, { error: error.message || 'Erro no servidor.' }); }
-  }
-  if (req.method === 'POST' && url.pathname === '/api/scores') {
-    try { const data = await body(req); return json(res, 200, { player: await submitScore(data.id, data.token, data.score) }); }
-    catch (error) { return json(res, error.status || 500, { error: error.message || 'Erro no servidor.' }); }
-  }
-  if (req.method === 'GET' && url.pathname === '/api/me') {
-    const player = await authenticate(url.searchParams.get('id'), url.searchParams.get('token'));
-    return json(res, player ? 200 : 401, player ? { player: publicPlayer(player) } : { error:'Sessão inválida.' });
-  }
-  if (req.method === 'POST' && url.pathname === '/api/rooms') {
-    try { const data = await body(req); return json(res, 201, { room: await createRoom(data.id, data.token, data.name, data.maxPlayers) }); }
-    catch (error) { return json(res, error.status || 500, { error: error.message || 'Erro no servidor.' }); }
-  }
-  if (req.method === 'GET' && url.pathname === '/api/rooms') {
-    try { return json(res, 200, { rooms: await listRooms(url.searchParams.get('id'), url.searchParams.get('token')) }); }
-    catch (error) { return json(res, error.status || 500, { error: error.message || 'Erro no servidor.' }); }
-  }
-  if (req.method === 'POST' && url.pathname === '/api/rooms/join') {
-    try { const data = await body(req); return json(res, 200, { room: await joinRoom(data.id, data.token, data.code) }); }
-    catch (error) { return json(res, error.status || 500, { error: error.message || 'Erro no servidor.' }); }
-  }
-  if (req.method === 'POST' && url.pathname === '/api/rooms/leave') {
-    try { const data = await body(req); return json(res, 200, await leaveRoom(data.id, data.token, data.roomId)); }
-    catch (error) { return json(res, error.status || 500, { error: error.message || 'Erro no servidor.' }); }
-  }
-  return json(res, 404, { error: 'API endpoint not found.' });
-}
-
-function serveFile(res, filePath) {
-  fs.stat(filePath, (statError, stats) => {
-    if (statError || !stats.isFile()) return json(res, 404, { error:'Not found' });
-    const ext = path.extname(filePath).toLowerCase();
-    const cacheControl = ['.html','.js','.css'].includes(ext) ? 'no-store, no-cache, must-revalidate' : 'public, max-age=3600';
-    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream', 'Cache-Control': cacheControl });
-    fs.createReadStream(filePath).pipe(res);
-  });
-}
-
-const server = http.createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    if (url.pathname === '/health' || url.pathname === '/healthz') return json(res, 200, { ok:true, database:dbReady ? 'postgresql' : 'memory' });
-    if (url.pathname.startsWith('/api/')) return handleApi(req, res, url);
-    if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error:'Method Not Allowed' });
-    let pathname = decodeURIComponent(url.pathname); if (pathname === '/') pathname = '/index.html';
-    const filePath = path.resolve(ROOT, pathname.replace(/^\/+/, ''));
-    if (filePath !== ROOT && !filePath.startsWith(ROOT + path.sep)) return json(res, 403, { error:'Forbidden' });
-    fs.stat(filePath, (error, stats) => {
-      if (!error && stats.isFile()) return serveFile(res, filePath);
-      return serveFile(res, path.join(ROOT, 'index.html'));
-    });
-  } catch (error) { console.error(error); json(res, 500, { error:'Internal server error' }); }
-});
-
-// Initialize the database BEFORE accepting requests. This prevents the first player
-// from being stored in temporary memory while PostgreSQL is still initializing.
-(async () => {
-  try { await initDb(); }
-  catch (error) { console.error('Database initialization failed:', error.message); dbReady = false; }
-  server.listen(PORT, HOST, () => console.log(`EIXO server listening on ${HOST}:${PORT}`));
-})();
+function serveFile(res,filePath){fs.stat(filePath,(err,st)=>{if(err||!st.isFile())return json(res,404,{error:'Not found'});const ext=path.extname(filePath).toLowerCase();res.writeHead(200,{'Content-Type':MIME_TYPES[ext]||'application/octet-stream','Cache-Control':['.html','.js','.css'].includes(ext)?'no-store, no-cache, must-revalidate':'public, max-age=3600'});fs.createReadStream(filePath).pipe(res);});}
+const server=http.createServer(async(req,res)=>{try{const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);if(url.pathname==='/health'||url.pathname==='/healthz')return json(res,200,{ok:true,database:dbReady?'postgresql':'memory'});if(url.pathname.startsWith('/api/'))return handleApi(req,res,url);if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'Method Not Allowed'});let pathname=decodeURIComponent(url.pathname);if(pathname==='/')pathname='/index.html';const fp=path.resolve(ROOT,pathname.replace(/^\/+/,''));if(fp!==ROOT&&!fp.startsWith(ROOT+path.sep))return json(res,403,{error:'Forbidden'});fs.stat(fp,(e,s)=>{if(!e&&s.isFile())return serveFile(res,fp);return serveFile(res,path.join(ROOT,'index.html'));});}catch(e){console.error(e);json(res,500,{error:'Internal server error'});}});
+(async()=>{try{await initDb();}catch(e){console.error('Database initialization failed:',e.message);dbReady=false;}server.listen(PORT,HOST,()=>console.log(`EIXO server listening on ${HOST}:${PORT}`));})();
