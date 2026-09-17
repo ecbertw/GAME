@@ -45,8 +45,15 @@
     }
   }
 
-  // game.js already has a ranking loader. Replace it with the same source of truth
-  // so a language/country UI change can never move the player's national ranking.
+  // Also intercept the original game ranking helper. Its country tab can now
+  // never accidentally query the UI language country instead of the player country.
+  const originalFetchRankings = window.fetchRankings;
+  if (typeof originalFetchRankings === 'function') {
+    window.fetchRankings = function (countryCode = null, page = 1) {
+      return originalFetchRankings(countryCode ? registeredCountry() : null, page);
+    };
+  }
+
   window.loadTopRankings = load;
   window.eixoRefreshRankings = load;
   load();
