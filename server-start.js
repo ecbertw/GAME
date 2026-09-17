@@ -11,6 +11,7 @@ source = source.replace(
   "const ALL_COLORS=['#ffffff','#ff4d4d','#ff7a2f','#ffd43b','#7bdc5a','#39d98a','#00d4ff','#3b82f6','#6f5cff','#b66cff','#ff4fd8','#ff6b9d','#a8e063','#00f0ff','#f97316','#facc15','#94a3b8','#e2e8f0','#22c55e','#ef4444'];",
   "const ALL_COLORS=['#ffffff','#ff4d4d','#ff7a2f','#ffd43b','#7bdc5a','#39d98a','#00d4ff','#3b82f6','#6f5cff','#b66cff','#ff4fd8','#ff6b9d','#a8e063','#00f0ff','#f97316','#facc15','#94a3b8','#e2e8f0','#22c55e','#ef4444','rainbow'];"
 );
+source = source.replace("const EFFECTS=['none','bounce','glow','wave','shake','float','pulse','jelly'];", "const EFFECTS=['none','bounce','glow','shake','pulse','jelly','twist','flicker','stretch'];");
 source = source.replace("if(worldRank!==1)effect='none';", "if(worldRank>2&&countryRank>2)effect='none';");
 
 const mod = new Module(serverPath, module);
