@@ -1,4 +1,4 @@
-/* EIXO: reliable per-letter effects. Observer is paused while DOM is updated to prevent UI freezes. */
+/* EIXO: reliable per-letter effects and live customization preview. */
 (function(){
  const palette=['#ff3b30','#ff9500','#ffd60a','#34c759','#0a84ff','#bf5af2'];
  const valid=['none','bounce','glow','shake','pulse','jelly','twist','flicker','stretch'];
@@ -9,8 +9,10 @@
  document.head.appendChild(css);
  function nameHtml(text,color){const rainbow=String(color||'').toLowerCase()==='rainbow';return [...String(text||'')].map((ch,i)=>`<span class="name-letter"${rainbow?` style="color:${palette[i%palette.length]}!important"`:''}>${esc(ch)}</span>`).join('');}
  function fixNames(){document.querySelectorAll('.rank-player-name,.name-preview').forEach(el=>{if(el.dataset.lettersReady==='1')return;const effect=(el.className.match(/effect-([a-z]+)/)||[])[1]||'none';const rainbow=el.classList.contains('name-rainbow');if(!rainbow&&!valid.includes(effect))return;const text=el.textContent||'';el.innerHTML=nameHtml(text,rainbow?'rainbow':el.style.color);el.dataset.lettersReady='1';});}
- function fixSelect(){const el=document.getElementById('customizeEffect');if(!el)return;[...el.options].forEach(o=>{if(o.value==='wave')o.value='twist';if(o.value==='float')o.value='flicker'});if(![...el.options].some(o=>o.value==='stretch')){const o=document.createElement('option');o.value='stretch';o.textContent='Stretch';el.appendChild(o)}const lang=document.documentElement.lang||'en',t=labels[lang]||labels.en;[...el.options].forEach(o=>{if(t[o.value]&&o.textContent!==t[o.value])o.textContent=t[o.value]});let p=null;try{p=JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){}if(p?.nameEffect&&valid.includes(p.nameEffect)&&el.value!==p.nameEffect)el.value=p.nameEffect;}
- function apply(){fixSelect();fixNames();}
+ function fixSelect(){const el=document.getElementById('customizeEffect');if(!el)return;[...el.options].forEach(o=>{if(o.value==='wave')o.value='twist';if(o.value==='float')o.value='flicker'});if(![...el.options].some(o=>o.value==='stretch')){const o=document.createElement('option');o.value='stretch';o.textContent='Stretch';el.appendChild(o)}const lang=document.documentElement.lang||'en',t=labels[lang]||labels.en;[...el.options].forEach(o=>{if(t[o.value])o.textContent=t[o.value]});let p=null;try{p=JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){}if(p?.nameEffect&&valid.includes(p.nameEffect)&&el.value!==p.nameEffect)el.value=p.nameEffect;}
+ function updatePreview(){const p=document.getElementById('namePreview'),n=document.getElementById('customizeName'),c=document.getElementById('customizeColor'),e=document.getElementById('customizeEffect');if(!p)return;const text=n?.value||'JOGADOR',color=c?.value||'#fff',effect=e?.value||'none',rainbow=color==='rainbow';p.className='name-preview effect-'+effect+(rainbow?' name-rainbow':'');p.style.color=rainbow?'#fff':color;p.innerHTML=nameHtml(text,rainbow?'rainbow':color);p.dataset.lettersReady='1';}
+ function bind(){const n=document.getElementById('customizeName'),c=document.getElementById('customizeColor'),e=document.getElementById('customizeEffect');if(!e||e.dataset.effectBound==='1')return;e.addEventListener('change',updatePreview);e.addEventListener('input',updatePreview);n?.addEventListener('input',updatePreview);c?.addEventListener('change',updatePreview);c?.addEventListener('input',updatePreview);e.dataset.effectBound='1';updatePreview();}
+ function apply(){fixSelect();fixNames();bind();}
  apply();
  const observer=new MutationObserver(()=>{observer.disconnect();requestAnimationFrame(()=>{apply();observer.observe(document.body,{childList:true,subtree:true})})});
  observer.observe(document.body,{childList:true,subtree:true});
