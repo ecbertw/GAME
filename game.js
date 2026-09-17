@@ -95,12 +95,16 @@ function loop(time){if(!running)return;const dt=Math.min((time-lastTime)/16.67||
 function resetGame(){score=0;scoreEl.textContent='0';const{w}=dimensions();x=Math.max(24,w*.1);direction=1;speed=4.2;running=true;messageEl.textContent=getLang().instruction;lastTime=performance.now();requestAnimationFrame(loop);}
 function stopGame(){running=false;messageEl.textContent=getLang().instruction;draw();}
 function showFeedback(text,type){feedbackEl.textContent=text;feedbackEl.className=`game-feedback ${type}`;void feedbackEl.offsetWidth;feedbackEl.classList.add('show');}
+function speedForScore(value){
+  const progress=Math.min(Math.max(Number(value)||0,0),100)/100;
+  return 4.2+(20-4.2)*progress;
+}
 async function hit(){
   if(!player){showOnboarding();return;}
   if(!running){resetGame();return;}
   const c=center(),distance=Math.abs(x-c.x),inner=Math.max(8,Math.min(11,dimensions().h*.027)),outer=Math.max(28,Math.min(38,dimensions().h*.095));
-  if(distance<=inner+4){score+=2;speed=Math.min(speed+.22,12);showFeedback('+2','good');}
-  else if(distance<=outer){score+=1;speed=Math.min(speed+.12,11);showFeedback('+1','ok');}
+  if(distance<=inner+4){score+=2;speed=speedForScore(score);showFeedback('+2','good');}
+  else if(distance<=outer){score+=1;speed=speedForScore(score);showFeedback('+1','ok');}
   else{showFeedback('MISS','miss');stopGame();await submitScore(score);return;}
   scoreEl.textContent=String(score);
 }
