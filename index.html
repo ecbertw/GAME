@@ -40,6 +40,7 @@
         <div class="game-actions">
           <a class="action blue" href="#ranking"><span data-i18n="ranking">RANKING</span></a>
           <a class="action purple" href="#rooms"><span data-i18n="myRooms">AS MINHAS SALAS</span></a>
+          <button class="action green" id="createRoomButton" type="button"><span data-room-i18n="createRoom">CRIAR SALA</span></button>
         </div>
       </section>
 
@@ -54,6 +55,22 @@
           <ol id="nationalRanking"><li class="loading-row">A CARREGAR...</li></ol>
           <button class="board-more" id="nationalFullButton" type="button" data-i18n="fullRanking">VER RANKING COMPLETO</button>
         </article>
+      </section>
+
+      <section class="room-create-panel hidden" id="roomCreatePanel" aria-label="Criar sala">
+        <div class="room-panel-heading"><span class="room-panel-mark">◆</span><span data-room-i18n="createRoomTitle">CRIAR UMA SALA</span></div>
+        <div class="room-create-grid">
+          <label class="room-field"><span data-room-i18n="roomName">NOME DA SALA</span><input id="roomNameInput" class="pixel-input" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="EX: NOITE DE EIXO"></label>
+          <label class="room-field"><span data-room-i18n="players">JOGADORES</span><select id="roomSizeInput" class="pixel-input"></select></label>
+          <button class="modal-button primary room-create-submit" id="roomCreateSubmit" type="button"><span data-room-i18n="create">CRIAR SALA ▶</span></button>
+        </div>
+        <div class="form-error" id="roomCreateError"></div>
+        <div class="room-created hidden" id="roomCreated">
+          <div class="room-created-label" data-room-i18n="roomCreated">SALA CRIADA</div>
+          <div class="room-code" id="createdRoomCode">ABC123</div>
+          <div class="room-created-hint" data-room-i18n="shareCode">Dá este código aos teus amigos para entrarem.</div>
+          <button class="board-more" id="copyRoomCode" type="button" data-room-i18n="copyCode">COPIAR CÓDIGO</button>
+        </div>
       </section>
     </main>
     <footer class="footer"><span>© EIXO</span><span>SMALL PIXELS · BIG IDEAS</span><span>2026</span></footer>
@@ -98,11 +115,25 @@
     </div>
   </div>
 
+  <div class="modal-backdrop hidden" id="roomsModal">
+    <div class="modal-card rooms-modal" role="dialog" aria-modal="true" aria-labelledby="roomsModalTitle">
+      <button class="modal-close" id="roomsClose" type="button" aria-label="Fechar">✕</button>
+      <div class="rooms-modal-heading"><h2 id="roomsModalTitle" data-room-i18n="myRoomsTitle">AS MINHAS SALAS</h2><button class="rooms-add-button" id="addRoomButton" type="button" data-room-i18n="addRoom">ADICIONAR SALA +</button></div>
+      <div class="rooms-add-panel hidden" id="roomsAddPanel">
+        <label class="room-field"><span data-room-i18n="roomCode">CÓDIGO DA SALA</span><input id="joinRoomCode" class="pixel-input room-code-input" type="text" maxlength="6" autocomplete="off" spellcheck="false" placeholder="ABC123"></label>
+        <button class="modal-button primary" id="joinRoomSubmit" type="button"><span data-room-i18n="join">ENTRAR ▶</span></button>
+        <div class="form-error" id="joinRoomError"></div>
+      </div>
+      <div class="rooms-list" id="roomsList"><div class="rooms-empty" data-room-i18n="loading">A CARREGAR...</div></div>
+    </div>
+  </div>
+
   <script src="dev-reset.js"></script>
   <script src="game.js"></script>
   <script src="country-languages.js"></script>
   <script src="language-fix.js"></script>
   <script src="ranking-fix.js"></script>
+  <script src="rooms.js"></script>
   <script src="ui.js"></script>
 </body>
 </html>
