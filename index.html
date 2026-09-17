@@ -13,12 +13,12 @@
   <div class="site-shell">
     <header class="topbar">
       <a class="brand" href="#game">EIXO</a>
-      <nav class="nav" aria-label="Navegação principal">
-        <a class="nav-link active" href="#game" data-i18n="play">JOGAR</a>
-        <a class="nav-link" href="#ranking" data-i18n="ranking">RANKING</a>
-        <a class="nav-link" href="#rooms" data-i18n="rooms">SALAS</a>
-        <a class="nav-link" href="#about" data-i18n="about">SOBRE</a>
-      </nav>
+      <div class="player-area">
+        <button class="player-button" id="playerButton" type="button" aria-haspopup="menu" aria-expanded="false">
+          <span id="playerName">JOGADOR</span><span class="chevron">▼</span>
+        </button>
+        <div class="player-menu" id="playerMenu" role="menu"></div>
+      </div>
       <div class="profile-area">
         <button class="country-button" id="countryButton" type="button" aria-haspopup="listbox" aria-expanded="false">
           <span id="countryFlag">🇵🇹</span><span id="countryName">PORTUGAL</span><span class="chevron">▼</span>
@@ -36,35 +36,23 @@
           <div class="game-feedback" id="feedback" aria-live="polite"></div>
         </div>
         <div class="game-actions">
-          <button class="action primary" id="playButton" type="button"><span data-i18n="play">JOGAR</span><b>▶</b></button>
-          <a class="action blue" href="#ranking"><span>▮▮</span><span data-i18n="ranking">RANKING</span></a>
-          <a class="action purple" href="#rooms"><span>♟♟</span><span data-i18n="myRooms">AS MINHAS SALAS</span></a>
+          <a class="action blue" href="#ranking"><span data-i18n="ranking">RANKING</span></a>
+          <a class="action purple" href="#rooms"><span data-i18n="myRooms">AS MINHAS SALAS</span></a>
         </div>
       </section>
 
       <section class="boards" id="ranking">
         <article class="board">
-          <div class="board-title"><span id="nationalFlag">🇵🇹</span><span id="nationalTitle">TOP PORTUGAL</span></div>
-          <ol id="nationalRanking"><li class="loading-row">A CARREGAR...</li></ol>
-          <button class="board-more" id="nationalFullButton" type="button" data-i18n="fullRanking">VER RANKING COMPLETO</button>
-        </article>
-        <article class="board">
           <div class="board-title"><span>🌐</span><span data-i18n="worldTop">TOP MUNDIAL</span></div>
           <ol id="worldRanking"><li class="loading-row">A CARREGAR...</li></ol>
           <button class="board-more" id="worldFullButton" type="button" data-i18n="fullRanking">VER RANKING COMPLETO</button>
         </article>
+        <article class="board">
+          <div class="board-title"><span id="nationalFlag">🇵🇹</span><span id="nationalTitle">TOP PORTUGAL</span></div>
+          <ol id="nationalRanking"><li class="loading-row">A CARREGAR...</li></ol>
+          <button class="board-more" id="nationalFullButton" type="button" data-i18n="fullRanking">VER RANKING COMPLETO</button>
+        </article>
       </section>
-
-      <section class="pixel-showcase" id="rooms">
-        <div class="mini-art art-city"><div class="pixel-icon">🏰</div><span>PORTUGAL</span></div>
-        <div class="mini-art art-lighthouse"><div class="pixel-icon">🔦</div><span>GOOD VIBES</span></div>
-        <div class="mini-art art-cat"><div class="pixel-icon">🐈</div><span>EVERY PIXEL COUNTS</span></div>
-        <div class="mini-art art-game"><div class="pixel-icon">🎮</div><span>GAME<br>EXPLORE<br>DISCOVER</span></div>
-        <div class="mini-art art-sun"><div class="pixel-icon">🌴</div><span>KEEP PLAYING</span></div>
-        <div class="showcase-title">PIXELS<br>CONNECT</div>
-      </section>
-
-      <section class="about" id="about"><span class="about-icon">◆</span><div><strong>EIXO</strong><span data-i18n="aboutText"> — um jogo simples de reflexos. Acerta no centro, soma pontos e sobe no ranking.</span></div></section>
     </main>
     <footer class="footer"><span>© EIXO</span><span>SMALL PIXELS · BIG IDEAS</span><span>2026</span></footer>
   </div>
@@ -108,5 +96,6 @@
 
   <script src="game.js"></script>
   <script src="country-languages.js"></script>
+  <script src="ui.js"></script>
 </body>
 </html>
