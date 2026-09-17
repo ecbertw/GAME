@@ -41,7 +41,16 @@
     }
   }
 
+  function playerCountryCode() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('eixo_player') || 'null');
+      if (saved?.country && countryNames[saved.country]) return saved.country;
+    } catch (_) {}
+    return currentCountryCode || 'PT';
+  }
+
   window.eixoLocalizedCountryName = localizedRegion;
+  window.eixoPlayerCountryCode = playerCountryCode;
 
   function selectCountry(code) {
     if (!countryNames[code]) return;
@@ -78,13 +87,17 @@
   window.applyLanguage = function () {
     originalApply();
     const lang = effectiveLanguage(currentCountryCode || 'PT');
+    const rankingCode = playerCountryCode();
     const c = country(currentCountryCode || 'PT');
+    const rankingCountry = country(rankingCode);
     const name = localizedRegion(c.code, lang);
+    const rankingName = localizedRegion(rankingCode, lang);
     document.documentElement.lang = lang;
     document.documentElement.dir = (lang === 'ar' || lang === 'he') ? 'rtl' : 'ltr';
     document.getElementById('countryName').textContent = name;
-    document.getElementById('nationalTitle').textContent = `TOP ${name}`;
-    document.getElementById('modalCountryTab').textContent = `${c.flag} ${name}`;
+    document.getElementById('nationalFlag').textContent = rankingCountry.flag;
+    document.getElementById('nationalTitle').textContent = `TOP ${rankingName}`;
+    document.getElementById('modalCountryTab').textContent = `${rankingCountry.flag} ${rankingName}`;
     fillLocalizedCountryControls();
 
     const intro = document.querySelector('.game-intro [data-i18n="aboutText"]');
