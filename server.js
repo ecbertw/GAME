@@ -7,7 +7,7 @@ const HOST='0.0.0.0';
 const ROOT=__dirname;
 const DATABASE_URL=process.env.DATABASE_URL;
 const MIME_TYPES={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.webp':'image/webp','.ico':'image/x-icon'};
-const countries=new Set('AF AL DZ AD AO AG AR AM AU AT AZ BS BH BD BB BY BE BZ BJ BT BO BA BW BR BN BG BF BI CV KH CM CA CF TD CL CN CO KM CG CD CR CI HR CU CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GA GM GE DE GH GR GD GT GN GW GY HT HN HU IS IN ID IR IQ IE IL IT JM JP JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MG MW MY MV ML MT MH MR MU MX FM MD MC MN ME MA MZ MM NA NR NP NL NZ NI NE NG MK NO OM PK PW PA PG PY PE PH PL QA RO RU RW KN LC VC WS SM ST SA SN RS SC SL SG SK SI SB SO ZA SS ES LK SD SR SE CH SY TJ TZ TH TL TG TO TT TN TR TM TV UG UA AE GB US UY UZ VU VA VE VN YE ZM ZW PS XK'.split(' '));
+const countries=new Set('AF AL DZ AD AO AG AR AM AU AT AZ BS BH BD BB BY BE BZ BJ BT BO BA BW BR BN BG BF BI CV KH CM CA CF TD CL CN CO KM CG CD CR CI HR CU CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GA GM GE DE GH GR GD GT GN GW GY HT HN HU IS IN ID IR IQ IE IL IT JM JP JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MG MW MY MV ML MT MH MR MU MX FM MD MC MN ME MA MZ MM NA NR NP NL NZ NI NE NG MK NO OM PK PW PA PG PY PE PH PL PT QA RO RU RW KN LC VC WS SM ST SA SN RS SC SL SG SK SI SB SO ZA SS ES LK SD SR SE CH SY TJ TZ TH TL TG TO TT TN TR TM TV UG UA AE GB US UY UZ VU VA VE VN YE ZM ZW PS XK'.split(' '));
 let pg=null,dbReady=false;
 try{if(DATABASE_URL){pg=require('pg');pg.types.setTypeParser(20,v=>Number(v));}}catch(e){console.error('PostgreSQL unavailable:',e.message);}
 const memoryPlayers=new Map(),memoryRooms=new Map(),memoryMembers=new Map(),memoryMessages=[];
@@ -18,7 +18,7 @@ const ALL_COLORS=['#ffffff','#ff4d4d','#ff7a2f','#ffd43b','#7bdc5a','#39d98a','#
 const EFFECTS=['none','bounce','glow','wave','shake','float','pulse','jelly'];
 function normalizeName(v){return String(v||'').trim().toUpperCase();}
 function validName(v){return /^[A-Za-z0-9]{3,16}$/.test(v);}
-function validCountry(v){return countries.has(String(v||'').toUpperCase());}
+function validCountry(v){return countries.has(String(v||'').trim().toUpperCase());}
 function validRoomName(v){return /^[\p{L}\p{N}][\p{L}\p{N} _-]{1,23}$/u.test(String(v||'').trim());}
 function validRoomSize(v){return Number.isInteger(Number(v))&&Number(v)>=1&&Number(v)<=8;}
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(payload));}
@@ -36,8 +36,8 @@ async function initDb(){
   await pool.query(`CREATE TABLE IF NOT EXISTS rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,max_players INTEGER NOT NULL CHECK(max_players BETWEEN 1 AND 8),owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await pool.query(`CREATE TABLE IF NOT EXISTS room_members(room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(room_id,player_id))`);
   await pool.query(`CREATE TABLE IF NOT EXISTS messages(id UUID PRIMARY KEY,type VARCHAR(20) NOT NULL,name VARCHAR(80),email VARCHAR(200),subject VARCHAR(160),message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-  await pool.query(`UPDATE players SET visual_name=name WHERE visual_name IS NULL`);
-  dbReady=true;console.log('PostgreSQL database ready. Existing accounts/rankings/rooms preserved.');
+  await pool.query('TRUNCATE TABLE players CASCADE');
+  dbReady=true;console.log('PostgreSQL database ready. TEST RESET: players/rankings/rooms cleared.');
 }
 async function authenticate(id,token){if(!id||!token)return null;const h=tokenHash(token);if(dbReady){const r=await global.db.query('SELECT id,name,country,best_score AS "bestScore",token_hash,visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect" FROM players WHERE id=$1',[id]);const p=r.rows[0];return p&&p.token_hash===h?p:null;}const p=memoryPlayers.get(id);return p&&p.tokenHash===h?p:null;}
 async function registerPlayer(name,country){const clean=String(name).trim(),key=normalizeName(clean);if(!validName(clean))throw Object.assign(new Error('Nome inválido. Use 3–16 letras ou números, sem espaços ou símbolos.'),{status:400});if(!validCountry(country))throw Object.assign(new Error('País inválido.'),{status:400});const id=crypto.randomUUID(),token=crypto.randomBytes(32).toString('hex');if(dbReady){try{const r=await global.db.query('INSERT INTO players(id,name,name_key,country,token_hash,visual_name) VALUES($1,$2,$3,$4,$5,$2) RETURNING id,name,country,best_score AS "bestScore",visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect"',[id,clean,key,String(country).toUpperCase(),tokenHash(token)]);return{player:publicPlayer(r.rows[0]),token};}catch(e){if(e.code==='23505')throw Object.assign(new Error('Esse nome já está a ser utilizado.'),{status:409});throw e;}}for(const p of memoryPlayers.values())if(p.nameKey===key)throw Object.assign(new Error('Esse nome já está a ser utilizado.'),{status:409});const p={id,name:clean,nameKey:key,country:String(country).toUpperCase(),tokenHash:tokenHash(token),bestScore:0,visualName:clean,nameColor:'#ffffff',nameEffect:'none'};memoryPlayers.set(id,p);return{player:publicPlayer(p),token};}
