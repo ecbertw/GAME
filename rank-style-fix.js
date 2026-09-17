@@ -5,6 +5,6 @@
  function flags(){document.querySelectorAll('.rank-flag').forEach(el=>{if(el.dataset.flagDone==='1')return;const code=String(el.getAttribute('title')||'').trim().toLowerCase();if(!/^[a-z]{2}$/.test(code))return;const img=document.createElement('img');img.src=`https://flagcdn.com/w20/${code}.png`;img.alt='';img.title=code.toUpperCase();img.loading='lazy';img.onerror=()=>{img.remove();el.textContent=code.toUpperCase();el.dataset.flagDone='1'};el.textContent='';el.appendChild(img);el.dataset.flagDone='1';});}
  function refresh(){const select=document.getElementById('customizeColor');if(select){[...select.options].forEach(o=>{if(o.dataset.colorNameDone==='1')return;const key=String(o.value).toLowerCase();o.textContent=colorNames[key]||o.textContent;o.style.color=key==='rainbow'?'#b66cff':key;o.dataset.colorNameDone='1'});const key=String(select.value).toLowerCase();select.style.color=key==='rainbow'?'#b66cff':key;}flags();}
  document.addEventListener('change',e=>{if(e.target?.id==='customizeColor')refresh()});new MutationObserver(refresh).observe(document.body,{childList:true,subtree:true});refresh();
- const load=(src)=>{const x=document.createElement('script');x.src=src+'?v=20260917-rgb3';document.head.appendChild(x)};
- load('i18n-fix.js');load('customize-i18n.js');load('effects-fix.js');load('rgb-fix.js');load('initial-en-fix.js');load('onboarding-country-fix.js');
+ const load=(src)=>{const x=document.createElement('script');x.src=src+'?v=20260917-rgb4';document.head.appendChild(x)};
+ load('i18n-fix.js');load('customize-i18n.js');load('effects-fix.js');load('rgb-fix.js');load('initial-en-fix.js');
 })();
