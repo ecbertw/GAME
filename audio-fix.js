@@ -1,4 +1,4 @@
-/* EIXO audio: melodic soundtrack with a little more movement + isolated game feedback. */
+/* EIXO audio: longer melodic soundtrack with natural variation + isolated game feedback. */
 (function(){
  const KEY='eixo_audio_settings';
  const state={site:.24,game:.48};
@@ -9,13 +9,16 @@
  function ensure(){if(ctx){if(ctx.state==='suspended')ctx.resume();return true}try{ctx=new(window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();siteGain=ctx.createGain();gameGain=ctx.createGain();master.gain.value=.72;siteGain.gain.value=state.site;gameGain.gain.value=state.game;siteGain.connect(master);gameGain.connect(master);master.connect(ctx.destination);return true}catch(_){return false}}
  function note(freq,dur,wave,gain,dest,at){if(!ensure()||!freq)return;const t=ctx.currentTime+at,o=ctx.createOscillator(),g=ctx.createGain();o.type=wave;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+.018);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(dest);o.start(t);o.stop(t+dur+.03)}
  
- /* Still one melodic voice: the extra life comes from rhythm, phrase length and register changes,
-    not from stacking instruments or a permanent beat. */
+ /* Long theme: still one melodic voice. Variation comes from phrasing, rests and register,
+    never from drums or a stack of simultaneous instruments. */
  const phrases=[
   {bpm:76,notes:[[392,.30],[440,.30],[523.25,.55],[0,.25],[493.88,.30],[440,.30],[392,.65],[0,.35],[329.63,.30],[392,.30],[440,.55],[0,.25],[392,.30],[349.23,.30],[329.63,.75],[0,.45]]},
   {bpm:80,notes:[[523.25,.24],[587.33,.24],[659.25,.42],[587.33,.24],[523.25,.42],[493.88,.24],[440,.55],[0,.28],[493.88,.24],[523.25,.24],[587.33,.42],[659.25,.24],[783.99,.48],[659.25,.24],[587.33,.55],[0,.40]]},
   {bpm:82,notes:[[659.25,.24],[587.33,.24],[523.25,.42],[493.88,.24],[523.25,.24],[587.33,.42],[659.25,.58],[0,.28],[783.99,.24],[659.25,.24],[587.33,.42],[523.25,.24],[493.88,.24],[440,.42],[392,.65],[0,.45]]},
   {bpm:78,notes:[[329.63,.30],[392,.30],[493.88,.55],[0,.25],[523.25,.30],[493.88,.30],[440,.65],[0,.30],[392,.24],[440,.24],[523.25,.42],[587.33,.24],[659.25,.48],[587.33,.24],[523.25,.60],[0,.40]]},
+  {bpm:84,notes:[[392,.20],[440,.20],[493.88,.32],[523.25,.20],[587.33,.32],[659.25,.44],[587.33,.20],[523.25,.32],[493.88,.20],[440,.44],[0,.25],[493.88,.20],[523.25,.20],[587.33,.32],[659.25,.20],[783.99,.48],[659.25,.32],[587.33,.55],[0,.35]]},
+  {bpm:82,notes:[[659.25,.20],[783.99,.20],[880,.36],[783.99,.20],[659.25,.36],[587.33,.20],[523.25,.50],[0,.25],[587.33,.20],[659.25,.20],[783.99,.36],[659.25,.20],[587.33,.36],[523.25,.20],[493.88,.52],[0,.35]]},
+  {bpm:79,notes:[[440,.30],[493.88,.30],[587.33,.55],[0,.22],[659.25,.30],[587.33,.30],[523.25,.62],[0,.28],[493.88,.24],[523.25,.24],[587.33,.42],[659.25,.24],[698.46,.48],[659.25,.24],[587.33,.58],[0,.38]]},
   {bpm:76,notes:[[392,.30],[523.25,.30],[659.25,.58],[0,.25],[587.33,.30],[523.25,.30],[440,.70],[0,.30],[392,.30],[440,.30],[523.25,.55],[0,.25],[493.88,.30],[440,.30],[392,.95],[0,.65]]}
  ];
  function playPhrase(pi){
