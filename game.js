@@ -143,3 +143,15 @@ fillCountryControls();
 if(currentCountryCode&&!countryNames[currentCountryCode])currentCountryCode='PT';
 if(!currentCountryCode){applyLanguage();showOnboarding();}else{applyLanguage();loadTopRankings();}
 resizeCanvas();stopGame();buildPixelWall();
+
+// Registration is mandatory on first visit: backdrop clicks and Escape cannot dismiss onboarding.
+[onboardingModal,nameModal].forEach(modal=>{
+  if(!modal)return;
+  modal.addEventListener('click',e=>{if(e.target===modal)e.stopPropagation();});
+  modal.addEventListener('pointerdown',e=>{if(e.target===modal)e.stopPropagation();});
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && (!onboardingModal.classList.contains('hidden') || !nameModal.classList.contains('hidden'))){
+    e.preventDefault();e.stopPropagation();
+  }
+},true);
