@@ -4,4 +4,5 @@
  function apply(){const a=labels[document.documentElement.lang]||labels.en;document.querySelectorAll('#playerMenu .player-option').forEach((b,i)=>{if(a[i]&&b.textContent!==a[i])b.textContent=a[i]});}
  apply();new MutationObserver(apply).observe(document.body,{childList:true,subtree:true});
  const r=document.createElement('script');r.src='rooms-i18n-fix.js?v=20260917';document.head.appendChild(r);
+ const m=document.createElement('script');m.src='menu-fix.js?v=20260917';document.head.appendChild(m);
 })();
