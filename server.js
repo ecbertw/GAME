@@ -59,8 +59,10 @@ async function initDb() {
     country CHAR(2) NOT NULL, token_hash CHAR(64) NOT NULL, best_score INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
+  // Development phase: each deployment/restart starts with a completely clean ranking and account list.
+  await pool.query('TRUNCATE TABLE players');
   dbReady = true;
-  console.log('PostgreSQL ranking database ready.');
+  console.log('PostgreSQL ranking database ready. Development reset applied.');
 }
 
 async function registerPlayer(name, country) {
