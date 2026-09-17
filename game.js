@@ -97,7 +97,10 @@ function stopGame(){running=false;messageEl.textContent=getLang().instruction;dr
 function showFeedback(text,type){feedbackEl.textContent=text;feedbackEl.className=`game-feedback ${type}`;void feedbackEl.offsetWidth;feedbackEl.classList.add('show');}
 function speedForScore(value){
   const progress=Math.min(Math.max(Number(value)||0,0),100)/100;
-  return 4.2+(20-4.2)*progress;
+  const baseSpeed=4.2+(20-4.2)*progress;
+  // Mobile screens have a much shorter travel distance, so use a gentler curve there.
+  const mobile=window.matchMedia && window.matchMedia('(max-width: 820px)').matches;
+  return mobile ? baseSpeed*0.55 : baseSpeed;
 }
 async function hit(){
   if(!player){showOnboarding();return;}
