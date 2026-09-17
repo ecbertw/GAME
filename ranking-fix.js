@@ -23,8 +23,8 @@
 
   function registeredCountry() {
     try {
-      const player = JSON.parse(localStorage.getItem('eixo_player') || 'null');
-      if (player?.country) return String(player.country).toUpperCase();
+      const saved = JSON.parse(localStorage.getItem('eixo_player') || 'null');
+      if (saved?.country) return String(saved.country).toUpperCase();
     } catch (_) {}
     return (localStorage.getItem('eixo_country') || 'PT').toUpperCase();
   }
@@ -45,6 +45,9 @@
     }
   }
 
+  // game.js already has a ranking loader. Replace it with the same source of truth
+  // so a language/country UI change can never move the player's national ranking.
+  window.loadTopRankings = load;
   window.eixoRefreshRankings = load;
   load();
   setInterval(load, 2000);
