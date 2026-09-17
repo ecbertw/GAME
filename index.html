@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090d12">
+  <meta name="description" content="EIXO — um jogo minimalista de reflexos em pixel art.">
+  <title>EIXO — Pixels Connect</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="pixel-wall" aria-hidden="true" id="pixelWall"></div>
+
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="#game" aria-label="EIXO">EIXO</a>
+      <nav class="nav" aria-label="Navegação principal">
+        <a class="nav-link active" href="#game" data-i18n="play">JOGAR</a>
+        <a class="nav-link" href="#ranking" data-i18n="ranking">RANKING</a>
+        <a class="nav-link" href="#rooms" data-i18n="rooms">SALAS</a>
+        <a class="nav-link" href="#about" data-i18n="about">SOBRE</a>
+      </nav>
+      <div class="profile-area">
+        <button class="country-button" id="countryButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span id="countryFlag">🇵🇹</span><span id="countryName">PORTUGAL</span><span class="chevron">▼</span>
+        </button>
+        <div class="country-menu" id="countryMenu" role="listbox" aria-label="Idioma e país"></div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" id="game">
+        <div class="game-frame">
+          <div class="score" id="score">0</div>
+          <canvas id="gameCanvas" width="900" height="390" aria-label="Jogo EIXO"></canvas>
+          <div class="game-message" id="gameMessage" data-i18n="instruction">CLICA QUANDO O PONTO ESTIVER NO CENTRO</div>
+          <div class="game-feedback" id="feedback" aria-live="polite"></div>
+        </div>
+
+        <div class="game-actions">
+          <button class="action primary" id="playButton" type="button"><span data-i18n="play">JOGAR</span><b>▶</b></button>
+          <a class="action blue" href="#ranking"><span>▮▮</span><span data-i18n="ranking">RANKING</span></a>
+          <a class="action purple" href="#rooms"><span>♟♟</span><span data-i18n="myRooms">AS MINHAS SALAS</span></a>
+        </div>
+      </section>
+
+      <section class="boards" id="ranking">
+        <article class="board">
+          <div class="board-title"><span>🌐</span><span data-i18n="worldTop">TOP MUNDIAL</span></div>
+          <ol id="worldRanking"></ol>
+          <a class="board-more" href="#ranking" data-i18n="fullRanking">VER RANKING COMPLETO</a>
+        </article>
+        <article class="board">
+          <div class="board-title"><span id="nationalFlag">🇵🇹</span><span id="nationalTitle">TOP PORTUGAL</span></div>
+          <ol id="nationalRanking"></ol>
+          <a class="board-more" href="#ranking" data-i18n="fullRanking">VER RANKING COMPLETO</a>
+        </article>
+      </section>
+
+      <section class="pixel-showcase" id="rooms">
+        <div class="showcase-title">PIXELS<br>CONNECT</div>
+        <div class="mini-art art-city">🏰<br><span>PORTUGAL</span></div>
+        <div class="mini-art art-lighthouse">🔦<br><span>GOOD VIBES</span></div>
+        <div class="mini-art art-cat">🐈<br><span>EVERY PIXEL COUNTS</span></div>
+        <div class="mini-art art-game">🎮<br><span>GAME<br>EXPLORE<br>DISCOVER</span></div>
+        <div class="mini-art art-sun">🌴</div>
+      </section>
+
+      <section class="about" id="about">
+        <span class="about-icon">◆</span>
+        <div><strong>EIXO</strong><span data-i18n="aboutText"> — um jogo simples de reflexos. Acerta no centro, soma pontos e sobe no ranking.</span></div>
+      </section>
+    </main>
+
+    <footer class="footer"><span>© EIXO</span><span>SMALL PIXELS · BIG IDEAS</span><span>PT • 2026</span></footer>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
