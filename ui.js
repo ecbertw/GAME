@@ -1,6 +1,6 @@
 (() => {
-  // Temporary development reset: every new UI version starts with a clean account/ranking state.
-  const EIXO_VERSION = '2026-09-17-3';
+  // Temporary development reset: every new UI version starts with a clean account/ranking/room state.
+  const EIXO_VERSION = '2026-09-17-4';
   const savedVersion = localStorage.getItem('eixo_ui_version');
   if (savedVersion !== EIXO_VERSION) {
     localStorage.removeItem('eixo_country');
@@ -64,7 +64,6 @@
     playerButton.setAttribute('aria-expanded', 'false');
   });
 
-  // The country selector remains available after registration so it can also act as the UI language selector.
   if (countryButton && countryMenu) {
     countryButton.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -83,7 +82,6 @@
     });
   }
 
-  // Full ranking modal: show WORLD first, then COUNTRY, matching the two cards on the main page.
   const rankingTabs = document.querySelector('.ranking-tabs');
   const worldTab = document.getElementById('modalWorldTab');
   const countryTab = document.getElementById('modalCountryTab');
