@@ -163,12 +163,13 @@ function buildPixelWall(){
   }
 
   const sponsor=document.createElement('img');
+  sponsor.id='pixelSponsor';
   sponsor.className='pixel-sponsor';
-  sponsor.src='/assets/visit-portugal-pixel.png';
+  sponsor.src='/assets/visit-portugal-pixel.png?v=2';
   sponsor.alt='Visite Portugal';
   sponsor.title='VISITE PORTUGAL';
   sponsor.setAttribute('aria-label','Visite Portugal');
-  wall.appendChild(sponsor);
+  document.body.appendChild(sponsor);
 
   window.addEventListener('pointermove',e=>{
     if(e.pointerType&&e.pointerType!=='mouse')return;
