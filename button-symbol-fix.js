@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const forbidden=/[▶◀→←➜➤►▸✕✓◆+∞]/g;
+  const forbidden=/[▶◀→←➜➤►▸▼✕✓◆+∞]/g;
   function clean(root){
     if(!root)return;
     root.querySelectorAll('button').forEach(btn=>{
