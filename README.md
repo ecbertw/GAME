@@ -346,3 +346,28 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.13 — Persistência de conta no browser
+
+**Data:** 18/09/2026  
+**Tipo:** Correção de conta / persistência
+
+## 1. ALTERADO
+- A conta criada no browser deixa de ser apagada quando o código frontend muda de versão.
+- `eixo_player` e `eixo_country` passam a permanecer no armazenamento local do browser.
+
+## 2. REMOVIDO
+- Reset automático de conta provocado pela alteração da versão do frontend.
+
+## 3. ADICIONADO
+- Persistência da sessão local para que fechar e voltar a abrir a página mantenha o mesmo jogador.
+
+## 4. BUGS FIXED
+- **FIXED:** Ao fechar e reabrir a página, o browser podia voltar ao onboarding e permitir criar uma segunda conta.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+## 6. NOTA
+- A conta local continua a ser validada pelo servidor através do token. Se o servidor tiver eliminado a conta, será necessário novo registo; esta versão elimina o reset local causado apenas por alterações de frontend.
