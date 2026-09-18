@@ -321,3 +321,28 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.12 — Submenu do botão VIP
+
+**Data:** 18/09/2026  
+**Tipo:** Correção de interface
+
+## 1. ALTERADO
+- O submenu VIP foi retirado do **menu do jogador** e passou para o botão **VIP** independente no topo.
+
+## 2. REMOVIDO
+- Submenu VIP associado ao menu do jogador.
+
+## 3. ADICIONADO
+- Ao carregar no botão **VIP** do topo abre um submenu próprio com:
+  - **COMPRAR VIP**
+  - **PERSONALIZAR NOME VIP**
+- **COMPRAR VIP** abre o pop-up de compra.
+- **PERSONALIZAR NOME VIP** abre a personalização para contas com VIP.
+
+## 4. BUGS FIXED
+- **FIXED:** O submenu estava a ser implementado no menu do jogador em vez de estar associado ao botão VIP independente.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
