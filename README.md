@@ -655,3 +655,32 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 6. REGRA DE PRODUÇÃO
 - A partir desta versão, **não deve ser executado qualquer reset/truncate automático de jogadores ou rankings em updates ou deploys**. A base de dados deve ser tratada como persistente.
+
+
+# EIXO V1.1.23 — Efeitos e RGB finais
+
+**Data:** 18/09/2026  
+**Tipo:** Correção de personalização / animações
+
+## 1. ALTERADO
+- Os efeitos normais passam a ser aplicados diretamente a cada letra do nome.
+- A pré-visualização normal passa a usar a mesma estrutura letra a letra do ranking.
+- O RGB passa a usar um espectro contínuo completo, com fluxo visual contínuo através das letras.
+
+## 2. REMOVIDO
+- Conflito entre a animação RGB e as animações dos efeitos.
+- Ciclo RGB baseado em tonalidades discretas por letra.
+- Dependência de animações CSS do elemento inteiro do nome.
+
+## 3. ADICIONADO
+- Aplicação explícita de **SALTA, BRILHA, TREME, PULSA, GELATINA, TORÇÃO, CINTILA e ESTICA** em cada letra.
+- RGB contínuo em espectro completo, sem inversão ao chegar ao vermelho.
+- Pré-visualização normal e ranking usam a mesma lógica de letras individuais.
+
+## 4. BUGS FIXED
+- **FIXED:** efeito escolhido podia não aparecer na pré-visualização.
+- **FIXED:** efeitos podiam não aparecer no ranking.
+- **FIXED:** RGB podia conflitar com a animação do efeito e parecer parar/reiniciar.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
