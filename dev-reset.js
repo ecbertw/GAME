@@ -1,6 +1,9 @@
 // EIXO no longer resets accounts when frontend code changes.
 (function () {
-  try { localStorage.setItem('eixo_state_version', '2026-09-17-persistent'); } catch (_) {}
+  try { const VERSION='2026-09-18-vip-reset';
+    const previous=localStorage.getItem('eixo_state_version');
+    if(previous!==VERSION){ localStorage.removeItem('eixo_player'); localStorage.removeItem('eixo_country'); }
+    localStorage.setItem('eixo_state_version', VERSION); } catch (_) {}
   // The very first onboarding screen is English until a country is selected.
   const setInitialEnglish = () => {
     const set=(id,text)=>{const el=document.getElementById(id);if(el)el.textContent=text;};
