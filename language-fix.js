@@ -54,14 +54,6 @@
 
   function selectCountry(code) {
     if (!countryNames[code]) return;
-    // Depois de criar o jogador, a nacionalidade fica ligada ao jogador.
-    // O seletor de país não pode alterar a identidade nacional nem o chat/ranking.
-    if (player?.country && String(player.country).toUpperCase() !== String(code).toUpperCase()) {
-      currentCountryCode = String(player.country).toUpperCase();
-      localStorage.setItem('eixo_country', currentCountryCode);
-      window.applyLanguage();
-      return;
-    }
     currentCountryCode = code;
     localStorage.setItem('eixo_country', code);
     countrySelect.value = code;
@@ -200,12 +192,8 @@
     if (intro && getLang().aboutText) intro.textContent = getLang().aboutText;
   };
 
-  // Mantém o país selecionado sincronizado com a nacionalidade real do jogador.
-  // Isto evita, por exemplo, cabeçalho "SOUTH AFRICA" + ranking nacional "PORTUGAL".
-  if (player?.country && countryNames[String(player.country).toUpperCase()]) {
-    currentCountryCode = String(player.country).toUpperCase();
-    localStorage.setItem('eixo_country', currentCountryCode);
-  }
+  // O país selecionado controla a língua/interface; a nacionalidade do jogador
+  // continua separada e é usada pelo ranking/chat nacional.
   fillLocalizedCountryControls();
   window.applyLanguage();
 })();
