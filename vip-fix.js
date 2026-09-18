@@ -32,7 +32,7 @@
 animateVip6Tag();
  window.eixoOpenVip=openVip;window.eixoOpenVipCustomize=openVipCustomize;
  function bind(){addModal();addVipCustomize();css();refreshRoomSizes();}
- window.addEventListener('eixo-player-menu',e=>{if(e.detail.action==='vip')openVip();else if(e.detail.action==='customize'){const p=get();if(p?.vipLevel){setTimeout(()=>{close($('customizeModal'));openVipCustomize()},0)}}});
+ window.addEventListener('eixo-player-menu',e=>{if(e.detail.action==='vip')openVip();});
  window.addEventListener('eixo-player-updated',refreshRoomSizes);
  bind();setInterval(bind,1000);
 })();
