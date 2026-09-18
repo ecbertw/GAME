@@ -125,3 +125,28 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.4 — Correção de entrada nas salas e escala VIP
+
+**Data:** 18/09/2026  
+**Tipo:** Correção crítica / interface
+
+## 1. ALTERADO
+- Corrigida a chamada do renderizador do ranking ao entrar numa sala.
+- Interface de personalização VIP aumentada de forma proporcional.
+
+## 2. REMOVIDO
+- Referência incorreta a uma função inexistente durante a entrada numa sala.
+- Escala demasiado pequena dos controlos de letras VIP.
+
+## 3. ADICIONADO
+- Renderização correta do ranking imediatamente após entrar na sala.
+- Maior legibilidade nos cabeçalhos, caracteres, seletores e pré-visualização VIP.
+
+## 4. BUGS FIXED
+- **FIXED:** Ao carregar em **ENTRAR NA SALA**, aparecia o erro `renderRoomPlayers is not defined`.
+- **FIXED:** A personalização VIP continuava visualmente demasiado pequena.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
