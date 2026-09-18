@@ -550,3 +550,29 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.19 — Efeitos letra a letra
+
+**Data:** 18/09/2026  
+**Tipo:** Correção de animações
+
+## 1. ALTERADO
+- Os nomes normais no ranking passam a ser construídos com **uma letra por elemento**, tal como no sistema VIP.
+- Os efeitos normais passam a poder animar cada letra de forma independente.
+- A pré-visualização mantém a mesma estrutura letra a letra.
+
+## 2. REMOVIDO
+- O tratamento que colocava o nome inteiro dentro de um único elemento `name-letter`.
+
+## 3. ADICIONADO
+- Separação automática de nomes antigos que ainda estejam guardados/renderizados como uma única letra-elemento.
+- Atrasos individuais dos efeitos passam a funcionar sobre cada letra do nome.
+
+## 4. BUGS FIXED
+- **FIXED:** **SALTA**, **TREME**, **PULSA**, etc. podiam animar o nome inteiro ao mesmo tempo.
+- **FIXED:** nomes renderizados anteriormente como um único `name-letter` não recebiam animação independente por letra.
+- **FIXED:** a estrutura dos nomes normais passa a seguir o mesmo princípio de letras independentes usado na personalização VIP.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
