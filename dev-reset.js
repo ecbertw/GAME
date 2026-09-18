@@ -1,6 +1,6 @@
 // EIXO no longer resets accounts when frontend code changes.
 (function () {
-  try { const VERSION='2026-09-18-vip-reset';
+  try { const VERSION='2026-09-18-vip-ui-reset-2';
     const previous=localStorage.getItem('eixo_state_version');
     if(previous!==VERSION){ localStorage.removeItem('eixo_player'); localStorage.removeItem('eixo_country'); }
     localStorage.setItem('eixo_state_version', VERSION); } catch (_) {}
