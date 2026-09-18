@@ -2,7 +2,7 @@
 (function(){
  const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;'}[c]));
  const colors=[['#f5f7ff','BRANCO'],['#ff4d4d','VERMELHO'],['#ff7a2f','LARANJA'],['#ffd43b','AMARELO'],['#7bdc5a','VERDE CLARO'],['#39d98a','VERDE'],['#00d4ff','CIANO'],['#3b82f6','AZUL'],['#6f5cff','ÍNDIGO'],['#b66cff','LILÁS'],['#ff4fd8','MAGENTA'],['#ff6b9d','ROSA'],['#a8e063','LIMA'],['#00f0ff','AZUL ELÉTRICO'],['#f97316','LARANJA FORTE'],['#facc15','AMARELO VIVO'],['#94a3b8','CINZENTO'],['#e2e8f0','PRATA'],['#22c55e','VERDE VIVO'],['#ef4444','VERMELHO VIVO'],['#f5f7ff','VIP BRANCO'],['#00e5ff','VIP CIANO'],['#7c4dff','VIP VIOLETA'],['#ff4fd8','VIP MAGENTA'],['#ff6b6b','VIP CORAL'],['#7cff6b','VIP VERDE'],['#00bfa6','VIP TURQUESA'],['#ff9f1c','VIP LARANJA'],['#d9ff00','VIP LIMA'],['#c084fc','VIP ROXO']];
- const effects=[['none','Nenhum'],['sparkle','Faísca'],['shimmer','Brilho'],['glitch','Glitch'],['tilt','Inclina'],['pop','Pop'],['scanline','Scan']];
+ const effects=[['none','Nenhum'],['bounce','Salta'],['glow','Brilha'],['wave','Onda'],['shake','Treme'],['float','Flutua'],['pulse','Pulsa'],['jelly','Gelatina'],['sparkle','Faísca'],['shimmer','Cintila'],['glitch','Glitch'],['tilt','Torção'],['pop','Pop'],['scanline','Scanline']];
  const vipTagColors=['#f5f7ff','#00e5ff','#c77dff','#7cff6b','#ff3b5c','rgb'];
  const get=()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
  const auth=()=>{const p=get();return p?.id&&p?.token?{id:p.id,token:p.token}:null};
