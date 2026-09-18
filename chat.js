@@ -53,10 +53,16 @@
   let channel='global',timer=0,loading=false;
   const messages=$('chatMessages'),input=$('chatInput'),form=$('chatForm'),status=$('chatStatus'),gTab=$('chatGlobalTab'),nTab=$('chatNationalTab');
   if(!messages||!input||!form||!gTab||!nTab)return;
+  function playerCountryLabel(){
+    const p=getPlayer(),cc=String(p?.country||'PT').toUpperCase(),lang=document.documentElement.lang||'en';
+    const name=window.eixoLocalizedCountryName?.(cc,lang)||cc;
+    const safe=esc(cc.toLowerCase());
+    return '<img class="chat-country-flag" src="https://flagcdn.com/24x18/'+safe+'.png" alt="" aria-hidden="true"><span>'+esc(name)+'</span>';
+  }
   function applyChatLanguage(){
-    const t=ct(),p=getPlayer(),cc=String(p?.country||'PT').toUpperCase(),cn=document.getElementById('countryName')?.textContent||cc;
+    const t=ct();
     const title=document.querySelector('.chat-header-title'); if(title)title.textContent=t.title;
-    gTab.textContent='🌐 '+t.global; nTab.textContent=flag(cc)+' '+cn;
+    gTab.textContent='🌐 '+t.global; nTab.innerHTML=playerCountryLabel();
     const hint=document.getElementById('chatHint'); if(hint)hint.textContent=t.hint;
     input.placeholder=channel==='global'?t.write:t.writeN;
   }
@@ -67,8 +73,7 @@
     gTab.classList.toggle('active',channel==='global');nTab.classList.toggle('active',channel==='national');
     gTab.setAttribute('aria-selected',String(channel==='global'));nTab.setAttribute('aria-selected',String(channel==='national'));
     const p=getPlayer(),c=String(p?.country||'PT').toUpperCase();
-    const countryName=document.getElementById('countryName')?.textContent||c;
-    nTab.textContent=flag(c)+' '+countryName;
+    nTab.innerHTML=playerCountryLabel();
     input.placeholder=channel==='global'?ct().write:ct().writeN;
     load(true);
   }
@@ -98,7 +103,7 @@
     try{
       const r=await fetch('/api/chat?id='+encodeURIComponent(p.id)+'&token='+encodeURIComponent(p.token)+'&channel='+encodeURIComponent(channel),{cache:'no-store'});
       const d=await r.json();if(!r.ok)throw Error(d.error||'Chat indisponível.');
-      input.disabled=false;status.textContent=channel==='global'?ct().all:ct().only+' '+(document.getElementById('countryName')?.textContent||p.country);
+      input.disabled=false;status.textContent=channel==='global'?ct().all:ct().only+' '+(window.eixoLocalizedCountryName?.(String(p.country||'PT').toUpperCase(),document.documentElement.lang||'en')||p.country);
       render(d,forceBottom);
     }catch(e){status.textContent=e.message||'CHAT INDISPONÍVEL';}
     finally{loading=false;}
