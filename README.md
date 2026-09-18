@@ -371,3 +371,27 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 6. NOTA
 - A conta local continua a ser validada pelo servidor através do token. Se o servidor tiver eliminado a conta, será necessário novo registo; esta versão elimina o reset local causado apenas por alterações de frontend.
+
+
+# EIXO V1.1.12b — Menu VIP no topo
+
+**Data:** 18/09/2026  
+**Tipo:** Correção visual / menu
+
+## 1. ALTERADO
+- O submenu do botão VIP no topo passa a ficar oculto por defeito e só é mostrado quando o botão VIP é carregado.
+- O submenu foi redimensionado para mobile e desktop.
+
+## 2. REMOVIDO
+- Aspeto branco, arredondado e desproporcional causado por estilos de botão não compatíveis com o visual do EIXO.
+
+## 3. ADICIONADO
+- Fundo escuro, borda ciano, tipografia pixel e hover coerente com o botão VIP.
+- Cache-busting do CSS para garantir que o browser recebe os estilos atuais.
+
+## 4. BUGS FIXED
+- **FIXED:** Submenu VIP aparecia visualmente aberto no mobile.
+- **FIXED:** Opções do submenu apareciam enormes e com fundo branco.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
