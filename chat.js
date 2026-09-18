@@ -30,7 +30,8 @@
     gTab.classList.toggle('active',channel==='global');nTab.classList.toggle('active',channel==='national');
     gTab.setAttribute('aria-selected',String(channel==='global'));nTab.setAttribute('aria-selected',String(channel==='national'));
     const p=getPlayer(),c=String(p?.country||'PT').toUpperCase();
-    nTab.textContent=flag(c)+' '+(window.countryNames?.[c]||c);
+    const countryName=document.getElementById('countryName')?.textContent||c;
+    nTab.textContent=flag(c)+' '+countryName;
     input.placeholder=channel==='global'?'ESCREVE UMA MENSAGEM...':'ESCREVE PARA O TEU PAÍS...';
     load(true);
   }
@@ -60,7 +61,7 @@
     try{
       const r=await fetch('/api/chat?id='+encodeURIComponent(p.id)+'&token='+encodeURIComponent(p.token)+'&channel='+encodeURIComponent(channel),{cache:'no-store'});
       const d=await r.json();if(!r.ok)throw Error(d.error||'Chat indisponível.');
-      input.disabled=false;status.textContent=channel==='global'?'TODOS OS JOGADORES':'APENAS '+(window.countryNames?.[p.country]||p.country);
+      input.disabled=false;status.textContent=channel==='global'?'TODOS OS JOGADORES':'APENAS '+(document.getElementById('countryName')?.textContent||p.country);
       render(d,forceBottom);
     }catch(e){status.textContent=e.message||'CHAT INDISPONÍVEL';}
     finally{loading=false;}
