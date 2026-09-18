@@ -47,9 +47,9 @@
       const top=channel==='global'?(world<=3?tag('global',world,m.country,m):''):(countryRank<=3?tag('national',countryRank,m.country,m):'');
       const v=Number(m.vipLevel||0),visual=m.visualName||m.name;
       const color=String(m.nameColor||'#fff').toLowerCase(),rainbow=color==='rainbow';
-      const style=!rainbow&&safeColor(color)?' style="color:'+esc(color)+'"':'';
-      const effect=hasLetters?'none':safeEffect(m.nameEffect);
       const hasLetters=v>0&&Array.isArray(m.letterStyles)&&m.letterStyles.length;
+      const style=!hasLetters&&!rainbow&&safeColor(color)?' style="color:'+esc(color)+'!important"':'';
+      const effect=hasLetters?'none':safeEffect(m.nameEffect);
       const name=hasLetters?letters(visual,m.letterStyles):[...String(visual)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
       const when=m.createdAt?new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
       return '<article class="chat-message"><div class="chat-avatar" aria-hidden="true">◆</div><div class="chat-content"><div class="chat-author"><span class="chat-name'+(rainbow?' name-rainbow':'')+(effect!=='none'?' effect-'+esc(effect):'')+'"'+style+'>'+name+'</span>'+top+vip(v)+'<span class="chat-time">'+esc(when)+'</span></div><div class="chat-text">'+esc(m.message)+'</div></div></article>';
