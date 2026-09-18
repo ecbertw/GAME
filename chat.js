@@ -9,8 +9,10 @@
   const letters=(text,styles)=>{
     const arr=Array.isArray(styles)?styles:[];
     return [...String(text||'')].map((ch,i)=>{
-      const s=arr[i]||{},c=safeColor(s.color),e=safeEffect(s.effect);
-      return '<span class="name-letter effect-'+esc(e)+'"'+(c?' style="color:'+esc(c)+'"':'')+'>'+esc(ch)+'</span>';
+      const s=arr[i]||{},rawColor=String(s.color||'').toLowerCase(),c=safeColor(rawColor),e=safeEffect(s.effect);
+      const rainbow=rawColor==='rainbow';
+      const delay=(-i*0.08).toFixed(2)+'s';
+      return '<span class="name-letter'+(rainbow?' name-rainbow':'')+' effect-'+esc(e)+'"'+(c?' style="color:'+esc(c)+'"':'')+' style="animation-delay:'+delay+'">'+esc(ch)+'</span>';
     }).join('');
   };
   const tag=(type,n,country,p)=>{
@@ -46,7 +48,7 @@
       const v=Number(m.vipLevel||0),visual=m.visualName||m.name;
       const color=String(m.nameColor||'#fff').toLowerCase(),rainbow=color==='rainbow';
       const style=!rainbow&&safeColor(color)?' style="color:'+esc(color)+'"':'';
-      const effect=safeEffect(m.nameEffect);
+      const effect=hasLetters?'none':safeEffect(m.nameEffect);
       const hasLetters=v>0&&Array.isArray(m.letterStyles)&&m.letterStyles.length;
       const name=hasLetters?letters(visual,m.letterStyles):[...String(visual)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
       const when=m.createdAt?new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
