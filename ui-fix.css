@@ -35,3 +35,6 @@ html,body,body *{cursor:crosshair!important}
 
 /* EIXO V1.1.10 — abandon confirmation buttons */
 .abandon-room-actions .modal-button:not(.primary){background:#18232d!important;color:#fff!important;border:2px solid #596570!important;box-shadow:inset 0 -5px 0 rgba(0,0,0,.25),4px 4px 0 #05070a!important}.abandon-room-actions .modal-button:not(.primary):hover{background:#263540!important;color:#fff!important;border-color:#7c8791!important}
+
+/* EIXO V1.1.11 — VIP submenu */
+.vip-submenu{display:none!important}.player-menu.vip-open .vip-submenu{display:block!important}.vip-sub-option{display:block!important;width:100%!important;text-align:left!important;border-left:2px solid #00e5ff!important;background:#071116!important;color:#00e5ff!important;cursor:pointer!important;padding:10px 12px!important;font-family:'Press Start 2P',monospace!important;font-size:6px!important;line-height:1.4!important}.vip-sub-option:hover{background:#0d2028!important;color:#fff!important}.vip-submenu{padding:3px 0 5px 10px!important;margin-left:8px!important}@media(max-width:480px){.vip-sub-option{font-size:5px!important;padding:9px 10px!important}}
