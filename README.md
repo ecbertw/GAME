@@ -150,3 +150,31 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.5 — Gestão de salas
+
+**Data:** 18/09/2026  
+**Tipo:** Nova funcionalidade / gestão de salas
+
+## 1. ALTERADO
+- O botão **SAIR DA SALA** passou a significar apenas sair da visualização da sala atual.
+- O botão **SAIR** que aparecia em **AS MINHAS SALAS** foi removido.
+- As ações da sala ativa foram reposicionadas para o lado direito.
+
+## 2. REMOVIDO
+- A ação de remoção da sala através do botão **SAIR DA SALA**.
+- O botão pequeno **SAIR** dentro de **AS MINHAS SALAS**.
+
+## 3. ADICIONADO
+- Novo botão **ABANDONAR SALA** na sala ativa.
+- Janela de confirmação antes de abandonar uma sala.
+- Explicação de que abandonar remove o jogador da sala e faz com que ela deixe de aparecer em **AS MINHAS SALAS**.
+- Nova operação de servidor `/api/rooms/abandon` separada da ação de sair da visualização.
+
+## 4. BUGS FIXED
+- **FIXED:** Não existia distinção entre sair da visualização e abandonar efetivamente uma sala.
+- **FIXED:** O botão **SAIR DA SALA** estava demasiado centrado no painel.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
