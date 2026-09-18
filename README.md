@@ -226,3 +226,28 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.8 — Entrada nas salas e sugestões
+
+**Data:** 18/09/2026  
+**Tipo:** Correção funcional
+
+## 1. ALTERADO
+- O botão **ENTRAR NA SALA** passou a executar diretamente a abertura e carregamento do ranking da sala através de `rooms.js`.
+- A janela de sugestões deixou o campo de título vazio por defeito.
+
+## 2. REMOVIDO
+- Valor automático **SUGESTÃO** no campo de título.
+- Dependência da camada antiga de entrada nas salas.
+
+## 3. ADICIONADO
+- Carregamento direto dos jogadores da sala selecionada.
+- A sala ativa é apresentada no painel de salas por baixo dos rankings.
+
+## 4. BUGS FIXED
+- **FIXED:** **ENTRAR NA SALA** podia não executar porque dependia de uma função global criada noutra camada.
+- **FIXED:** O título das sugestões aparecia preenchido automaticamente com **SUGESTÃO**.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
