@@ -297,3 +297,27 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.11 — Submenu VIP
+
+**Data:** 18/09/2026  
+**Tipo:** Organização de interface / funcionalidade
+
+## 1. ALTERADO
+- A opção **VIP** no menu do jogador passa a controlar explicitamente o seu submenu.
+- O estado aberto/fechado do submenu fica sincronizado com `aria-expanded`.
+
+## 2. REMOVIDO
+- Comportamento ambíguo do estado do submenu ao fechar o menu principal.
+
+## 3. ADICIONADO
+- **COMPRAR VIP** → abre o pop-up de compra do VIP.
+- **PERSONALIZAR NOME VIP** → abre o pop-up de personalização quando a conta tem VIP.
+- Estilo próprio e hover para as duas opções do submenu.
+
+## 4. BUGS FIXED
+- **FIXED:** Estado do submenu VIP podia ficar aberto depois de o menu principal ser fechado.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
