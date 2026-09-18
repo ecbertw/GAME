@@ -51,3 +51,6 @@ html,body,body *{cursor:crosshair!important}
 .vip-top-menu button:hover{background:#10252c!important;color:#fff!important}
 @media(max-width:820px){.vip-top-menu{width:185px!important}.vip-top-menu button{font-size:5px!important;padding:9px 7px!important}}
 @media(max-width:480px){.vip-top-menu{width:180px!important;right:-8px!important}.vip-top-menu button{font-size:5px!important;padding:8px 6px!important;line-height:1.4!important}}
+
+/* EIXO V1.1.15 — VIP submenu readability */
+.vip-top-menu{width:250px!important;padding:4px!important}.vip-top-menu button,.vip-top-menu button:first-child,.vip-top-menu button:last-child{font-size:7px!important;padding:12px 10px!important;line-height:1.5!important;min-height:38px!important}@media(max-width:820px){.vip-top-menu{width:240px!important}.vip-top-menu button{font-size:6px!important;padding:11px 9px!important;min-height:36px!important}}@media(max-width:480px){.vip-top-menu{width:235px!important;right:-8px!important}.vip-top-menu button{font-size:6px!important;padding:10px 8px!important;min-height:34px!important}}
