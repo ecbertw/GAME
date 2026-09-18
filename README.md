@@ -104,3 +104,24 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.3 — Dados de ranking nas salas
+
+**Data:** 18/09/2026  
+**Tipo:** Correção de dados / ranking
+
+## 1. ALTERADO
+- A API das salas passou a devolver também a posição mundial e nacional de cada jogador.
+
+## 2. REMOVIDO
+- Dependência de dados incompletos no frontend para determinar as tags do jogador dentro da sala.
+
+## 3. ADICIONADO
+- Dados `worldRank` e `countryRank` em cada jogador devolvido pelo ranking da sala.
+
+## 4. BUGS FIXED
+- **FIXED:** As tags GLOBAL e nacional não podiam aparecer corretamente na sala porque as respetivas posições não eram fornecidas pela API.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
