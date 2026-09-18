@@ -22,10 +22,6 @@
  async function openCustomize(){
   const p=player();
   if(!p)return;
-  if(Number(p.vipLevel||0)>0&&window.eixoOpenVipCustomize){
-    window.eixoOpenVipCustomize();
-    return;
-  }
   const modal=$('customizeModal'),name=$('customizeName'),color=$('customizeColor'),effect=$('customizeEffect'),hint=$('customizeHint'),wrap=$('customizeNameWrap'),err=$('customizeError');
   err.textContent='';
   hint.textContent='A verificar a tua posição no ranking...';
