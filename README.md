@@ -519,3 +519,34 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.18 — RGB, efeitos e tags de ranking
+
+**Data:** 18/09/2026  
+**Tipo:** Correção visual / regras de ranking
+
+## 1. ALTERADO
+- O RGB passa a avançar de letra em letra, com atraso progressivo entre letras.
+- A cor escolhida para o nome normal passa a ser aplicada corretamente no ranking.
+- O ranking mundial passou a aplicar a regra específica das tags nacionais.
+
+## 2. REMOVIDO
+- Animação RGB sincronizada para o nome inteiro.
+- Regras CSS genéricas que faziam efeitos como **TREME** poderem afetar a caixa inteira.
+- Códigos HEX apresentados nas opções de cor da personalização normal.
+
+## 3. ADICIONADO
+- Efeitos normais adicionais: **Torção, Cintila e Estica**.
+- Validação do servidor alinhada com os efeitos disponibilizados na personalização normal.
+- No ranking mundial, **GLOBAL 1/2/3** aparece apenas nos três primeiros; a tag nacional só aparece quando o jogador está fora do TOP 3 mundial e é TOP 3 do país.
+- No ranking nacional, é apresentada a tag nacional correspondente.
+
+## 4. BUGS FIXED
+- **FIXED:** RGB ficava com uma cor fixa ou mudava no nome inteiro ao mesmo tempo.
+- **FIXED:** efeitos podiam animar a BOX em vez de apenas o nome.
+- **FIXED:** algumas combinações de cor + efeito podiam ser rejeitadas pelo servidor apesar de aparecerem na interface.
+- **FIXED:** nome guardado com cor selecionada podia aparecer cinzento no ranking.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
