@@ -605,3 +605,24 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.21 — RGB restaurado
+
+**Data:** 18/09/2026  
+**Tipo:** Correção visual / regressão
+
+## 1. ALTERADO
+- O comportamento visual do **ARCO-ÍRIS** foi restaurado para a implementação anterior, que produzia a animação de cor nas letras em vez de deixar cores fixas por letra.
+
+## 2. REMOVIDO
+- A nova implementação RGB que estava a deixar sequências de cores fixas como vermelho, laranja, amarelo e verde.
+
+## 3. ADICIONADO
+- Restauração do ciclo animado de tonalidade por letra.
+
+## 4. BUGS FIXED
+- **FIXED:** regressão introduzida na V1.1.20 que fazia o Arco-Íris aparecer como cores fixas.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
