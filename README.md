@@ -711,3 +711,31 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.25 — Efeitos VIP independentes por letra
+
+**Data:** 18/09/2026  
+**Tipo:** Correção de personalização VIP / animações
+
+## 1. ALTERADO
+- Os efeitos do nome VIP passam a respeitar a escolha feita **individualmente em cada letra**.
+- A camada geral de efeitos deixa de substituir os efeitos específicos guardados nas letterStyles do VIP.
+- A lista de efeitos VIP passa a ter suporte visual completo, incluindo **Faísca, Brilho, Glitch, Inclina, Pop e Scanline**.
+
+## 2. REMOVIDO
+- Aplicação automática do efeito da primeira letra a todas as letras de um nome VIP.
+- Ausência de animação para os efeitos VIP adicionais.
+
+## 3. ADICIONADO
+- Identificação explícita de nomes VIP com estilos por letra no ranking, ranking completo e salas.
+- 17 efeitos VIP suportados no frontend, alinhados com a validação existente do servidor.
+- Atraso individual de animação por letra sem alterar a escolha de efeito de cada letra.
+
+## 4. BUGS FIXED
+- **FIXED:** Escolher **SALTA** na primeira letra fazia todas as restantes letras seguirem o mesmo efeito.
+- **FIXED:** **FAÍSCA, BRILHO, GLITCH, INCLINA, POP e SCANLINE** não tinham animações implementadas no frontend.
+- **FIXED:** Os efeitos VIP podiam ser removidos pelo processador genérico de efeitos ao atualizar o ranking.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
