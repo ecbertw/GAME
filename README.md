@@ -684,3 +684,30 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.24 — RGB por letra e efeitos independentes
+
+**Data:** 18/09/2026  
+**Tipo:** Correção de personalização
+
+## 1. ALTERADO
+- O RGB passa a ser tratado exclusivamente como **cor**.
+- Cada letra recebe uma tonalidade própria e a sequência de tonalidades avança continuamente pelas letras.
+- A animação de efeitos continua independente da animação de cor.
+
+## 2. REMOVIDO
+- RGB através de gradiente aplicado individualmente à palavra.
+- Conflito visual em que a animação RGB podia substituir ou interferir com o efeito escolhido.
+
+## 3. ADICIONADO
+- O jogador pode combinar **RGB + um efeito**.
+- O RGB percorre as letras como uma onda de cor, em vez de funcionar como um gradiente único sobre a palavra.
+
+## 4. BUGS FIXED
+- **FIXED:** RGB parecia atravessar a palavra inteira como um gradiente.
+- **FIXED:** RGB e efeito não funcionavam corretamente em conjunto.
+- **FIXED:** A cor RGB podia interferir com a animação CSS do efeito.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
