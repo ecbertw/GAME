@@ -81,4 +81,5 @@
     try{const r=await fetch('/api/rooms/abandon',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id,token:a.token,roomId:id})});if(!r.ok)throw Error();closeAbandon();window.eixoActiveRoomId=null;$('roomBoard').classList.add('hidden');if(window.eixoOpenRooms)window.eixoOpenRooms();}catch(_){alert('Não foi possível abandonar a sala.')}finally{b.disabled=false;}
   });
  setInterval(async()=>{if(!window.eixoActiveRoomId)return;const a=getAuth();if(!a)return;try{const r=await fetch(`/api/rooms/rankings?id=${encodeURIComponent(a.id)}&token=${encodeURIComponent(a.token)}&roomId=${encodeURIComponent(window.eixoActiveRoomId)}`,{cache:'no-store'});if(r.ok){const d=await r.json();renderRoom(d.players);$('roomBoardMeta').textContent=` · ${d.players.length} ${window.eixoT?window.eixoT('players','JOGADORES'):'JOGADORES'}`}}catch(_){ }},3000);
-})();
+})();  window.eixoOpenRoom=openRoom;
+
