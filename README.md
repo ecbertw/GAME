@@ -626,3 +626,32 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.22 — Ranking permanente e RGB contínuo
+
+**Data:** 18/09/2026  
+**Tipo:** Persistência / correção visual
+
+## 1. ALTERADO
+- O ranking deixou de ser limpo durante o arranque do servidor.
+- Jogadores, pontuações, países e personalizações existentes na base de dados PostgreSQL são preservados entre deploys e reinícios.
+- O RGB volta a usar um ciclo contínuo de tonalidade aplicado progressivamente às letras.
+
+## 2. REMOVIDO
+- `TRUNCATE TABLE players CASCADE` do arranque do servidor.
+- Reset automático que apagava jogadores, rankings e dados relacionados.
+
+## 3. ADICIONADO
+- Persistência efetiva da tabela de jogadores entre deploys.
+- Animação RGB contínua com deslocamento de fase entre letras.
+
+## 4. BUGS FIXED
+- **FIXED:** Deploy/restart podia apagar todo o ranking.
+- **FIXED:** O RGB podia parecer uma sequência de cores fixas ou inverter o movimento.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+## 6. REGRA DE PRODUÇÃO
+- A partir desta versão, **não deve ser executado qualquer reset/truncate automático de jogadores ou rankings em updates ou deploys**. A base de dados deve ser tratada como persistente.
