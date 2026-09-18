@@ -251,3 +251,27 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.9 — Controlo de saída e abandono de salas
+
+**Data:** 18/09/2026  
+**Tipo:** Correção funcional
+
+## 1. ALTERADO
+- Os botões **SAIR DA SALA** e **ABANDONAR SALA** passaram a ser tratados diretamente pelo módulo de salas.
+
+## 2. REMOVIDO
+- Handlers duplicados dos botões de sala em `enhancements.js`, evitando conflitos entre implementações.
+
+## 3. ADICIONADO
+- **SAIR DA SALA:** fecha a visualização da sala sem remover o jogador.
+- **ABANDONAR SALA:** abre a confirmação e, em **SIM**, remove o jogador da sala através da API.
+- Após abandonar, a lista **AS MINHAS SALAS** é atualizada.
+
+## 4. BUGS FIXED
+- **FIXED:** Os botões da sala podiam não responder porque os handlers estavam numa camada diferente da implementação atual da entrada nas salas.
+- **FIXED:** Potencial conflito provocado por handlers duplicados.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
