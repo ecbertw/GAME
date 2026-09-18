@@ -17,7 +17,7 @@ main{padding:18px 24px 24px}.hero{max-width:920px;margin:0 auto}.game-frame{posi
 .chat-tab{min-height:38px;border:2px solid #404c57;background:#0c131a;color:#7f8a94;cursor:pointer;font-size:7px;padding:6px}
 .chat-tab:hover{background:#172029;color:#fff}
 .chat-tab.active{background:#18232d;border-color:#7a8792;color:#fff}
-.chat-status{min-height:20px;padding:7px 10px 0;color:#68737e;font-size:5px}
+.chat-status{min-height:20px;padding:7px 10px 0;color:#68737e;font-size:6px}
 .chat-messages{flex:1;min-height:0;overflow-y:auto;padding:7px 9px 9px;scrollbar-width:thin;scrollbar-color:#44515c #090e13}
 .chat-message{display:grid;grid-template-columns:30px 1fr;gap:8px;padding:10px 3px;border-bottom:1px solid #232d35}
 .chat-message:last-child{border-bottom:0}
@@ -32,34 +32,36 @@ main{padding:18px 24px 24px}.hero{max-width:920px;margin:0 auto}.game-frame{posi
 .chat-empty{height:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:25px;color:#5e6973;font-size:6px;line-height:1.9}
 .chat-loading{padding:25px;text-align:center;color:#68737e;font-size:6px}
 .chat-form{display:grid;grid-template-columns:1fr 44px;gap:7px;padding:9px;border-top:2px solid #303a44;background:#090e14}
-.chat-input{width:100%;height:42px;border:2px solid #4d5a65;background:#070c11;color:#fff;padding:0 9px;outline:none;font-size:6px}
+.chat-input{width:100%;height:42px;border:2px solid #4d5a65;background:#070c11;color:#fff;padding:0 9px;outline:none;font-size:7px}
 .chat-input:focus{border-color:#35dc75;box-shadow:3px 3px 0 #071e13}
 .chat-input:disabled{opacity:.5;cursor:not-allowed}
 .chat-send{height:42px;border:0;background:#18c66b;color:#fff;cursor:pointer;font-size:10px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
 .chat-send:hover{filter:brightness(1.1)}
 .chat-send:disabled{opacity:.45;cursor:wait}
-.chat-hint{padding:7px 10px 9px;color:#56626c;background:#090e14;font-size:5px;text-align:center}
+.chat-hint{padding:7px 10px 9px;color:#56626c;background:#090e14;font-size:6px;text-align:center}
 .rank-tag{display:inline-flex;align-items:center;justify-content:center;padding:3px 5px;font-size:5px;line-height:1.2;vertical-align:middle}
 .vip-rank-tag{display:inline-flex;align-items:center;justify-content:center;padding:3px 5px;font-size:5px;line-height:1.2;vertical-align:middle}
 .name-letter{display:inline-block}
 
 /* Chat-specific letter animations. The ranking already has the keyframes; these classes make them usable here too. */
-.chat-name .effect-bounce,.chat-name.effect-bounce{animation:name-bounce .55s steps(2,end) infinite alternate}
-.chat-name .effect-glow,.chat-name.effect-glow{animation:name-glow .8s ease-in-out infinite alternate}
-.chat-name .effect-wave,.chat-name.effect-wave{animation:name-wave .8s ease-in-out infinite}
-.chat-name .effect-shake,.chat-name.effect-shake{animation:name-shake .28s steps(2,end) infinite}
-.chat-name .effect-float,.chat-name.effect-float{animation:name-float 1.2s ease-in-out infinite}
-.chat-name .effect-pulse,.chat-name.effect-pulse{animation:name-pulse .9s ease-in-out infinite}
-.chat-name .effect-jelly,.chat-name.effect-jelly{animation:name-jelly .8s ease-in-out infinite}
-.chat-name .effect-twist,.chat-name.effect-twist{animation:name-wave .7s ease-in-out infinite}
-.chat-name .effect-flicker,.chat-name.effect-flicker{animation:name-pulse .45s steps(2,end) infinite}
-.chat-name .effect-stretch,.chat-name.effect-stretch{animation:name-jelly 1s ease-in-out infinite}
-.chat-name .effect-sparkle,.chat-name.effect-sparkle{animation:name-glow .7s ease-in-out infinite alternate}
-.chat-name .effect-shimmer,.chat-name.effect-shimmer{animation:name-wave .9s ease-in-out infinite}
-.chat-name .effect-glitch,.chat-name.effect-glitch{animation:name-shake .22s steps(2,end) infinite}
-.chat-name .effect-tilt,.chat-name.effect-tilt{animation:name-wave .75s ease-in-out infinite}
-.chat-name .effect-pop,.chat-name.effect-pop{animation:name-jelly .65s ease-in-out infinite}
-.chat-name .effect-scanline,.chat-name.effect-scanline{animation:name-pulse .65s steps(2,end) infinite}
+.chat-name .name-letter{display:inline-block}
+.chat-name .name-letter.effect-bounce{animation:name-bounce .55s steps(2,end) infinite alternate}
+.chat-name .name-letter.effect-glow{animation:name-glow .8s ease-in-out infinite alternate}
+.chat-name .name-letter.effect-wave{animation:name-wave .8s ease-in-out infinite}
+.chat-name .name-letter.effect-shake{animation:name-shake .28s steps(2,end) infinite}
+.chat-name .name-letter.effect-float{animation:name-float 1.2s ease-in-out infinite}
+.chat-name .name-letter.effect-pulse{animation:name-pulse .9s ease-in-out infinite}
+.chat-name .name-letter.effect-jelly{animation:name-jelly .8s ease-in-out infinite}
+.chat-name .name-letter.effect-twist{animation:name-wave .7s ease-in-out infinite}
+.chat-name .name-letter.effect-flicker{animation:name-pulse .45s steps(2,end) infinite}
+.chat-name .name-letter.effect-stretch{animation:name-jelly 1s ease-in-out infinite}
+.chat-name .name-letter.effect-sparkle{animation:name-glow .7s ease-in-out infinite alternate}
+.chat-name .name-letter.effect-shimmer{animation:name-wave .9s ease-in-out infinite}
+.chat-name .name-letter.effect-glitch{animation:name-shake .22s steps(2,end) infinite}
+.chat-name .name-letter.effect-tilt{animation:name-wave .75s ease-in-out infinite}
+.chat-name .name-letter.effect-pop{animation:name-jelly .65s ease-in-out infinite}
+.chat-name .name-letter.effect-scanline{animation:name-pulse .65s steps(2,end) infinite}
+.chat-name .name-letter.name-rainbow{background:linear-gradient(90deg,#ff3b30,#ffcc00,#34c759,#0a84ff,#bf5af2,#ff2d55,#ff3b30);background-size:400% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation-name:name-rainbow;animation-duration:2.4s;animation-timing-function:linear;animation-iteration-count:infinite}
 @keyframes name-rainbow{to{background-position:400% 0}}
 @keyframes name-bounce{to{transform:translateY(-3px)}}
 @keyframes name-glow{to{text-shadow:0 0 8px currentColor}}
