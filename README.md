@@ -418,3 +418,25 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.14 — Personalização normal do jogador
+
+**Data:** 18/09/2026  
+**Tipo:** Correção funcional
+
+## 1. ALTERADO
+- O botão **PERSONALIZAR NOME** do menu do jogador passa a enviar sempre o evento específico da personalização normal.
+
+## 2. REMOVIDO
+- Dependência direta da função global para abrir a personalização a partir do menu do jogador.
+
+## 3. ADICIONADO
+- Encaminhamento dedicado para a janela `customizeModal` através do evento já tratado pela camada de personalização.
+- Cache-busting do `ui.js` para garantir que o browser recebe a versão atual.
+
+## 4. BUGS FIXED
+- **FIXED:** Ao carregar em **PERSONALIZAR NOME** no menu do jogador, a janela podia não abrir apesar de a conta ter uma posição elegível no ranking.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
