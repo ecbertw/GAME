@@ -140,7 +140,66 @@ countryButton.addEventListener('click',()=>{if(player)return;const open=countryM
 document.addEventListener('click',e=>{if(!e.target.closest('.profile-area')){countryMenu.classList.remove('open');countryButton.setAttribute('aria-expanded','false');}});
 
 function resizeCanvas(){const rect=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.max(1,Math.floor(rect.width*dpr));canvas.height=Math.max(1,Math.floor(rect.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;draw();}
-function buildPixelWall(){const wall=document.getElementById('pixelWall'),colors=['#e83e45','#f1c438','#2f9bd1','#39b86a','#7d4ac7','#ef7b2d','#e7e7df','#172b3b'],count=Math.min(650,Math.floor(innerWidth*innerHeight/900));for(let i=0;i<count;i++){const tile=document.createElement('i');tile.style.left=`${Math.random()*100}%`;tile.style.top=`${Math.random()*100}%`;tile.style.background=colors[Math.floor(Math.random()*colors.length)];tile.style.width=`${4+Math.floor(Math.random()*8)}px`;tile.style.height=tile.style.width;tile.style.opacity=String(.35+Math.random()*.55);wall.appendChild(tile);}}
+function buildPixelWall(){
+  const wall=document.getElementById('pixelWall');
+  if(!wall)return;
+  const colors=['#e83e45','#f1c438','#2f9bd1','#39b86a','#7d4ac7','#ef7b2d','#e7e7df','#172b3b'];
+  const count=Math.min(650,Math.floor(innerWidth*innerHeight/900));
+  const particles=[];
+  let mouseX=-9999,mouseY=-9999;
+
+  for(let i=0;i<count;i++){
+    const tile=document.createElement('i');
+    const x=Math.random()*innerWidth,y=Math.random()*innerHeight;
+    const size=4+Math.floor(Math.random()*8);
+    tile.style.left='0';
+    tile.style.top='0';
+    tile.style.background=colors[Math.floor(Math.random()*colors.length)];
+    tile.style.width=size+'px';
+    tile.style.height=size+'px';
+    tile.style.opacity=String(.35+Math.random()*.55);
+    wall.appendChild(tile);
+    particles.push({el:tile,x,y,ox:x,oy:y,vx:0,vy:0});
+  }
+
+  window.addEventListener('pointermove',e=>{
+    if(e.pointerType&&e.pointerType!=='mouse')return;
+    mouseX=e.clientX;mouseY=e.clientY;
+  },{passive:true});
+  window.addEventListener('pointerleave',()=>{mouseX=-9999;mouseY=-9999},{passive:true});
+  window.addEventListener('blur',()=>{mouseX=-9999;mouseY=-9999},{passive:true});
+
+  function animate(){
+    for(const p of particles){
+      const dx=p.x-mouseX,dy=p.y-mouseY;
+      const dist=Math.hypot(dx,dy);
+      const radius=105;
+      if(dist<radius){
+        const d=Math.max(dist,1);
+        const strength=Math.pow(1-d/radius,2)*1.35;
+        p.vx+=(dx/d)*strength;
+        p.vy+=(dy/d)*strength;
+      }
+
+      p.vx+=(p.ox-p.x)*0.012;
+      p.vy+=(p.oy-p.y)*0.012;
+      p.vx*=0.86;
+      p.vy*=0.86;
+      p.x+=p.vx;
+      p.y+=p.vy;
+
+      const maxOffset=58;
+      if(p.x<p.ox-maxOffset){p.x=p.ox-maxOffset;p.vx*=0.4;}
+      if(p.x>p.ox+maxOffset){p.x=p.ox+maxOffset;p.vx*=0.4;}
+      if(p.y<p.oy-maxOffset){p.y=p.oy-maxOffset;p.vy*=0.4;}
+      if(p.y>p.oy+maxOffset){p.y=p.oy+maxOffset;p.vy*=0.4;}
+
+      p.el.style.transform='translate3d('+Math.round(p.x)+'px,'+Math.round(p.y)+'px,0)';
+    }
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+}
 
 fillCountryControls();
 if(currentCountryCode&&!countryNames[currentCountryCode])currentCountryCode='PT';
