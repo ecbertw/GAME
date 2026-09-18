@@ -576,3 +576,32 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.20 — RGB contínuo e pré-visualização de efeitos
+
+**Data:** 18/09/2026  
+**Tipo:** Correção de personalização
+
+## 1. ALTERADO
+- O **ARCO-ÍRIS** passa a estar disponível também para uma conta VIP quando essa conta é TOP 1 mundial.
+- O RGB passa a percorrer continuamente as letras da esquerda para a direita, sem reiniciar ao chegar ao vermelho.
+- A animação RGB deixa de controlar a propriedade `animation` das letras, permitindo que o efeito escolhido continue a funcionar em paralelo.
+
+## 2. REMOVIDO
+- Restrição que impedia TOP 1 mundial com VIP de guardar Arco-Íris.
+- Implementação RGB que podia substituir a animação do efeito selecionado.
+
+## 3. ADICIONADO
+- Camada explícita de efeitos e RGB carregada pela página.
+- Pré-visualização normal preparada para apresentar os efeitos letra a letra.
+- Pré-visualização VIP mantém os efeitos individuais definidos para cada letra.
+
+## 4. BUGS FIXED
+- **FIXED:** TOP 1 mundial + VIP não conseguia usar Arco-Íris.
+- **FIXED:** RGB parava/recomeçava ao atingir a zona vermelha em vez de manter um fluxo contínuo.
+- **FIXED:** RGB podia substituir a animação do efeito escolhido.
+- **FIXED:** Efeitos podiam não aparecer corretamente na pré-visualização normal e VIP.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
