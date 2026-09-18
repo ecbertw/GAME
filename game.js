@@ -24,7 +24,7 @@ const translations = {
   it:{play:'GIOCA',ranking:'CLASSIFICA',rooms:'STANZE',about:'INFO',myRooms:'LE MIE STANZE',instruction:'CLICCA QUANDO IL PUNTO È AL CENTRO',worldTop:'TOP MONDIALE',fullRanking:'CLASSIFICA COMPLETA',aboutText:' — un semplice gioco di riflessi. Colpisci il centro e scala la classifica.',welcome:'BENVENUTO SU EIXO',countryIntro:'Scegli prima il tuo paese.',country:'PAESE',continue:'CONTINUA ▶',nameTitle:'SCEGLI IL TUO NOME',nameText:'Questo nome sarà associato al tuo giocatore e non potrà essere usato da altri.',nameLabel:'NOME DEL GIOCATORE',create:'CREA GIOCATORE ▶',nameInvalid:'Nome non valido. Usa 3–16 lettere o numeri, senza spazi o simboli.',nameTaken:'Questo nome è già utilizzato.'}
 };
 
-let currentCountryCode = localStorage.getItem('eixo_country') || '';
+let currentCountryCode = localStorage.getItem('eixo_country') || 'PT';
 let player = JSON.parse(localStorage.getItem('eixo_player') || 'null');
 let running = false, score = 0, x = 0, direction = 1, speed = 4.2, lastTime = 0, pulse = 0;
 let modalCountry = 'PT', rankingMode = 'country', rankingPage = 1, rankingPages = 1;
