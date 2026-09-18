@@ -464,3 +464,32 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.16 — Nova personalização normal
+
+**Data:** 18/09/2026  
+**Tipo:** Reconstrução funcional / interface
+
+## 1. ALTERADO
+- A antiga janela de **PERSONALIZAR NOME** foi removida da página.
+- O botão **PERSONALIZAR NOME** do menu do jogador passa a usar uma nova janela independente.
+
+## 2. REMOVIDO
+- Dependência da antiga `customizeModal`.
+- Ligações entre a personalização normal e a janela VIP.
+
+## 3. ADICIONADO
+- Nova janela `playerCustomizeModal`, criada exclusivamente para a personalização normal.
+- Verificação direta da posição mundial e nacional através de `/api/player-rank`.
+- Permissões reconstruídas para TOP 1/2/3 mundial e TOP 1/2/3 nacional.
+- Cores e efeitos correspondentes às permissões existentes.
+- TOP 1 mundial mantém acesso ao nome visual, incluindo Arco-Íris.
+- Guardar continua a usar `/api/profile/customize`, pelo que as validações finais continuam no servidor.
+
+## 4. BUGS FIXED
+- **FIXED:** O botão **PERSONALIZAR NOME** podia não abrir qualquer janela.
+- **FIXED:** A personalização normal podia ficar ligada acidentalmente ao fluxo VIP.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
