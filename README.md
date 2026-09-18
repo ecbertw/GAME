@@ -395,3 +395,26 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.13 — Personalização normal e VIP separadas
+
+**Data:** 18/09/2026  
+**Tipo:** Correção funcional / interface
+
+## 1. ALTERADO
+- **PERSONALIZAR NOME** no menu do jogador volta a abrir a janela normal de personalização.
+- **PERSONALIZAR NOME VIP** no submenu VIP continua a abrir exclusivamente a janela de personalização VIP.
+
+## 2. REMOVIDO
+- Redirecionamento automático de jogadores VIP da personalização normal para a personalização VIP.
+
+## 3. ADICIONADO
+- Separação explícita entre os dois fluxos de personalização.
+- As permissões da personalização normal continuam a ser calculadas pela posição no ranking.
+
+## 4. BUGS FIXED
+- **FIXED:** Um jogador com VIP que escolhesse **PERSONALIZAR NOME** recebia indevidamente o pop-up **PERSONALIZAR NOME VIP**.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
