@@ -201,3 +201,28 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.7 — Contacto, sugestões e entrada nas salas
+
+**Data:** 18/09/2026  
+**Tipo:** Correção funcional / interface
+
+## 1. ALTERADO
+- **CONTACTO** e **SUGESTÕES** passaram a abrir janelas pop-up independentes.
+- **SUGESTÕES** tem formulário próprio e envio identificado como sugestão.
+
+## 2. REMOVIDO
+- Comportamento anterior em que **SUGESTÕES** reutilizava e alterava a janela de **CONTACTO**.
+
+## 3. ADICIONADO
+- Pop-up dedicado a sugestões.
+- Formulário e botão **ENVIAR SUGESTÃO**.
+- Ligação funcional do botão **ENTRAR NA SALA** à função que abre a sala.
+
+## 4. BUGS FIXED
+- **FIXED:** CONTACTO e SUGESTÕES abriam a mesma janela.
+- **FIXED:** **ENTRAR NA SALA** não executava qualquer ação porque a função de abertura não estava exposta corretamente ao botão da lista.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
