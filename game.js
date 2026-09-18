@@ -162,6 +162,14 @@ function buildPixelWall(){
     particles.push({el:tile,x,y,vx:0,vy:0});
   }
 
+  const sponsor=document.createElement('img');
+  sponsor.className='pixel-sponsor';
+  sponsor.src='/assets/visit-portugal-pixel.png';
+  sponsor.alt='Visite Portugal';
+  sponsor.title='VISITE PORTUGAL';
+  sponsor.setAttribute('aria-label','Visite Portugal');
+  wall.appendChild(sponsor);
+
   window.addEventListener('pointermove',e=>{
     if(e.pointerType&&e.pointerType!=='mouse')return;
     mouseX=e.clientX;mouseY=e.clientY;
