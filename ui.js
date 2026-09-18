@@ -10,5 +10,7 @@
   if(countryButton&&countryMenu){countryButton.addEventListener('click',e=>{e.stopPropagation();const open=countryMenu.classList.toggle('open');countryButton.setAttribute('aria-expanded',String(open));});countryMenu.addEventListener('click',e=>{const b=e.target.closest('.country-option');if(!b)return;const c=b.dataset.country;if(typeof window.changeCountry==='function')window.changeCountry(c);countryMenu.classList.remove('open');countryButton.setAttribute('aria-expanded','false');render();});}
   const rankingTabs=document.querySelector('.ranking-tabs'),worldTab=document.getElementById('modalWorldTab'),countryTab=document.getElementById('modalCountryTab');if(rankingTabs&&worldTab&&countryTab)rankingTabs.append(worldTab,countryTab);
   document.addEventListener('click',e=>{if(!e.target.closest('.player-area')){playerMenu.classList.remove('open');playerButton.setAttribute('aria-expanded','false')}if(!e.target.closest('.profile-area')){countryMenu?.classList.remove('open');countryButton?.setAttribute('aria-expanded','false')}});
+  document.querySelectorAll('.modal-close[data-close-modal]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.closeModal)?.classList.add('hidden')));
+  document.querySelectorAll('.modal-backdrop').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.add('hidden')}));
   render();window.addEventListener('storage',render);window.addEventListener('eixo-player-updated',render);
 })();
