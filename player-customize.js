@@ -9,7 +9,7 @@
  const WORLD=['#39d98a','#3b82f6','#f59e0b'],COUNTRY=['#ffd43b','#b66cff','#ff7a2f'],OTHER=['#00d4ff','#ff4fd8','#ffffff'];
  const EFFECTS=[['none','Nenhum'],['bounce','Salta'],['glow','Brilha'],['wave','Onda'],['shake','Treme'],['float','Flutua'],['pulse','Pulsa'],['jelly','Gelatina']];
  async function rank(){const a=auth();if(!a)throw Error('Sessão inválida.');const r=await fetch('/api/player-rank?id='+encodeURIComponent(a.id)+'&token='+encodeURIComponent(a.token),{cache:'no-store'});if(!r.ok)throw Error('Ranking indisponível.');const d=await r.json();return{world:Number(d.worldRank)||9999,country:Number(d.countryRank)||9999};}
- function preview(){const n=$('playerCustomizeName'),c=$('playerCustomizeColor'),e=$('playerCustomizeEffect'),p=$('playerCustomizePreview');if(!p)return;p.textContent=n?.value||get()?.name||'JOGADOR';p.className='name-preview '+(e?.value?'effect-'+e.value:'effect-none')+(c?.value==='rainbow'?' name-rainbow':'');p.style.color=c?.value==='rainbow'?'#fff':(c?.value||'#fff');}
+ function preview(){const n=$('playerCustomizeName'),c=$('playerCustomizeColor'),e=$('playerCustomizeEffect'),p=$('playerCustomizePreview');if(!p)return;p.textContent=n?.value||get()?.name||'JOGADOR';p.className='name-preview '+(e?.value?'effect-'+e.value:'effect-none')+(c?.value==='rainbow'?' name-rainbow':'');p.style.color=c?.value==='rainbow'?'transparent':(c?.value||'#fff');}
  async function show(){
    const p=get();if(!p)return;
    const m=$('playerCustomizeModal'),hint=$('playerCustomizeHint'),name=$('playerCustomizeName'),color=$('playerCustomizeColor'),effect=$('playerCustomizeEffect'),err=$('playerCustomizeError');
@@ -19,13 +19,13 @@
     color.innerHTML='';effect.innerHTML='';
     if(!eligible){hint.textContent='A personalização está disponível apenas para TOP 1/2/3 mundial ou TOP 1/2/3 do país.';return;}
     let colors=w1?ALL:w23?WORLD:c1?COUNTRY:OTHER;
-    color.innerHTML=colors.map(x=>'<option value="'+x+'">'+(x==='rainbow'?'ARCO-ÍRIS':x)+'</option>').join('');
+    const colorNames={'#ffffff':'BRANCO','#ff4d4d':'VERMELHO','#ff7a2f':'LARANJA','#ffd43b':'AMARELO','#7bdc5a':'VERDE-LIMA','#39d98a':'VERDE','#00d4ff':'CIANO','#3b82f6':'AZUL','#6f5cff':'ÍNDIGO','#b66cff':'ROXO','#ff4fd8':'MAGENTA','#ff6b9d':'ROSA','#a8e063':'VERDE-CLARO','#00f0ff':'TURQUESA','#f97316':'LARANJA-ESCURO','#facc15':'AMARELO-VIVO','#94a3b8':'CINZENTO','#e2e8f0':'CINZENTO-CLARO','#22c55e':'VERDE-FORTE','#ef4444':'VERMELHO-FORTE',rainbow:'ARCO-ÍRIS'};color.innerHTML=colors.map(x=>'<option value="'+x+'">'+(colorNames[x]||x)+'</option>').join('');
     color.value=colors.includes(p.nameColor)?p.nameColor:colors[0];
     const canEffect=w1||r.world===2||r.country===1||r.country===2;
     effect.innerHTML=EFFECTS.map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join('');
     effect.value=canEffect?(p.nameEffect||'none'):'none';
     name.disabled=!w1;
-    hint.textContent=w1?'TOP 1 MUNDIAL: podes mudar o nome visual, cor e efeito. O nome oficial não muda.':w23?'TOP 2/3 MUNDIAL: podes escolher as cores especiais.' :c1?'TOP 1 DO PAÍS: podes escolher as cores nacionais e efeitos.':'TOP 2/3 DO PAÍS: podes escolher as cores reservadas.';
+    hint.textContent=w1?'TOP 1 MUNDIAL: podes mudar o nome visual, cor e efeito.':w23?'TOP 2/3 MUNDIAL: podes escolher as cores especiais.' :c1?'TOP 1 DO PAÍS: podes escolher as cores nacionais e efeitos.':'TOP 2/3 DO PAÍS: podes escolher as cores reservadas.';
     preview();
    }catch(e){err.textContent=e.message;hint.textContent='Não foi possível carregar as opções.';}
  }
