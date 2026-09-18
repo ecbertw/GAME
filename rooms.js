@@ -110,10 +110,16 @@
       return `<article class="room-card">
         <div class="room-card-main"><div class="room-card-name">${esc(room.name)}</div><div class="room-card-meta">${esc(room.ownerName)} · ${room.memberCount}/${room.maxPlayers} ${esc(x.playersLabel)}</div></div>
         <div class="room-card-code">${esc(room.code)}</div>
-        <div class="room-card-actions"><span class="room-status">${full ? esc(x.full) : `${room.memberCount}/${room.maxPlayers}`}</span></div>
+        <div class="room-card-actions"><span class="room-status">${full ? esc(x.full) : `${room.memberCount}/${room.maxPlayers}`}</span><button type="button" class="board-more enter-room-button" data-room-id="${esc(room.id)}">${window.eixoT?window.eixoT('enterRoom','ENTRAR NA SALA'):'ENTRAR NA SALA'}</button></div>
       </article>`;
     }).join('');
   }
+
+  roomsList.addEventListener('click', event => {
+    const button = event.target.closest('.enter-room-button');
+    if (!button) return;
+    if (typeof window.eixoOpenRoom === 'function') window.eixoOpenRoom(button.dataset.roomId);
+  });
 
   createRoomButton.addEventListener('click', () => {
     createPanel.classList.toggle('hidden');
