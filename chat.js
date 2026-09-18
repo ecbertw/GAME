@@ -12,7 +12,7 @@
       const s=arr[i]||{},rawColor=String(s.color||'').toLowerCase(),c=safeColor(rawColor),e=safeEffect(s.effect);
       const rainbow=rawColor==='rainbow';
       const delay=(-i*0.08).toFixed(2)+'s';
-      return '<span class="name-letter'+(rainbow?' name-rainbow':'')+' effect-'+esc(e)+'"'+(c?' style="color:'+esc(c)+'"':'')+' style="animation-delay:'+delay+'">'+esc(ch)+'</span>';
+      return '<span class="name-letter'+(rainbow?' name-rainbow':'')+' effect-'+esc(e)+'" style="'+(c?'color:'+esc(c)+';':'')+'animation-delay:'+delay+'">'+esc(ch)+'</span>';
     }).join('');
   };
   const tag=(type,n,country,p)=>{
