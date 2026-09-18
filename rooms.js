@@ -115,10 +115,38 @@
     }).join('');
   }
 
+  async function openRoomFromList(roomId){
+    try{
+      const c=credentials();
+      const data=await api(`/api/rooms/rankings?id=${encodeURIComponent(c.id)}&token=${encodeURIComponent(c.token)}&roomId=${encodeURIComponent(roomId)}`);
+      const room=[...roomsList.querySelectorAll('.room-card')].find(card=>card.querySelector('.enter-room-button')?.dataset.roomId===roomId);
+      const board=document.getElementById('roomBoard'),list=document.getElementById('roomRanking');
+      if(!board||!list)throw new Error('Não foi possível abrir a sala.');
+      document.getElementById('roomBoardTitle').textContent=room?.querySelector('.room-card-name')?.textContent||'SALA';
+      document.getElementById('roomBoardMeta').textContent=` · ${data.players.length} ${t().playersLabel}`;
+      const escHtml=esc;
+      const flag=v=>[...String(v||'')].map(ch=>String.fromCodePoint(127397+ch.charCodeAt())).join('');
+      const tag=(kind,n,country)=>n>=1&&n<=3?`<span class="rank-tag ${kind}-${n}">${n}# ${kind==='country'?escHtml(country):'GLOBAL'}</span>`:'';
+      const vip=n=>n>0?`<span class="vip-rank-tag vip-rank-${Math.min(n,6)}">${n>=6?'VIP ∞':'VIP #'+n}</span>`:'';
+      list.innerHTML=(data.players||[]).map(p=>{
+        const styles=Array.isArray(p.letterStyles)?p.letterStyles:[],visual=String(p.visualName||p.name||'');
+        const letters=[...visual].map((ch,i)=>{const st=styles[i]||{};const color=/^#[0-9a-f]{6}$/i.test(String(st.color||''))?st.color:'';const effect=/^[a-z]+$/.test(String(st.effect||'none'))?st.effect:'none';return `<span class="name-letter effect-${effect}" style="${color?'color:'+escHtml(color)+';':''}">${escHtml(ch)}</span>`;}).join('');
+        const w=Number(p.worldRank||9999),cr=Number(p.countryRank||9999);
+        return `<li><span class="rank-number">${p.roomRank}</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name${String(p.nameColor||'').toLowerCase()==='rainbow'?' name-rainbow':''}">${letters||escHtml(visual)}</span>${tag('world',w,'')}${tag('country',cr,String(p.country||'').toUpperCase())}${vip(Number(p.vipLevel||0))}</span></span><span class="rank-score-wrap"><span class="rank-flag" title="${escHtml(p.country)}">${escHtml(flag(p.country))}</span><span class="rank-score">${Number(p.score||0)}</span></span></li>`;
+      }).join('')||'<li class="empty-row">AINDA SEM JOGADORES</li>';
+      window.eixoActiveRoomId=roomId;
+      board.classList.remove('hidden');
+      roomsModal.classList.add('hidden');
+      board.scrollIntoView({behavior:'smooth',block:'start'});
+    }catch(e){alert(e.message||'Não foi possível abrir a sala.');}
+  }
+  window.eixoOpenRoom=openRoomFromList;
   roomsList.addEventListener('click', event => {
-    const button = event.target.closest('.enter-room-button');
-    if (!button) return;
-    if (typeof window.eixoOpenRoom === 'function') window.eixoOpenRoom(button.dataset.roomId);
+    const button=event.target.closest('.enter-room-button');
+    if(!button)return;
+    event.preventDefault();
+    event.stopPropagation();
+    openRoomFromList(button.dataset.roomId);
   });
 
   createRoomButton.addEventListener('click', () => {
