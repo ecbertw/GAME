@@ -12,6 +12,10 @@
   document.querySelectorAll('.rank-player-name.name-rgb,.name-preview.name-rgb').forEach(el=>{letters(el);el.querySelectorAll('.name-letter').forEach((letter,i)=>letter.style.setProperty('--i',i));el.dataset.rgbReady='1';});
  }
  function apply(){fixOptions();fixNames();}
+ let rgbStart=performance.now();
+ function rgbTick(now){const phase=((now-rgbStart)/12)%360;document.querySelectorAll('.rank-player-name.name-rgb,.name-preview.name-rgb').forEach(el=>{el.querySelectorAll(':scope > .name-letter').forEach((letter,i)=>{letter.style.color='hsl('+((phase+i*32)%360)+',100%,60%)';});});requestAnimationFrame(rgbTick);}
+ requestAnimationFrame(rgbTick);
+
  apply();
  const observer=new MutationObserver(()=>{observer.disconnect();requestAnimationFrame(()=>{apply();observer.observe(document.body,{childList:true,subtree:true})})});
  observer.observe(document.body,{childList:true,subtree:true});
