@@ -9,7 +9,7 @@
 
   playerButton.addEventListener('click',e=>{e.stopPropagation();const open=playerMenu.classList.toggle('open');playerButton.setAttribute('aria-expanded',String(open));});
   function openMenuAction(action){
-  if(action==='customize'){if(window.eixoOpenCustomize){window.eixoOpenCustomize();return}window.dispatchEvent(new CustomEvent('eixo-player-menu',{detail:{action:'customize'}}));return}
+  if(action==='customize'){window.dispatchEvent(new CustomEvent('eixo-player-menu',{detail:{action:'customize'}}));return}
   if(action==='vip'){const open=playerMenu.classList.toggle('vip-open');const b=playerMenu.querySelector('.vip-menu-toggle');b?.setAttribute('aria-expanded',String(open));return}
   if(action==='vip-buy'){if(window.eixoOpenVip)window.eixoOpenVip();return}
   if(action==='vip-customize'){
