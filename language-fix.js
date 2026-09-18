@@ -131,13 +131,13 @@
     const button = document.getElementById('onboardingCountryButton');
     if (!button || !countrySelect) return;
     const code = countrySelect.value || 'PT';
-    const lang = effectiveLanguage(currentCountryCode || 'PT');
+    const lang = (!player ? 'en' : effectiveLanguage(currentCountryCode || 'PT'));
     const c = country(code);
     button.innerHTML = `<img class="country-flag-img" src="${countryFlagUrl(code)}" alt="" aria-hidden="true"><span>${localizedRegion(c.code, lang)}</span><span class="country-picker-chevron">▼</span>`;
   }
 
   function fillLocalizedCountryControls() {
-    const lang = effectiveLanguage(currentCountryCode || 'PT');
+    const lang = (!player ? 'en' : effectiveLanguage(currentCountryCode || 'PT'));
     const ordered = orderedCountryCodes(lang);
     const label = code => renderCountryLabel(code, lang);
 
@@ -174,7 +174,16 @@
     document.documentElement.lang = lang;
     document.documentElement.dir = (lang === 'ar' || lang === 'he') ? 'rtl' : 'ltr';
     document.getElementById('countryName').textContent = name;
-    document.getElementById('nationalFlag').textContent = rankingCountry.flag;
+    const setFlag = (id, code) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const safe = String(code || '').toUpperCase();
+      el.innerHTML = `<img class="country-flag-img country-flag-top-img" src="https://flagcdn.com/24x18/${safe.toLowerCase()}.png" alt="" aria-hidden="true"><span class="country-flag-code">${safe}</span>`;
+      const img = el.querySelector('img');
+      if (img) img.onerror = () => { img.style.display='none'; const fallback=el.querySelector('.country-flag-code'); if(fallback) fallback.style.display='inline'; };
+    };
+    setFlag('countryFlag', c.code);
+    setFlag('nationalFlag', rankingCountry.code);
     document.getElementById('nationalTitle').textContent = `TOP ${rankingName}`;
     document.getElementById('modalCountryTab').textContent = `${rankingCountry.flag} ${rankingName}`;
     fillLocalizedCountryControls();
