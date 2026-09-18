@@ -18,7 +18,48 @@
  $('bugForm')?.addEventListener('submit',e=>{e.preventDefault();sendForm(e.currentTarget,'bugs','bugError')});
  async function topData(){const p=player();if(!p?.id||!p?.token)return null;const r=await fetch(`/api/player-rank?id=${encodeURIComponent(p.id)}&token=${encodeURIComponent(p.token)}`,{cache:'no-store'});if(!r.ok)throw Error('Ranking indisponível');const d=await r.json();return{p,worldRank:Number(d.worldRank)||9999,countryRank:Number(d.countryRank)||9999};}
  window.eixoOpenCustomize=()=>openCustomize();
- async function openCustomize(){const p=player();if(!p)return;if(Number(p.vipLevel||0)>0&&window.eixoOpenVipCustomize){window.eixoOpenVipCustomize();return;}const modal=$('customizeModal'),name=$('customizeName'),color=$('customizeColor'),effect=$('customizeEffect'),hint=$('customizeHint'),wrap=$('customizeNameWrap'),err=$('customizeError');err.textContent='';try{const r=await topData();if(!r)return;const isW1=r.worldRank===1,isW23=r.worldRank===2||r.worldRank===3,isC1=r.countryRank===1,isC23=r.countryRank===2||r.countryRank===3;const eligible=isW1||isW23||isC1||isC23;const canEffect=isW1||r.worldRank===2||r.countryRank===1||r.countryRank===2;if(!eligible){hint.textContent='A personalização está disponível apenas para TOP 1/2/3 mundial ou TOP 1/2/3 do país.';return}let colors=[];if(isW1)colors=ALL;else if(isW23)colors=WORLD;else if(isC1)colors=COUNTRY;else if(isC23)colors=COUNTRY_OTHER;else{hint.textContent='Não tens opções especiais disponíveis neste momento.';return}color.innerHTML=colors.map(c=>`<option value="${c}">${c==='rainbow'?'🌈 ARCO-ÍRIS':c}</option>`).join('');color.value=colors.includes(p.nameColor)?p.nameColor:colors[0];effect.innerHTML=EFFECTS.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');effect.value=canEffect?(p.nameEffect||'none'):'none';wrap.style.display=isW1?'block':'none';name.value=p.visualName||p.name;hint.textContent=isW1?'TOP 1 MUNDIAL: podes mudar o nome visual, cor e efeito. O nome oficial da conta não muda.':isW23?'TOP 2/3 MUNDIAL: podes escolher uma das 3 cores especiais. O TOP 2 também pode usar efeitos.':isC1?'TOP 1 DO PAÍS: podes escolher uma das 3 cores nacionais e usar efeitos.':isC23?'TOP 2/3 DO PAÍS: podes escolher uma das 3 cores reservadas. O TOP 2 também pode usar efeitos.':'Não tens opções especiais disponíveis neste momento.';updatePreview();open('customizeModal');}catch(e){err.textContent=e.message}}
+ async function openCustomize(){
+  const p=player();
+  if(!p)return;
+  if(Number(p.vipLevel||0)>0&&window.eixoOpenVipCustomize){
+    window.eixoOpenVipCustomize();
+    return;
+  }
+  const modal=$('customizeModal'),name=$('customizeName'),color=$('customizeColor'),effect=$('customizeEffect'),hint=$('customizeHint'),wrap=$('customizeNameWrap'),err=$('customizeError');
+  err.textContent='';
+  hint.textContent='A verificar a tua posição no ranking...';
+  wrap.style.display='none';
+  open('customizeModal');
+  try{
+    const r=await topData();
+    if(!r)throw Error('Sessão inválida.');
+    const isW1=r.worldRank===1,isW23=r.worldRank===2||r.worldRank===3,isC1=r.countryRank===1,isC23=r.countryRank===2||r.countryRank===3;
+    const eligible=isW1||isW23||isC1||isC23;
+    const canEffect=isW1||r.worldRank===2||r.countryRank===1||r.countryRank===2;
+    if(!eligible){
+      hint.textContent='A personalização está disponível apenas para TOP 1/2/3 mundial ou TOP 1/2/3 do país.';
+      color.innerHTML='';
+      effect.innerHTML='';
+      return;
+    }
+    let colors=[];
+    if(isW1)colors=ALL;
+    else if(isW23)colors=WORLD;
+    else if(isC1)colors=COUNTRY;
+    else if(isC23)colors=COUNTRY_OTHER;
+    color.innerHTML=colors.map(c=>`<option value="${c}">${c==='rainbow'?'🌈 ARCO-ÍRIS':c}</option>`).join('');
+    color.value=colors.includes(p.nameColor)?p.nameColor:colors[0];
+    effect.innerHTML=EFFECTS.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+    effect.value=canEffect?(p.nameEffect||'none'):'none';
+    wrap.style.display=isW1?'block':'none';
+    name.value=p.visualName||p.name;
+    hint.textContent=isW1?'TOP 1 MUNDIAL: podes mudar o nome visual, cor e efeito. O nome oficial da conta não muda.':isW23?'TOP 2/3 MUNDIAL: podes escolher uma das 3 cores especiais. O TOP 2 também pode usar efeitos.':isC1?'TOP 1 DO PAÍS: podes escolher uma das 3 cores nacionais e usar efeitos.':isC23?'TOP 2/3 DO PAÍS: podes escolher uma das 3 cores reservadas. O TOP 2 também pode usar efeitos.':'Não tens opções especiais disponíveis neste momento.';
+    updatePreview();
+  }catch(e){
+    err.textContent=e.message;
+    hint.textContent='Não foi possível carregar as opções de personalização.';
+  }
+}
  function updatePreview(){const n=$('customizeName'),c=$('customizeColor'),e=$('customizeEffect'),p=$('namePreview');if(!p)return;p.textContent=n?.value||player()?.visualName||player()?.name||'JOGADOR';p.className='name-preview '+effectClass(e?.value)+(c?.value==='rainbow'?' name-rainbow':'');p.style.color=c?.value==='rainbow'?'#fff':c?.value||'#fff';if(c?.value==='rainbow'){p.style.background='none';p.style.backgroundSize='';p.style.webkitBackgroundClip='';p.style.backgroundClip=''}else{p.style.background='';p.style.backgroundSize='';p.style.webkitBackgroundClip='';p.style.backgroundClip=''}}
  ['customizeName','customizeColor','customizeEffect'].forEach(id=>$(id)?.addEventListener('input',updatePreview));
  $('customizeSave')?.addEventListener('click',async()=>{const a=getAuth(),err=$('customizeError');if(!a)return;err.textContent='';try{const r=await fetch('/api/profile/customize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id,token:a.token,visualName:$('customizeName').value,color:$('customizeColor').value,effect:$('customizeEffect').value})}),d=await r.json();if(!r.ok)throw Error(d.error||'Não foi possível guardar.');localStorage.setItem('eixo_player',JSON.stringify({...player(),...d.player,token:a.token}));window.dispatchEvent(new Event('eixo-player-updated'));close('customizeModal');if(window.eixoRefreshRankings)window.eixoRefreshRankings();}catch(e){err.textContent=e.message}});
