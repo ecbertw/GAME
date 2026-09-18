@@ -149,6 +149,35 @@
     openRoomFromList(button.dataset.roomId);
   });
 
+  document.getElementById('leaveActiveRoom')?.addEventListener('click',()=>{
+    document.getElementById('roomBoard')?.classList.add('hidden');
+    window.eixoActiveRoomId=null;
+  });
+  const abandonModal=document.getElementById('abandonRoomModal');
+  const closeAbandon=()=>abandonModal?.classList.add('hidden');
+  document.getElementById('abandonRoomClose')?.addEventListener('click',closeAbandon);
+  document.getElementById('abandonRoomCancel')?.addEventListener('click',closeAbandon);
+  abandonModal?.addEventListener('click',e=>{if(e.target===abandonModal)closeAbandon();});
+  document.getElementById('abandonActiveRoom')?.addEventListener('click',()=>{
+    if(window.eixoActiveRoomId) abandonModal?.classList.remove('hidden');
+  });
+  document.getElementById('abandonRoomConfirm')?.addEventListener('click',async()=>{
+    const button=document.getElementById('abandonRoomConfirm');
+    const roomId=window.eixoActiveRoomId;
+    if(!roomId)return;
+    try{
+      const c=credentials();
+      button.disabled=true;
+      const data=await api('/api/rooms/abandon',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:c.id,token:c.token,roomId})});
+      if(!data?.ok)throw new Error('Não foi possível abandonar a sala.');
+      closeAbandon();
+      window.eixoActiveRoomId=null;
+      document.getElementById('roomBoard')?.classList.add('hidden');
+      await loadRooms();
+    }catch(e){alert(e.message||'Não foi possível abandonar a sala.');}
+    finally{button.disabled=false;}
+  });
+
   createRoomButton.addEventListener('click', () => {
     createPanel.classList.toggle('hidden');
     if (!createPanel.classList.contains('hidden')) {
