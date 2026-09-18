@@ -75,3 +75,32 @@ Para transformar o protótipo num jogo realmente online, o próximo passo é lig
 ## 6. NOTA DE DESENVOLVIMENTO
 
 A versão segue a regra de que os elementos visuais do EIXO devem permanecer minimalistas: **botões = texto**, enquanto os dropdowns da barra superior podem manter a indicação visual `▼`.
+
+
+# EIXO V1.1.2 — Ranking, salas e VIP
+
+**Data:** 18/09/2026
+
+## 1. ALTERADO
+- Paginação com **ANTERIOR** e **SEGUINTE** dentro das caixas e em escala adequada.
+- **SAIR** com o mesmo comportamento de hover dos botões das salas.
+- Elementos de personalização VIP aumentados para melhor leitura.
+
+## 2. REMOVIDO
+- Bandeira do lado esquerdo do nome no ranking das salas.
+- Falta de tags de posição/VIP no ranking das salas.
+
+## 3. ADICIONADO
+- Bandeira junto à pontuação no lado direito.
+- Tags GLOBAL, país e VIP nas salas quando aplicáveis.
+- Cores e efeitos individuais das letras nas salas.
+
+## 4. BUGS FIXED
+- **FIXED:** paginação desproporcional após remoção das setas.
+- **FIXED:** hover ausente no botão **SAIR**.
+- **FIXED:** bandeira no lado errado.
+- **FIXED:** tags e personalização não eram preservadas no ranking das salas.
+- **FIXED:** controlos VIP demasiado pequenos.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
