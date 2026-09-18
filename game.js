@@ -159,7 +159,7 @@ function buildPixelWall(){
     tile.style.height=size+'px';
     tile.style.opacity=String(.35+Math.random()*.55);
     wall.appendChild(tile);
-    particles.push({el:tile,x,y,ox:x,oy:y,vx:0,vy:0});
+    particles.push({el:tile,x,y,vx:0,vy:0});
   }
 
   window.addEventListener('pointermove',e=>{
@@ -173,26 +173,26 @@ function buildPixelWall(){
     for(const p of particles){
       const dx=p.x-mouseX,dy=p.y-mouseY;
       const dist=Math.hypot(dx,dy);
-      const radius=105;
+      const radius=115;
       if(dist<radius){
         const d=Math.max(dist,1);
-        const strength=Math.pow(1-d/radius,2)*1.35;
-        p.vx+=(dx/d)*strength;
-        p.vy+=(dy/d)*strength;
+        const force=Math.pow(1-d/radius,2)*2.4;
+        p.vx+=(dx/d)*force;
+        p.vy+=(dy/d)*force;
       }
 
-      p.vx+=(p.ox-p.x)*0.012;
-      p.vy+=(p.oy-p.y)*0.012;
-      p.vx*=0.86;
-      p.vy*=0.86;
+      // No spring / return-to-origin: once pushed, a pixel keeps its new position.
+      p.vx*=0.94;
+      p.vy*=0.94;
       p.x+=p.vx;
       p.y+=p.vy;
 
-      const maxOffset=58;
-      if(p.x<p.ox-maxOffset){p.x=p.ox-maxOffset;p.vx*=0.4;}
-      if(p.x>p.ox+maxOffset){p.x=p.ox+maxOffset;p.vx*=0.4;}
-      if(p.y<p.oy-maxOffset){p.y=p.oy-maxOffset;p.vy*=0.4;}
-      if(p.y>p.oy+maxOffset){p.y=p.oy+maxOffset;p.vy*=0.4;}
+      // Keep pixels on the page so they can be pushed around indefinitely.
+      const size=parseFloat(p.el.style.width)||6;
+      if(p.x<-size)p.x=innerWidth;
+      else if(p.x>innerWidth)p.x=-size;
+      if(p.y<-size)p.y=innerHeight;
+      else if(p.y>innerHeight)p.y=-size;
 
       p.el.style.transform='translate3d('+Math.round(p.x)+'px,'+Math.round(p.y)+'px,0)';
     }
