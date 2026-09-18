@@ -64,16 +64,95 @@
     if (typeof window.loadTopRankings === 'function') window.loadTopRankings();
   }
 
+  function countryFlagUrl(code) {
+    return `https://flagcdn.com/24x18/${String(code).toLowerCase()}.png`;
+  }
+
+  function orderedCountryCodes(lang) {
+    return [...countryCodes].sort((a,b) => {
+      if (a === 'PT' && b !== 'PT') return -1;
+      if (b === 'PT' && a !== 'PT') return 1;
+      return localizedRegion(a, lang).localeCompare(localizedRegion(b, lang), lang);
+    });
+  }
+
+  function renderCountryLabel(code, lang, compact=false) {
+    const c = country(code);
+    return `<img class="country-flag-img" src="${countryFlagUrl(code)}" alt="" aria-hidden="true"><span>${localizedRegion(code, lang)}</span>`;
+  }
+
+  function ensureOnboardingCountryPicker() {
+    if (!countrySelect || document.getElementById('onboardingCountryPicker')) return;
+    const wrapper = document.createElement('div');
+    wrapper.id = 'onboardingCountryPicker';
+    wrapper.className = 'country-picker-custom';
+    countrySelect.parentNode.insertBefore(wrapper, countrySelect);
+    wrapper.appendChild(countrySelect);
+    countrySelect.classList.add('native-country-select');
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'country-picker-button';
+    button.id = 'onboardingCountryButton';
+    button.setAttribute('aria-haspopup','listbox');
+    button.setAttribute('aria-expanded','false');
+
+    const menu = document.createElement('div');
+    menu.className = 'country-picker-menu';
+    menu.id = 'onboardingCountryMenu';
+    menu.setAttribute('role','listbox');
+
+    wrapper.appendChild(button);
+    wrapper.appendChild(menu);
+
+    button.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = menu.classList.toggle('open');
+      button.setAttribute('aria-expanded', String(open));
+    });
+    menu.addEventListener('click', e => {
+      const option = e.target.closest('[data-country]');
+      if (!option) return;
+      countrySelect.value = option.dataset.country;
+      modalCountry = option.dataset.country;
+      updateOnboardingCountryButton();
+      menu.classList.remove('open');
+      button.setAttribute('aria-expanded','false');
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#onboardingCountryPicker')) {
+        menu.classList.remove('open');
+        button.setAttribute('aria-expanded','false');
+      }
+    });
+  }
+
+  function updateOnboardingCountryButton() {
+    const button = document.getElementById('onboardingCountryButton');
+    if (!button || !countrySelect) return;
+    const code = countrySelect.value || 'PT';
+    const lang = effectiveLanguage(currentCountryCode || 'PT');
+    const c = country(code);
+    button.innerHTML = `<img class="country-flag-img" src="${countryFlagUrl(code)}" alt="" aria-hidden="true"><span>${localizedRegion(c.code, lang)}</span><span class="country-picker-chevron">▼</span>`;
+  }
+
   function fillLocalizedCountryControls() {
     const lang = effectiveLanguage(currentCountryCode || 'PT');
-    const label = code => `${country(code).flag} ${localizedRegion(code, lang)}`;
+    const ordered = orderedCountryCodes(lang);
+    const label = code => renderCountryLabel(code, lang);
 
     if (countrySelect) {
-      countrySelect.innerHTML = countryCodes.map(code => `<option value="${code}">${label(code)}</option>`).join('');
-      if (currentCountryCode) countrySelect.value = currentCountryCode;
+      countrySelect.innerHTML = ordered.map(code => `<option value="${code}">${localizedRegion(code, lang)}</option>`).join('');
+      countrySelect.value = currentCountryCode || 'PT';
+      ensureOnboardingCountryPicker();
+      updateOnboardingCountryButton();
+      const menu = document.getElementById('onboardingCountryMenu');
+      if (menu) {
+        menu.innerHTML = ordered.map(code => `<button class="country-picker-option" type="button" data-country="${code}">${renderCountryLabel(code, lang)}</button>`).join('');
+      }
     }
     if (countryMenu) {
-      countryMenu.innerHTML = countryCodes.map(code => `<button class="country-option" type="button" data-country="${code}">${label(code)}</button>`).join('');
+      countryMenu.innerHTML = ordered.map(code => `<button class="country-option" type="button" data-country="${code}">${label(code)}</button>`).join('');
       countryMenu.querySelectorAll('.country-option').forEach(btn => {
         btn.addEventListener('click', () => selectCountry(btn.dataset.country));
       });
