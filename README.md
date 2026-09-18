@@ -440,3 +440,27 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.15 — Personalização normal e legibilidade VIP
+
+**Data:** 18/09/2026  
+**Tipo:** Correção funcional / visual
+
+## 1. ALTERADO
+- **PERSONALIZAR NOME** no menu do jogador passa a abrir diretamente a janela normal de personalização.
+- As opções do submenu VIP no topo foram aumentadas para leitura adequada, sobretudo em ecrãs pequenos.
+
+## 2. REMOVIDO
+- Dependência do fluxo de evento como único mecanismo para abrir a personalização normal.
+
+## 3. ADICIONADO
+- Abertura direta de `customizeModal` através de `window.eixoOpenCustomize` quando a função está disponível.
+- Tamanho de letra e área de clique maiores no submenu VIP.
+
+## 4. BUGS FIXED
+- **FIXED:** **PERSONALIZAR NOME** podia não abrir a janela normal.
+- **FIXED:** Opções do submenu VIP estavam demasiado pequenas para leitura confortável.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
