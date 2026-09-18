@@ -144,8 +144,38 @@ function buildPixelWall(){const wall=document.getElementById('pixelWall'),colors
 
 fillCountryControls();
 if(currentCountryCode&&!countryNames[currentCountryCode])currentCountryCode='PT';
-if(!currentCountryCode){applyLanguage();showOnboarding();}else{applyLanguage();loadTopRankings();}
+
+async function bootPlayer(){
+  // The test server resets the database on every restart/deploy. A stale
+  // localStorage player must never block the registration screen.
+  if(player?.id&&player?.token){
+    try{
+      const res=await fetch(`/api/me?id=${encodeURIComponent(player.id)}&token=${encodeURIComponent(player.token)}`,{cache:'no-store'});
+      if(res.ok){
+        const data=await res.json();
+        if(data?.player){
+          player={...player,...data.player,token:player.token};
+          localStorage.setItem('eixo_player',JSON.stringify(player));
+        }else throw Error();
+      }else throw Error();
+    }catch(_){
+      player=null;
+      localStorage.removeItem('eixo_player');
+      localStorage.removeItem('eixo_country');
+      currentCountryCode='';
+    }
+  }
+  if(!player){
+    applyLanguage();
+    showOnboarding();
+  }else{
+    applyLanguage();
+    loadTopRankings();
+  }
+}
+
 resizeCanvas();stopGame();buildPixelWall();
+bootPlayer();
 
 // Registration is mandatory on first visit: backdrop clicks and Escape cannot dismiss onboarding.
 [onboardingModal,nameModal].forEach(modal=>{
