@@ -10,7 +10,7 @@
     set('onboardingTitle','WELCOME TO EIXO');
     set('onboardingText','First choose the country where you play.');
     const label=document.querySelector('label[for="countrySelect"]');if(label)label.textContent='COUNTRY';
-    set('countryContinue','CONTINUE ▶');
+    set('countryContinue','CONTINUE');
   };
   setInitialEnglish();
 })();
