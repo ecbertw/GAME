@@ -178,3 +178,26 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.6 — Botão de entrada nas salas
+
+**Data:** 18/09/2026  
+**Tipo:** Correção de interface / funcionalidade
+
+## 1. ALTERADO
+- **AS MINHAS SALAS** voltou a apresentar o botão **ENTRAR NA SALA**.
+- O botão permite abrir e visualizar a sala diretamente a partir da lista.
+
+## 2. REMOVIDO
+- Nenhum novo elemento removido nesta atualização.
+
+## 3. ADICIONADO
+- Ligação funcional entre o botão **ENTRAR NA SALA** e a visualização da sala.
+
+## 4. BUGS FIXED
+- **FIXED:** O botão **ENTRAR NA SALA** tinha desaparecido de **AS MINHAS SALAS**.
+- **FIXED:** A lista de salas não tinha acesso à função que abre a sala ativa.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
