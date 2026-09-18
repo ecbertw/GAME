@@ -493,3 +493,29 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.17 — Personalização: cores e RGB
+
+**Data:** 18/09/2026  
+**Tipo:** Correção visual
+
+## 1. ALTERADO
+- Removida a frase interna sobre o nome oficial não mudar.
+- Os códigos HEX das cores deixaram de ser apresentados ao jogador; passam a aparecer nomes como **BRANCO**, **VERMELHO**, **AZUL**, etc.
+
+## 2. REMOVIDO
+- Informação técnica desnecessária na janela de personalização.
+- Exibição direta de códigos HEX nas opções de cor.
+
+## 3. ADICIONADO
+- Nome legível para cada cor disponível.
+- Tratamento RGB reforçado para a janela de personalização e para os nomes nos rankings.
+- O modo **ARCO-ÍRIS** usa animação RGB contínua em vez de uma cor fixa.
+
+## 4. BUGS FIXED
+- **FIXED:** A opção Arco-Íris podia acabar apresentada como uma cor fixa no ranking.
+- **FIXED:** A pré-visualização RGB não tinha o mesmo tratamento robusto do ranking.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
