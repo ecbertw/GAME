@@ -275,3 +275,25 @@ A versão segue a regra de que os elementos visuais do EIXO devem permanecer min
 
 ## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
 - Nenhuma sugestão de jogador identificada/documentada nesta atualização.
+
+
+# EIXO V1.1.10 — Estilo da confirmação de abandono
+
+**Data:** 18/09/2026  
+**Tipo:** Correção visual
+
+## 1. ALTERADO
+- O botão **NÃO** da confirmação de abandono passou a usar o estilo visual escuro dos restantes botões do EIXO.
+
+## 2. REMOVIDO
+- Fundo claro que fazia o texto branco do botão **NÃO** ficar praticamente ilegível.
+
+## 3. ADICIONADO
+- Fundo escuro, borda e texto contrastante.
+- Estado hover consistente com os restantes botões.
+
+## 4. BUGS FIXED
+- **FIXED:** Texto **NÃO** ficava branco sobre fundo claro no pop-up de abandono.
+
+## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
+- Nenhuma sugestão de jogador identificada/documentada nesta atualização.
