@@ -17,7 +17,7 @@
   }
   if(action==='contact'){document.getElementById('contactModal')?.classList.remove('hidden');return}
   if(action==='bugs'){document.getElementById('bugModal')?.classList.remove('hidden');return}
-  if(action==='suggestions'){const m=document.getElementById('contactModal');if(m){m.classList.remove('hidden');const s=m.querySelector('[name="subject"]');if(s)s.value='SUGESTÃO';const h=m.querySelector('h2');if(h)h.textContent='SUGESTÕES';}return}
+  if(action==='suggestions'){document.getElementById('suggestionModal')?.classList.remove('hidden');return}
   window.dispatchEvent(new CustomEvent('eixo-player-menu',{detail:{action}}));
 }
   playerMenu.addEventListener('click',e=>{const b=e.target.closest('.player-option');if(!b)return;const action=b.dataset.action;if(action==='vip'){openMenuAction(action);return;}playerMenu.classList.remove('open','vip-open');playerButton.setAttribute('aria-expanded','false');openMenuAction(action);});
