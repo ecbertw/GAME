@@ -165,12 +165,50 @@ function buildPixelWall(){
   const sponsor=document.createElement('div');
   sponsor.id='pixelSponsor';
   sponsor.className='pixel-sponsor';
-  const sponsorImage=document.createElement('img');
-  sponsorImage.src='/assets/eixo-small-pixels-big-ideas.svg?v=1';
-  sponsorImage.alt='';
-  sponsorImage.draggable=false;
-  sponsor.appendChild(sponsorImage);
+  const sponsorCanvas=document.createElement('canvas');
+  sponsorCanvas.className='pixel-sponsor-canvas';
+  sponsorCanvas.width=128;
+  sponsorCanvas.height=48;
+  sponsorCanvas.setAttribute('aria-label','SMALL PIXELS . BIG IDEAS');
+  sponsor.appendChild(sponsorCanvas);
   document.body.appendChild(sponsor);
+
+  // True bitmap artwork: 128x48 logical pixels, enlarged with nearest-neighbor.
+  const ac=sponsorCanvas.getContext('2d');
+  ac.imageSmoothingEnabled=false;
+  const C={bg:'#071018',w:'#f1eee2',b:'#168fe5',g:'#f0bd35',c:'#55c8d8',v:'#39a85a',d:'#155334',br:'#8b5a35',r:'#d7353f',p:'#7550b8',s:'#6d8294'};
+  const pixel=(x,y,c)=>{ac.fillStyle=C[c];ac.fillRect(x,y,1,1);};
+  const block=(x,y,w,h,c)=>{ac.fillStyle=C[c];ac.fillRect(x,y,w,h);};
+  const font={
+    S:['1111','1000','1110','0001','1110'],M:['10001','11011','10101','10001','10001'],
+    A:['0110','1001','1111','1001','1001'],L:['1000','1000','1000','1000','1111'],
+    P:['1110','1001','1110','1000','1000'],I:['111','010','010','010','111'],
+    X:['10001','01010','00100','01010','10001'],E:['1111','1000','1110','1000','1111'],
+    B:['1110','1001','1110','1001','1110'],G:['0111','1000','1011','1001','0111'],
+    D:['1110','1001','1001','1001','1110']
+  };
+  ac.fillStyle=C.bg;ac.fillRect(0,0,128,48);
+
+  // Small scene elements around the slogan.
+  [[4,5,'g'],[12,3,'b'],[27,7,'v'],[42,4,'b'],[73,6,'g'],[92,4,'b'],[119,6,'r'],[122,18,'g'],[3,23,'b'],[111,24,'c'],[30,39,'r'],[88,41,'v'],[121,38,'p']].forEach(([x,y,c])=>pixel(x,y,c));
+  [[37,6],[36,7],[37,7],[38,7],[35,8],[36,8],[37,8],[38,8],[39,8],[37,9],[37,10]].forEach(([x,y])=>pixel(x,y,'g'));
+  block(11,13,4,2,'w');block(14,11,4,4,'w');block(18,13,3,2,'w');
+  block(80,14,4,2,'w');block(83,12,4,4,'w');block(87,14,3,2,'w');
+  [[43,27,15],[44,26,13],[45,25,11],[46,24,9],[47,23,7],[48,22,5],[49,21,3],[59,28,14],[60,27,12],[61,26,10],[62,25,8],[63,24,6],[64,23,4]].forEach(([x,y,w])=>block(x,y,w,1,'w'));
+  [[48,23],[49,22],[50,21],[62,26],[63,25],[64,24]].forEach(([x,y])=>pixel(x,y,'s'));
+  block(7,28,6,1,'g');block(6,29,8,3,'g');block(7,32,6,2,'g');block(8,34,4,2,'w');block(8,36,4,1,'s');
+  block(116,28,4,5,'v');block(113,30,10,5,'v');block(111,33,13,4,'v');block(115,37,7,2,'v');block(118,35,3,10,'br');block(113,36,2,2,'d');block(123,31,2,3,'d');
+
+  let x=2;
+  for(const ch of 'SMALL PIXELS . BIG IDEAS'){
+    if(ch===' '){x+=2;continue;}
+    const pat=ch==='.'?['001','001','001','001','001']:font[ch];
+    const col=x<30?'w':x<63?'b':x<76?'g':'w';
+    for(let y=0;y<pat.length;y++)for(let i=0;i<pat[y].length;i++)if(pat[y][i]==='1')pixel(x+i,18+y,col);
+    x+=pat[0].length+1;
+  }
+  for(let i=2;i<58;i++)pixel(i,25,'b');
+  for(let i=62;i<126;i++)pixel(i,25,'g');
 
   window.addEventListener('pointermove',e=>{
     if(e.pointerType&&e.pointerType!=='mouse')return;
