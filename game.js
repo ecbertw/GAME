@@ -166,7 +166,7 @@ function buildPixelWall(){
   sponsor.id='pixelSponsor';
   sponsor.className='pixel-sponsor';
   const sponsorImage=document.createElement('img');
-  sponsorImage.src='/assets/visit-portugal-pixel-cutout.png?v=2';
+  sponsorImage.src='/assets/eixo-small-pixels-big-ideas.svg?v=1';
   sponsorImage.alt='';
   sponsorImage.draggable=false;
   sponsor.appendChild(sponsorImage);
