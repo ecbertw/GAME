@@ -159,7 +159,7 @@ function buildPixelWall(){
     tile.style.height=size+'px';
     tile.style.opacity=String(.35+Math.random()*.55);
     wall.appendChild(tile);
-    particles.push({el:tile,x,y,vx:0,vy:0});
+    particles.push({el:tile,x,y,ox:x,oy:y,vx:0,vy:0});
   }
 
   window.addEventListener('pointermove',e=>{
@@ -173,17 +173,20 @@ function buildPixelWall(){
     for(const p of particles){
       const dx=p.x-mouseX,dy=p.y-mouseY;
       const dist=Math.hypot(dx,dy);
-      const radius=115;
+      const radius=28;
       if(dist<radius){
         const d=Math.max(dist,1);
-        const force=Math.pow(1-d/radius,2)*2.4;
+        const force=Math.pow(1-d/radius,2)*1.15;
         p.vx+=(dx/d)*force;
         p.vy+=(dy/d)*force;
       }
 
-      // No spring / return-to-origin: once pushed, a pixel keeps its new position.
-      p.vx*=0.94;
-      p.vy*=0.94;
+      // Soft spring: pixels move only when the pointer is very close,
+      // then naturally settle back to their original positions.
+      p.vx+=(p.ox-p.x)*0.018;
+      p.vy+=(p.oy-p.y)*0.018;
+      p.vx*=0.82;
+      p.vy*=0.82;
       p.x+=p.vx;
       p.y+=p.vy;
 
