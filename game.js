@@ -144,7 +144,7 @@ function buildPixelWall(){
   const wall=document.getElementById('pixelWall');
   if(!wall)return;
   const colors=['#e83e45','#f1c438','#2f9bd1','#39b86a','#7d4ac7','#ef7b2d','#e7e7df','#172b3b'];
-  const count=Math.min(650,Math.floor(innerWidth*innerHeight/900));
+  const count=Math.min(950,Math.floor(innerWidth*innerHeight/620));
   const particles=[];
   let mouseX=-9999,mouseY=-9999;
 
@@ -173,7 +173,7 @@ function buildPixelWall(){
     for(const p of particles){
       const dx=p.x-mouseX,dy=p.y-mouseY;
       const dist=Math.hypot(dx,dy);
-      const radius=30;
+      const radius=38;
       if(dist<radius){
         const d=Math.max(dist,1);
         const force=Math.pow(1-d/radius,2)*0.95;
