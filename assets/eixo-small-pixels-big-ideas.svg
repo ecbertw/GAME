@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 72" shape-rendering="crispEdges">
+<rect width="128" height="72" fill="#071018"/>
+<g opacity=".35" fill="#172631"><path d="M0 0h128v1H0zM0 12h128v1H0zM0 24h128v1H0zM0 36h128v1H0zM0 48h128v1H0zM0 60h128v1H0z"/><path d="M0 0h1v72H0zM16 0h1v72h-1zM32 0h1v72h-1zM48 0h1v72h-1zM64 0h1v72h-1zM80 0h1v72h-1zM96 0h1v72h-1zM112 0h1v72h-1z"/> </g>
+<!-- stars -->
+<g fill="#2f8fc7"><rect x="8" y="5" width="1" height="1"/><rect x="48" y="8" width="1" height="1"/><rect x="72" y="6" width="1" height="1"/><rect x="114" y="8" width="1" height="1"/></g>
+<g fill="#f0bd35"><rect x="35" y="5" width="1" height="1"/><rect x="77" y="16" width="1" height="1"/><rect x="122" y="18" width="1" height="1"/><rect x="6" y="25" width="1" height="1"/></g>
+<!-- clouds -->
+<g fill="#e9edf0"><path d="M15 16h3v-2h4v-2h4v2h3v2h2v3H15z"/><path d="M82 17h3v-2h3v-3h4v2h3v3h3v3H82z"/></g>
+<g fill="#75a9c9"><rect x="16" y="19" width="16" height="1"/><rect x="84" y="20" width="14" height="1"/></g>
+<!-- sun -->
+<g fill="#f0bd35"><rect x="36" y="10" width="1" height="5"/><rect x="34" y="12" width="5" height="1"/><rect x="35" y="11" width="3" height="3"/><rect x="35" y="12" width="3" height="1"/></g>
+<!-- mountains -->
+<path fill="#dfe7ee" d="M42 28l8-10 2 3 3-5 10 12H42z"/><path fill="#6d8294" d="M50 20l2 3 2-1 5 7h-9l-4-2z"/><path fill="#b6c7d6" d="M65 30l7-9 2 3 3-4 8 10H65z"/><path fill="#526d83" d="M72 22l2 3 2-1 4 6h-8l-4-3z"/>
+<!-- crescent -->
+<path fill="#f1f1e7" d="M103 12h3v1h2v2h1v6h-1v2h-2v2h-4v-2h3v-2h1v-7h-1v-1h-2z"/>
+<!-- lightbulb -->
+<g><path fill="#f5c542" d="M6 29h6v1h2v4h-1v2h-2v3H8v-3H6v-2H5v-4h1z"/><path fill="#fff4c2" d="M8 30h3v1h1v2H8v-3z"/><path fill="#68747f" d="M8 39h4v2H8z"/></g>
+<!-- tree -->
+<g><path fill="#8b5a35" d="M118 48h3v12h-3z"/><path fill="#2e9b59" d="M112 46h4v-4h5v3h4v4h2v7h-5v2h-12v-4h2z"/><path fill="#55a64f" d="M115 44h4v3h-2v2h-4v-3h2z"/></g>
+<!-- main slogan -->
+<g font-family="monospace" font-size="8" font-weight="900" letter-spacing=".1" text-anchor="middle"><text x="64" y="42" fill="#f4f1df">SMALL <tspan fill="#168fe5">PIXELS</tspan><tspan fill="#f4f1df"> . </tspan><tspan fill="#f0bd35">BIG</tspan><tspan fill="#f4f1df"> IDEAS</tspan></text></g>
+<!-- pixel underline -->
+<g><rect x="18" y="46" width="44" height="2" fill="#168fe5"/><rect x="64" y="46" width="46" height="2" fill="#f0bd35"/></g>
+<!-- bottom accents -->
+<g fill="#35a86b"><rect x="9" y="51" width="2" height="1"/><rect x="13" y="54" width="2" height="1"/><rect x="28" y="57" width="1" height="1"/><rect x="106" y="55" width="2" height="1"/></g>
+<g fill="#d7353f"><rect x="4" y="57" width="1" height="1"/><rect x="24" y="51" width="1" height="1"/><rect x="116" y="51" width="1" height="1"/></g>
+<g fill="#7550b8"><rect x="33" y="56" width="1" height="1"/><rect x="100" y="59" width="1" height="1"/></g>
+</svg>
