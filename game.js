@@ -173,7 +173,7 @@ function buildPixelWall(){
     for(const p of particles){
       const dx=p.x-mouseX,dy=p.y-mouseY;
       const dist=Math.hypot(dx,dy);
-      const radius=38;
+      const radius=46;
       if(dist<radius){
         const d=Math.max(dist,1);
         const force=Math.pow(1-d/radius,2)*0.95;
