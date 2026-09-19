@@ -15,9 +15,9 @@
     if (!container) return;
     container.innerHTML = '';
     container.classList.add('eixo-pixel-art');
-    container.style.setProperty('--pixel-size', art.pixelSize + 'px');
-    container.style.width = (art.width * art.pixelSize) + 'px';
-    container.style.height = (art.height * art.pixelSize) + 'px';
+    const pixelSize = parseFloat(getComputedStyle(container).getPropertyValue('--pixel-size')) || art.pixelSize;
+    container.style.width = (art.width * pixelSize) + 'px';
+    container.style.height = (art.height * pixelSize) + 'px';
     container.setAttribute('aria-label', 'Pixel art');
     container.setAttribute('role', 'img');
 
@@ -32,8 +32,10 @@
         if (!color) continue;
         const pixel = document.createElement('i');
         pixel.className = 'eixo-pixel';
-        pixel.style.left = (x * art.pixelSize) + 'px';
-        pixel.style.top = (y * art.pixelSize) + 'px';
+        pixel.style.left = (x * pixelSize) + 'px';
+        pixel.style.top = (y * pixelSize) + 'px';
+        pixel.style.width = pixelSize + 'px';
+        pixel.style.height = pixelSize + 'px';
         pixel.style.backgroundColor = color;
         fragment.appendChild(pixel);
       }
