@@ -176,7 +176,8 @@ function buildPixelWall(){
   // True bitmap artwork: 128x48 logical pixels, enlarged with nearest-neighbor.
   const ac=sponsorCanvas.getContext('2d');
   ac.imageSmoothingEnabled=false;
-  const C={bg:'#071018',w:'#f1eee2',b:'#168fe5',g:'#f0bd35',c:'#55c8d8',v:'#39a85a',d:'#155334',br:'#8b5a35',r:'#d7353f',p:'#7550b8',s:'#6d8294'};
+  // Official r/place-style 16-color palette. Every painted cell uses one palette color.
+  const C={bg:'#000000',w:'#FFFFFF',b:'#2450A4',g:'#FFD635',c:'#51E9F4',v:'#00A368',d:'#155F30',br:'#9C6926',r:'#FF4500',p:'#811E9F',s:'#898D90'};
   const pixel=(x,y,c)=>{ac.fillStyle=C[c];ac.fillRect(x,y,1,1);};
   const block=(x,y,w,h,c)=>{ac.fillStyle=C[c];ac.fillRect(x,y,w,h);};
   const font={
