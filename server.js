@@ -122,6 +122,7 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/players'){const d=await body(req);return json(res,201,await registerPlayer(d.name,d.country));}
   if(req.method==='POST'&&url.pathname==='/api/scores'){const d=await body(req);return json(res,200,{player:await submitScore(d.id,d.token,d.score)});}
   if(req.method==='GET'&&url.pathname==='/api/me'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
+  if(req.method==='GET'&&url.pathname==='/api/profile/ranks'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));if(!p)return json(res,401,{error:'Sessão inválida.'});const r=await ranked();return json(res,200,{worldRank:r.world.get(p.id)||null,countryRank:r.country.get(p.id)||null});}
   if(req.method==='POST'&&url.pathname==='/api/profile/customize'){const d=await body(req);return json(res,200,await customize(d.id,d.token,d));}
   if(req.method==='POST'&&url.pathname==='/api/vip/test-purchase'){const d=await body(req);return json(res,200,await buyVip(d.id,d.token));}
   if(req.method==='POST'&&url.pathname==='/api/rooms'){const d=await body(req);return json(res,201,{room:await createRoom(d.id,d.token,d.name,d.maxPlayers)});}
