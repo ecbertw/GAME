@@ -165,18 +165,8 @@ function buildPixelWall(){
   const sponsor=document.createElement('div');
   sponsor.id='pixelSponsor';
   sponsor.className='pixel-sponsor';
-  sponsor.setAttribute('role','img');
-  sponsor.setAttribute('aria-label','Visite Portugal');
-  sponsor.title='VISITE PORTUGAL';
-  const sponsorImage=document.createElement('img');
-  sponsorImage.src='/assets/visit-portugal-pixel-cutout.png?v=1';
-  sponsorImage.alt='';
-  sponsorImage.draggable=false;
-  sponsor.appendChild(sponsorImage);
-  const sponsorLabel=document.createElement('span');
-  sponsorLabel.textContent='VISITE PORTUGAL';
-  sponsor.appendChild(sponsorLabel);
   document.body.appendChild(sponsor);
+  if(window.EixoPixelArt?.mount) window.EixoPixelArt.mount(sponsor);
 
   window.addEventListener('pointermove',e=>{
     if(e.pointerType&&e.pointerType!=='mouse')return;
