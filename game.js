@@ -187,13 +187,13 @@ function buildPixelWall(){
     const tctx=tmp.getContext('2d');tctx.imageSmoothingEnabled=false;tctx.drawImage(sponsorImage,0,0,sw,sh);
     const px=tctx.getImageData(0,0,sw,sh).data;
     for(let py=0;py<sh;py++)for(let pxx=0;pxx<sw;pxx++){
-      if(py<8)continue;
       const k=(py*sw+pxx)*4,r=px[k],g=px[k+1],b=px[k+2];
-      const max=Math.max(r,g,b),min=Math.min(r,g,b),sat=max-min;
-      const sky=py<29&&((b>r*1.12&&b>g*1.03)||(b>145&&sat>35&&g>r*1.05));
-      const cloud=py<25&&sat<28&&max>185;
-      if(sky||cloud)continue;
-      sctx.fillStyle='rgb('+r+','+g+','+b+')';
+      const max=Math.max(r,g,b),min=Math.min(r,g,b),sat=max-min,lum=(r+g+b)/3;
+      const blueSky=py<24&&b>r*1.28&&b>g*1.06;
+      const nearBlack=lum<18;
+      if(blueSky||nearBlack)continue;
+      const alpha=Math.max(.55,Math.min(1,(lum-10)/90));
+      sctx.fillStyle='rgba('+r+','+g+','+b+','+alpha.toFixed(2)+')';
       sctx.fillRect(pxx*cell,py*cell,cell,cell);
     }
   };
