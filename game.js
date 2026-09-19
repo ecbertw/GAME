@@ -162,14 +162,41 @@ function buildPixelWall(){
     particles.push({el:tile,x,y,vx:0,vy:0});
   }
 
-  const sponsor=document.createElement('img');
+  const sponsor=document.createElement('div');
   sponsor.id='pixelSponsor';
   sponsor.className='pixel-sponsor';
-  sponsor.src='/assets/visit-portugal-pixel.png?v=2';
-  sponsor.alt='Visite Portugal';
-  sponsor.title='VISITE PORTUGAL';
+  sponsor.setAttribute('role','img');
   sponsor.setAttribute('aria-label','Visite Portugal');
+  sponsor.title='VISITE PORTUGAL';
+  const sponsorCanvas=document.createElement('canvas');
+  sponsorCanvas.width=288;sponsorCanvas.height=192;
+  sponsorCanvas.className='pixel-sponsor-canvas';
+  const sponsorLabel=document.createElement('span');
+  sponsorLabel.textContent='VISITE PORTUGAL';
+  sponsor.appendChild(sponsorCanvas);
+  sponsor.appendChild(sponsorLabel);
   document.body.appendChild(sponsor);
+  const sponsorImage=new Image();
+  sponsorImage.src='/assets/visit-portugal-pixel.png?v=3';
+  sponsorImage.onload=()=>{
+    const sctx=sponsorCanvas.getContext('2d');
+    sctx.imageSmoothingEnabled=false;
+    sctx.clearRect(0,0,288,192);
+    const sw=72,sh=48,cell=4;
+    const tmp=document.createElement('canvas');tmp.width=sw;tmp.height=sh;
+    const tctx=tmp.getContext('2d');tctx.imageSmoothingEnabled=false;tctx.drawImage(sponsorImage,0,0,sw,sh);
+    const px=tctx.getImageData(0,0,sw,sh).data;
+    for(let py=0;py<sh;py++)for(let pxx=0;pxx<sw;pxx++){
+      if(py<8)continue;
+      const k=(py*sw+pxx)*4,r=px[k],g=px[k+1],b=px[k+2];
+      const max=Math.max(r,g,b),min=Math.min(r,g,b),sat=max-min;
+      const sky=py<29&&((b>r*1.12&&b>g*1.03)||(b>145&&sat>35&&g>r*1.05));
+      const cloud=py<25&&sat<28&&max>185;
+      if(sky||cloud)continue;
+      sctx.fillStyle='rgb('+r+','+g+','+b+')';
+      sctx.fillRect(pxx*cell,py*cell,cell,cell);
+    }
+  };
 
   window.addEventListener('pointermove',e=>{
     if(e.pointerType&&e.pointerType!=='mouse')return;
