@@ -173,20 +173,18 @@ function buildPixelWall(){
     for(const p of particles){
       const dx=p.x-mouseX,dy=p.y-mouseY;
       const dist=Math.hypot(dx,dy);
-      const radius=28;
+      const radius=30;
       if(dist<radius){
         const d=Math.max(dist,1);
-        const force=Math.pow(1-d/radius,2)*1.15;
+        const force=Math.pow(1-d/radius,2)*0.95;
         p.vx+=(dx/d)*force;
         p.vy+=(dy/d)*force;
       }
 
-      // Soft spring: pixels move only when the pointer is very close,
-      // then naturally settle back to their original positions.
-      p.vx+=(p.ox-p.x)*0.018;
-      p.vy+=(p.oy-p.y)*0.018;
-      p.vx*=0.82;
-      p.vy*=0.82;
+      // Permanent displacement: the pointer pushes nearby pixels out of the way,
+      // and they keep their new position instead of snapping back.
+      p.vx*=0.91;
+      p.vy*=0.91;
       p.x+=p.vx;
       p.y+=p.vy;
 
