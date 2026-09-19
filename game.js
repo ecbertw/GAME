@@ -165,8 +165,12 @@ function buildPixelWall(){
   const sponsor=document.createElement('div');
   sponsor.id='pixelSponsor';
   sponsor.className='pixel-sponsor';
+  const sponsorImage=document.createElement('img');
+  sponsorImage.src='/assets/visit-portugal-pixel-cutout.png?v=2';
+  sponsorImage.alt='';
+  sponsorImage.draggable=false;
+  sponsor.appendChild(sponsorImage);
   document.body.appendChild(sponsor);
-  if(window.EixoPixelArt?.mount) window.EixoPixelArt.mount(sponsor);
 
   window.addEventListener('pointermove',e=>{
     if(e.pointerType&&e.pointerType!=='mouse')return;
