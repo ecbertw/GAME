@@ -92,7 +92,11 @@
       const effect=hasLetters?'none':safeEffect(m.nameEffect);
       const name=hasLetters?letters(visual,m.letterStyles):[...String(visual)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
       const when=m.createdAt?new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
-      return '<article class="chat-message"><div class="chat-avatar" aria-hidden="true">◆</div><div class="chat-content"><div class="chat-author"><span class="chat-name'+(rainbow?' name-rainbow':'')+(effect!=='none'?' effect-'+esc(effect):'')+'"'+style+'>'+name+'</span>'+top+vip(v)+'<span class="chat-time">'+esc(when)+'</span></div><div class="chat-text">'+esc(m.message)+'</div></div></article>';
+      const role=m.role==='admin'?'<span class="role-tag admin">ADMIN</span>':m.role==='moderator'?'<span class="role-tag">MOD</span>':'';
+      const me=getPlayer(),canDelete=me?.role==='admin';
+      const border=safeColor(m.avatarBorder)?' style="border-color:'+esc(m.avatarBorder)+'"':'';
+      const glyph={default:'◆',diamond:'◆',square:'■',circle:'●',star:'★',bolt:'ϟ'}[m.avatar]||'◆';
+      return '<article class="chat-message" data-message-id="'+esc(m.id)+'"><div class="chat-avatar"'+border+' aria-hidden="true">'+glyph+'</div><div class="chat-content"><div class="chat-author"><span class="chat-name'+(rainbow?' name-rainbow':'')+(effect!=='none'?' effect-'+esc(effect):'')+'"'+style+'>'+name+'</span>'+role+top+vip(v)+'<span class="chat-time">'+esc(when)+'</span>'+(canDelete?'<button class="chat-delete" data-delete-message="'+esc(m.id)+'" title="Eliminar mensagem">×</button>':'')+'</div><div class="chat-text">'+esc(m.message)+'</div></div></article>';
     }).join('');
     if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
   }
@@ -109,7 +113,8 @@
     finally{loading=false;}
   }
 
-  form.addEventListener('submit',async e=>{
+  messages.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-message]');if(!b)return;const p=getPlayer();if(p?.role!=='admin')return;try{const r=await fetch('/api/admin/chat',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,token:p.token,messageId:b.dataset.deleteMessage})});const d=await r.json();if(!r.ok)throw Error(d.error||'Erro ao eliminar.');await load(false)}catch(err){status.textContent=err.message}});
+    form.addEventListener('submit',async e=>{
     e.preventDefault();
     const p=getPlayer(),text=input.value.trim();
     if(!p?.id||!p?.token||!text||loading)return;
