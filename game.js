@@ -148,10 +148,11 @@ function buildPixelWall(){
       const dist=Math.hypot(dx,dy);
       const radius=120;
       if(dist<radius){
+        const under=document.elementFromPoint(mouseX,mouseY);
+        const protectedUi=under&&under.closest&&under.closest('.site-shell,.chat-panel,#chatPanel,.chat-shell');
+        if(!protectedUi&&window.EixoAudio&&window.EixoAudio.pixelWind&&Math.hypot(p.vx,p.vy)>.025)window.EixoAudio.pixelWind(1-dist/radius);
         if(dist<10&&!p.pixelHit){
           p.pixelHit=true;
-          const under=document.elementFromPoint(mouseX,mouseY);
-          const protectedUi=under&&under.closest&&under.closest('.site-shell,.chat-panel,#chatPanel,.chat-shell');
           if(!protectedUi&&window.EixoAudio)window.EixoAudio.pixel();
         }
         const d=Math.max(dist,1);
