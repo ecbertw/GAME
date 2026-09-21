@@ -1,8 +1,8 @@
 {
   "name": "eixo-game",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "EIXO — minimalist online reflex game in pixel art",
+  "description": "EIXO — online reflex game with secure accounts and sessions",
   "main": "server.js",
   "scripts": {
     "start": "node server-start.js"
