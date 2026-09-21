@@ -178,7 +178,12 @@ async function handleApi(req,res,url){
   if(req.method==='GET'&&url.pathname==='/api/me'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
   if(req.method==='GET'&&url.pathname==='/api/profile/ranks'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));if(!p)return json(res,401,{error:'Sessão inválida.'});const r=await ranked();return json(res,200,{worldRank:r.world.get(p.id)||null,countryRank:r.country.get(p.id)||null});}
   if(req.method==='POST'&&url.pathname==='/api/profile/customize'){const d=await body(req);return json(res,200,await customize(d.id,d.token,d));}
-  if(req.method==='POST'&&url.pathname==='/api/vip/test-purchase'){const d=await body(req);return json(res,200,await buyVip(d.id,d.token));}
+  if(req.method==='POST'&&url.pathname==='/api/vip/test-purchase'){return json(res,403,{error:'As compras VIP ainda não estão disponíveis.'});}
+  if(req.method==='POST'&&url.pathname==='/api/profile/account'){const d=await body(req);return json(res,200,await updateAccountProfile(d.id,d.token,d));}
+  if(req.method==='POST'&&url.pathname==='/api/admin/vip'){const d=await body(req);return json(res,200,await adminSetVip(d.id,d.token,d.targetId,d.level));}
+  if(req.method==='POST'&&url.pathname==='/api/admin/role'){const d=await body(req);return json(res,200,await adminSetRole(d.id,d.token,d.targetId,String(d.role||'')));}
+  if(req.method==='POST'&&url.pathname==='/api/moderation/ban'){const d=await body(req);return json(res,200,await moderateBan(d.id,d.token,d.targetId,d.hours,!!d.permanent));}
+  if(req.method==='DELETE'&&url.pathname==='/api/admin/chat'){const d=await body(req);return json(res,200,await deleteChatMessage(d.id,d.token,d.messageId));}
   if(req.method==='POST'&&url.pathname==='/api/rooms'){const d=await body(req);return json(res,201,{room:await createRoom(d.id,d.token,d.name,d.maxPlayers)});}
   if(req.method==='GET'&&url.pathname==='/api/rooms'){return json(res,200,{rooms:await listRooms(url.searchParams.get('id'),url.searchParams.get('token'))});}
   if(req.method==='POST'&&url.pathname==='/api/rooms/join'){const d=await body(req);return json(res,200,{room:await joinRoom(d.id,d.token,d.code)});}
