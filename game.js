@@ -144,7 +144,7 @@ function buildPixelWall(){
   const wall=document.getElementById('pixelWall');
   if(!wall)return;
   const colors=['#e83e45','#f1c438','#2f9bd1','#39b86a','#7d4ac7','#ef7b2d','#e7e7df','#172b3b'];
-  const count=Math.min(2000,Math.floor(innerWidth*innerHeight/400));
+  const count=Math.min(2500,Math.floor(innerWidth*innerHeight/400));
   const particles=[];
   let mouseX=-9999,mouseY=-9999;
 
@@ -159,7 +159,7 @@ function buildPixelWall(){
     tile.style.height=size+'px';
     tile.style.opacity=String(.35+Math.random()*.55);
     wall.appendChild(tile);
-    particles.push({el:tile,x,y,ox:x,oy:y,vx:0,vy:0});
+    particles.push({el:tile,x,y,ox:x,oy:y,vx:0,vy:0,pixelHit:false});
   }
 
   window.addEventListener('pointermove',e=>{
@@ -175,11 +175,17 @@ function buildPixelWall(){
       const dist=Math.hypot(dx,dy);
       const radius=80;
       if(dist<radius){
+        if(dist<10&&!p.pixelHit){
+          p.pixelHit=true;
+          if(window.EixoAudio)window.EixoAudio.pixel();
+        }
         const d=Math.max(dist,1);
         const force=Math.pow(1-d/radius,2)*0.95;
         p.vx+=(dx/d)*force;
         p.vy+=(dy/d)*force;
       }
+
+      if(dist>18)p.pixelHit=false;
 
       // Permanent displacement: the pointer pushes nearby pixels out of the way,
       // and they keep their new position instead of snapping back.
