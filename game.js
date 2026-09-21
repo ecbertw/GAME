@@ -146,11 +146,13 @@ function buildPixelWall(){
     for(const p of particles){
       const dx=p.x-mouseX,dy=p.y-mouseY;
       const dist=Math.hypot(dx,dy);
-      const radius=80;
+      const radius=120;
       if(dist<radius){
         if(dist<10&&!p.pixelHit){
           p.pixelHit=true;
-          if(window.EixoAudio)window.EixoAudio.pixel();
+          const under=document.elementFromPoint(mouseX,mouseY);
+          const protectedUi=under&&under.closest&&under.closest('.site-shell,.chat-panel,#chatPanel,.chat-shell');
+          if(!protectedUi&&window.EixoAudio)window.EixoAudio.pixel();
         }
         const d=Math.max(dist,1);
         const force=Math.pow(1-d/radius,2)*0.95;
