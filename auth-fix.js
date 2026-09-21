@@ -3,13 +3,14 @@
   const $=id=>document.getElementById(id);
   const modal=$('authModal'),loginForm=$('authLoginForm'),registerForm=$('authRegisterForm'),resetForm=$('authResetForm');
   if(!modal)return;
+  const syncPlayerMenu=()=>{const menu=$('playerMenu');if(!menu)return;let b=menu.querySelector('[data-auth-logout]');if(!window.eixoGetPlayer?.()){b?.remove();return;}if(!b){b=document.createElement('button');b.type='button';b.dataset.authLogout='1';b.textContent='TERMINAR SESSÃO';b.addEventListener('click',()=>window.eixoLogout?.());menu.appendChild(b);}};
   const setPlayer=p=>{
     const clean=p?{...p,token:'session'}:null;
     if(clean){localStorage.setItem('eixo_player',JSON.stringify(clean));localStorage.setItem('eixo_country',clean.country);}
     else localStorage.removeItem('eixo_player');
     window.eixoSetPlayer?.(clean);
     const name=$('playerName');if(name)name.textContent=clean?.visualName||clean?.name||'ENTRAR';
-    window.dispatchEvent(new Event('eixo-player-updated'));
+    window.dispatchEvent(new Event('eixo-player-updated'));syncPlayerMenu();
   };
   const open=mode=>{
     modal.classList.remove('hidden');
@@ -63,5 +64,5 @@
   };
   populateCountries();
   window.dispatchEvent(new Event('eixo-auth-ready'));
-  const p=window.eixoGetPlayer?.();if(p){$('playerName').textContent=p.visualName||p.name;modal.classList.add('hidden');}else{$('playerName').textContent='ENTRAR';}
+  const p=window.eixoGetPlayer?.();if(p){$('playerName').textContent=p.visualName||p.name;modal.classList.add('hidden');}else{$('playerName').textContent='ENTRAR';}syncPlayerMenu();
 })();
