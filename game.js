@@ -52,7 +52,6 @@ function changeCountry(code){if(player&&player.country&&player.country!==code){c
 if(typeof window!=='undefined'){window.eixoGetPlayer=()=>player;window.eixoSetPlayer=p=>{player=p||null;window.dispatchEvent(new Event('eixo-player-updated'));};window.eixoGetCountry=()=>currentCountryCode;}
 
 function dimensions(){const rect=canvas.getBoundingClientRect();return{w:rect.width,h:rect.height};}
-function dimensions(){const rect=canvas.getBoundingClientRect();return{w:rect.width,h:rect.height};}
 function center(){const{w,h}=dimensions();return{x:w/2,y:h/2};}
 function drawPixelCircle(cx,cy,radius,color,width=1,dashed=false){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dashed?[3,5]:[]);ctx.beginPath();ctx.arc(Math.round(cx),Math.round(cy),radius,0,Math.PI*2);ctx.stroke();ctx.restore();}
 function draw(){
