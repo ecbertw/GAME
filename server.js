@@ -2,6 +2,7 @@ const http=require('http');
 const fs=require('fs');
 const path=require('path');
 const crypto=require('crypto');
+const authService=require('./auth-server');
 const PORT=Number(process.env.PORT)||3000;
 const HOST='0.0.0.0';
 const ROOT=__dirname;
@@ -43,7 +44,7 @@ function validVipVisualName(v){const s=String(v??'').trim();return s.length>=1&&
 function parseLetterStyles(v){try{return Array.isArray(v)?v:JSON.parse(v||'[]')}catch(_){return[]}}
 function securityHeaders(){return {'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=()','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://flagcdn.com data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",'Strict-Transport-Security':'max-age=31536000; includeSubDomains'};}
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...securityHeaders()});res.end(JSON.stringify(payload));}
-function body(req){return new Promise((resolve,reject)=>{let raw='';req.on('data',c=>{raw+=c;if(raw.length>30000)req.destroy();});req.on('end',()=>{try{resolve(raw?JSON.parse(raw):{});}catch(e){reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
+function body(req){return new Promise((resolve,reject)=>{let raw='';req.on('data',c=>{raw+=c;if(raw.length>30000)req.destroy();});req.on('end',()=>{try{const data=raw?JSON.parse(raw):{};if(data&&typeof data==='object'){const c=parseCookies(req);if(c[SESSION_COOKIE])data.token=c[SESSION_COOKIE];}resolve(data);}catch(e){reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
 function tokenHash(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
 function publicPlayer(p){let styles=[];try{styles=Array.isArray(p.letterStyles)?p.letterStyles:JSON.parse(p.letterStyles||'[]')}catch(_){}return{id:p.id,name:p.name,country:p.country,bestScore:Number(p.bestScore||0),visualName:p.visualName||p.name,nameColor:p.nameColor||'#ffffff',nameEffect:p.nameEffect||'none',vipLevel:Number(p.vipLevel||0),letterStyles:styles,tagGlobalColor:p.tagGlobalColor||'#e53935',tagCountryColor:p.tagCountryColor||'#ff7a2f'};}
 function code(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<6;i++)s+=a[crypto.randomInt(a.length)];return s;}
@@ -140,12 +141,21 @@ async function getChatMessages(id,token,channel){
 async function saveMessage(type,data){const name=String(data.name||'').trim().slice(0,80),email=String(data.email||'').trim().slice(0,200),subject=String(data.subject||'').trim().slice(0,160),message=String(data.message||'').trim().slice(0,10000);if(!message)throw Object.assign(new Error('Escreve uma mensagem antes de enviar.'),{status:400});if(dbReady){await global.db.query('INSERT INTO messages(id,type,name,email,subject,message) VALUES($1,$2,$3,$4,$5,$6)',[crypto.randomUUID(),type,name,email,subject,message]);}else memoryMessages.push({id:crypto.randomUUID(),type,name,email,subject,message,createdAt:new Date().toISOString()});return{ok:true};}
 async function handleApi(req,res,url){
  try{
+  if(['POST','PUT','PATCH','DELETE'].includes(req.method)){const origin=req.headers.origin;if(origin){let ok=false;try{ok=new URL(origin).host===String(req.headers.host||'').split(',')[0].trim()}catch(_){}if(!ok)return json(res,403,{error:'Origem não autorizada.'});}}
+  const cookieToken=parseCookies(req)[SESSION_COOKIE];
+  if(cookieToken)url.searchParams.set('token',cookieToken);
   if(req.method==='GET'&&url.pathname==='/api/chat'){return json(res,200,{channel:url.searchParams.get('channel')||'global',messages:await getChatMessages(url.searchParams.get('id'),url.searchParams.get('token'),url.searchParams.get('channel')||'global')});}
   if(req.method==='POST'&&url.pathname==='/api/chat'){const d=await body(req);return json(res,201,await sendChatMessage(d.id,d.token,d.channel,d.message));}
   if(req.method==='GET'&&url.pathname==='/api/player-rank'){return json(res,200,await playerRanks(url.searchParams.get('id'),url.searchParams.get('token')));}
   if(req.method==='GET'&&url.pathname==='/api/rankings'){const c=url.searchParams.get('country')||'';if(c&&!validCountry(c))return json(res,400,{error:'País inválido.'});return json(res,200,{country:c||null,...await rankings(c||null,url.searchParams.get('page')||1)});}
-  if(req.method==='POST'&&url.pathname==='/api/players'){const d=await body(req);return json(res,201,await registerPlayer(d.name,d.country));}
+  if(req.method==='POST'&&url.pathname==='/api/auth/register'){const d=await body(req);d.ip=clientIp(req);const out=await authService.createAccount({db:global.db,normalizeName,validName,validCountry,publicPlayer,authenticate},d);setSessionCookie(res,out.session);return json(res,201,{player:out.player});}
+  if(req.method==='POST'&&url.pathname==='/api/auth/login'){const d=await body(req);d.ip=clientIp(req);const out=await authService.loginAccount({db:global.db,authenticate,publicPlayer},d);setSessionCookie(res,out.session);return json(res,200,{player:out.player});}
+  if(req.method==='POST'&&url.pathname==='/api/auth/logout'){const out=await authService.logout(global.db,parseCookies(req)[SESSION_COOKIE]);clearSessionCookie(res);return json(res,200,out);}
+  if(req.method==='POST'&&url.pathname==='/api/auth/password-reset/request'){const d=await body(req);return json(res,200,await authService.requestReset(global.db,d));}
+  if(req.method==='POST'&&url.pathname==='/api/auth/password-reset/confirm'){const d=await body(req);return json(res,200,await authService.resetPassword(global.db,d));}
+  if(req.method==='POST'&&url.pathname==='/api/players'){return json(res,410,{error:'Este endpoint foi substituído pelo sistema de contas EIXO.'});}
   if(req.method==='POST'&&url.pathname==='/api/scores'){const d=await body(req);return json(res,200,{player:await submitScore(d.id,d.token,d.score)});}
+  if(req.method==='GET'&&url.pathname==='/api/auth/me'){const p=await authenticateSession(url.searchParams.get('token'));return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
   if(req.method==='GET'&&url.pathname==='/api/me'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
   if(req.method==='GET'&&url.pathname==='/api/profile/ranks'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));if(!p)return json(res,401,{error:'Sessão inválida.'});const r=await ranked();return json(res,200,{worldRank:r.world.get(p.id)||null,countryRank:r.country.get(p.id)||null});}
   if(req.method==='POST'&&url.pathname==='/api/profile/customize'){const d=await body(req);return json(res,200,await customize(d.id,d.token,d));}
