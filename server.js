@@ -139,7 +139,7 @@ async function getChatMessages(id,token,channel){
       pl.id AS "playerId",pl.name,pl.country,pl.visual_name AS "visualName",pl.name_color AS "nameColor",
       pl.name_effect AS "nameEffect",pl.vip_level AS "vipLevel",pl.letter_styles AS "letterStyles",
       pl.tag_global_color AS "tagGlobalColor",pl.tag_country_color AS "tagCountryColor",
-      pl.avatar
+      pl.avatar,pl.avatar_border AS "avatarBorder",pl.role
       FROM chat_messages cm JOIN players pl ON pl.id=cm.player_id ${where}
       ORDER BY cm.created_at DESC LIMIT 50`,params);
     const ranks=await ranked(),rows=r.rows.reverse();
