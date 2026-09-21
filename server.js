@@ -22,7 +22,10 @@ function rateLimit(key,limit=8,windowMs=15*60*1000){const now=Date.now(),row=log
 function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())&&String(v).length<=200;}
 function passwordBytes(v){return Buffer.byteLength(String(v||''),'utf8');}
 function validPassword(v){const n=passwordBytes(v);return n>=12&&n<=72;}
-function hashPassword(password){return new Promise((resolve,reject)=>{const salt=crypto.randomBytes(16);crypto.scrypt(String(password),salt,64,{N:32768,r:8,p:3,maxmem:128*1024*1024},(err,key)=>err?reject(err):resolve('scrypt$32768$8$3
+function hashPassword(password){return new Promise((resolve,reject)=>{const salt=crypto.randomBytes(16);crypto.scrypt(String(password),salt,64,{N:32768,r:8,p:3,maxmem:128*1024*1024},(err,key)=>err?reject(err):resolve(['scrypt','32768','8','3',salt.toString('hex'),key.toString('hex')].join('$')));});}
+function verifyPassword(password,stored){return new Promise(resolve=>{try{const parts=String(stored||'').split('$');const alg=parts[0],N=parts[1],r=parts[2],p=parts[3],saltHex=parts[4],keyHex=parts[5];if(alg!=='scrypt')return resolve(false);const salt=Buffer.from(saltHex,'hex'),expected=Buffer.from(keyHex,'hex');crypto.scrypt(String(password),salt,expected.length,{N:Number(N),r:Number(r),p:Number(p),maxmem:128*1024*1024},(err,key)=>resolve(!err&&key.length===expected.length&&crypto.timingSafeEqual(key,expected)));}catch(_){resolve(false);}});}
+function newSessionToken(){return crypto.randomBytes(32).toString('base64url');}
+function sessionHash(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
 const chatRate=new Map();
 const WORLD_COLORS=['#e53935','#00d4ff','#ffd43b'];
 const COUNTRY_TOP_COLORS=['#ff7a2f','#6f5cff','#7bdc5a'];
