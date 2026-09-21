@@ -27,59 +27,31 @@ const translations = {
 let currentCountryCode = localStorage.getItem('eixo_country') || 'PT';
 let player = JSON.parse(localStorage.getItem('eixo_player') || 'null');
 let running = false, score = 0, x = 0, direction = 1, speed = 4.2, lastTime = 0, pulse = 0;
-let modalCountry = 'PT', rankingMode = 'country', rankingPage = 1, rankingPages = 1;
-
-const onboardingModal = document.getElementById('onboardingModal');
-const nameModal = document.getElementById('nameModal');
+let rankingMode = 'country', rankingPage = 1, rankingPages = 1;
 const rankingModal = document.getElementById('rankingModal');
 const countrySelect = document.getElementById('countrySelect');
-const nameInput = document.getElementById('nameInput');
-const nameError = document.getElementById('nameError');
 const countryButton = document.getElementById('countryButton');
 const countryMenu = document.getElementById('countryMenu');
 
 function getLang(){ return translations[languageByCountry[currentCountryCode] || 'en'] || translations.en; }
 function applyLanguage(){
-  const t=getLang(); document.querySelectorAll('[data-i18n]').forEach(el=>{if(t[el.dataset.i18n])el.textContent=t[el.dataset.i18n];});
+  const t=getLang();
+  document.querySelectorAll('[data-i18n]').forEach(el=>{if(t[el.dataset.i18n])el.textContent=t[el.dataset.i18n];});
   document.documentElement.lang=languageByCountry[currentCountryCode]||'en';
   const c=country(currentCountryCode||'PT');
-  document.getElementById('countryFlag').textContent=c.flag; document.getElementById('countryName').textContent=c.name;
-  document.getElementById('nationalFlag').textContent=c.flag; document.getElementById('nationalTitle').textContent=`TOP ${c.name}`;
-  document.getElementById('modalCountryTab').textContent=`${c.flag} ${c.name}`;
+  const flagEl=document.getElementById('countryFlag'),nameEl=document.getElementById('countryName'),nationalFlag=document.getElementById('nationalFlag'),nationalTitle=document.getElementById('nationalTitle'),modalCountryTab=document.getElementById('modalCountryTab');
+  if(flagEl)flagEl.textContent=c.flag;if(nameEl)nameEl.textContent=c.name;if(nationalFlag)nationalFlag.textContent=c.flag;if(nationalTitle)nationalTitle.textContent=`TOP ${c.name}`;if(modalCountryTab)modalCountryTab.textContent=`${c.flag} ${c.name}`;
   messageEl.textContent=t.instruction;
 }
 function fillCountryControls(){
-  countrySelect.innerHTML=countryCodes.map(code=>{const c=country(code);return `<option value="${code}">${c.flag} ${c.name}</option>`}).join('');
-  countryMenu.innerHTML=countryCodes.map(code=>{const c=country(code);return `<button class="country-option" type="button" data-country="${code}">${c.flag} ${c.name}</button>`}).join('');
-  countryMenu.querySelectorAll('.country-option').forEach(btn=>btn.addEventListener('click',()=>changeCountry(btn.dataset.country)));
+  if(countrySelect)countrySelect.innerHTML=countryCodes.map(code=>{const c=country(code);return `<option value="${code}">${c.flag} ${c.name}</option>`}).join('');
+  if(countryMenu){countryMenu.innerHTML=countryCodes.map(code=>{const c=country(code);return `<button class="country-option" type="button" data-country="${code}">${c.flag} ${c.name}</button>`}).join('');countryMenu.querySelectorAll('.country-option').forEach(btn=>btn.addEventListener('click',()=>changeCountry(btn.dataset.country)));}
 }
-function openModal(el){el.classList.remove('hidden');}
-function closeModal(el){el.classList.add('hidden');}
-function setCountry(code){currentCountryCode=code;localStorage.setItem('eixo_country',code);applyLanguage();loadTopRankings();}
-function changeCountry(code){
-  // A player's country is an identity field and cannot be changed after registration.
-  if(player && player.country && player.country!==code){ countryMenu.classList.remove('open'); return; }
-  setCountry(code); countryMenu.classList.remove('open'); countryButton.setAttribute('aria-expanded','false');
-}
-function showOnboarding(){
-  const c=currentCountryCode || 'PT'; countrySelect.value=c; modalCountry=c; openModal(onboardingModal);
-}
-function showNameModal(){ nameInput.value=''; nameError.textContent=''; openModal(nameModal); setTimeout(()=>nameInput.focus(),50); }
+function setCountry(code){if(!countryNames[code])return;currentCountryCode=code;localStorage.setItem('eixo_country',code);applyLanguage();loadTopRankings();}
+function changeCountry(code){if(player&&player.country&&player.country!==code){countryMenu?.classList.remove('open');return;}setCountry(code);countryMenu?.classList.remove('open');countryButton?.setAttribute('aria-expanded','false');}
+if(typeof window!=='undefined'){window.eixoGetPlayer=()=>player;window.eixoSetPlayer=p=>{player=p||null;window.dispatchEvent(new Event('eixo-player-updated'));};window.eixoGetCountry=()=>currentCountryCode;}
 
-document.getElementById('countryContinue').addEventListener('click',()=>{modalCountry=countrySelect.value;setCountry(modalCountry);closeModal(onboardingModal);showNameModal();});
-document.getElementById('nameContinue').addEventListener('click',register);
-nameInput.addEventListener('keydown',e=>{if(e.key==='Enter')register();});
-async function register(){
-  const value=nameInput.value.trim(); nameError.textContent='';
-  if(!/^[A-Za-z0-9]{3,8}$/.test(value)){nameError.textContent=getLang().nameInvalid;return;}
-  const button=document.getElementById('nameContinue');button.disabled=true;
-  try{
-    const res=await fetch('/api/players',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:value,country:currentCountryCode})});
-    const data=await res.json(); if(!res.ok)throw new Error(data.error||getLang().nameTaken);
-    player={...data.player,token:data.token}; localStorage.setItem('eixo_player',JSON.stringify(player)); closeModal(nameModal); applyLanguage(); loadTopRankings();
-  }catch(e){nameError.textContent=e.message.includes('já')||e.message.toLowerCase().includes('already')?getLang().nameTaken:e.message;}finally{button.disabled=false;}
-}
-
+function dimensions(){const rect=canvas.getBoundingClientRect();return{w:rect.width,h:rect.height};}
 function dimensions(){const rect=canvas.getBoundingClientRect();return{w:rect.width,h:rect.height};}
 function center(){const{w,h}=dimensions();return{x:w/2,y:h/2};}
 function drawPixelCircle(cx,cy,radius,color,width=1,dashed=false){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dashed?[3,5]:[]);ctx.beginPath();ctx.arc(Math.round(cx),Math.round(cy),radius,0,Math.PI*2);ctx.stroke();ctx.restore();}
@@ -103,7 +75,7 @@ function speedForScore(value){
   return mobile ? baseSpeed*0.55 : baseSpeed;
 }
 async function hit(){
-  if(!player){showOnboarding();return;}
+  if(!player){if(window.eixoOpenAuth)window.eixoOpenAuth('login');return;}
   if(!running){resetGame();return;}
   const c=center(),distance=Math.abs(x-c.x),inner=Math.max(8,Math.min(11,dimensions().h*.027)),outer=Math.max(28,Math.min(38,dimensions().h*.095));
   if(distance<=inner+4){score+=2;speed=speedForScore(score);showFeedback('+2','good');if(window.EixoAudio)window.EixoAudio.perfect();}
@@ -210,47 +182,24 @@ function buildPixelWall(){
 
 fillCountryControls();
 if(currentCountryCode&&!countryNames[currentCountryCode])currentCountryCode='PT';
+window.eixoCountryNames=countryNames;
+window.eixoCountryCodes=countryCodes;
 
 async function bootPlayer(){
-  // The test server resets the database on every restart/deploy. A stale
-  // localStorage player must never block the registration screen.
-  if(player?.id&&player?.token){
-    try{
-      const res=await fetch(`/api/me?id=${encodeURIComponent(player.id)}&token=${encodeURIComponent(player.token)}`,{cache:'no-store'});
-      if(res.ok){
-        const data=await res.json();
-        if(data?.player){
-          player={...player,...data.player,token:player.token};
-          localStorage.setItem('eixo_player',JSON.stringify(player));
-        }else throw Error();
-      }else throw Error();
-    }catch(_){
-      player=null;
-      localStorage.removeItem('eixo_player');
-      localStorage.removeItem('eixo_country');
-      currentCountryCode='';
+  try{
+    const res=await fetch('/api/auth/me',{cache:'no-store'});
+    if(res.ok){
+      const data=await res.json();
+      if(data?.player){player=data.player;localStorage.setItem('eixo_player',JSON.stringify({...data.player,token:'session'}));}
+    }else{
+      player=null;localStorage.removeItem('eixo_player');localStorage.removeItem('eixo_country');
     }
-  }
-  if(!player){
-    applyLanguage();
-    showOnboarding();
-  }else{
-    applyLanguage();
-    loadTopRankings();
-  }
+  }catch(_){}
+  if(player){currentCountryCode=String(player.country||currentCountryCode||'PT').toUpperCase();localStorage.setItem('eixo_country',currentCountryCode);applyLanguage();loadTopRankings();}
+  else{applyLanguage();if(window.eixoOpenAuth)window.eixoOpenAuth('login');}
 }
+
 
 resizeCanvas();stopGame();buildPixelWall();
 bootPlayer();
 
-// Registration is mandatory on first visit: backdrop clicks and Escape cannot dismiss onboarding.
-[onboardingModal,nameModal].forEach(modal=>{
-  if(!modal)return;
-  modal.addEventListener('click',e=>{if(e.target===modal)e.stopPropagation();});
-  modal.addEventListener('pointerdown',e=>{if(e.target===modal)e.stopPropagation();});
-});
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape' && (!onboardingModal.classList.contains('hidden') || !nameModal.classList.contains('hidden'))){
-    e.preventDefault();e.stopPropagation();
-  }
-},true);
