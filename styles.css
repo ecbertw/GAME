@@ -112,3 +112,6 @@ main{padding:18px 24px 24px}.hero{max-width:920px;margin:0 auto}.game-frame{posi
     opacity:.88;
   }
 }
+
+/* EIXO V2.1 staff/chat account visuals */
+.chat-delete{margin-left:auto;border:1px solid #e83e45;background:#160b0d;color:#ff6b6b;width:18px;height:18px;padding:0;font:10px/16px monospace;cursor:pointer}.chat-delete:hover{background:#e83e45;color:#fff}.chat-avatar{transition:border-color .15s,box-shadow .15s}.topbar .account-actions{flex:0 0 auto}
