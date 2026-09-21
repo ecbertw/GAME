@@ -12,7 +12,7 @@ let pg=null,dbReady=false;
 try{if(DATABASE_URL){pg=require('pg');pg.types.setTypeParser(20,v=>Number(v));}}catch(e){console.error('PostgreSQL unavailable:',e.message);}
 const memoryPlayers=new Map(),memoryRooms=new Map(),memoryMembers=new Map(),memoryMessages=[];
 const loginRate=new Map();
-const SESSION_COOKIE='eixo_session';
+const SESSION_COOKIE='__Host-eixo_session';
 const SESSION_DAYS=30;
 function parseCookies(req){const out={};for(const part of String(req.headers.cookie||'').split(';')){const i=part.indexOf('=');if(i>0)out[part.slice(0,i).trim()]=decodeURIComponent(part.slice(i+1).trim())}return out;}
 function setSessionCookie(res,token,maxAge=SESSION_DAYS*86400){res.setHeader('Set-Cookie',SESSION_COOKIE+'='+encodeURIComponent(token)+'; Max-Age='+maxAge+'; Path=/; HttpOnly; Secure; SameSite=Lax');}
