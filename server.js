@@ -151,7 +151,7 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/auth/register'){const d=await body(req);d.ip=clientIp(req);const out=await authService.createAccount({db:global.db,normalizeName,validName,validCountry,publicPlayer,authenticate},d);setSessionCookie(res,out.session);return json(res,201,{player:out.player});}
   if(req.method==='POST'&&url.pathname==='/api/auth/login'){const d=await body(req);d.ip=clientIp(req);const out=await authService.loginAccount({db:global.db,authenticate,publicPlayer},d);setSessionCookie(res,out.session);return json(res,200,{player:out.player});}
   if(req.method==='POST'&&url.pathname==='/api/auth/logout'){const out=await authService.logout(global.db,parseCookies(req)[SESSION_COOKIE]);clearSessionCookie(res);return json(res,200,out);}
-  if(req.method==='POST'&&url.pathname==='/api/auth/password-reset/request'){const d=await body(req);return json(res,200,await authService.requestReset(global.db,d));}
+  if(req.method==='POST'&&url.pathname==='/api/auth/password-reset/request'){const d=await body(req);d.ip=clientIp(req);return json(res,200,await authService.requestReset(global.db,d));}
   if(req.method==='POST'&&url.pathname==='/api/auth/password-reset/confirm'){const d=await body(req);return json(res,200,await authService.resetPassword(global.db,d));}
   if(req.method==='POST'&&url.pathname==='/api/players'){return json(res,410,{error:'Este endpoint foi substituído pelo sistema de contas EIXO.'});}
   if(req.method==='POST'&&url.pathname==='/api/scores'){const d=await body(req);return json(res,200,{player:await submitScore(d.id,d.token,d.score)});}
