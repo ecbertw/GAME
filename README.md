@@ -1,5 +1,45 @@
 # EIXO — Changelog
 
+# EIXO V2.1.0 — Administração, moderação e perfis de conta
+
+**Data:** 22/09/2026  
+**Tipo:** Segurança / administração / moderação / perfis
+
+## 1. ALTERADO
+
+- O sistema VIP deixou de permitir compras/ativações de teste.
+- O VIP fica indisponível para jogadores enquanto não existir um sistema de pagamentos real.
+- A conta **Bala** existente é promovida a administrador no arranque da base de dados.
+- O perfil de conta passa a permitir alterar nome, avatar e borda do avatar.
+- Avatares e bordas passam a ser enviados no chat; jogadores VIP têm acesso a opções de borda adicionais.
+
+## 2. REMOVIDO
+
+- Removida a possibilidade de qualquer jogador ativar VIP através do endpoint de compra de teste.
+
+## 3. ADICIONADO
+
+- Cargo **ADMIN**, reservado à conta Bala.
+- Cargo **MOD**, que apenas o administrador pode atribuir ou remover.
+- TAG ADMIN/MOD junto do nome no chat e identificação na conta.
+- Painel de administração nas definições da conta.
+- Administração de níveis VIP (0–6) pelo administrador.
+- Banimento permanente exclusivo do administrador.
+- Banimento temporário até 24h para moderadores.
+- Expulsão de sessão (kick) para administrador e moderadores.
+- Proteções para impedir moderadores de agir sobre ADMIN ou outros MOD.
+- Eliminação de mensagens do chat global/nacional exclusiva do administrador.
+- Botões **DEFINIÇÕES** e **SAIR DA CONTA** na barra superior para utilizadores autenticados.
+- Persistência PostgreSQL para cargo, borda de avatar e estado de banimento.
+
+## 4. SEGURANÇA
+
+- Todas as ações administrativas são validadas no servidor; esconder botões no frontend não concede permissões.
+- Jogadores bloqueados deixam de conseguir restaurar a sessão e ficam impedidos de usar endpoints autenticados.
+- Alterações VIP, MOD e banimentos não podem ser executadas por jogadores normais.
+
+---
+
 # EIXO V2.0.0 — Sistema oficial de contas e autenticação
 
 **Data:** 21/09/2026  
@@ -50,41 +90,3 @@
 
 - A sessão autenticada não é guardada em localStorage nem sessionStorage.
 - O sistema de recuperação de palavra-passe já possui a estrutura segura de tokens, mas o envio real por email fica dependente da configuração de um fornecedor SMTP/email antes de ser ativado em produção.
-
----
-
-# EIXO V1.1.29 — Som dos pixels flutuantes
-
-**Data:** 21/09/2026  
-**Tipo:** Melhoria visual / interação / áudio
-
-## 1. ALTERADO
-
-- Aumentado novamente o número máximo de pixels do fundo.
-- Mantido o campo de interação do cursor em **80px**.
-- Mantido o deslocamento permanente dos pixels após serem afastados pelo cursor.
-- Mantido o movimento suave através de velocidade e desaceleração progressiva.
-
-## 2. REMOVIDO
-
-- Nenhum.
-
-## 3. ADICIONADO
-
-- Densidade máxima aumentada de **2000 para 2500 pixels**.
-- Novo efeito sonoro curto e satisfatório para quando o cursor toca diretamente num pixel flutuante.
-- O novo som utiliza o canal de volume **JOGO**, mantendo-se separado da música.
-- Proteção contra repetição excessiva do som quando vários pixels estão próximos do cursor.
-
-## 4. BUGS FIXED
-
-- **FIXED:** A densidade máxima dos pixels ainda estava abaixo do novo objetivo.
-- **FIXED:** Os pixels podiam gerar interações sonoras repetidas enquanto permaneciam debaixo do cursor.
-
-## 5. SUGESTÕES DE JOGADORES IMPLEMENTADAS
-
-- Adicionada interação sonora dos pixels flutuantes para tornar o movimento do cursor mais satisfatório.
-
-## 6. REGRA DE PRODUÇÃO
-
-- O novo efeito sonoro é apenas visual/interativo e não altera pontuação, rankings, contas ou dados persistentes.
