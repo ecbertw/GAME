@@ -63,7 +63,8 @@ async function initDb(){
   await pool.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS account_id UUID UNIQUE REFERENCES accounts(id) ON DELETE CASCADE`);
   await pool.query(`ALTER TABLE players ALTER COLUMN token_hash DROP NOT NULL`);
   await pool.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS role VARCHAR(12) NOT NULL DEFAULT 'player', ADD COLUMN IF NOT EXISTS avatar_border VARCHAR(32) NOT NULL DEFAULT '#46535f', ADD COLUMN IF NOT EXISTS banned_until TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS banned_permanent BOOLEAN NOT NULL DEFAULT FALSE`);
-  await pool.query(`UPDATE players SET role='admin' WHERE name_key='BALA' AND role='player'`);
+  // Pin the owner to the verified player UUID; display names can change.
+  await pool.query("UPDATE players SET role='admin' WHERE id=$1 AND account_id IS NOT NULL AND role IN ('player','moderator')", ['dd88732f-7907-4120-ad75-e6fc3878c8cb']);
   await pool.query(`DELETE FROM players WHERE account_id IS NULL`);
   await pool.query(`DELETE FROM sessions WHERE expires_at<=NOW()`);
   await pool.query(`DELETE FROM password_reset_tokens WHERE expires_at<=NOW() OR used_at IS NOT NULL`);
