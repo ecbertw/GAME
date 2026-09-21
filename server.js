@@ -139,6 +139,14 @@ async function getChatMessages(id,token,channel){
   return rows.map(m=>{const pl=memoryPlayers.get(m.playerId);return pl?{id:m.id,channel:m.channel,message:m.message,createdAt:m.createdAt,playerId:pl.id,name:pl.name,country:pl.country,visualName:pl.visualName,nameColor:pl.nameColor,nameEffect:pl.nameEffect,vipLevel:Number(pl.vipLevel||0),letterStyles:pl.letterStyles||[],tagGlobalColor:pl.tagGlobalColor||'#e53935',tagCountryColor:pl.tagCountryColor||'#ff7a2f',worldRank:ranks.world.get(pl.id)||9999,countryRank:ranks.country.get(pl.id)||9999,avatar:'default'}:null}).filter(Boolean);
 }
 async function saveMessage(type,data){const name=String(data.name||'').trim().slice(0,80),email=String(data.email||'').trim().slice(0,200),subject=String(data.subject||'').trim().slice(0,160),message=String(data.message||'').trim().slice(0,10000);if(!message)throw Object.assign(new Error('Escreve uma mensagem antes de enviar.'),{status:400});if(dbReady){await global.db.query('INSERT INTO messages(id,type,name,email,subject,message) VALUES($1,$2,$3,$4,$5,$6)',[crypto.randomUUID(),type,name,email,subject,message]);}else memoryMessages.push({id:crypto.randomUUID(),type,name,email,subject,message,createdAt:new Date().toISOString()});return{ok:true};}
+function clientIp(req) {
+  const peer = req.socket.remoteAddress || '';
+  const localProxy = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(peer);
+  const forwarded = String(req.headers['x-real-ip'] || '').trim();
+  // Only trust X-Real-IP overwritten by the local Nginx proxy.
+  if (localProxy && require('node:net').isIP(forwarded)) return forwarded;
+  return peer;
+}
 async function handleApi(req,res,url){
  try{
   if(['POST','PUT','PATCH','DELETE'].includes(req.method)){const origin=req.headers.origin;if(origin){let ok=false;try{ok=new URL(origin).host===String(req.headers.host||'').split(',')[0].trim()}catch(_){}if(!ok)return json(res,403,{error:'Origem não autorizada.'});}}
