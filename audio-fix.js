@@ -36,6 +36,20 @@
  function perfect(){if(!fxGate('perfect')||!ensure())return;note(523.25,.07,'square',.08,gameGain,0);note(659.25,.07,'square',.07,gameGain,.055);note(783.99,.08,'triangle',.062,gameGain,.11);note(1046.5,.13,'triangle',.045,gameGain,.17)}
  function miss(){if(!fxGate('miss')||!ensure())return;note(247,.09,'triangle',.05,gameGain,0);note(185,.13,'sawtooth',.034,gameGain,.055);note(138.59,.2,'triangle',.028,gameGain,.12)}
  function pixel(){if(!fxGate('pixel')||!ensure())return;note(880,.045,'triangle',.055,gameGain,0);note(1174.66,.065,'triangle',.035,gameGain,.035)}
+ let windUntil=0;
+ function pixelWind(intensity=.35){
+  if(!ensure())return;
+  const now=ctx.currentTime;
+  if(now<windUntil)return;
+  windUntil=now+.085;
+  const dur=.16,buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*dur),ctx.sampleRate),data=buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1);
+  const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),g=ctx.createGain();
+  filter.type='bandpass';filter.frequency.value=1050;filter.Q.value=.55;
+  const level=Math.min(.014,.004+Math.max(0,Math.min(1,intensity))*.01);
+  g.gain.setValueAtTime(.0001,now);g.gain.linearRampToValueAtTime(level,now+.035);g.gain.exponentialRampToValueAtTime(.0001,now+dur);
+  src.buffer=buffer;src.connect(filter);filter.connect(g);g.connect(gameGain);src.start(now);src.stop(now+dur);
+ }
  function bindGameFeedback(){const el=document.getElementById('feedback');if(!el||el.dataset.audioBridge)return;el.dataset.audioBridge='1';new MutationObserver(()=>{const v=(el.textContent||'').trim();if(v==='+2')perfect();else if(v==='+1')hit();else if(v==='MISS')miss()}).observe(el,{childList:true,characterData:true,subtree:true})}
  function controls(){
   const frame=document.querySelector('.game-frame');
@@ -50,5 +64,5 @@
  function css(){if(document.getElementById('audioStyle'))return;const s=document.createElement('style');s.id='audioStyle';s.textContent=`#eixoAudioControls{display:flex!important;align-items:flex-start!important;justify-content:center!important;gap:28px!important;margin:0 auto 12px!important;padding:6px 10px!important;width:min(430px,calc(100% - 20px))!important;box-sizing:border-box!important}.audio-slider{display:flex!important;flex-direction:column!important;gap:5px!important;flex:1!important;min-width:0!important}.audio-slider span{font:5px 'Press Start 2P',monospace!important;color:#69747e!important;line-height:1!important;text-align:center!important}.audio-slider input[type=range]{appearance:none!important;-webkit-appearance:none!important;width:100%!important;height:3px!important;margin:2px 0!important;background:#34404a!important;border:0!important;outline:0!important;cursor:crosshair!important}.audio-slider input[type=range]::-webkit-slider-thumb{appearance:none!important;-webkit-appearance:none!important;width:8px!important;height:8px!important;border:0!important;border-radius:0!important;background:#24d477!important;cursor:crosshair!important}.audio-slider input[type=range]::-moz-range-thumb{width:8px!important;height:8px!important;border:0!important;border-radius:0!important;background:#24d477!important;cursor:crosshair!important}.audio-slider input[type=range]::-moz-range-track{height:3px!important;background:#34404a!important;border:0!important}@media(max-width:480px){#eixoAudioControls{gap:18px!important;width:calc(100% - 20px)!important;padding:5px 4px!important;margin-bottom:10px!important}.audio-slider span{font-size:4px!important}.audio-slider input[type=range]{height:3px!important}.audio-slider input[type=range]::-webkit-slider-thumb{width:7px!important;height:7px!important}.audio-slider input[type=range]::-moz-range-thumb{width:7px!important;height:7px!important}}`;document.head.appendChild(s)}
  function bind(){controls();css();bindGameFeedback();if(!document.body.dataset.audioBound){document.body.dataset.audioBound='1';document.addEventListener('pointerdown',start,{once:true})}}
  bind();setInterval(bind,500);
- window.EixoAudio={hit,perfect,miss,pixel,start,setSiteVolume(v){state.site=clamp(v);ensure();siteGain.gain.value=state.site;save();start()},setGameVolume(v){state.game=clamp(v);ensure();gameGain.gain.value=state.game;save()}};
+ window.EixoAudio={hit,perfect,miss,pixel,pixelWind,start,setSiteVolume(v){state.site=clamp(v);ensure();siteGain.gain.value=state.site;save();start()},setGameVolume(v){state.game=clamp(v);ensure();gameGain.gain.value=state.game;save()}};
 })();
