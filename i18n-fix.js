@@ -27,7 +27,7 @@
     he:{close:'סגור',onboardingTitle:'ברוכים הבאים ל-EIXO',onboardingText:'בחרו תחילה את המדינה שבה אתם משחקים.',country:'מדינה',continue:'המשך ▶',nameTitle:'בחרו שם',nameText:'השם ישויך לשחקן שלכם ולא יוכל לשמש שחקן אחר.',nameLabel:'שם שחקן',nameRules:'3–8 תווים · אותיות ומספרים · ללא רווחים או סמלים',create:'צור שחקן ▶',contactTitle:'צור קשר',contactText:'פרסום, שותפויות, מידע או שאלות אחרות.',name:'שם',email:'אימייל',subject:'נושא',message:'הודעה',send:'שלח ▶',bugsTitle:'דיווח על באג',bugsText:'שלחו פרטים כדי שנוכל לשחזר ולתקן את הבעיה.',bugSubject:'כותרת הבאג',bugMessage:'תארו את הבאג, מה עשיתם ומה קרה',sendBug:'שלח באג ▶',customizeTitle:'התאמת שם',customizeHint:'האפשרויות הזמינות תלויות במיקום שלכם בדירוג.',visualName:'שם תצוגה',nameColor:'צבע השם',effect:'אפקט',save:'שמור ▶',worldTab:'🌐 עולמי',loading:'טוען...',emptyRanking:'עדיין אין שחקנים',emptyFull:'עדיין אין שחקנים',players:'שחקנים',leaveRoom:'עזוב חדר',enterRoom:'היכנס לחדר',room:'חדר',messageSent:'ההודעה נשלחה. תודה!'}
   };
   const en=D.en;
-  const lang=()=>D[document.documentElement.lang]||en;
+  const lang=()=>{const l=String(document.documentElement.lang||'en').split('-')[0];return D[l]||window.EixoExtraLocales?.[l]?.forms||en;};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function apply(){
     const t=lang();
