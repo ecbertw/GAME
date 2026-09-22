@@ -157,6 +157,24 @@ async function fulfillCapture(db,orderId,capture){
   }finally{client.release()}
 }
 
+async function captureKnownOrder(db,id,requestKey){
+  let order;
+  try{
+    order=await pp('/v2/checkout/orders/'+encodeURIComponent(id)+'/capture',{
+      method:'POST',
+      headers:{'PayPal-Request-Id':requestKey}
+    });
+  }catch(e){
+    // A replay/race can make PayPal report an already-captured order.
+    // Retrieve the authoritative order and fulfill idempotently from its capture.
+    if(Number(e.paypalStatus)!==422)throw e;
+    order=await pp('/v2/checkout/orders/'+encodeURIComponent(id),{method:'GET'});
+  }
+  const {capture}=captureFromOrder(order);
+  if(!capture?.id)throw Object.assign(new Error('PayPal did not return a completed capture.'),{status:409});
+  return fulfillCapture(db,id,capture);
+}
+
 async function captureOrder(db,player,orderId){
   const id=String(orderId||'').trim();
   if(!/^[A-Z0-9-]{10,40}$/i.test(id))throw Object.assign(new Error('Invalid PayPal order ID.'),{status:400});
@@ -169,12 +187,7 @@ async function captureOrder(db,player,orderId){
     return{ok:true,level:Number(p.rows[0]?.vipLevel||0),already:true};
   }
 
-  const order=await pp('/v2/checkout/orders/'+encodeURIComponent(id)+'/capture',{
-    method:'POST',
-    headers:{'PayPal-Request-Id':'capture-'+id}
-  });
-  const {capture}=captureFromOrder(order);
-  const result=await fulfillCapture(db,id,capture);
+  const result=await captureKnownOrder(db,id,'capture-'+id);
   const p=await db.query('SELECT vip_level AS "vipLevel" FROM players WHERE id=$1',[player.id]);
   return{ok:true,level:Number(p.rows[0]?.vipLevel||result.level||0),orderId:id,captureId:result.captureId||null};
 }
@@ -201,7 +214,23 @@ async function handleWebhook(db,headers,event){
   if(!(await verifyWebhook(headers,event)))throw Object.assign(new Error('Invalid PayPal webhook signature.'),{status:400});
   const type=String(event?.event_type||'');
   const resource=event?.resource||{};
-  if(type==='PAYMENT.CAPTURE.COMPLETED'){
+
+  if(type==='CHECKOUT.ORDER.APPROVED'){
+    const orderId=String(resource?.id||'');
+    if(orderId){
+      const q=await db.query('SELECT status FROM vip_payments WHERE paypal_order_id=$1',[orderId]);
+      if(q.rowCount&&q.rows[0].status!=='CAPTURED'){
+        await db.query("UPDATE vip_payments SET status='APPROVED',updated_at=NOW() WHERE paypal_order_id=$1 AND status<>'CAPTURED'",[orderId]);
+        await captureKnownOrder(db,orderId,'webhook-capture-'+orderId);
+      }
+    }
+  }else if(type==='CHECKOUT.ORDER.DECLINED'){
+    const orderId=String(resource?.id||'');
+    if(orderId)await db.query("UPDATE vip_payments SET status='DECLINED',updated_at=NOW() WHERE paypal_order_id=$1 AND status<>'CAPTURED'",[orderId]);
+  }else if(type==='PAYMENT.CAPTURE.PENDING'){
+    const orderId=resource?.supplementary_data?.related_ids?.order_id;
+    if(orderId)await db.query("UPDATE vip_payments SET status='PENDING',updated_at=NOW() WHERE paypal_order_id=$1 AND status<>'CAPTURED'",[String(orderId)]);
+  }else if(type==='PAYMENT.CAPTURE.COMPLETED'){
     const orderId=resource?.supplementary_data?.related_ids?.order_id;
     if(orderId)await fulfillCapture(db,String(orderId),resource);
   }else if(type==='PAYMENT.CAPTURE.DENIED'){
