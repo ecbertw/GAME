@@ -54,8 +54,9 @@ document.addEventListener('click',e=>{if(!e.target.closest('.profile-area')){cou
 function changeCountry(code){setCountry(code);countryMenu?.classList.remove('open');countryButton?.setAttribute('aria-expanded','false');}
 if(typeof window!=='undefined'){window.eixoGetPlayer=()=>player;window.eixoSetPlayer=p=>{player=p||null;window.dispatchEvent(new Event('eixo-player-updated'));};window.eixoGetCountry=()=>currentCountryCode;}
 
-function dimensions(){const rect=canvas.getBoundingClientRect();return{w:rect.width,h:rect.height};}
-function center(){const{w,h}=dimensions();return{x:w/2,y:h/2};}
+let viewW=900,viewH=390;
+function dimensions(){return{w:viewW,h:viewH};}
+function center(){return{x:viewW/2,y:viewH/2};}
 function drawPixelCircle(cx,cy,radius,color,width=1,dashed=false){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dashed?[3,5]:[]);ctx.beginPath();ctx.arc(Math.round(cx),Math.round(cy),radius,0,Math.PI*2);ctx.stroke();ctx.restore();}
 function draw(){
   const{w,h}=dimensions(),c=center();ctx.clearRect(0,0,w,h);ctx.fillStyle='#080d12';ctx.fillRect(0,0,w,h);
@@ -115,78 +116,42 @@ window.addEventListener('keydown',e=>{if(['Space','Enter'].includes(e.code)){e.p
 countryButton.addEventListener('click',()=>{if(player)return;const open=countryMenu.classList.toggle('open');countryButton.setAttribute('aria-expanded',String(open));});
 document.addEventListener('click',e=>{if(!e.target.closest('.profile-area')){countryMenu.classList.remove('open');countryButton.setAttribute('aria-expanded','false');}});
 
-function resizeCanvas(){const rect=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.max(1,Math.floor(rect.width*dpr));canvas.height=Math.max(1,Math.floor(rect.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;draw();}
+function resizeCanvas(){const rect=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);viewW=Math.max(1,rect.width);viewH=Math.max(1,rect.height);canvas.width=Math.max(1,Math.floor(viewW*dpr));canvas.height=Math.max(1,Math.floor(viewH*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;if(x>viewW)x=viewW*.5;draw();}
 function buildPixelWall(){
-  const wall=document.getElementById('pixelWall');
-  if(!wall)return;
+  const wall=document.getElementById('pixelWall');if(!wall)return;
   const colors=['#e83e45','#f1c438','#2f9bd1','#39b86a','#7d4ac7','#ef7b2d','#e7e7df','#172b3b'];
-  const count=Math.min(2500,Math.floor(innerWidth*innerHeight/400));
-  const particles=[];
-  let mouseX=-9999,mouseY=-9999,movingUntil=0;
-
+  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const lowPower=reduced||Number(navigator.hardwareConcurrency||4)<=4||(navigator.deviceMemory&&Number(navigator.deviceMemory)<=4);
+  const area=innerWidth*innerHeight,count=Math.max(90,Math.min(lowPower?280:650,Math.floor(area/(lowPower?6500:3000))));
+  const particles=[];let mouseX=-9999,mouseY=-9999,movingUntil=0,lastFrame=0;
   for(let i=0;i<count;i++){
-    const tile=document.createElement('i');
-    const x=Math.random()*innerWidth,y=Math.random()*innerHeight;
-    const size=4+Math.floor(Math.random()*8);
-    tile.style.left='0';
-    tile.style.top='0';
-    tile.style.background=colors[Math.floor(Math.random()*colors.length)];
-    tile.style.width=size+'px';
-    tile.style.height=size+'px';
-    tile.style.opacity=String(.35+Math.random()*.55);
-    wall.appendChild(tile);
-    particles.push({el:tile,x,y,ox:x,oy:y,vx:0,vy:0,pixelHit:false});
+    const tile=document.createElement('i'),x=Math.random()*innerWidth,y=Math.random()*innerHeight,size=4+Math.floor(Math.random()*8);
+    tile.style.cssText='left:0;top:0;background:'+colors[Math.floor(Math.random()*colors.length)]+';width:'+size+'px;height:'+size+'px;opacity:'+(0.35+Math.random()*.55).toFixed(2)+';transform:translate3d('+Math.round(x)+'px,'+Math.round(y)+'px,0)';
+    wall.appendChild(tile);particles.push({el:tile,x,y,vx:0,vy:0,pixelHit:false,size});
   }
-
-  window.addEventListener('pointermove',e=>{
-    if(e.pointerType&&e.pointerType!=='mouse')return;
-    if(Math.hypot(e.clientX-mouseX,e.clientY-mouseY)>1)movingUntil=performance.now()+65;
-    mouseX=e.clientX;mouseY=e.clientY;
-  },{passive:true});
+  window.addEventListener('pointermove',e=>{if(e.pointerType&&e.pointerType!=='mouse')return;mouseX=e.clientX;mouseY=e.clientY;movingUntil=performance.now()+75},{passive:true});
   window.addEventListener('pointerleave',()=>{mouseX=-9999;mouseY=-9999},{passive:true});
   window.addEventListener('blur',()=>{mouseX=-9999;mouseY=-9999},{passive:true});
-
-  function animate(){
-    const under=document.elementFromPoint(mouseX,mouseY);
-    const protectedUi=under?.closest('.site-shell,.chat-sidebar,.modal-backdrop,.acct-overlay');
-    const canSound=!protectedUi&&performance.now()<movingUntil;
-    let directHit=false,windStrength=0;
+  function animate(now){
+    if(lowPower&&now-lastFrame<30){requestAnimationFrame(animate);return}lastFrame=now;
+    const pointerActive=now<movingUntil,under=pointerActive?document.elementFromPoint(mouseX,mouseY):null;
+    const protectedUi=under?.closest('.site-shell,.chat-sidebar,.modal-backdrop,.acct-overlay,.admin-overlay'),canSound=pointerActive&&!protectedUi;
+    let directHit=false,windStrength=0;const radius=120,r2=radius*radius;
     for(const p of particles){
-      const dx=p.x-mouseX,dy=p.y-mouseY;
-      const dist=Math.hypot(dx,dy);
-      const radius=120;
-      if(dist<radius){
-        if(canSound&&Math.hypot(p.vx,p.vy)>.025)windStrength=Math.max(windStrength,1-dist/radius);
-        if(dist<10&&!p.pixelHit){
-          p.pixelHit=true;
-          if(canSound)directHit=true;
-        }
-        const d=Math.max(dist,1);
-        const force=Math.pow(1-d/radius,2)*0.95;
-        p.vx+=(dx/d)*force;
-        p.vy+=(dy/d)*force;
-      }
-
-      if(dist>18)p.pixelHit=false;
-
-      // Permanent displacement: the pointer pushes nearby pixels out of the way,
-      // and they keep their new position instead of snapping back.
-      p.vx*=0.91;
-      p.vy*=0.91;
-      p.x+=p.vx;
-      p.y+=p.vy;
-
-      // Keep pixels on the page so they can be pushed around indefinitely.
-      const size=parseFloat(p.el.style.width)||6;
-      if(p.x<-size)p.x=innerWidth;
-      else if(p.x>innerWidth)p.x=-size;
-      if(p.y<-size)p.y=innerHeight;
-      else if(p.y>innerHeight)p.y=-size;
-
+      const dx=p.x-mouseX,dy=p.y-mouseY,dist2=dx*dx+dy*dy;let near=false;
+      if(pointerActive&&dist2<r2){
+        near=true;const dist=Math.sqrt(Math.max(dist2,1));
+        if(canSound&&(p.vx*p.vx+p.vy*p.vy)>.0007)windStrength=Math.max(windStrength,1-dist/radius);
+        if(dist<10&&!p.pixelHit){p.pixelHit=true;if(canSound)directHit=true}
+        const force=(1-dist/radius);const f=force*force*.95;p.vx+=(dx/dist)*f;p.vy+=(dy/dist)*f;
+      }else if(dist2>324)p.pixelHit=false;
+      const moving=near||Math.abs(p.vx)+Math.abs(p.vy)>.018;
+      if(!moving)continue;
+      p.vx*=.91;p.vy*=.91;p.x+=p.vx;p.y+=p.vy;
+      if(p.x<-p.size)p.x=innerWidth;else if(p.x>innerWidth)p.x=-p.size;if(p.y<-p.size)p.y=innerHeight;else if(p.y>innerHeight)p.y=-p.size;
       p.el.style.transform='translate3d('+Math.round(p.x)+'px,'+Math.round(p.y)+'px,0)';
     }
-    if(directHit)window.EixoAudio?.pixel();
-    else if(windStrength>0)window.EixoAudio?.pixelWind(windStrength);
+    if(directHit)window.EixoAudio?.pixel();else if(windStrength>.12)window.EixoAudio?.pixelWind(windStrength);
     requestAnimationFrame(animate);
   }
   requestAnimationFrame(animate);
