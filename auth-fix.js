@@ -95,7 +95,7 @@
   modal.addEventListener('click',e=>{if(e.target===modal)close();});
   loginForm.addEventListener('submit',async e=>{
     e.preventDefault();const err=$('authLoginError'),button=loginForm.querySelector('button[type="submit"]');err.textContent='';button.disabled=true;
-    try{const d=await api('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('authLoginEmail').value,password:$('authLoginPassword').value,rememberMe:!!$('authRemember')?.checked})});close();try{setPlayer(d.player);window.applyLanguage?.();window.loadTopRankings?.();}catch(uiError){console.error('EIXO post-login UI:',uiError);location.reload();}}
+    try{const d=await api('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('authLoginEmail').value,password:$('authLoginPassword').value,rememberMe:!!$('authRemember')?.checked})});close();try{setPlayer(d.player);if(d.player?.bannedPermanent||(d.player?.bannedUntil&&Date.parse(d.player.bannedUntil)>Date.now())){const ban={permanent:!!d.player.bannedPermanent,until:d.player.bannedUntil||null,reason:d.player.banReason||null};window.__eixoPendingBan=ban;window.eixoShowBan?.(ban);window.dispatchEvent(new CustomEvent('eixo-ban',{detail:ban}));return;}window.applyLanguage?.();window.loadTopRankings?.();}catch(uiError){console.error('EIXO post-login UI:',uiError);location.reload();}}
     catch(x){err.textContent=errorText(x.message);}finally{button.disabled=false;}
   });
   registerForm.addEventListener('submit',async e=>{
