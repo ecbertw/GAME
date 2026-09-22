@@ -45,5 +45,5 @@
       hideMenu();await load();
     }catch(err){b.disabled=false;alert(err.message);}
   });
-  window.addEventListener('resize',resize);window.addEventListener('eixo-player-updated',load);resize();load();setInterval(load,10000);
+  window.addEventListener('resize',resize);window.addEventListener('eixo-player-updated',load);resize();load();setInterval(load,30000);
 })();
