@@ -74,6 +74,8 @@ async function initDb(){
   await pool.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS account_id UUID UNIQUE REFERENCES accounts(id) ON DELETE CASCADE`);
   await pool.query(`ALTER TABLE players ALTER COLUMN token_hash DROP NOT NULL`);
   await pool.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS role VARCHAR(12) NOT NULL DEFAULT 'player', ADD COLUMN IF NOT EXISTS avatar_border VARCHAR(32) NOT NULL DEFAULT '#46535f', ADD COLUMN IF NOT EXISTS banned_until TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS banned_permanent BOOLEAN NOT NULL DEFAULT FALSE, ADD COLUMN IF NOT EXISTS ban_reason VARCHAR(240)`);
+  await pool.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS best_score_at TIMESTAMPTZ`);
+  await pool.query(`UPDATE players SET best_score_at=COALESCE(best_score_at,created_at) WHERE best_score>0 AND best_score_at IS NULL`);
   // Pin the owner to the verified player UUID; display names can change.
   await pool.query("UPDATE players SET role='admin' WHERE id=$1 AND account_id IS NOT NULL AND role IN ('player','moderator')", ['dd88732f-7907-4120-ad75-e6fc3878c8cb']);
   await pool.query(`DELETE FROM players WHERE account_id IS NULL`);
@@ -140,7 +142,7 @@ async function submitScore(id,token,score,telemetry,runId,roomId=null){
     const client=await global.db.connect();
     try{
       await client.query('BEGIN');
-      const r=await client.query('UPDATE players SET best_score=GREATEST(best_score,$1),updated_at=NOW() WHERE id=$2 RETURNING id,name,country,best_score AS "bestScore",visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect",vip_level AS "vipLevel",letter_styles AS "letterStyles",tag_global_color AS "tagGlobalColor",tag_country_color AS "tagCountryColor",avatar,avatar_border AS "avatarBorder",role,banned_until AS "bannedUntil",banned_permanent AS "bannedPermanent",ban_reason AS "banReason"',[value,id]);
+      const r=await client.query('UPDATE players SET best_score_at=CASE WHEN $1>best_score THEN NOW() ELSE best_score_at END,best_score=GREATEST(best_score,$1),updated_at=NOW() WHERE id=$2 RETURNING id,name,country,best_score AS "bestScore",visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect",vip_level AS "vipLevel",letter_styles AS "letterStyles",tag_global_color AS "tagGlobalColor",tag_country_color AS "tagCountryColor",avatar,avatar_border AS "avatarBorder",role,banned_until AS "bannedUntil",banned_permanent AS "bannedPermanent",ban_reason AS "banReason"',[value,id]);
       let roomScore=null,roomScoreAccepted=false;
       if(roomId){
         const member=await client.query('SELECT best_score FROM room_members WHERE room_id=$1 AND player_id=$2 FOR UPDATE',[String(roomId),id]);
@@ -149,14 +151,15 @@ async function submitScore(id,token,score,telemetry,runId,roomId=null){
         roomScore=Number(rr.rows[0]?.bestScore||0);roomScoreAccepted=true;
       }
       await client.query('COMMIT');
+      await enforceTopOneCosmetics();
       return{player:publicPlayer(r.rows[0]),antiCheat:{...anti,scoreAccepted:true},roomScore,roomScoreAccepted,roomId:roomId||null};
     }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
   }
   p.bestScore=Math.max(p.bestScore,value);
   return{player:publicPlayer(p),antiCheat:{...anti,scoreAccepted:true},roomScore:null,roomScoreAccepted:false,roomId:roomId||null};
 }
-async function getAllPlayers(){if(dbReady){const r=await global.db.query('SELECT id,name,country,best_score AS score,visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect",vip_level AS "vipLevel",letter_styles AS "letterStyles",tag_global_color AS "tagGlobalColor",tag_country_color AS "tagCountryColor",updated_at AS "updatedAt",created_at AS "createdAt" FROM players');return r.rows.map(p=>({...p,letterStyles:parseLetterStyles(p.letterStyles)}));}return[...memoryPlayers.values()].map(p=>({id:p.id,name:p.name,country:p.country,score:p.bestScore,visualName:p.visualName,nameColor:p.nameColor,nameEffect:p.nameEffect,vipLevel:Number(p.vipLevel||0),letterStyles:p.letterStyles||[],tagGlobalColor:p.tagGlobalColor||'#e53935',tagCountryColor:p.tagCountryColor||'#ff7a2f',updatedAt:0,createdAt:0}));}
-async function ranked(){const rows=await getAllPlayers();rows.sort((a,b)=>Number(b.score)-Number(a.score)||String(a.updatedAt).localeCompare(String(b.updatedAt)));const world=new Map(rows.map((p,i)=>[p.id,i+1]));const countryMaps=new Map();for(const p of rows){if(!countryMaps.has(p.country))countryMaps.set(p.country,[]);countryMaps.get(p.country).push(p);}const cr=new Map();for(const list of countryMaps.values())list.forEach((p,i)=>cr.set(p.id,i+1));return{rows,world,country:cr};}
+async function getAllPlayers(){if(dbReady){const r=await global.db.query('SELECT id,name,country,best_score AS score,visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect",vip_level AS "vipLevel",letter_styles AS "letterStyles",tag_global_color AS "tagGlobalColor",tag_country_color AS "tagCountryColor",best_score_at AS "bestScoreAt",updated_at AS "updatedAt",created_at AS "createdAt" FROM players');return r.rows.map(p=>({...p,letterStyles:parseLetterStyles(p.letterStyles)}));}return[...memoryPlayers.values()].map(p=>({id:p.id,name:p.name,country:p.country,score:p.bestScore,visualName:p.visualName,nameColor:p.nameColor,nameEffect:p.nameEffect,vipLevel:Number(p.vipLevel||0),letterStyles:p.letterStyles||[],tagGlobalColor:p.tagGlobalColor||'#e53935',tagCountryColor:p.tagCountryColor||'#ff7a2f',updatedAt:0,createdAt:0}));}
+async function ranked(){const rows=await getAllPlayers();rows.sort((a,b)=>Number(b.score)-Number(a.score)||String(a.bestScoreAt||a.createdAt||'').localeCompare(String(b.bestScoreAt||b.createdAt||''))||String(a.createdAt||'').localeCompare(String(b.createdAt||''))||String(a.id).localeCompare(String(b.id)));const world=new Map(rows.map((p,i)=>[p.id,i+1]));const countryMaps=new Map();for(const p of rows){if(!countryMaps.has(p.country))countryMaps.set(p.country,[]);countryMaps.get(p.country).push(p);}const cr=new Map();for(const list of countryMaps.values())list.forEach((p,i)=>cr.set(p.id,i+1));return{rows,world,country:cr};}
 async function playerRanks(id,token){await roomAuth(id,token);const r=await ranked();return{worldRank:r.world.get(id)||9999,countryRank:r.country.get(id)||9999};}
 async function rankings(country,page=1){const safe=Math.max(1,Math.floor(Number(page)||1)),offset=(safe-1)*25,r=await ranked();let list=country?r.rows.filter(p=>p.country===country.toUpperCase()):r.rows;const total=list.length;list=list.slice(offset,offset+25).map(p=>({...p,score:Number(p.score||0),worldRank:r.world.get(p.id),countryRank:r.country.get(p.id)}));return{players:list,total,page:safe,pages:Math.max(1,Math.ceil(total/25))};}
 async function roomAuth(id,token){const p=await authenticate(id,token);if(!p)throw Object.assign(new Error('Sessão inválida.'),{status:401});if(p.bannedPermanent||(p.bannedUntil&&new Date(p.bannedUntil)>new Date()))throw Object.assign(new Error('A tua conta está temporariamente ou permanentemente bloqueada.'),{status:403});return p;}
@@ -169,6 +172,27 @@ const VIP_BORDERS={1:['glow-blue','glow-yellow'],2:['pulse-green','pulse-purple'
 function unlockedByTier(base,tiers,level){const out=[...base];for(let i=1;i<=Math.min(6,Number(level)||0);i++)out.push(...(tiers[i]||[]));return out;}
 function validAvatar(v,vip,worldRank){const allowed=unlockedByTier(BASIC_AVATARS,VIP_AVATARS,vip);if(Number(worldRank)===1)allowed.push('prism');return allowed.includes(String(v||''));}
 function validBorder(v,vip,worldRank){const value=String(v||'').toLowerCase(),allowed=unlockedByTier(BASIC_BORDERS,VIP_BORDERS,vip);if(Number(worldRank)===1)allowed.push('rainbow');return allowed.includes(value);}
+async function enforceTopOneCosmetics(){
+  if(!dbReady)return;
+  const r=await ranked(),topId=r.rows[0]?.id;
+  if(!topId)return;
+  const q=await global.db.query(`SELECT id,vip_level AS "vipLevel",name_color AS "nameColor",letter_styles AS "letterStyles",avatar,avatar_border AS "avatarBorder",tag_global_color AS "tagGlobalColor",tag_country_color AS "tagCountryColor"
+    FROM players
+    WHERE id<>$1 AND (
+      LOWER(name_color)='rainbow' OR LOWER(avatar)='prism' OR LOWER(avatar_border)='rainbow'
+      OR LOWER(tag_global_color)='rainbow' OR LOWER(tag_country_color)='rainbow'
+      OR letter_styles::text ILIKE '%rainbow%'
+    )`,[topId]);
+  for(const p of q.rows){
+    const styles=parseLetterStyles(p.letterStyles).map(s=>String(s?.color||'').toLowerCase()==='rainbow'?{...s,color:Number(p.vipLevel||0)>0?'#f5f7ff':'#ffffff'}:s);
+    const color=String(p.nameColor||'').toLowerCase()==='rainbow'?(Number(p.vipLevel||0)>0?'#f5f7ff':'#ffffff'):p.nameColor;
+    const avatar=String(p.avatar||'').toLowerCase()==='prism'?'default':p.avatar;
+    const border=String(p.avatarBorder||'').toLowerCase()==='rainbow'?'#46535f':p.avatarBorder;
+    const globalTag=String(p.tagGlobalColor||'').toLowerCase()==='rainbow'?'#e53935':p.tagGlobalColor;
+    const countryTag=String(p.tagCountryColor||'').toLowerCase()==='rainbow'?'#ff7a2f':p.tagCountryColor;
+    await global.db.query('UPDATE players SET name_color=$1,letter_styles=$2,avatar=$3,avatar_border=$4,tag_global_color=$5,tag_country_color=$6,updated_at=NOW() WHERE id=$7',[color,JSON.stringify(styles),avatar,border,globalTag,countryTag,p.id]);
+  }
+}
 async function updateAccountProfile(id,token,data){const p=await roomAuth(id,token),r=await ranked(),worldRank=r.world.get(id)||9999;const avatar=String(data.avatar||p.avatar||'default'),border=String(data.avatarBorder||p.avatarBorder||'#46535f').toLowerCase(),newName=String(data.name||p.name).trim();if(!validName(newName))throw Object.assign(new Error('O nome deve ter 3–8 letras ou números.'),{status:400});if(!validAvatar(avatar,vipLevelOf(p),worldRank))throw Object.assign(new Error('Esse avatar ainda não está disponível para a tua conta.'),{status:403});if(!validBorder(border,vipLevelOf(p),worldRank))throw Object.assign(new Error('Essa borda ainda não está disponível para a tua conta.'),{status:403});const q=await global.db.query('UPDATE players SET avatar=$1,avatar_border=$2,name=$3,name_key=$4,visual_name=CASE WHEN visual_name=name THEN $3 ELSE visual_name END,updated_at=NOW() WHERE id=$5 RETURNING id,name,country,best_score AS "bestScore",visual_name AS "visualName",name_color AS "nameColor",name_effect AS "nameEffect",vip_level AS "vipLevel",letter_styles AS "letterStyles",tag_global_color AS "tagGlobalColor",tag_country_color AS "tagCountryColor",avatar,avatar_border AS "avatarBorder",role,banned_until AS "bannedUntil",banned_permanent AS "bannedPermanent",ban_reason AS "banReason"',[avatar,border,newName,normalizeName(newName),id]);return{player:publicPlayer(q.rows[0]),worldRank};}
 async function resolveTarget(value){const s=String(value||'').trim();const q=await global.db.query('SELECT id FROM players WHERE id::text=$1 OR name_key=$2 LIMIT 1',[s,normalizeName(s)]);if(!q.rowCount)throw Object.assign(new Error('Jogador não encontrado.'),{status:404});return q.rows[0].id;}
 async function adminSetVip(adminId,token,targetId,level){
