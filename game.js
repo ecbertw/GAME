@@ -124,6 +124,7 @@ function buildPixelWall(){
   const colors=['#e83e45','#f1c438','#2f9bd1','#39b86a','#7d4ac7','#ef7b2d','#e7e7df','#172b3b'];
   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const lowPower=reduced||Number(navigator.hardwareConcurrency||4)<=4||(navigator.deviceMemory&&Number(navigator.deviceMemory)<=4);
+  document.documentElement.classList.toggle('eixo-low-power',!!lowPower);
   const area=innerWidth*innerHeight,count=Math.max(90,Math.min(lowPower?280:650,Math.floor(area/(lowPower?6500:3000))));
   const particles=[];let mouseX=-9999,mouseY=-9999,movingUntil=0,lastFrame=0;
   for(let i=0;i<count;i++){
