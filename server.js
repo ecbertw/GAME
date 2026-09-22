@@ -17,7 +17,7 @@ const loginRate=new Map();
 const SESSION_COOKIE='__Host-eixo_session';
 const SESSION_DAYS=30;
 function parseCookies(req){const out={};for(const part of String(req.headers.cookie||'').split(';')){const i=part.indexOf('=');if(i>0)out[part.slice(0,i).trim()]=decodeURIComponent(part.slice(i+1).trim())}return out;}
-function setSessionCookie(res,token,maxAge=SESSION_DAYS*86400){res.setHeader('Set-Cookie',SESSION_COOKIE+'='+encodeURIComponent(token)+'; Max-Age='+maxAge+'; Path=/; HttpOnly; Secure; SameSite=Lax');}
+function setSessionCookie(res,token,persistent=false){const maxAge=persistent?'; Max-Age='+(SESSION_DAYS*86400):'';res.setHeader('Set-Cookie',SESSION_COOKIE+'='+encodeURIComponent(token)+maxAge+'; Path=/; HttpOnly; Secure; SameSite=Lax');}
 function clearSessionCookie(res){res.setHeader('Set-Cookie',SESSION_COOKIE+'=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax');}
 function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())&&String(v).length<=200;}
 function passwordBytes(v){return Buffer.byteLength(String(v||''),'utf8');}
@@ -170,8 +170,8 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/chat'){const d=await body(req);return json(res,201,await sendChatMessage(d.id,d.token,d.channel,d.message));}
   if(req.method==='GET'&&url.pathname==='/api/player-rank'){return json(res,200,await playerRanks(url.searchParams.get('id'),url.searchParams.get('token')));}
   if(req.method==='GET'&&url.pathname==='/api/rankings'){const c=url.searchParams.get('country')||'';if(c&&!validCountry(c))return json(res,400,{error:'País inválido.'});return json(res,200,{country:c||null,...await rankings(c||null,url.searchParams.get('page')||1)});}
-  if(req.method==='POST'&&url.pathname==='/api/auth/register'){const d=await body(req);d.ip=clientIp(req);const out=await authService.createAccount({db:global.db,normalizeName,validName,validCountry,publicPlayer,authenticate},d);setSessionCookie(res,out.session);return json(res,201,{player:out.player});}
-  if(req.method==='POST'&&url.pathname==='/api/auth/login'){const d=await body(req);d.ip=clientIp(req);const out=await authService.loginAccount({db:global.db,authenticate,publicPlayer},d);setSessionCookie(res,out.session);return json(res,200,{player:out.player});}
+  if(req.method==='POST'&&url.pathname==='/api/auth/register'){const d=await body(req);d.ip=clientIp(req);const out=await authService.createAccount({db:global.db,normalizeName,validName,validCountry,publicPlayer,authenticate},d);setSessionCookie(res,out.session,false);return json(res,201,{player:out.player});}
+  if(req.method==='POST'&&url.pathname==='/api/auth/login'){const d=await body(req);d.ip=clientIp(req);const out=await authService.loginAccount({db:global.db,authenticate,publicPlayer},d);setSessionCookie(res,out.session,!!d.rememberMe);return json(res,200,{player:out.player});}
   if(req.method==='POST'&&url.pathname==='/api/auth/logout'){const out=await authService.logout(global.db,parseCookies(req)[SESSION_COOKIE]);clearSessionCookie(res);return json(res,200,out);}
   if(req.method==='POST'&&url.pathname==='/api/auth/password-reset/request'){const d=await body(req);d.ip=clientIp(req);return json(res,200,await authService.requestReset(global.db,d));}
   if(req.method==='POST'&&url.pathname==='/api/auth/password-reset/confirm'){const d=await body(req);return json(res,200,await authService.resetPassword(global.db,d));}
