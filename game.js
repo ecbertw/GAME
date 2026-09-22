@@ -27,6 +27,7 @@ const translations = {
 let currentCountryCode = localStorage.getItem('eixo_country') || 'PT';
 let player = JSON.parse(localStorage.getItem('eixo_player') || 'null');
 let running = false, score = 0, x = 0, direction = 1, speed = 4.2, lastTime = 0, pulse = 0;
+let roundStartedAt=0,hitTelemetry=[];
 let rankingMode = 'country', rankingPage = 1, rankingPages = 1;
 const rankingModal = document.getElementById('rankingModal');
 const countrySelect = document.getElementById('countrySelect');
@@ -65,7 +66,7 @@ function draw(){
   pulse+=.035;ctx.fillStyle=`rgba(255,255,255,${.13+Math.sin(pulse)*.04})`;ctx.fillRect(Math.round(x-2),Math.round(c.y-2),4,4);
 }
 function loop(time){if(!running)return;const dt=Math.min((time-lastTime)/16.67||1,2);lastTime=time;const{w}=dimensions(),margin=Math.max(24,w*.055);x+=direction*speed*dt;if(x>=w-margin){x=w-margin;direction=-1;}if(x<=margin){x=margin;direction=1;}draw();requestAnimationFrame(loop);}
-function resetGame(){score=0;scoreEl.textContent='0';const{w}=dimensions();x=Math.max(24,w*.1);direction=1;speed=4.2;running=true;messageEl.textContent=getLang().instruction;lastTime=performance.now();requestAnimationFrame(loop);}
+function resetGame(){score=0;scoreEl.textContent='0';const{w}=dimensions();x=Math.max(24,w*.1);direction=1;speed=4.2;running=true;roundStartedAt=performance.now();hitTelemetry=[];messageEl.textContent=getLang().instruction;lastTime=performance.now();requestAnimationFrame(loop);}
 function stopGame(){running=false;messageEl.textContent=getLang().instruction;draw();}
 function showFeedback(text,type){feedbackEl.textContent=text;feedbackEl.className=`game-feedback ${type}`;void feedbackEl.offsetWidth;feedbackEl.classList.add('show');}
 function speedForScore(value){
@@ -78,15 +79,17 @@ function speedForScore(value){
 async function hit(){
   if(!player){if(window.eixoOpenAuth)window.eixoOpenAuth('login');return;}
   if(!running){resetGame();return;}
-  const c=center(),distance=Math.abs(x-c.x),inner=Math.max(8,Math.min(11,dimensions().h*.027)),outer=Math.max(28,Math.min(38,dimensions().h*.095));
-  if(distance<=inner+4){score+=2;speed=speedForScore(score);showFeedback('+2','good');if(window.EixoAudio)window.EixoAudio.perfect();}
-  else if(distance<=outer){score+=1;speed=speedForScore(score);showFeedback('+1','ok');if(window.EixoAudio)window.EixoAudio.hit();}
-  else{showFeedback('MISS','miss');if(window.EixoAudio)window.EixoAudio.miss();stopGame();await submitScore(score);return;}
+  const c=center(),signedOffset=x-c.x,distance=Math.abs(signedOffset),inner=Math.max(8,Math.min(11,dimensions().h*.027)),outer=Math.max(28,Math.min(38,dimensions().h*.095));
+  let points=0;
+  if(distance<=inner+4){points=2;score+=2;speed=speedForScore(score);showFeedback('+2','good');if(window.EixoAudio)window.EixoAudio.perfect();}
+  else if(distance<=outer){points=1;score+=1;speed=speedForScore(score);showFeedback('+1','ok');if(window.EixoAudio)window.EixoAudio.hit();}
+  else{hitTelemetry.push({t:Math.round(performance.now()-roundStartedAt),offset:Math.round(signedOffset*10)/10,points:0});showFeedback('MISS','miss');if(window.EixoAudio)window.EixoAudio.miss();stopGame();await submitScore(score);return;}
+  hitTelemetry.push({t:Math.round(performance.now()-roundStartedAt),offset:Math.round(signedOffset*10)/10,points});
   scoreEl.textContent=String(score);
 }
 async function submitScore(value){
   if(!player||value<=0)return;
-  try{const res=await fetch('/api/scores',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:player.id,token:player.token,score:value})});const data=await res.json();if(res.ok&&data.player){player={...player,...data.player,token:player.token};localStorage.setItem('eixo_player',JSON.stringify(player));loadTopRankings();}}
+  try{const res=await fetch('/api/scores',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:player.id,token:player.token,score:value,telemetry:hitTelemetry.slice(0,600)})});const data=await res.json();if(res.status===423&&data.ban){window.__eixoPendingBan=data.ban;window.dispatchEvent(new CustomEvent('eixo-ban',{detail:data.ban}));return;}if(res.ok&&data.player){player={...player,...data.player,token:player.token};localStorage.setItem('eixo_player',JSON.stringify(player));loadTopRankings();if(data.antiCheat?.flagged)console.info('EIXO run review flag:',data.antiCheat.risk,data.antiCheat.reasons);}}
   catch(e){console.warn('Score could not be submitted:',e.message);}
 }
 
@@ -203,6 +206,11 @@ async function bootPlayer(){
       const data=await res.json();
       if(player?.id&&player.id!==initialId)return;
       if(data?.player){player={...data.player,token:'session'};localStorage.setItem('eixo_player',JSON.stringify(player));}
+    }else if(res.status===423){
+      const data=await res.json().catch(()=>({}));
+      window.__eixoPendingBan=data.ban||{permanent:false,until:null,reason:null};
+      window.dispatchEvent(new CustomEvent('eixo-ban',{detail:window.__eixoPendingBan}));
+      return;
     }else{
       player=null;currentCountryCode='PT';localStorage.removeItem('eixo_player');localStorage.removeItem('eixo_country');
     }
