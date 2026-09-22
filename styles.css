@@ -219,3 +219,21 @@ html.eixo-modal-open,body.eixo-modal-open{overflow:hidden!important;overscroll-b
   .vip-customize-modal .vip-letter-heading{position:sticky;top:-1px;z-index:3;background:#0b1117;padding:8px 0;margin-top:10px!important}
   .vip-customize-modal #vipCustomizeSave{position:sticky;bottom:0;z-index:5;margin-bottom:0!important}
 }
+
+
+/* EIXO PayPal VIP store */
+.vip-store-modal{width:min(620px,calc(100vw - 24px))}
+.vip-store-sandbox{margin:10px 0;padding:9px;border:1px solid #ffd43b;color:#ffd43b;background:#171405;font-size:7px;line-height:1.6;text-align:center}
+.vip-store-levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.vip-store-level{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:11px;border:1px solid #35414b;background:#070c11;font-size:7px}
+.vip-store-level strong{color:#fff}.vip-store-level span{color:#00e5ff}.vip-store-level small{color:#39d98a;min-width:10px}
+.vip-store-level.owned{opacity:.68}.vip-store-level.next{border-color:#18c66b;box-shadow:0 0 0 1px rgba(24,198,107,.25)}
+.vip-store-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.vip-store-summary>div,.vip-store-summary>strong{border:1px solid #35414b;background:#080d12;padding:10px;font-size:7px;line-height:1.7}
+.vip-store-summary span{display:block;color:#7f8a94;font-size:5px;margin-bottom:7px}.vip-store-summary strong{color:#fff}
+.vip-store-status{min-height:18px;margin-top:10px;color:#00e5ff;font-size:6px;line-height:1.7}
+#vipPaypalButton{display:block;width:100%;min-height:44px;margin-top:12px}
+@media(max-width:600px){
+  .vip-store-levels{grid-template-columns:1fr 1fr}
+  .vip-store-summary{grid-template-columns:1fr}
+}
