@@ -5,6 +5,9 @@ const crypto=require('crypto');
 const authService=require('./auth-server');
 const PORT=Number(process.env.PORT)||3000;
 const HOST=String(process.env.HOST||'127.0.0.1');
+const ALLOWED_HOSTS=new Set(String(process.env.PUBLIC_HOSTS||'eixo.at,www.eixo.at,127.0.0.1,localhost').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean));
+function requestHost(req){return String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().toLowerCase().replace(/:\d+$/,'')}
+function allowedRequestHost(req){return ALLOWED_HOSTS.has(requestHost(req))}
 const ROOT=__dirname;
 const DATABASE_URL=process.env.DATABASE_URL;
 const MIME_TYPES={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.webp':'image/webp','.ico':'image/x-icon'};
@@ -31,13 +34,6 @@ function decryptMfaSecret(payload){const key=mfaEncryptionKey();if(!key)throw Ob
 function parseCookies(req){const out={};for(const part of String(req.headers.cookie||'').split(';')){const i=part.indexOf('=');if(i>0)out[part.slice(0,i).trim()]=decodeURIComponent(part.slice(i+1).trim())}return out;}
 function setSessionCookie(res,token,persistent=false){const maxAge=persistent?'; Max-Age='+(SESSION_DAYS*86400):'';res.setHeader('Set-Cookie',SESSION_COOKIE+'='+encodeURIComponent(token)+maxAge+'; Path=/; HttpOnly; Secure; SameSite=Strict');}
 function clearSessionCookie(res){res.setHeader('Set-Cookie',SESSION_COOKIE+'=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Strict');}
-function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())&&String(v).length<=200;}
-function passwordBytes(v){return Buffer.byteLength(String(v||''),'utf8');}
-function validPassword(v){const n=passwordBytes(v);return n>=12&&n<=72;}
-function newSessionToken(){return crypto.randomBytes(32).toString('base64url');}
-function sessionHash(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
-function hashPassword(password){return new Promise((resolve,reject)=>{const salt=crypto.randomBytes(16);crypto.scrypt(String(password),salt,64,{N:32768,r:8,p:3,maxmem:128*1024*1024},(err,key)=>err?reject(err):resolve(['scrypt','32768','8','3',salt.toString('hex'),key.toString('hex')].join(PG_PARAM)));});}
-function verifyPassword(password,stored){return new Promise(resolve=>{try{const parts=String(stored||'').split(PG_PARAM);const salt=Buffer.from(parts[4],'hex'),expected=Buffer.from(parts[5],'hex');if(parts[0]!=='scrypt')return resolve(false);crypto.scrypt(String(password),salt,expected.length,{N:Number(parts[1]),r:Number(parts[2]),p:Number(parts[3]),maxmem:128*1024*1024},(err,key)=>resolve(!err&&crypto.timingSafeEqual(key,expected)));}catch(_){resolve(false);}});}
 const chatRate=new Map();
 const WORLD_COLORS=['#e53935','#00d4ff','#ffd43b'];
 const COUNTRY_TOP_COLORS=['#ff7a2f','#6f5cff','#7bdc5a'];
@@ -54,7 +50,7 @@ function validRoomSize(v){return Number.isInteger(Number(v))&&Number(v)>=1&&Numb
 function vipLevelOf(p){return Number(p.vipLevel||0);}
 function validVipVisualName(v){const s=String(v??'').trim();return s.length>=1&&s.length<=16;}
 function parseLetterStyles(v){try{return Array.isArray(v)?v:JSON.parse(v||'[]')}catch(_){return[]}}
-function securityHeaders(){return {'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','X-Permitted-Cross-Domain-Policies':'none','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=(self)','Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Resource-Policy':'same-origin','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://flagcdn.com data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",'Strict-Transport-Security':'max-age=63072000; includeSubDomains; preload'};}
+function securityHeaders(){return {'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','X-Permitted-Cross-Domain-Policies':'none','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=(self)','Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Resource-Policy':'same-origin','Vary':'Origin, Sec-Fetch-Site','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://flagcdn.com data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",'Strict-Transport-Security':'max-age=63072000; includeSubDomains; preload'};}
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...securityHeaders()});res.end(JSON.stringify(payload));}
 function body(req){return new Promise((resolve,reject)=>{let raw='';req.on('data',c=>{raw+=c;if(raw.length>30000)req.destroy();});req.on('end',()=>{try{const data=raw?JSON.parse(raw):{};if(data&&typeof data==='object'){const c=parseCookies(req);if(c[SESSION_COOKIE])data.token=c[SESSION_COOKIE];}resolve(data);}catch(e){reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
 function tokenHash(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
@@ -258,10 +254,11 @@ async function handleApi(req,res,url){
   if(['POST','PUT','PATCH','DELETE'].includes(req.method)){
     const fetchSite=String(req.headers['sec-fetch-site']||'').toLowerCase();
     if(fetchSite==='cross-site')return json(res,403,{error:'Origem não autorizada.'});
-    const targetHost=String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().toLowerCase();
+    const targetHost=requestHost(req);
+    if(!ALLOWED_HOSTS.has(targetHost))return json(res,403,{error:'Host não autorizado.'});
     const source=String(req.headers.origin||req.headers.referer||'').trim();
     if(!source)return json(res,403,{error:'Origem não autorizada.'});
-    let ok=false;try{ok=new URL(source).host.toLowerCase()===targetHost}catch(_){}
+    let ok=false;try{ok=new URL(source).hostname.toLowerCase()===targetHost}catch(_){}
     if(!ok)return json(res,403,{error:'Origem não autorizada.'});
   }
   const cookieToken=parseCookies(req)[SESSION_COOKIE];
@@ -313,7 +310,11 @@ async function handleApi(req,res,url){
  }catch(e){const status=Number(e.status)||500;if(status>=500){console.error('EIXO API error:',e&&e.stack?e.stack:e);return json(res,500,{error:'Internal server error.'});}return json(res,status,{error:e.message||'Request failed.'});}
 }
 function serveFile(res,filePath){fs.stat(filePath,(err,st)=>{if(err||!st.isFile())return json(res,404,{error:'Not found'});const ext=path.extname(filePath).toLowerCase();res.writeHead(200,{...securityHeaders(),'Content-Type':MIME_TYPES[ext]||'application/octet-stream','Cache-Control':['.html','.js','.css'].includes(ext)?'no-store, no-cache, must-revalidate':'public, max-age=3600'});fs.createReadStream(filePath).pipe(res);});}
-const server=http.createServer(async(req,res)=>{try{const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);if(url.pathname==='/health'||url.pathname==='/healthz')return json(res,200,{ok:true,database:dbReady?'postgresql':'memory'});if(url.pathname.startsWith('/api/'))return handleApi(req,res,url);if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'Method Not Allowed'});let pathname=decodeURIComponent(url.pathname);if(pathname==='/')pathname='/index.html';const fp=path.resolve(ROOT,pathname.replace(/^\/+/,''));if(fp!==ROOT&&!fp.startsWith(ROOT+path.sep))return json(res,403,{error:'Forbidden'});fs.stat(fp,(e,s)=>{if(!e&&s.isFile())return serveFile(res,fp);return serveFile(res,path.join(ROOT,'index.html'));});}catch(e){console.error(e);json(res,500,{error:'Internal server error'});}});
+const server=http.createServer(async(req,res)=>{try{if(!allowedRequestHost(req))return json(res,421,{error:'Misdirected Request'});const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);if(url.pathname==='/health'||url.pathname==='/healthz')return json(res,200,{ok:true,database:dbReady?'postgresql':'memory'});if(url.pathname.startsWith('/api/'))return handleApi(req,res,url);if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'Method Not Allowed'});let pathname=decodeURIComponent(url.pathname);if(pathname==='/')pathname='/index.html';const fp=path.resolve(ROOT,pathname.replace(/^\/+/,''));if(fp!==ROOT&&!fp.startsWith(ROOT+path.sep))return json(res,403,{error:'Forbidden'});fs.stat(fp,(e,s)=>{if(!e&&s.isFile())return serveFile(res,fp);return serveFile(res,path.join(ROOT,'index.html'));});}catch(e){console.error(e);json(res,500,{error:'Internal server error'});}});
+server.requestTimeout=15000;
+server.headersTimeout=10000;
+server.keepAliveTimeout=5000;
+server.maxHeadersCount=100;
 (async()=>{
   try{
     await initDb();
