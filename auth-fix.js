@@ -20,16 +20,20 @@
     'Demasiados pedidos. Tenta novamente mais tarde.':'Too many requests. Please try again later.'
   };
   const errorText=v=>englishErrors[String(v||'')]||String(v||'Unable to complete the request.');
-  const setPlayer=p=>{
+  const setPlayer=(p,isNewAccount=false)=>{
     const clean=p?{...p,token:'session'}:null;
     if(clean){
+      // UI country belongs to the account; never inherit the previous account's choice.
+      const prefKey='eixo_ui_country_'+clean.id;
+      if(isNewAccount)localStorage.removeItem(prefKey);
+      const preferred=String(localStorage.getItem(prefKey)||clean.country||'PT').toUpperCase();
+      localStorage.setItem('eixo_country',preferred);
       localStorage.setItem('eixo_player',JSON.stringify(clean));
-      if(!localStorage.getItem('eixo_country'))localStorage.setItem('eixo_country',String(clean.country||'PT').toUpperCase());
-    }else localStorage.removeItem('eixo_player');
-    window.eixoSetPlayer?.(clean);
-    if(clean&&typeof window.changeCountry==='function'){
-      const preferred=String(localStorage.getItem('eixo_country')||clean.country||'PT').toUpperCase();
-      window.changeCountry(preferred);
+      window.eixoSetPlayer?.(clean);
+      window.changeCountry?.(preferred);
+    }else{
+      localStorage.removeItem('eixo_player');
+      window.eixoSetPlayer?.(null);
     }
     const name=$('playerName');if(name)name.textContent=clean?.visualName||clean?.name||'SIGN IN';
     window.dispatchEvent(new Event('eixo-player-updated'));
@@ -83,16 +87,16 @@
   $('authRegisterTab').addEventListener('click',()=>{populateCountries();showMode('register');});
   $('authForgotButton').addEventListener('click',()=>showMode('reset'));
   $('authBackLogin').addEventListener('click',()=>showMode('login'));
-  $('authClose').addEventListener('click',()=>{if(window.eixoGetPlayer?.())close();});
-  modal.addEventListener('click',e=>{if(e.target===modal&&window.eixoGetPlayer?.())close();});
+  $('authClose').addEventListener('click',close);
+  modal.addEventListener('click',e=>{if(e.target===modal)close();});
   loginForm.addEventListener('submit',async e=>{
     e.preventDefault();const err=$('authLoginError'),button=loginForm.querySelector('button[type="submit"]');err.textContent='';button.disabled=true;
-    try{const d=await api('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('authLoginEmail').value,password:$('authLoginPassword').value,rememberMe:!!$('authRemember')?.checked})});setPlayer(d.player);close();window.applyLanguage?.();window.loadTopRankings?.();}
+    try{const d=await api('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('authLoginEmail').value,password:$('authLoginPassword').value,rememberMe:!!$('authRemember')?.checked})});close();try{setPlayer(d.player);window.applyLanguage?.();window.loadTopRankings?.();}catch(uiError){console.error('EIXO post-login UI:',uiError);location.reload();}}
     catch(x){err.textContent=errorText(x.message);}finally{button.disabled=false;}
   });
   registerForm.addEventListener('submit',async e=>{
     e.preventDefault();const err=$('authRegisterError'),button=registerForm.querySelector('button[type="submit"]');err.textContent='';button.disabled=true;
-    try{const d=await api('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('authRegisterName').value,email:$('authRegisterEmail').value,password:$('authRegisterPassword').value,country:$('authRegisterCountry').value})});setPlayer(d.player);close();window.applyLanguage?.();window.loadTopRankings?.();}
+    try{const d=await api('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('authRegisterName').value,email:$('authRegisterEmail').value,password:$('authRegisterPassword').value,country:$('authRegisterCountry').value})});close();try{setPlayer(d.player,true);window.applyLanguage?.();window.loadTopRankings?.();}catch(uiError){console.error('EIXO post-registration UI:',uiError);location.reload();}}
     catch(x){err.textContent=errorText(x.message);}finally{button.disabled=false;}
   });
   resetForm.addEventListener('submit',async e=>{
