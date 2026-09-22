@@ -3,6 +3,7 @@ set -euo pipefail
 APP="/opt/eixo"
 
 if [ "$(id -u)" -ne 0 ]; then echo "Run with sudo." >&2; exit 1; fi
+sudo -u eixo git -C "$APP" config core.fileMode false
 PREV="$(sudo -u eixo git -C "$APP" rev-parse HEAD)"
 echo "Current: $PREV"
 
@@ -19,7 +20,7 @@ echo "New: $NEW"
 
 echo "[2/5] Dependencies"
 cd "$APP"
-sudo -u eixo npm install --omit=dev --ignore-scripts
+sudo -u eixo npm install --omit=dev --ignore-scripts --package-lock=false
 
 echo "[3/5] Syntax"
 for f in server.js auth-server.js server-start.js; do node --check "$APP/$f"; done
@@ -33,7 +34,7 @@ if ! curl -fsS -H "Host: eixo.at" http://127.0.0.1:3000/health >/tmp/eixo-health
   echo "Health failed. Rolling back to $PREV" >&2
   systemctl stop eixo || true
   sudo -u eixo git -C "$APP" reset --hard "$PREV"
-  cd "$APP"; sudo -u eixo npm install --omit=dev --ignore-scripts
+  cd "$APP"; sudo -u eixo npm install --omit=dev --ignore-scripts --package-lock=false
   systemctl start eixo
   exit 1
 fi
