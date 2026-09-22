@@ -21,5 +21,5 @@
   document.getElementById('nationalFullButton')?.remove();
  }
  bindMainRanking();
- setInterval(render,700);document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
+ setInterval(render,3000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
 })();
