@@ -46,6 +46,17 @@ function setSessionCookie(res,token,persistent=false){const maxAge=persistent?';
 function clearSessionCookie(res){res.setHeader('Set-Cookie',SESSION_COOKIE+'=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Strict');}
 function sessionHash(v){return crypto.createHash('sha256').update(String(v||'')).digest('hex');}
 const chatRate=new Map();
+const feedbackRate=new Map();
+function boundedRate(map,key,limit,windowMs,maxEntries=10000){
+  const now=Date.now();
+  if(map.size>maxEntries){
+    for(const [k,v] of map){if(now-v.start>windowMs)map.delete(k)}
+    if(map.size>maxEntries){let drop=map.size-maxEntries;for(const k of map.keys()){map.delete(k);if(--drop<=0)break}}
+  }
+  const row=map.get(key);
+  if(!row||now-row.start>windowMs){map.set(key,{start:now,count:1});return true}
+  row.count++;return row.count<=limit;
+}
 const WORLD_COLORS=['#e53935','#00d4ff','#ffd43b'];
 const COUNTRY_TOP_COLORS=['#ff7a2f','#6f5cff','#7bdc5a'];
 const COUNTRY_OTHER_COLORS=['#00d4ff','#ff4fd8','#ffffff'];
@@ -345,7 +356,7 @@ async function getChatMessages(id,token,channel){
   const ranks=await ranked();
   return rows.map(m=>{const pl=memoryPlayers.get(m.playerId);return pl?{id:m.id,channel:m.channel,message:m.message,createdAt:m.createdAt,playerId:pl.id,name:pl.name,country:pl.country,visualName:pl.visualName,nameColor:pl.nameColor,nameEffect:pl.nameEffect,vipLevel:Number(pl.vipLevel||0),letterStyles:pl.letterStyles||[],tagGlobalColor:pl.tagGlobalColor||'#e53935',tagCountryColor:pl.tagCountryColor||'#ff7a2f',worldRank:ranks.world.get(pl.id)||9999,countryRank:ranks.country.get(pl.id)||9999,avatar:'default'}:null}).filter(Boolean);
 }
-async function saveMessage(type,data){const name=String(data.name||'').trim().slice(0,80),email=String(data.email||'').trim().slice(0,200),subject=String(data.subject||'').trim().slice(0,160),message=String(data.message||'').trim().slice(0,10000);if(!message)throw Object.assign(new Error('Escreve uma mensagem antes de enviar.'),{status:400});if(dbReady){await global.db.query('INSERT INTO messages(id,type,name,email,subject,message) VALUES($1,$2,$3,$4,$5,$6)',[crypto.randomUUID(),type,name,email,subject,message]);}else memoryMessages.push({id:crypto.randomUUID(),type,name,email,subject,message,createdAt:new Date().toISOString()});return{ok:true};}
+async function saveMessage(type,data,ip=''){const rateKey='feedback:'+String(ip||'unknown');if(!boundedRate(feedbackRate,rateKey,8,60*60*1000))throw Object.assign(new Error('Demasiados pedidos. Tenta novamente mais tarde.'),{status:429});const name=String(data.name||'').trim().slice(0,80),email=String(data.email||'').trim().slice(0,200),subject=String(data.subject||'').trim().slice(0,160),message=String(data.message||'').trim().slice(0,5000);if(!message)throw Object.assign(new Error('Escreve uma mensagem antes de enviar.'),{status:400});if(dbReady){await global.db.query('INSERT INTO messages(id,type,name,email,subject,message) VALUES($1,$2,$3,$4,$5,$6)',[crypto.randomUUID(),type,name,email,subject,message]);}else memoryMessages.push({id:crypto.randomUUID(),type,name,email,subject,message,createdAt:new Date().toISOString()});return{ok:true};}
 function clientIp(req) {
   const peer = req.socket.remoteAddress || '';
   const localProxy = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(peer);
@@ -409,8 +420,8 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/rooms/leave'){const d=await body(req);return json(res,200,{ok:true});}
   if(req.method==='POST'&&url.pathname==='/api/rooms/abandon'){const d=await body(req);return json(res,200,await abandonRoom(d.id,d.token,d.roomId));}
   if(req.method==='GET'&&url.pathname==='/api/rooms/rankings'){return json(res,200,{players:await roomRankings(url.searchParams.get('id'),url.searchParams.get('token'),url.searchParams.get('roomId'))});}
-  if(req.method==='POST'&&url.pathname==='/api/contact'){const d=await body(req);return json(res,201,await saveMessage('contact',d));}
-  if(req.method==='POST'&&url.pathname==='/api/bugs'){const d=await body(req);return json(res,201,await saveMessage('bug',d));}
+  if(req.method==='POST'&&url.pathname==='/api/contact'){const d=await body(req);return json(res,201,await saveMessage('contact',d,clientIp(req)));}
+  if(req.method==='POST'&&url.pathname==='/api/bugs'){const d=await body(req);return json(res,201,await saveMessage('bug',d,clientIp(req)));}
   return json(res,404,{error:'API endpoint not found.'});
  }catch(e){const status=Number(e.status)||500;if(status>=500){console.error('EIXO API error:',e&&e.stack?e.stack:e);return json(res,500,{error:'Internal server error.'});}return json(res,status,{error:e.message||'Request failed.'});}
 }
