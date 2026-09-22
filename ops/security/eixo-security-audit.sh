@@ -25,6 +25,13 @@ for h in "strict-transport-security:" "content-security-policy:" "x-content-type
   if printf "%s" "$H" | tr "[:upper:]" "[:lower:]" | grep -q "$(printf "%s" "$h" | tr "[:upper:]" "[:lower:]")"; then green "header $h"; else red "missing/weak header $h"; fi
 done
 
+# TLS edge checks
+if timeout 8 openssl s_client -connect eixo.at:443 -servername eixo.at -tls1_2 </dev/null >/dev/null 2>&1; then green "TLS 1.2 accepted"; else red "TLS 1.2 connection failed"; fi
+if timeout 8 openssl s_client -connect eixo.at:443 -servername eixo.at -tls1_3 </dev/null >/dev/null 2>&1; then green "TLS 1.3 accepted"; else red "TLS 1.3 connection failed"; fi
+if timeout 8 openssl s_client -connect eixo.at:443 -servername eixo.at -tls1_1 </dev/null >/dev/null 2>&1; then red "obsolete TLS 1.1 is still accepted"; else green "TLS 1.1 rejected"; fi
+CERT="$(timeout 8 openssl s_client -connect eixo.at:443 -servername eixo.at </dev/null 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null || true)"
+[ -n "$CERT" ] && green "TLS certificate readable: $CERT" || red "TLS certificate check failed"
+
 # 3) Unsafe HTTP methods / host / CSRF
 TRACE="$(curl -k -sS -o /dev/null -w "%{http_code}" -X TRACE --max-time 10 "$BASE/" || true)"
 case "$TRACE" in 405|403|404) green "TRACE blocked ($TRACE)";; *) red "TRACE returned $TRACE";; esac
