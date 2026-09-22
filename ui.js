@@ -2,8 +2,8 @@
   const playerButton=document.getElementById('playerButton'),playerMenu=document.getElementById('playerMenu'),playerName=document.getElementById('playerName'),vipTopButton=document.getElementById('vipTopButton'),vipTopMenu=document.getElementById('vipTopMenu'),countryButton=document.getElementById('countryButton'),countryMenu=document.getElementById('countryMenu');
   if(!playerButton||!playerMenu||!playerName)return;
   const labels={
-    pt:{settings:'DEFINIÇÕES',customize:'PERSONALIZAR NOME',bugs:'REPORTAR BUGS',suggestions:'SUGESTÕES',contact:'CONTACTOS',logout:'SAIR DA CONTA',vipSoon:'COMPRAR VIP',vipCustomize:'PERSONALIZAR NOME VIP',signIn:'ENTRAR'},
-    en:{settings:'SETTINGS',customize:'CUSTOMIZE NAME',bugs:'REPORT BUGS',suggestions:'SUGGESTIONS',contact:'CONTACT',logout:'LOG OUT',vipSoon:'BUY VIP',vipCustomize:'CUSTOMIZE VIP NAME',signIn:'SIGN IN'},
+    pt:{settings:'DEFINIÇÕES',customize:'PERSONALIZAR NOME',bugs:'REPORTAR BUGS',suggestions:'SUGESTÕES',contact:'CONTACTOS',logout:'SAIR DA CONTA',vipSoon:'COMPRAR VIP',vipCustomize:'PERSONALIZAR NOME VIP',donate:'DOAR',signIn:'ENTRAR'},
+    en:{settings:'SETTINGS',customize:'CUSTOMIZE NAME',bugs:'REPORT BUGS',suggestions:'SUGGESTIONS',contact:'CONTACT',logout:'LOG OUT',vipSoon:'BUY VIP',vipCustomize:'CUSTOMIZE VIP NAME',donate:'DONATE',signIn:'SIGN IN'},
     es:{settings:'AJUSTES',customize:'PERSONALIZAR NOMBRE',bugs:'REPORTAR BUGS',suggestions:'SUGERENCIAS',contact:'CONTACTO',logout:'CERRAR SESIÓN',vipSoon:'COMPRAR VIP',vipCustomize:'PERSONALIZAR NOMBRE VIP',signIn:'ENTRAR'},
     fr:{settings:'PARAMÈTRES',customize:'PERSONNALISER LE NOM',bugs:'SIGNALER UN BUG',suggestions:'SUGGESTIONS',contact:'CONTACT',logout:'DÉCONNEXION',vipSoon:'ACHETER VIP',vipCustomize:'PERSONNALISER LE NOM VIP',signIn:'CONNEXION'},
     de:{settings:'EINSTELLUNGEN',customize:'NAMEN ANPASSEN',bugs:'BUG MELDEN',suggestions:'VORSCHLÄGE',contact:'KONTAKT',logout:'ABMELDEN',vipSoon:'VIP KAUFEN',vipCustomize:'VIP-NAMEN ANPASSEN',signIn:'ANMELDEN'},
@@ -40,10 +40,10 @@
       '<button type="button" class="player-option" data-action="contact">'+x.contact+'</button>'+
       (p?.role==='admin'?'<button type="button" class="player-option account-menu-option admin-menu-option" data-action="admin">ADMIN</button>':'')+
       (p?'<button type="button" class="player-option account-menu-option" data-action="logout">'+x.logout+'</button>':'');
-    if(vipTopMenu){const b=[...vipTopMenu.querySelectorAll('button')];if(b[0])b[0].textContent=x.vipSoon;if(b[1])b[1].textContent=x.vipCustomize;}
+    if(vipTopMenu){const b=[...vipTopMenu.querySelectorAll('button')];if(b[0])b[0].textContent=x.vipSoon;if(b[1])b[1].textContent=x.vipCustomize;if(b[2])b[2].textContent=x.donate||'DONATE';}
   }
   vipTopButton?.addEventListener('click',e=>{e.stopPropagation();const open=vipTopMenu?.classList.toggle('open');vipTopButton.setAttribute('aria-expanded',String(!!open));});
-  vipTopMenu?.addEventListener('click',e=>{const b=e.target.closest('[data-vip-action]');if(!b)return;vipTopMenu.classList.remove('open');vipTopButton?.setAttribute('aria-expanded','false');if(b.dataset.vipAction==='buy'){window.eixoOpenVip?.();}else if(b.dataset.vipAction==='customize'){const p=(()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}})();if(Number(p?.vipLevel||0)>0)window.eixoOpenVipCustomize?.();else window.eixoOpenVip?.();}});
+  vipTopMenu?.addEventListener('click',e=>{const b=e.target.closest('[data-vip-action]');if(!b)return;vipTopMenu.classList.remove('open');vipTopButton?.setAttribute('aria-expanded','false');if(b.dataset.vipAction==='buy'){window.eixoOpenVip?.();}else if(b.dataset.vipAction==='customize'){const p=(()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}})();if(Number(p?.vipLevel||0)>0)window.eixoOpenVipCustomize?.();else window.eixoOpenVip?.();}else if(b.dataset.vipAction==='donate'){window.EixoVipStore?.open?.('donation');}});
 
   playerButton.addEventListener('click',e=>{e.stopPropagation();render();const open=playerMenu.classList.toggle('open');playerButton.setAttribute('aria-expanded',String(open));});
   playerButton.closest('.player-area')?.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='Enter')e.stopPropagation()});
