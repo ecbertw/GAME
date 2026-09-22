@@ -131,5 +131,5 @@
   nTab.addEventListener('click',()=>setChannel('national'));
   window.addEventListener('eixo-player-updated',()=>{setChannel(channel)});
   window.addEventListener('storage',()=>load(false));
-  load(true);timer=setInterval(()=>load(false),2500);
+  load(true);timer=setInterval(()=>load(false),4000);
 })();
