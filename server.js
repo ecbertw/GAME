@@ -155,7 +155,14 @@ async function adminMetrics(actorId,token){const a=await roomAuth(actorId,token)
   (SELECT COUNT(*)::int FROM chat_messages WHERE created_at>=NOW()-INTERVAL '24 hours') AS "messages24h",
   (SELECT COUNT(*)::int FROM anti_cheat_runs) AS "gamesRecorded",
   (SELECT COUNT(*)::int FROM anti_cheat_runs WHERE created_at>=NOW()-INTERVAL '24 hours') AS "games24h",
-  (SELECT COUNT(*)::int FROM anti_cheat_runs WHERE flagged=TRUE AND created_at>=NOW()-INTERVAL '24 hours') AS "antiCheatFlags24h"`);
+  (SELECT COUNT(*)::int FROM anti_cheat_runs WHERE flagged=TRUE AND created_at>=NOW()-INTERVAL '24 hours') AS "antiCheatFlags24h",
+  (SELECT COUNT(*)::int FROM anti_cheat_runs WHERE flagged=TRUE AND created_at>=NOW()-INTERVAL '7 days') AS "antiCheatFlags7d",
+  (SELECT COALESCE(ROUND(AVG(score)::numeric,1),0) FROM anti_cheat_runs WHERE created_at>=NOW()-INTERVAL '24 hours') AS "avgScore24h",
+  (SELECT COUNT(*)::int FROM security_audit WHERE action='auth.login_success' AND created_at>=NOW()-INTERVAL '24 hours') AS "loginSuccess24h",
+  (SELECT COUNT(*)::int FROM security_audit WHERE action='auth.login_failure' AND created_at>=NOW()-INTERVAL '24 hours') AS "loginFailure24h",
+  (SELECT COUNT(*)::int FROM security_audit WHERE action LIKE 'moderation.ban_%' AND created_at>=NOW()-INTERVAL '7 days') AS "bans7d",
+  (SELECT COUNT(*)::int FROM security_audit WHERE action='admin.unban' AND created_at>=NOW()-INTERVAL '7 days') AS "unbans7d",
+  (SELECT COUNT(*)::int FROM online_presence op JOIN players p ON p.id=op.player_id WHERE p.role='admin' AND op.last_seen>=NOW()-INTERVAL '90 seconds') AS "adminsOnline"`);
  const countries=await global.db.query('SELECT country,COUNT(*)::int count FROM players GROUP BY country ORDER BY count DESC,country ASC LIMIT 8');
  const vip=await global.db.query('SELECT vip_level AS level,COUNT(*)::int count FROM players WHERE vip_level>0 GROUP BY vip_level ORDER BY vip_level');
  return{...q.rows[0],uptimeSeconds:Math.floor(process.uptime()),countries:countries.rows,vipBreakdown:vip.rows};
@@ -245,8 +252,8 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/chat'){const d=await body(req);return json(res,201,await sendChatMessage(d.id,d.token,d.channel,d.message));}
   if(req.method==='GET'&&url.pathname==='/api/player-rank'){return json(res,200,await playerRanks(url.searchParams.get('id'),url.searchParams.get('token')));}
   if(req.method==='GET'&&url.pathname==='/api/rankings'){const c=url.searchParams.get('country')||'';if(c&&!validCountry(c))return json(res,400,{error:'País inválido.'});return json(res,200,{country:c||null,...await rankings(c||null,url.searchParams.get('page')||1)});}
-  if(req.method==='POST'&&url.pathname==='/api/auth/register'){const d=await body(req);d.ip=clientIp(req);const out=await authService.createAccount({db:global.db,normalizeName,validName,validCountry,publicPlayer,authenticate},d);setSessionCookie(res,out.session,false);return json(res,201,{player:out.player});}
-  if(req.method==='POST'&&url.pathname==='/api/auth/login'){const d=await body(req);d.ip=clientIp(req);const out=await authService.loginAccount({db:global.db,authenticate,publicPlayer},d);setSessionCookie(res,out.session,!!d.rememberMe&&out.player?.role!=='admin');return json(res,200,{player:out.player});}
+  if(req.method==='POST'&&url.pathname==='/api/auth/register'){const d=await body(req);d.ip=clientIp(req);try{const out=await authService.createAccount({db:global.db,normalizeName,validName,validCountry,publicPlayer,authenticate},d);await auditSecurity(out.player?.id||null,'auth.register',out.player?.id||null,{ipHash:crypto.createHash('sha256').update(String(d.ip||'')).digest('hex')});setSessionCookie(res,out.session,false);return json(res,201,{player:out.player});}catch(e){await auditSecurity(null,'auth.register_failure',null,{ipHash:crypto.createHash('sha256').update(String(d.ip||'')).digest('hex')});throw e;}}
+  if(req.method==='POST'&&url.pathname==='/api/auth/login'){const d=await body(req);d.ip=clientIp(req);const ipHash=crypto.createHash('sha256').update(String(d.ip||'')).digest('hex');const emailHash=crypto.createHash('sha256').update(String(d.email||'').trim().toLowerCase()).digest('hex');try{const out=await authService.loginAccount({db:global.db,authenticate,publicPlayer},d);await auditSecurity(out.player?.id||null,'auth.login_success',out.player?.id||null,{ipHash,emailHash});setSessionCookie(res,out.session,!!d.rememberMe&&out.player?.role!=='admin');return json(res,200,{player:out.player});}catch(e){await auditSecurity(null,'auth.login_failure',null,{ipHash,emailHash});throw e;}}
   if(req.method==='POST'&&url.pathname==='/api/auth/logout'){const out=await authService.logout(global.db,parseCookies(req)[SESSION_COOKIE]);clearSessionCookie(res);res.setHeader('Clear-Site-Data','"cache", "cookies", "storage"');return json(res,200,out);}
   if(req.method==='POST'&&url.pathname==='/api/auth/password-reset/request'){const d=await body(req);d.ip=clientIp(req);return json(res,200,await authService.requestReset(global.db,d));}
   if(req.method==='POST'&&url.pathname==='/api/auth/password-reset/confirm'){const d=await body(req);return json(res,200,await authService.resetPassword(global.db,d));}
