@@ -51,7 +51,7 @@
      letter.style.animationDelay=(i*0.05)+'s';
    });
  }
- function fix(){document.querySelectorAll('.rank-player-name,.name-preview').forEach(applyEffect)}
+ function fix(){document.querySelectorAll('.rank-player-name,.name-preview,.chat-name').forEach(applyEffect)}
  fix();
  const observer=new MutationObserver(()=>{observer.disconnect();requestAnimationFrame(()=>{fix();observer.observe(document.body,{childList:true,subtree:true})})});
  observer.observe(document.body,{childList:true,subtree:true});
