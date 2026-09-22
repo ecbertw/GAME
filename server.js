@@ -280,7 +280,6 @@ async function handleApi(req,res,url){
   if(req.method==='GET'&&url.pathname==='/api/me'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));if(p&&(p.bannedPermanent||(p.bannedUntil&&new Date(p.bannedUntil)>new Date())))return json(res,423,{error:'Conta bloqueada.',ban:{permanent:!!p.bannedPermanent,until:p.bannedUntil||null,reason:p.banReason||null}});return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
   if(req.method==='GET'&&url.pathname==='/api/profile/ranks'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));const r=await ranked();return json(res,200,{worldRank:r.world.get(p.id)||null,countryRank:r.country.get(p.id)||null});}
   if(req.method==='POST'&&url.pathname==='/api/profile/customize'){const d=await body(req);return json(res,200,await customize(d.id,d.token,d));}
-  if(req.method==='POST'&&url.pathname==='/api/vip/test-purchase'){return json(res,403,{error:'As compras VIP ainda não estão disponíveis.'});}
   if(req.method==='POST'&&url.pathname==='/api/profile/account'){const d=await body(req);return json(res,200,await updateAccountProfile(d.id,d.token,d));}
   if(req.method==='POST'&&url.pathname==='/api/admin/vip'){const d=await body(req);return json(res,200,await adminSetVip(d.id,d.token,d.targetId,d.level));}
   if(req.method==='POST'&&url.pathname==='/api/admin/role'){const d=await body(req);return json(res,200,await adminSetRole(d.id,d.token,d.targetId,String(d.role||'')));}
