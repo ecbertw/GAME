@@ -285,5 +285,15 @@ async function handleApi(req,res,url){
 }
 function serveFile(res,filePath){fs.stat(filePath,(err,st)=>{if(err||!st.isFile())return json(res,404,{error:'Not found'});const ext=path.extname(filePath).toLowerCase();res.writeHead(200,{...securityHeaders(),'Content-Type':MIME_TYPES[ext]||'application/octet-stream','Cache-Control':['.html','.js','.css'].includes(ext)?'no-store, no-cache, must-revalidate':'public, max-age=3600'});fs.createReadStream(filePath).pipe(res);});}
 const server=http.createServer(async(req,res)=>{try{const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);if(url.pathname==='/health'||url.pathname==='/healthz')return json(res,200,{ok:true,database:dbReady?'postgresql':'memory'});if(url.pathname.startsWith('/api/'))return handleApi(req,res,url);if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'Method Not Allowed'});let pathname=decodeURIComponent(url.pathname);if(pathname==='/')pathname='/index.html';const fp=path.resolve(ROOT,pathname.replace(/^\/+/,''));if(fp!==ROOT&&!fp.startsWith(ROOT+path.sep))return json(res,403,{error:'Forbidden'});fs.stat(fp,(e,s)=>{if(!e&&s.isFile())return serveFile(res,fp);return serveFile(res,path.join(ROOT,'index.html'));});}catch(e){console.error(e);json(res,500,{error:'Internal server error'});}});
-server.listen(PORT,HOST,()=>console.log(`EIXO server listening on ${HOST}:${PORT}`));
-(async()=>{try{await initDb();}catch(e){console.error('Database initialization failed:',e.message);dbReady=false;}})();
+(async()=>{
+  try{
+    await initDb();
+    if(!dbReady&&process.env.ALLOW_MEMORY_DB!=='1')throw new Error('PostgreSQL is required in production.');
+    server.listen(PORT,HOST,()=>console.log(`EIXO server listening on ${HOST}:${PORT}`));
+  }catch(e){
+    console.error('Database initialization failed:',e&&e.message?e.message:e);
+    dbReady=false;
+    if(process.env.ALLOW_MEMORY_DB==='1')server.listen(PORT,HOST,()=>console.log(`EIXO development server listening on ${HOST}:${PORT} without PostgreSQL`));
+    else setTimeout(()=>process.exit(1),100);
+  }
+})();
