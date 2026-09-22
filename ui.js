@@ -28,7 +28,7 @@
     he:{settings:'הגדרות',customize:'התאמת שם',bugs:'דיווח על באג',suggestions:'הצעות',contact:'צור קשר',logout:'התנתקות',vipSoon:'VIP — בקרוב',vipCustomize:'התאמת שם VIP',signIn:'התחברות'}
   };
   const lang=()=>String(document.documentElement.lang||'en').split('-')[0];
-  const t=()=>labels[lang()]||labels.en;
+  const t=()=>window.EixoExtraLocales?.[lang()]?.menu||labels[lang()]||labels.en;
   function render(){
     let p=null;try{p=JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){}
     const x=t();
