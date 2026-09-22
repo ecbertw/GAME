@@ -260,3 +260,16 @@ html.eixo-modal-open,body.eixo-modal-open{overflow:hidden!important;overscroll-b
 .eixo-support-thanks-card p{color:#a8b6be;font-size:8px;line-height:2.2;margin:0 auto 22px;max-width:380px}
 .eixo-support-thanks-back{max-width:360px;margin:8px auto 0}
 @media(max-width:480px){.eixo-support-thanks-card{padding:28px 17px 22px}.eixo-support-thanks-brand{font-size:19px}.eixo-support-thanks-card h2{font-size:9px}.eixo-support-thanks-card p{font-size:7px}}
+
+/* EIXO identity: same pixel logo in navbar and browser icon. */
+.topbar>.brand{display:inline-flex;align-items:center;width:max-content;max-width:100%;line-height:0;text-shadow:none}
+.topbar>.brand img{display:block;width:116px;height:36px;max-width:100%;image-rendering:pixelated;filter:drop-shadow(4px 4px 0 #202731)}
+@media(max-width:480px){.topbar>.brand img{width:98px;height:auto}}
+
+/* Consistent dark scrollbars for the page and every scrollable dialog/panel. */
+*{scrollbar-width:thin;scrollbar-color:#596673 #0b1117}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:#0b1117}
+*::-webkit-scrollbar-thumb{background:#596673;border:2px solid #0b1117;border-radius:0}
+*::-webkit-scrollbar-thumb:hover{background:#768491}
+*::-webkit-scrollbar-corner{background:#0b1117}
