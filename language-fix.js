@@ -56,6 +56,8 @@
     if (!countryNames[code]) return;
     currentCountryCode = code;
     localStorage.setItem('eixo_country', code);
+    const account=window.eixoGetPlayer?.();
+    if(account?.id)localStorage.setItem('eixo_ui_country_'+account.id,code);
     if (countrySelect) countrySelect.value = code;
     countryMenu?.classList.remove('open');
     countryButton?.setAttribute('aria-expanded', 'false');
