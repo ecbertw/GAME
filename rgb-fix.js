@@ -1,51 +1,44 @@
-/* EIXO V1.1.24 — RGB por letra, independente do efeito */
+/* EIXO RGB: animate global rainbow names and per-letter rainbow safely. */
 (function(){
- const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ 'use strict';
  const css=document.createElement('style');
- css.textContent=`.name-rgb .name-letter{display:inline-block!important;background:none!important;background-image:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;-webkit-text-fill-color:currentColor!important;color:inherit}`;
+ css.textContent=`
+  .name-rgb>.name-letter,.name-letter.name-rainbow{display:inline-block!important;background:none!important;background-image:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;-webkit-text-fill-color:currentColor!important}
+ `;
  document.head.appendChild(css);
 
- function letters(el){
-   const text=el.textContent||'';
-   const old=[...el.querySelectorAll(':scope > .name-letter')];
-   if(old.length===text.length&&old.length>0)return;
-   el.innerHTML=[...text].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
- }
-
- function fix(){
-   document.querySelectorAll('.rank-player-name.name-rainbow,.name-preview.name-rainbow').forEach(el=>{
-     letters(el);
-     el.classList.add('name-rgb');
-     el.style.color='transparent';
-     el.querySelectorAll(':scope > .name-letter').forEach((letter,i)=>{
-       letter.style.setProperty('--rgb-index',i);
-     });
+ let targets=[],running=false;
+ function refresh(){
+   const found=[];
+   document.querySelectorAll('.rank-player-name,.chat-name,.name-preview').forEach(el=>{
+     const globalRainbow=el.classList.contains('name-rainbow');
+     const letters=[...el.querySelectorAll(':scope > .name-letter')];
+     if(!letters.length)return;
+     if(globalRainbow)el.classList.add('name-rgb');
+     else el.classList.remove('name-rgb');
+     for(const letter of letters){
+       const perLetter=letter.classList.contains('name-rainbow');
+       if(globalRainbow||perLetter)found.push(letter);
+     }
    });
+   targets=found;
+   if(targets.length&&!running&&!document.hidden){running=true;requestAnimationFrame(tick)}
  }
-
- // Animate only while RGB names are actually present.
- let rgbEls=[],running=false;
- function refreshRgb(){
-   rgbEls=[...document.querySelectorAll('.rank-player-name.name-rgb,.name-preview.name-rgb')];
-   if(rgbEls.length&&!running){running=true;requestAnimationFrame(tick)}
- }
- const start=performance.now();
+ const started=performance.now();
  function tick(now){
-   if(document.hidden){running=false;return}
-   if(!rgbEls.length){running=false;return}
-   const phase=((now-start)/18)%360;
-   for(const el of rgbEls){
-     el.querySelectorAll(':scope > .name-letter').forEach((letter,i)=>{
-       const hue=(phase+i*28)%360,color='hsl('+hue+',100%,60%)';
-       letter.style.color=color;letter.style.webkitTextFillColor=color;letter.style.background='none';
-     });
+   if(document.hidden||!targets.length){running=false;return}
+   const phase=((now-started)/18)%360;
+   for(let i=0;i<targets.length;i++){
+     const hue=(phase+i*28)%360,color='hsl('+hue+',100%,60%)',letter=targets[i];
+     letter.style.setProperty('color',color,'important');
+     letter.style.setProperty('-webkit-text-fill-color',color,'important');
+     letter.style.setProperty('background','none','important');
    }
    requestAnimationFrame(tick);
  }
- fix();refreshRgb();
- const observer=new MutationObserver(()=>{
-   observer.disconnect();requestAnimationFrame(()=>{fix();refreshRgb();observer.observe(document.body,{childList:true,subtree:true})});
- });
- observer.observe(document.body,{childList:true,subtree:true});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshRgb()});
+ let pending=false;
+ const observer=new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;refresh()})});
+ observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+ refresh();
 })();
