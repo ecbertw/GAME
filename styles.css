@@ -237,3 +237,15 @@ html.eixo-modal-open,body.eixo-modal-open{overflow:hidden!important;overscroll-b
   .vip-store-levels{grid-template-columns:1fr 1fr}
   .vip-store-summary{grid-template-columns:1fr}
 }
+
+
+/* EIXO PayPal support amount */
+.vip-support-amount{margin:14px 0;padding:12px;border:1px solid #35414b;background:#080d12}
+.vip-support-amount>label{display:block;margin-bottom:9px;color:#7f8a94;font-family:'Press Start 2P',monospace;font-size:6px;line-height:1.5}
+.vip-support-input{display:flex;align-items:center;border:1px solid #00e5ff;background:#05090d}
+.vip-support-input>span{padding:0 10px;color:#00e5ff;font-family:'Press Start 2P',monospace;font-size:9px}
+.vip-support-input input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:#fff;padding:12px 10px;font-family:'Press Start 2P',monospace;font-size:9px}
+.vip-support-input input::-webkit-outer-spin-button,.vip-support-input input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.vip-support-input input[type=number]{-moz-appearance:textfield}
+.vip-support-amount small{display:block;margin-top:9px;color:#7f8a94;font-size:5px;line-height:1.6}
+@media(max-width:600px){.vip-support-amount{padding:10px}.vip-support-input input{font-size:8px;padding:11px 8px}}
