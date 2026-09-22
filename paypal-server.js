@@ -17,6 +17,17 @@ function webhookId(){return String(process.env.PAYPAL_WEBHOOK_ID||'').trim();}
 function configured(){return Boolean(clientId()&&clientSecret());}
 function centsToValue(cents){return (Number(cents)/100).toFixed(2);}
 function vipLabel(level){return Number(level)>=6?'VIP ∞':'VIP '+Number(level);}
+const SUPPORT_MIN_CENTS=50;
+const SUPPORT_MAX_CENTS=100000;
+function supportCents(value){
+  const normalized=String(value??'').trim().replace(',','.');
+  if(!/^(?:\\d+)(?:\\.\\d{1,2})?$/.test(normalized))throw Object.assign(new Error('Introduz um valor válido para o apoio.'),{status:400});
+  const cents=Math.round(Number(normalized)*100);
+  if(!Number.isSafeInteger(cents)||cents<SUPPORT_MIN_CENTS||cents>SUPPORT_MAX_CENTS){
+    throw Object.assign(new Error('O valor do apoio deve estar entre €0,50 e €1000,00.'),{status:400});
+  }
+  return cents;
+}
 
 async function initDb(db){
   await db.query(`CREATE TABLE IF NOT EXISTS vip_payments(
@@ -32,8 +43,11 @@ async function initDb(db){
     captured_at TIMESTAMPTZ,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
+  await db.query(`ALTER TABLE vip_payments ADD COLUMN IF NOT EXISTS payment_type VARCHAR(16) NOT NULL DEFAULT 'VIP'`);
+  await db.query(`ALTER TABLE vip_payments ALTER COLUMN vip_level DROP NOT NULL`);
   await db.query(`CREATE INDEX IF NOT EXISTS vip_payments_player_created_idx ON vip_payments(player_id,created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS vip_payments_status_idx ON vip_payments(status)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS vip_payments_type_idx ON vip_payments(payment_type)`);
 }
 
 async function accessToken(){
@@ -76,19 +90,34 @@ function publicStore(player){
     currentLevel:current,
     nextLevel:next,
     nextPrice:next?centsToValue(VIP_PRICES_CENTS[next]):null,
-    prices:Object.fromEntries(Object.entries(VIP_PRICES_CENTS).map(([k,v])=>[k,centsToValue(v)]))
+    prices:Object.fromEntries(Object.entries(VIP_PRICES_CENTS).map(([k,v])=>[k,centsToValue(v)])),
+    supportMin:centsToValue(SUPPORT_MIN_CENTS),
+    supportMax:centsToValue(SUPPORT_MAX_CENTS)
   };
 }
 
-async function createOrder(db,player){
+async function createOrder(db,player,options={}){
   if(!configured())throw Object.assign(new Error('PayPal ainda não está configurado.'),{status:503});
   const current=Math.max(0,Math.min(6,Number(player.vipLevel||0)));
-  if(current>=6)throw Object.assign(new Error('Já tens VIP ∞.'),{status:400});
-  const level=current+1,cents=VIP_PRICES_CENTS[level],paymentId=crypto.randomUUID();
+  const type=String(options.type||'vip').trim().toLowerCase()==='donation'?'DONATION':'VIP';
+  let level=null,cents=0,referenceId='',description='';
 
+  if(type==='VIP'){
+    if(current>=6)throw Object.assign(new Error('Já tens VIP ∞. Podes continuar a apoiar o EIXO com um valor livre.'),{status:400});
+    level=current+1;
+    cents=VIP_PRICES_CENTS[level];
+    referenceId='vip-'+level;
+    description='EIXO '+vipLabel(level);
+  }else{
+    cents=supportCents(options.amount);
+    referenceId='support';
+    description=current>=6?'EIXO VIP ∞ Support':'EIXO Support';
+  }
+
+  const paymentId=crypto.randomUUID();
   await db.query(
-    'INSERT INTO vip_payments(id,player_id,vip_level,amount_cents,currency,status) VALUES($1,$2,$3,$4,$5,$6)',
-    [paymentId,player.id,level,cents,CURRENCY,'CREATING']
+    'INSERT INTO vip_payments(id,player_id,vip_level,amount_cents,currency,status,payment_type) VALUES($1,$2,$3,$4,$5,$6,$7)',
+    [paymentId,player.id,level,cents,CURRENCY,'CREATING',type]
   );
 
   try{
@@ -98,10 +127,10 @@ async function createOrder(db,player){
       body:JSON.stringify({
         intent:'CAPTURE',
         purchase_units:[{
-          reference_id:'vip-'+level,
+          reference_id:referenceId,
           custom_id:String(player.id),
           invoice_id:'EIXO-'+paymentId,
-          description:'EIXO '+vipLabel(level),
+          description,
           amount:{currency_code:CURRENCY,value:centsToValue(cents)}
         }],
         payment_source:{paypal:{experience_context:{
@@ -113,13 +142,12 @@ async function createOrder(db,player){
     });
     if(!order?.id)throw Object.assign(new Error('PayPal did not return an order ID.'),{status:502});
     await db.query('UPDATE vip_payments SET paypal_order_id=$1,status=$2,updated_at=NOW() WHERE id=$3',[order.id,'CREATED',paymentId]);
-    return{orderId:order.id,level,price:centsToValue(cents),currency:CURRENCY};
+    return{orderId:order.id,type:type.toLowerCase(),level,price:centsToValue(cents),currency:CURRENCY};
   }catch(e){
     await db.query('UPDATE vip_payments SET status=$1,updated_at=NOW() WHERE id=$2',['CREATE_FAILED',paymentId]).catch(()=>{});
     throw e;
   }
 }
-
 function captureFromOrder(order){
   const unit=order?.purchase_units?.[0];
   const capture=unit?.payments?.captures?.[0];
@@ -136,7 +164,7 @@ async function fulfillCapture(db,orderId,capture){
     const pay=q.rows[0];
     if(pay.status==='CAPTURED'){
       await client.query('COMMIT');
-      return{fulfilled:true,already:true,level:Number(pay.vip_level),captureId:pay.paypal_capture_id};
+      return{fulfilled:true,already:true,type:String(pay.payment_type||'VIP').toLowerCase(),level:pay.vip_level==null?null:Number(pay.vip_level),captureId:pay.paypal_capture_id};
     }
     const expected=centsToValue(pay.amount_cents);
     const actual=String(capture?.amount?.value||'');
@@ -147,10 +175,13 @@ async function fulfillCapture(db,orderId,capture){
     const dup=await client.query('SELECT id FROM vip_payments WHERE paypal_capture_id=$1 AND id<>$2',[capture.id,pay.id]);
     if(dup.rowCount)throw Object.assign(new Error('PayPal capture was already used.'),{status:409});
 
-    await client.query('UPDATE players SET vip_level=GREATEST(vip_level,$1),updated_at=NOW() WHERE id=$2',[pay.vip_level,pay.player_id]);
+    const paymentType=String(pay.payment_type||'VIP').toUpperCase();
+    if(paymentType==='VIP'&&Number(pay.vip_level)>0){
+      await client.query('UPDATE players SET vip_level=GREATEST(vip_level,$1),updated_at=NOW() WHERE id=$2',[pay.vip_level,pay.player_id]);
+    }
     await client.query('UPDATE vip_payments SET paypal_capture_id=$1,status=$2,captured_at=NOW(),updated_at=NOW() WHERE id=$3',[capture.id,'CAPTURED',pay.id]);
     await client.query('COMMIT');
-    return{fulfilled:true,level:Number(pay.vip_level),captureId:capture.id};
+    return{fulfilled:true,type:paymentType.toLowerCase(),level:pay.vip_level==null?null:Number(pay.vip_level),captureId:capture.id};
   }catch(e){
     try{await client.query('ROLLBACK')}catch(_){}
     throw e;
@@ -243,4 +274,4 @@ async function handleWebhook(db,headers,event){
   return{ok:true};
 }
 
-module.exports={VIP_PRICES_CENTS,CURRENCY,configured,mode,initDb,publicStore,createOrder,captureOrder,handleWebhook};
+module.exports={VIP_PRICES_CENTS,CURRENCY,SUPPORT_MIN_CENTS,SUPPORT_MAX_CENTS,configured,mode,initDb,publicStore,createOrder,captureOrder,handleWebhook};
