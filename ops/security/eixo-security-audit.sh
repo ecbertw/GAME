@@ -76,6 +76,79 @@ else
   green "No broad IPv4 origin allow for HTTP/HTTPS"
 fi
 fail2ban-client status sshd >/dev/null 2>&1 && green "Fail2ban sshd jail active" || red "Fail2ban sshd jail missing"
+SSHD="$(sshd -T 2>/dev/null || true)"
+printf "%s\n" "$SSHD" | grep -q '^permitrootlogin no
+  MODE="$(stat -c "%a" /etc/eixo/security.env)"
+  [ "$MODE" = "600" ] && green "/etc/eixo/security.env mode 600" || red "/etc/eixo/security.env mode $MODE (expected 600)"
+else red "/etc/eixo/security.env missing"; fi
+
+# 6) PostgreSQL hardening
+LA="$(sudo -u postgres psql -Atqc "SHOW listen_addresses;" 2>/dev/null || true)"
+[ "$LA" = "localhost" ] && green "PostgreSQL listen_addresses=localhost" || red "PostgreSQL listen_addresses=$LA"
+PE="$(sudo -u postgres psql -Atqc "SHOW password_encryption;" 2>/dev/null || true)"
+[ "$PE" = "scram-sha-256" ] && green "PostgreSQL SCRAM-SHA-256" || red "PostgreSQL password_encryption=$PE"
+
+# 7) Optional bounded resilience test — intentionally not a DDoS flood
+if [ "$LOAD" = "--load" ]; then
+  echo
+  echo "Running bounded local load check: 300 requests, max concurrency 15..."
+  START="$(date +%s)"
+  seq 1 300 | xargs -P15 -I{} sh -c 'curl -sS --max-time 3 -o /dev/null http://127.0.0.1:3000/health || exit 1'
+  END="$(date +%s)"
+  green "bounded local load completed in $((END-START))s"
+fi
+
+echo
+echo "PASS=$PASS FAIL=$FAIL"
+[ "$FAIL" -eq 0 ] && green "SSH root login disabled" || red "SSH PermitRootLogin is not no"
+printf "%s\n" "$SSHD" | grep -q '^passwordauthentication no
+  MODE="$(stat -c "%a" /etc/eixo/security.env)"
+  [ "$MODE" = "600" ] && green "/etc/eixo/security.env mode 600" || red "/etc/eixo/security.env mode $MODE (expected 600)"
+else red "/etc/eixo/security.env missing"; fi
+
+# 6) PostgreSQL hardening
+LA="$(sudo -u postgres psql -Atqc "SHOW listen_addresses;" 2>/dev/null || true)"
+[ "$LA" = "localhost" ] && green "PostgreSQL listen_addresses=localhost" || red "PostgreSQL listen_addresses=$LA"
+PE="$(sudo -u postgres psql -Atqc "SHOW password_encryption;" 2>/dev/null || true)"
+[ "$PE" = "scram-sha-256" ] && green "PostgreSQL SCRAM-SHA-256" || red "PostgreSQL password_encryption=$PE"
+
+# 7) Optional bounded resilience test — intentionally not a DDoS flood
+if [ "$LOAD" = "--load" ]; then
+  echo
+  echo "Running bounded local load check: 300 requests, max concurrency 15..."
+  START="$(date +%s)"
+  seq 1 300 | xargs -P15 -I{} sh -c 'curl -sS --max-time 3 -o /dev/null http://127.0.0.1:3000/health || exit 1'
+  END="$(date +%s)"
+  green "bounded local load completed in $((END-START))s"
+fi
+
+echo
+echo "PASS=$PASS FAIL=$FAIL"
+[ "$FAIL" -eq 0 ] && green "SSH password authentication disabled" || red "SSH password authentication is still enabled"
+printf "%s\n" "$SSHD" | grep -q '^pubkeyauthentication yes
+  MODE="$(stat -c "%a" /etc/eixo/security.env)"
+  [ "$MODE" = "600" ] && green "/etc/eixo/security.env mode 600" || red "/etc/eixo/security.env mode $MODE (expected 600)"
+else red "/etc/eixo/security.env missing"; fi
+
+# 6) PostgreSQL hardening
+LA="$(sudo -u postgres psql -Atqc "SHOW listen_addresses;" 2>/dev/null || true)"
+[ "$LA" = "localhost" ] && green "PostgreSQL listen_addresses=localhost" || red "PostgreSQL listen_addresses=$LA"
+PE="$(sudo -u postgres psql -Atqc "SHOW password_encryption;" 2>/dev/null || true)"
+[ "$PE" = "scram-sha-256" ] && green "PostgreSQL SCRAM-SHA-256" || red "PostgreSQL password_encryption=$PE"
+
+# 7) Optional bounded resilience test — intentionally not a DDoS flood
+if [ "$LOAD" = "--load" ]; then
+  echo
+  echo "Running bounded local load check: 300 requests, max concurrency 15..."
+  START="$(date +%s)"
+  seq 1 300 | xargs -P15 -I{} sh -c 'curl -sS --max-time 3 -o /dev/null http://127.0.0.1:3000/health || exit 1'
+  END="$(date +%s)"
+  green "bounded local load completed in $((END-START))s"
+fi
+
+echo
+echo "PASS=$PASS FAIL=$FAIL"
+[ "$FAIL" -eq 0 ] && green "SSH public-key authentication enabled" || red "SSH public-key authentication not confirmed"
 if [ -f /etc/eixo/security.env ]; then
   MODE="$(stat -c "%a" /etc/eixo/security.env)"
   [ "$MODE" = "600" ] && green "/etc/eixo/security.env mode 600" || red "/etc/eixo/security.env mode $MODE (expected 600)"
