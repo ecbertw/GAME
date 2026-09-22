@@ -100,7 +100,7 @@
         const p=getPlayer(),status=$('vipStoreStatus');
         status.textContent='OPENING PAYPAL...';
         try{
-          const orderPromise=api('/api/paypal/orders/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,token:p.token})}).then(d=>d.orderId);
+          const orderPromise=api('/api/paypal/orders/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,token:p.token})}).then(d=>({orderId:String(d.orderId||'')}));
           await session.start({presentationMode:'auto'},orderPromise);
         }catch(e){console.error(e);status.textContent=e.message||tr().error}
       });
