@@ -39,5 +39,5 @@
      }else{setMyRank('worldMyRank',w.players.find(x=>x.id===p?.id)?.worldRank);setMyRank('nationalMyRank',c.players.find(x=>x.id===p?.id)?.countryRank);}
    }catch(_){setMyRank('worldMyRank',null);setMyRank('nationalMyRank',null);}
  }
- window.addEventListener('eixo-player-updated',load);window.eixoRefreshRankings=load;window.loadTopRankings=load;load();setInterval(load,2000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
+ window.addEventListener('eixo-player-updated',load);window.eixoRefreshRankings=load;window.loadTopRankings=load;load();setInterval(load,5000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
 })();
