@@ -109,7 +109,7 @@
     try{
       const p=getPlayer();
       if(!p?.id||p.id!==attempt.playerId){endTracking(attempt);return}
-      const out=await api('/api/paypal/orders/status?id='+encodeURIComponent(p.id)+'&orderId='+encodeURIComponent(attempt.orderId),{cache:'no-store'});
+      const out=await api('/api/paypal/orders/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,token:p.token,orderId:attempt.orderId}),cache:'no-store'});
       if(out.captured===true){await confirmedPayment(attempt,out);return}
       if(['DECLINED','DENIED','REVERSED','CREATE_FAILED'].includes(out.status)){endTracking(attempt);return}
     }catch(e){console.warn('PayPal payment verification:',e.message)}
