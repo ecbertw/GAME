@@ -24,7 +24,7 @@ main{padding:18px 24px 24px}.hero{max-width:920px;margin:0 auto}.game-frame{posi
 .chat-content{min-width:0}
 .chat-author{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-bottom:5px;line-height:1.5;min-width:0}
 .chat-name{display:inline-block;min-width:0;font-size:8px;color:#f4f5f6!important;white-space:normal;overflow:visible;line-height:1.5}
-.chat-name.name-rainbow{background:linear-gradient(90deg,#ff3b30,#ffcc00,#34c759,#0a84ff,#bf5af2,#ff2d55,#ff3b30);background-size:400% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:name-rainbow 2.4s linear infinite}
+.chat-name.name-rainbow,.rank-player-name.name-rainbow,.name-preview.name-rainbow{background:none!important;background-image:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;color:#ff3b30!important;-webkit-text-fill-color:currentColor!important;animation:none!important}
 .chat-name .name-letter{display:inline-block}
 .chat-text{font-size:7px;color:#c3cbd1;line-height:1.8;overflow-wrap:anywhere;word-break:break-word}
 .chat-time{font-family:Arial,sans-serif;font-size:9px;color:#5f6a74;margin-left:auto}
@@ -60,7 +60,9 @@ main{padding:18px 24px 24px}.hero{max-width:920px;margin:0 auto}.game-frame{posi
 .chat-name .name-letter.effect-tilt{animation:name-wave .75s ease-in-out infinite}
 .chat-name .name-letter.effect-pop{animation:name-jelly .65s ease-in-out infinite}
 .chat-name .name-letter.effect-scanline{animation:name-pulse .65s steps(2,end) infinite}
-.chat-name .name-letter.name-rainbow{background:none!important;background-image:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;-webkit-text-fill-color:currentColor!important}
+.chat-name .name-letter.name-rainbow,.rank-player-name .name-letter.name-rainbow,.name-preview .name-letter.name-rainbow{color:#ff3b30!important;background:none!important;background-image:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;-webkit-text-fill-color:currentColor!important}
+.name-letter.eixo-rainbow-fallback{color:#ff3b30!important;animation-name:eixoRainbowHue!important;animation-duration:1.8s!important;animation-timing-function:linear!important;animation-iteration-count:infinite!important}
+@keyframes eixoRainbowHue{to{filter:hue-rotate(360deg)}}
 @keyframes name-rainbow{to{background-position:400% 0}}
 @keyframes name-bounce{to{transform:translateY(-3px)}}
 @keyframes name-glow{to{text-shadow:0 0 8px currentColor}}
