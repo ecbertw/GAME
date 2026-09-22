@@ -45,3 +45,64 @@ jobs:
             echo "Potential hard-coded secret detected."
             exit 1
           fi
+
+
+  appsec-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --omit=dev --ignore-scripts
+      - name: Start isolated EIXO server
+        shell: bash
+        env:
+          ALLOW_MEMORY_DB: '1'
+          HOST: 127.0.0.1
+          PORT: '3100'
+          PUBLIC_HOSTS: 127.0.0.1,localhost
+        run: |
+          node server-start.js >/tmp/eixo-ci.log 2>&1 &
+          echo $! >/tmp/eixo-ci.pid
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:3100/health >/dev/null && exit 0
+            sleep 0.5
+          done
+          cat /tmp/eixo-ci.log
+          exit 1
+      - name: Public-surface regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3100/)" = "200"
+          for p in server.js auth-server.js server-start.js package.json README.md .git/HEAD .env ops/nginx/eixo-security.conf.example; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:3100/$p")"
+            test "$code" = "404" || { echo "$p returned $code"; exit 1; }
+          done
+      - name: Host and CSRF regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -H 'Host: evil.example' http://127.0.0.1:3100/)"
+          test "$code" = "421"
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'Host: 127.0.0.1:3100' -H 'Origin: https://evil.example' -H 'Content-Type: application/json' --data '{}' http://127.0.0.1:3100/api/auth/login)"
+          test "$code" = "403"
+      - name: Security-header regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$(curl -sSI -H 'Host: 127.0.0.1:3100' http://127.0.0.1:3100/ | tr '[:upper:]' '[:lower:]')"
+          grep -q '^content-security-policy:' <<<"$headers"
+          grep -q '^x-content-type-options: nosniff' <<<"$headers"
+          grep -q '^x-frame-options: deny' <<<"$headers"
+          grep -q '^referrer-policy:' <<<"$headers"
+      - name: Stop isolated EIXO server
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/eixo-ci.pid ]; then kill "$(cat /tmp/eixo-ci.pid)" 2>/dev/null || true; fi
+          cat /tmp/eixo-ci.log 2>/dev/null || true
