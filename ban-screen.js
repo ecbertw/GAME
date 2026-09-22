@@ -1,6 +1,15 @@
 /* EIXO ban screen — replaces the normal site while a signed-in account is banned. */
 (function(){
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const style=document.createElement('style');style.textContent=`
+    html.eixo-banned body{overflow:hidden!important;background:#05080c!important}
+    html.eixo-banned body>*:not(#eixoBanScreen){display:none!important}
+    #eixoBanScreen{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 35%,#17131a 0,#070b10 42%,#030507 100%);color:#f4f5f6;font-family:'Press Start 2P',monospace}
+    .ban-card{position:relative;width:min(650px,96vw);padding:36px 28px;border:3px solid #e83e45;outline:3px solid #201015;background:#090e14;box-shadow:9px 9px 0 #020305;text-align:center}
+    .ban-mark{color:#e83e45;margin-bottom:18px;font-size:18px}.ban-card h1{margin:0 0 20px;color:#ff6b6b;font-size:18px;line-height:1.7}.ban-copy{color:#aab3bb;font-size:8px;line-height:2;margin:0 auto 22px;max-width:520px}
+    .ban-reason,.ban-countdown{border:2px solid #3b4650;background:#070b0f;margin:14px 0;padding:16px}.ban-reason span,.ban-countdown span{display:block;color:#68737e;font-size:6px;margin-bottom:10px}.ban-reason strong{display:block;color:#fff;font-size:8px;line-height:1.8}.ban-countdown strong{display:block;color:#ffd43b;font-size:15px;letter-spacing:1px}
+    .ban-foot{margin-top:24px;color:#4d5861;font-size:6px}
+  `;document.head.appendChild(style);
   let timer=0;
   function fmt(ms){
     const total=Math.max(0,Math.floor(ms/1000));
