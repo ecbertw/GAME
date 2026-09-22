@@ -38,6 +38,7 @@
       '<button type="button" class="player-option" data-action="bugs">'+x.bugs+'</button>'+
       '<button type="button" class="player-option" data-action="suggestions">'+x.suggestions+'</button>'+
       '<button type="button" class="player-option" data-action="contact">'+x.contact+'</button>'+
+      (p?.role==='admin'?'<button type="button" class="player-option account-menu-option admin-menu-option" data-action="admin">ADMIN</button>':'')+
       (p?'<button type="button" class="player-option account-menu-option" data-action="logout">'+x.logout+'</button>':'');
     if(vipTopMenu){const b=[...vipTopMenu.querySelectorAll('button')];if(b[0])b[0].textContent=x.vipSoon;if(b[1])b[1].textContent=x.vipCustomize;}
   }
@@ -47,7 +48,8 @@
   playerButton.addEventListener('click',e=>{e.stopPropagation();render();const open=playerMenu.classList.toggle('open');playerButton.setAttribute('aria-expanded',String(open));});
   playerButton.closest('.player-area')?.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='Enter')e.stopPropagation()});
   function openMenuAction(action){
-  if(action==='settings'){window.EixoAccountUI?.openSettings();return}
+  if(action==='settings'){if(window.EixoAccountUI?.openSettings)window.EixoAccountUI.openSettings();else console.error('EIXO account UI unavailable');return}
+  if(action==='admin'){window.EixoAdminUI?.open?.();return}
   if(action==='logout'){window.eixoLogout?.();return}
   if(action==='customize'){if(typeof window.eixoOpenPlayerCustomize==='function'){window.eixoOpenPlayerCustomize();}return}
   if(action==='vip'){const open=playerMenu.classList.toggle('vip-open');const b=playerMenu.querySelector('.vip-menu-toggle');b?.setAttribute('aria-expanded',String(open));return}
