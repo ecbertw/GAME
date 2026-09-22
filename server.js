@@ -34,6 +34,7 @@ function decryptMfaSecret(payload){const key=mfaEncryptionKey();if(!key)throw Ob
 function parseCookies(req){const out={};for(const part of String(req.headers.cookie||'').split(';')){const i=part.indexOf('=');if(i>0)out[part.slice(0,i).trim()]=decodeURIComponent(part.slice(i+1).trim())}return out;}
 function setSessionCookie(res,token,persistent=false){const maxAge=persistent?'; Max-Age='+(SESSION_DAYS*86400):'';res.setHeader('Set-Cookie',SESSION_COOKIE+'='+encodeURIComponent(token)+maxAge+'; Path=/; HttpOnly; Secure; SameSite=Strict');}
 function clearSessionCookie(res){res.setHeader('Set-Cookie',SESSION_COOKIE+'=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Strict');}
+function sessionHash(v){return crypto.createHash('sha256').update(String(v||'')).digest('hex');}
 const chatRate=new Map();
 const WORLD_COLORS=['#e53935','#00d4ff','#ffd43b'];
 const COUNTRY_TOP_COLORS=['#ff7a2f','#6f5cff','#7bdc5a'];
