@@ -49,7 +49,7 @@
     vi:{title:'TRÒ CHUYỆN',global:'TOÀN CẦU',all:'TẤT CẢ NGƯỜI CHƠI',only:'CHỈ',write:'VIẾT TIN NHẮN...',writeN:'VIẾT CHO QUỐC GIA CỦA BẠN...',hint:'TỐI ĐA 300 KÝ TỰ · TRÁNH SPAM',empty:'CHƯA CÓ TIN NHẮN.<br>HÃY LÀ NGƯỜI ĐẦU TIÊN.',need:'TẠO NGƯỜI CHƠI ĐỂ DÙNG TRÒ CHUYỆN.',sending:'ĐANG GỬI...'},
     he:{title:'צ׳אט',global:'עולמי',all:'כל השחקנים',only:'רק',write:'כתבו הודעה...',writeN:'כתבו למדינה שלכם...',hint:'מקסימום 300 תווים · הימנעו מספאם',empty:'אין הודעות עדיין.<br>היו הראשונים.',need:'צרו שחקן כדי להשתמש בצ׳אט.',sending:'שולח...'}
   };
-  const ct=()=>chatI18n[document.documentElement.lang]||chatI18n.en;
+  const ct=()=>window.EixoExtraLocales?.[String(document.documentElement.lang||'en').split('-')[0]]?.chat||chatI18n[document.documentElement.lang]||chatI18n.en;
   let channel='global',timer=0,loading=false;
   const messages=$('chatMessages'),input=$('chatInput'),form=$('chatForm'),status=$('chatStatus'),gTab=$('chatGlobalTab'),nTab=$('chatNationalTab');
   if(!messages||!input||!form||!gTab||!nTab)return;
