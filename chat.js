@@ -96,7 +96,7 @@
       const me=getPlayer(),canDelete=me?.role==='admin';
       const border=safeColor(m.avatarBorder)?' style="border-color:'+esc(m.avatarBorder)+'"':'';
       const glyph={default:'◆',diamond:'◆',square:'■',circle:'●',star:'★',bolt:'ϟ'}[m.avatar]||'◆';
-      return '<article class="chat-message" data-message-id="'+esc(m.id)+'"><div class="chat-avatar"'+border+' aria-hidden="true">'+glyph+'</div><div class="chat-content"><div class="chat-author"><span class="chat-name'+(rainbow?' name-rainbow':'')+(effect!=='none'?' effect-'+esc(effect):'')+'"'+style+'>'+name+'</span>'+role+top+vip(v)+'<span class="chat-time">'+esc(when)+'</span>'+(canDelete?'<button class="chat-delete" data-delete-message="'+esc(m.id)+'" title="Eliminar mensagem">×</button>':'')+'</div><div class="chat-text">'+esc(m.message)+'</div></div></article>';
+      return '<article class="chat-message" data-message-id="'+esc(m.id)+'"><div class="chat-avatar"'+border+' aria-hidden="true">'+glyph+'</div><div class="chat-content"><div class="chat-author"><span class="chat-name'+(rainbow?' name-rainbow':'')+(effect!=='none'?' effect-'+esc(effect):'')+'"'+style+'>'+name+'</span>'+role+top+vip(v)+'<span class="chat-time">'+esc(when)+'</span>'+(canDelete?'<button class="chat-delete" data-delete-message="'+esc(m.id)+'" title="Delete message">×</button>':'')+'</div><div class="chat-text">'+esc(m.message)+'</div></div></article>';
     }).join('');
     if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
   }
@@ -106,25 +106,25 @@
     if(loading)return;loading=true;
     try{
       const r=await fetch('/api/chat?id='+encodeURIComponent(p.id)+'&token='+encodeURIComponent(p.token)+'&channel='+encodeURIComponent(channel),{cache:'no-store'});
-      const d=await r.json();if(!r.ok)throw Error(d.error||'Chat indisponível.');
+      const d=await r.json();if(!r.ok)throw Error(d.error||'Chat unavailable.');
       input.disabled=false;status.textContent=channel==='global'?ct().all:ct().only+' '+(window.eixoLocalizedCountryName?.(String(p.country||'PT').toUpperCase(),document.documentElement.lang||'en')||p.country);
       render(d,forceBottom);
-    }catch(e){status.textContent=e.message||'CHAT INDISPONÍVEL';}
+    }catch(e){status.textContent=e.message||'CHAT UNAVAILABLE';}
     finally{loading=false;}
   }
 
-  messages.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-message]');if(!b)return;const p=getPlayer();if(p?.role!=='admin')return;try{const r=await fetch('/api/admin/chat',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,token:p.token,messageId:b.dataset.deleteMessage})});const d=await r.json();if(!r.ok)throw Error(d.error||'Erro ao eliminar.');await load(false)}catch(err){status.textContent=err.message}});
+  messages.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-message]');if(!b)return;const p=getPlayer();if(p?.role!=='admin')return;try{const r=await fetch('/api/admin/chat',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,token:p.token,messageId:b.dataset.deleteMessage})});const d=await r.json();if(!r.ok)throw Error(d.error||'Unable to delete.');await load(false)}catch(err){status.textContent=err.message}});
     form.addEventListener('submit',async e=>{
     e.preventDefault();
     const p=getPlayer(),text=input.value.trim();
     if(!p?.id||!p?.token||!text||loading)return;
-    if([...text].length>300){status.textContent='MENSAGEM DEMASIADO LONGA (MÁX. 300).';return;}
+    if([...text].length>300){status.textContent='MESSAGE TOO LONG (MAX. 300).';return;}
     const button=form.querySelector('button');button.disabled=true;input.disabled=true;status.textContent=ct().sending;
     try{
       const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,token:p.token,channel,message:text})});
-      const d=await r.json();if(!r.ok)throw Error(d.error||'Não foi possível enviar.');
+      const d=await r.json();if(!r.ok)throw Error(d.error||'Unable to send.');
       input.value='';await load(true);
-    }catch(e){status.textContent=e.message||'NÃO FOI POSSÍVEL ENVIAR.';input.disabled=false;}
+    }catch(e){status.textContent=e.message||'UNABLE TO SEND.';input.disabled=false;}
     finally{button.disabled=false;}
   });
   gTab.addEventListener('click',()=>setChannel('global'));
