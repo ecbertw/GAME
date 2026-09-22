@@ -9,6 +9,16 @@ const ALLOWED_HOSTS=new Set(String(process.env.PUBLIC_HOSTS||'eixo.at,www.eixo.a
 function requestHost(req){return String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().toLowerCase().replace(/:\d+$/,'')}
 function allowedRequestHost(req){return ALLOWED_HOSTS.has(requestHost(req))}
 const ROOT=__dirname;
+const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','package.json','package-lock.json','README.md','.gitignore']);
+const PUBLIC_STATIC_EXTS=new Set(['.html','.css','.js','.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.woff','.woff2']);
+function isPublicStaticRequestPath(pathname){
+  const clean=String(pathname||'').replace(/^\/+/,''),parts=clean.split('/');
+  if(!clean)return true;
+  if(parts.some(part=>!part||part.startsWith('.')))return false;
+  if(parts[0]==='ops'||PRIVATE_STATIC_NAMES.has(clean))return false;
+  const ext=path.extname(clean).toLowerCase();
+  return PUBLIC_STATIC_EXTS.has(ext);
+}
 const DATABASE_URL=process.env.DATABASE_URL;
 const MIME_TYPES={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.webp':'image/webp','.ico':'image/x-icon'};
 const countries=new Set('AF AL DZ AD AO AG AR AM AU AT AZ BS BH BD BB BY BE BZ BJ BT BO BA BW BR BN BG BF BI CV KH CM CA CF TD CL CN CO KM CG CD CR CI HR CU CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FJ FI FR GA GM GE DE GH GR GD GT GN GW GY HT HN HU IS IN ID IR IQ IE IL IT JM JP JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MG MW MY MV ML MT MH MR MU MX FM MD MC MN ME MA MZ MM NA NR NP NL NZ NI NE NG MK NO OM PK PW PA PG PY PE PH PL PT QA RO RU RW KN LC VC WS SM ST SA SN RS SC SL SG SK SI SB SO ZA SS ES LK SD SR SE CH SY TJ TZ TH TL TG TO TT TN TR TM TV UG UA AE GB US UY UZ VU VA VE VN YE ZM ZW PS XK'.split(' '));
@@ -405,7 +415,7 @@ async function handleApi(req,res,url){
  }catch(e){const status=Number(e.status)||500;if(status>=500){console.error('EIXO API error:',e&&e.stack?e.stack:e);return json(res,500,{error:'Internal server error.'});}return json(res,status,{error:e.message||'Request failed.'});}
 }
 function serveFile(res,filePath){fs.stat(filePath,(err,st)=>{if(err||!st.isFile())return json(res,404,{error:'Not found'});const ext=path.extname(filePath).toLowerCase();res.writeHead(200,{...securityHeaders(),'Content-Type':MIME_TYPES[ext]||'application/octet-stream','Cache-Control':['.html','.js','.css'].includes(ext)?'no-store, no-cache, must-revalidate':'public, max-age=3600'});fs.createReadStream(filePath).pipe(res);});}
-const server=http.createServer(async(req,res)=>{try{if(!allowedRequestHost(req))return json(res,421,{error:'Misdirected Request'});const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);if(url.pathname==='/health'||url.pathname==='/healthz')return json(res,200,{ok:true,database:dbReady?'postgresql':'memory'});if(url.pathname.startsWith('/api/'))return handleApi(req,res,url);if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'Method Not Allowed'});let pathname=decodeURIComponent(url.pathname);if(pathname==='/')pathname='/index.html';const fp=path.resolve(ROOT,pathname.replace(/^\/+/,''));if(fp!==ROOT&&!fp.startsWith(ROOT+path.sep))return json(res,403,{error:'Forbidden'});fs.stat(fp,(e,s)=>{if(!e&&s.isFile())return serveFile(res,fp);return serveFile(res,path.join(ROOT,'index.html'));});}catch(e){console.error(e);json(res,500,{error:'Internal server error'});}});
+const server=http.createServer(async(req,res)=>{try{if(!allowedRequestHost(req))return json(res,421,{error:'Misdirected Request'});const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);if(url.pathname==='/health'||url.pathname==='/healthz')return json(res,200,{ok:true,database:dbReady?'postgresql':'memory'});if(url.pathname.startsWith('/api/'))return handleApi(req,res,url);if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'Method Not Allowed'});let pathname=decodeURIComponent(url.pathname);if(pathname==='/')pathname='/index.html';if(!isPublicStaticRequestPath(pathname))return json(res,404,{error:'Not found'});const fp=path.resolve(ROOT,pathname.replace(/^\/+/,''));if(fp!==ROOT&&!fp.startsWith(ROOT+path.sep))return json(res,404,{error:'Not found'});fs.stat(fp,(e,s)=>{if(!e&&s.isFile())return serveFile(res,fp);const hasExt=Boolean(path.extname(pathname));if(hasExt)return json(res,404,{error:'Not found'});return serveFile(res,path.join(ROOT,'index.html'));});}catch(e){console.error(e);json(res,500,{error:'Internal server error'});}});
 server.requestTimeout=15000;
 server.headersTimeout=10000;
 server.keepAliveTimeout=5000;
