@@ -417,7 +417,7 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/rooms'){const d=await body(req);return json(res,201,{room:await createRoom(d.id,d.token,d.name,d.maxPlayers)});}
   if(req.method==='GET'&&url.pathname==='/api/rooms'){return json(res,200,{rooms:await listRooms(url.searchParams.get('id'),url.searchParams.get('token'))});}
   if(req.method==='POST'&&url.pathname==='/api/rooms/join'){const d=await body(req);return json(res,200,{room:await joinRoom(d.id,d.token,d.code)});}
-  if(req.method==='POST'&&url.pathname==='/api/rooms/leave'){const d=await body(req);return json(res,200,{ok:true});}
+  if(req.method==='POST'&&url.pathname==='/api/rooms/leave'){const d=await body(req);return json(res,200,await leaveRoom(d.id,d.token,d.roomId));}
   if(req.method==='POST'&&url.pathname==='/api/rooms/abandon'){const d=await body(req);return json(res,200,await abandonRoom(d.id,d.token,d.roomId));}
   if(req.method==='GET'&&url.pathname==='/api/rooms/rankings'){return json(res,200,{players:await roomRankings(url.searchParams.get('id'),url.searchParams.get('token'),url.searchParams.get('roomId'))});}
   if(req.method==='POST'&&url.pathname==='/api/contact'){const d=await body(req);return json(res,201,await saveMessage('contact',d,clientIp(req)));}
