@@ -209,18 +209,18 @@ async function captureKnownOrder(db,id,requestKey){
 async function captureOrder(db,player,orderId){
   const id=String(orderId||'').trim();
   if(!/^[A-Z0-9-]{10,40}$/i.test(id))throw Object.assign(new Error('Invalid PayPal order ID.'),{status:400});
-  const q=await db.query('SELECT player_id AS "playerId",status FROM vip_payments WHERE paypal_order_id=$1',[id]);
+  const q=await db.query('SELECT player_id AS "playerId",status,payment_type AS "paymentType" FROM vip_payments WHERE paypal_order_id=$1',[id]);
   if(!q.rowCount)throw Object.assign(new Error('Unknown PayPal order.'),{status:404});
   if(q.rows[0].playerId!==player.id)throw Object.assign(new Error('This PayPal order belongs to another account.'),{status:403});
 
   if(q.rows[0].status==='CAPTURED'){
     const p=await db.query('SELECT vip_level AS "vipLevel" FROM players WHERE id=$1',[player.id]);
-    return{ok:true,level:Number(p.rows[0]?.vipLevel||0),already:true};
+    return{ok:true,type:String(q.rows[0].paymentType||'VIP').toLowerCase(),level:Number(p.rows[0]?.vipLevel||0),already:true};
   }
 
   const result=await captureKnownOrder(db,id,'capture-'+id);
   const p=await db.query('SELECT vip_level AS "vipLevel" FROM players WHERE id=$1',[player.id]);
-  return{ok:true,level:Number(p.rows[0]?.vipLevel||result.level||0),orderId:id,captureId:result.captureId||null};
+  return{ok:true,type:String(result.type||q.rows[0].paymentType||'VIP').toLowerCase(),level:Number(p.rows[0]?.vipLevel||result.level||0),orderId:id,captureId:result.captureId||null};
 }
 
 async function verifyWebhook(headers,event){
