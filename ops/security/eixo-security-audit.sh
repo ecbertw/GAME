@@ -27,7 +27,7 @@ echo
 
 # 1) Public HTTP surface
 check_code 200 "$BASE/"
-for p in server.js auth-server.js server-start.js package.json README.md .git/HEAD .env ops/nginx/eixo-security.conf.example; do
+for p in server.js auth-server.js paypal-server.js server-start.js package.json README.md .git/HEAD .env ops/nginx/eixo-security.conf.example; do
   check_code 404 "$BASE/$p"
 done
 
@@ -120,6 +120,12 @@ if [ -f /etc/eixo/security.env ]; then
   if [ "$MODE" = "600" ]; then green "/etc/eixo/security.env mode 600"; else red "/etc/eixo/security.env mode $MODE (expected 600)"; fi
 else
   red "/etc/eixo/security.env missing"
+fi
+
+if [ -f /etc/eixo/security.env ] && grep -q '^PAYPAL_CLIENT_SECRET=' /etc/eixo/security.env; then
+  green "PayPal secret stored server-side in security.env"
+else
+  echo "INFO PayPal credentials not configured yet."
 fi
 
 # 9) PostgreSQL hardening
