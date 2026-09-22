@@ -4,7 +4,7 @@ function ipKey(data){return String(data.ip||'unknown');}
 function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())&&String(v).length<=200;}
 function passwordBytes(v){return Buffer.byteLength(String(v||''),'utf8');}
 function validPassword(v){const value=String(v||'');return value.length>=12&&value.length<=128&&passwordBytes(value)<=256;}
-function rate(map,key,limit,windowMs){const now=Date.now(),row=map.get(key);if(!row||now-row.start>windowMs){map.set(key,{start:now,count:1});return true}row.count++;return row.count<=limit;}
+function rate(map,key,limit,windowMs){const now=Date.now();if(map.size>10000){for(const [k,v] of map){if(now-v.start>windowMs)map.delete(k)}if(map.size>12000){let drop=map.size-10000;for(const k of map.keys()){map.delete(k);if(--drop<=0)break}}}const row=map.get(key);if(!row||now-row.start>windowMs){map.set(key,{start:now,count:1});return true}row.count++;return row.count<=limit;}
 const loginRate=new Map();
 const loginAccountRate=new Map();
 const resetRate=new Map();
