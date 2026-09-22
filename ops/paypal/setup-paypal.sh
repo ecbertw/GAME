@@ -57,4 +57,4 @@ done
 
 curl -fsS -H 'Host: eixo.at' http://127.0.0.1:3000/health
 echo
-echo "PayPal environment loaded. Keep PAYPAL_MODE=sandbox until all test payments pass."
+echo "PayPal environment loaded in $MODE mode."
