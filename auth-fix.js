@@ -4,7 +4,7 @@
   const modal=$('authModal'),loginForm=$('authLoginForm'),registerForm=$('authRegisterForm'),resetForm=$('authResetForm');
   const style=document.createElement('style');style.textContent=`
     .auth-tabs{display:flex;gap:8px;margin:16px 0}.auth-tab{flex:1;padding:10px 8px;border:1px solid rgba(255,255,255,.18);background:#111820;color:#9aa6b2;font:700 11px/1 monospace;cursor:pointer}.auth-tab.active{color:#fff;border-color:#00d4ff}.auth-link{display:block;margin:12px auto 0;background:none;border:0;color:#7fdfff;text-decoration:underline;font:700 10px/1 monospace;cursor:pointer}.auth-modal .form-error{min-height:18px;margin:8px 0;color:#ff6b6b;font:700 10px/1.3 monospace}
-    .auth-country-picker{position:relative;width:100%;margin-top:0}.auth-country-native{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important}.auth-country-button{width:100%;height:52px;border:2px solid #626e79;background:#070c11;color:#fff;padding:0 12px;outline:none;display:flex;align-items:center;gap:10px;cursor:pointer;text-align:left}.auth-country-button:hover,.auth-country-button:focus{border-color:#35dc75;box-shadow:4px 4px 0 #071e13}.auth-country-button .auth-country-name{flex:1;font-size:9px}.auth-country-chevron{font-size:8px;color:#aeb7c0}.auth-country-flag{width:24px;height:18px;object-fit:cover;image-rendering:auto;flex:0 0 auto}.auth-country-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:11000;max-height:260px;overflow:auto;background:#070c11;border:2px solid #626e79;box-shadow:5px 5px 0 #020407;padding:5px}.auth-country-menu.open{display:block}.auth-country-option{width:100%;min-height:38px;border:0;background:transparent;color:#fff;display:flex;align-items:center;gap:10px;padding:8px;text-align:left;cursor:pointer;font-size:7px}.auth-country-option:hover,.auth-country-option[aria-selected="true"]{background:#18232d}.auth-country-option .auth-country-name{flex:1}.auth-country-emoji{display:none;width:24px;flex:0 0 24px;text-align:center;font-size:16px;line-height:18px}.auth-country-flag.is-missing{display:none}.auth-country-flag.is-missing+.auth-country-emoji{display:inline-block}
+    .auth-country-picker{position:relative;width:100%;margin-top:0}.auth-country-native{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important}.auth-country-button{width:100%;height:52px;border:2px solid #626e79;background:#070c11;color:#fff;padding:0 12px;outline:none;display:flex;align-items:center;gap:10px;cursor:pointer;text-align:left}.auth-country-button:hover,.auth-country-button:focus{border-color:#35dc75;box-shadow:4px 4px 0 #071e13}.auth-country-button .auth-country-name{flex:1;font-size:9px}.auth-country-chevron{font-size:8px;color:#aeb7c0}.auth-country-flag{width:24px;height:18px;object-fit:cover;image-rendering:auto;flex:0 0 auto}.auth-country-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:11000;max-height:260px;overflow:auto;background:#070c11;border:2px solid #626e79;box-shadow:5px 5px 0 #020407;padding:5px}.auth-country-menu.open{display:block}.auth-country-option{width:100%;min-height:38px;border:0;background:transparent;color:#fff;display:flex;align-items:center;gap:10px;padding:8px;text-align:left;cursor:pointer;font-size:7px}.auth-country-option:hover,.auth-country-option[aria-selected="true"]{background:#18232d}.auth-country-option .auth-country-name{flex:1}.auth-country-emoji{display:none;width:24px;flex:0 0 24px;text-align:center;font-size:16px;line-height:18px}.auth-country-flag.is-missing{display:none}.auth-country-flag.is-missing+.auth-country-emoji{display:inline-block}.auth-remember{display:flex;align-items:center;gap:9px;margin:12px 0 0;color:#aeb7c0;font-size:7px;line-height:1.4;cursor:pointer;user-select:none}.auth-remember input{width:15px;height:15px;margin:0;accent-color:#18c66b;cursor:pointer}.auth-remember span{padding-top:1px}
   `;document.head.appendChild(style);
   if(!modal)return;
 
@@ -22,10 +22,15 @@
   const errorText=v=>englishErrors[String(v||'')]||String(v||'Unable to complete the request.');
   const setPlayer=p=>{
     const clean=p?{...p,token:'session'}:null;
-    if(clean){localStorage.setItem('eixo_player',JSON.stringify(clean));localStorage.setItem('eixo_country',clean.country);}
-    else localStorage.removeItem('eixo_player');
+    if(clean){
+      localStorage.setItem('eixo_player',JSON.stringify(clean));
+      if(!localStorage.getItem('eixo_country'))localStorage.setItem('eixo_country',String(clean.country||'PT').toUpperCase());
+    }else localStorage.removeItem('eixo_player');
     window.eixoSetPlayer?.(clean);
-    if(clean?.country)window.changeCountry?.(String(clean.country).toUpperCase());
+    if(clean&&typeof window.changeCountry==='function'){
+      const preferred=String(localStorage.getItem('eixo_country')||clean.country||'PT').toUpperCase();
+      window.changeCountry(preferred);
+    }
     const name=$('playerName');if(name)name.textContent=clean?.visualName||clean?.name||'SIGN IN';
     window.dispatchEvent(new Event('eixo-player-updated'));
   };
@@ -39,7 +44,7 @@
     $('authLoginTab').textContent='SIGN IN';$('authRegisterTab').textContent='CREATE ACCOUNT';
     $('authLoginEmail').placeholder='EMAIL';$('authLoginPassword').placeholder='PASSWORD';
     $('authRegisterName').placeholder='PLAYER NAME';$('authRegisterEmail').placeholder='EMAIL';$('authRegisterPassword').placeholder='PASSWORD (MIN. 8 CHARACTERS)';
-    $('authResetEmail').placeholder='EMAIL';$('authForgotButton').textContent='FORGOT PASSWORD';$('authBackLogin').textContent='BACK TO SIGN IN';
+    $('authResetEmail').placeholder='EMAIL';$('authForgotButton').textContent='FORGOT PASSWORD';$('authBackLogin').textContent='BACK TO SIGN IN';if($('authRememberLabel'))$('authRememberLabel').textContent='KEEP ME SIGNED IN';
     loginForm.querySelector('button[type="submit"]').textContent='SIGN IN ▶';registerForm.querySelector('button[type="submit"]').textContent='CREATE ACCOUNT ▶';resetForm.querySelector('button[type="submit"]').textContent='SEND INSTRUCTIONS ▶';
     $('authClose').textContent='CLOSE';
     loginForm.classList.toggle('hidden',!login);registerForm.classList.toggle('hidden',login||reset);resetForm.classList.toggle('hidden',!reset);
@@ -82,7 +87,7 @@
   modal.addEventListener('click',e=>{if(e.target===modal&&window.eixoGetPlayer?.())close();});
   loginForm.addEventListener('submit',async e=>{
     e.preventDefault();const err=$('authLoginError'),button=loginForm.querySelector('button[type="submit"]');err.textContent='';button.disabled=true;
-    try{const d=await api('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('authLoginEmail').value,password:$('authLoginPassword').value})});setPlayer(d.player);close();window.applyLanguage?.();window.loadTopRankings?.();}
+    try{const d=await api('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('authLoginEmail').value,password:$('authLoginPassword').value,rememberMe:!!$('authRemember')?.checked})});setPlayer(d.player);close();window.applyLanguage?.();window.loadTopRankings?.();}
     catch(x){err.textContent=errorText(x.message);}finally{button.disabled=false;}
   });
   registerForm.addEventListener('submit',async e=>{
