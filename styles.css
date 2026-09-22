@@ -42,35 +42,8 @@ main{padding:18px 24px 24px}.hero{max-width:920px;margin:0 auto}.game-frame{posi
 .vip-rank-tag{display:inline-flex;align-items:center;justify-content:center;padding:3px 5px;font-size:5px;line-height:1.2;vertical-align:middle}
 .name-letter{display:inline-block}
 
-/* Chat-specific letter animations. The ranking already has the keyframes; these classes make them usable here too. */
+/* Chat uses the same universal .name-letter effect animations as rankings and previews. */
 .chat-name .name-letter{display:inline-block}
-.chat-name .name-letter.effect-bounce{animation:name-bounce .55s steps(2,end) infinite alternate}
-.chat-name .name-letter.effect-glow{animation:name-glow .8s ease-in-out infinite alternate}
-.chat-name .name-letter.effect-wave{animation:name-wave .8s ease-in-out infinite}
-.chat-name .name-letter.effect-shake{animation:name-shake .28s steps(2,end) infinite}
-.chat-name .name-letter.effect-float{animation:name-float 1.2s ease-in-out infinite}
-.chat-name .name-letter.effect-pulse{animation:name-pulse .9s ease-in-out infinite}
-.chat-name .name-letter.effect-jelly{animation:name-jelly .8s ease-in-out infinite}
-.chat-name .name-letter.effect-twist{animation:name-wave .7s ease-in-out infinite}
-.chat-name .name-letter.effect-flicker{animation:name-pulse .45s steps(2,end) infinite}
-.chat-name .name-letter.effect-stretch{animation:name-jelly 1s ease-in-out infinite}
-.chat-name .name-letter.effect-sparkle{animation:name-glow .7s ease-in-out infinite alternate}
-.chat-name .name-letter.effect-shimmer{animation:name-wave .9s ease-in-out infinite}
-.chat-name .name-letter.effect-glitch{animation:name-shake .22s steps(2,end) infinite}
-.chat-name .name-letter.effect-tilt{animation:name-wave .75s ease-in-out infinite}
-.chat-name .name-letter.effect-pop{animation:name-jelly .65s ease-in-out infinite}
-.chat-name .name-letter.effect-scanline{animation:name-pulse .65s steps(2,end) infinite}
-.chat-name .name-letter.name-rainbow,.rank-player-name .name-letter.name-rainbow,.name-preview .name-letter.name-rainbow{color:#ff3b30!important;background:none!important;background-image:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;-webkit-text-fill-color:currentColor!important}
-.name-letter.eixo-rainbow-fallback{color:#ff3b30!important;animation-name:eixoRainbowHue!important;animation-duration:1.8s!important;animation-timing-function:linear!important;animation-iteration-count:infinite!important}
-@keyframes eixoRainbowHue{to{filter:hue-rotate(360deg)}}
-@keyframes name-rainbow{to{background-position:400% 0}}
-@keyframes name-bounce{to{transform:translateY(-3px)}}
-@keyframes name-glow{to{text-shadow:0 0 8px currentColor}}
-@keyframes name-wave{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
-@keyframes name-shake{25%{transform:translateX(-1px)}75%{transform:translateX(1px)}}
-@keyframes name-float{50%{transform:translateY(-2px)}}
-@keyframes name-pulse{50%{opacity:.55}}
-@keyframes name-jelly{0%,100%{transform:scaleX(1)}50%{transform:scaleX(1.06) scaleY(.94)}}
 
 @media(max-width:1500px){
   .chat-sidebar{position:relative;top:auto;left:auto;right:auto;width:min(920px,calc(100% - 20px));height:430px;margin:18px auto 24px}
