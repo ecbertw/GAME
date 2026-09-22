@@ -17,8 +17,8 @@ const loginRate=new Map();
 const SESSION_COOKIE='__Host-eixo_session';
 const SESSION_DAYS=30;
 function parseCookies(req){const out={};for(const part of String(req.headers.cookie||'').split(';')){const i=part.indexOf('=');if(i>0)out[part.slice(0,i).trim()]=decodeURIComponent(part.slice(i+1).trim())}return out;}
-function setSessionCookie(res,token,persistent=false){const maxAge=persistent?'; Max-Age='+(SESSION_DAYS*86400):'';res.setHeader('Set-Cookie',SESSION_COOKIE+'='+encodeURIComponent(token)+maxAge+'; Path=/; HttpOnly; Secure; SameSite=Lax');}
-function clearSessionCookie(res){res.setHeader('Set-Cookie',SESSION_COOKIE+'=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax');}
+function setSessionCookie(res,token,persistent=false){const maxAge=persistent?'; Max-Age='+(SESSION_DAYS*86400):'';res.setHeader('Set-Cookie',SESSION_COOKIE+'='+encodeURIComponent(token)+maxAge+'; Path=/; HttpOnly; Secure; SameSite=Strict');}
+function clearSessionCookie(res){res.setHeader('Set-Cookie',SESSION_COOKIE+'=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Strict');}
 function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim())&&String(v).length<=200;}
 function passwordBytes(v){return Buffer.byteLength(String(v||''),'utf8');}
 function validPassword(v){const n=passwordBytes(v);return n>=12&&n<=72;}
@@ -42,7 +42,7 @@ function validRoomSize(v){return Number.isInteger(Number(v))&&Number(v)>=1&&Numb
 function vipLevelOf(p){return Number(p.vipLevel||0);}
 function validVipVisualName(v){const s=String(v??'').trim();return s.length>=1&&s.length<=16;}
 function parseLetterStyles(v){try{return Array.isArray(v)?v:JSON.parse(v||'[]')}catch(_){return[]}}
-function securityHeaders(){return {'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=()','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://flagcdn.com data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",'Strict-Transport-Security':'max-age=31536000; includeSubDomains'};}
+function securityHeaders(){return {'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','X-Permitted-Cross-Domain-Policies':'none','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=(self)','Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Resource-Policy':'same-origin','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://flagcdn.com data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",'Strict-Transport-Security':'max-age=63072000; includeSubDomains; preload'};}
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...securityHeaders()});res.end(JSON.stringify(payload));}
 function body(req){return new Promise((resolve,reject)=>{let raw='';req.on('data',c=>{raw+=c;if(raw.length>30000)req.destroy();});req.on('end',()=>{try{const data=raw?JSON.parse(raw):{};if(data&&typeof data==='object'){const c=parseCookies(req);if(c[SESSION_COOKIE])data.token=c[SESSION_COOKIE];}resolve(data);}catch(e){reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
 function tokenHash(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
@@ -82,6 +82,10 @@ async function initDb(){
   await pool.query(`CREATE INDEX IF NOT EXISTS background_claims_owner_idx ON background_claims(owner_id)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS anti_cheat_runs(id UUID PRIMARY KEY,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,score INTEGER NOT NULL,risk INTEGER NOT NULL DEFAULT 0,flagged BOOLEAN NOT NULL DEFAULT FALSE,details JSONB NOT NULL DEFAULT '{}'::jsonb,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await pool.query(`CREATE INDEX IF NOT EXISTS anti_cheat_runs_player_created_idx ON anti_cheat_runs(player_id,created_at DESC)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS online_presence(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS online_presence_seen_idx ON online_presence(last_seen DESC)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS security_audit(id UUID PRIMARY KEY,actor_id UUID REFERENCES players(id) ON DELETE SET NULL,action VARCHAR(80) NOT NULL,target_id UUID REFERENCES players(id) ON DELETE SET NULL,metadata JSONB NOT NULL DEFAULT '{}'::jsonb,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS security_audit_created_idx ON security_audit(created_at DESC)`);
   dbReady=true;console.log('PostgreSQL database ready. EIXO V2 accounts/sessions active; legacy test players removed.');
 }
 async function authenticateSession(token){if(!token||!dbReady)return null;const h=sessionHash(token);const r=await global.db.query('SELECT p.id,p.name,p.country,p.best_score AS "bestScore",p.visual_name AS "visualName",p.name_color AS "nameColor",p.name_effect AS "nameEffect",p.vip_level AS "vipLevel",p.letter_styles AS "letterStyles",p.tag_global_color AS "tagGlobalColor",p.tag_country_color AS "tagCountryColor",p.avatar,p.avatar_border AS "avatarBorder",p.role,p.banned_until AS "bannedUntil",p.banned_permanent AS "bannedPermanent",p.ban_reason AS "banReason" FROM sessions s JOIN players p ON p.account_id=s.account_id WHERE s.token_hash='+PG_PARAM+'1 AND s.expires_at>NOW()',[h]);return r.rows[0]||null;}
@@ -130,6 +134,30 @@ async function moderateBan(actorId,token,targetId,hours,permanent=false,reason='
 async function kickPlayer(actorId,token,targetId){const a=await roomAuth(actorId,token);requireStaff(a);targetId=await resolveTarget(targetId);const t=await global.db.query('SELECT role FROM players WHERE id=$1',[targetId]);if(!t.rowCount)throw Object.assign(new Error('Jogador não encontrado.'),{status:404});if(t.rows[0].role==='admin'||(a.role==='moderator'&&t.rows[0].role==='moderator'))throw Object.assign(new Error('Não tens permissão para expulsar este jogador.'),{status:403});await global.db.query('DELETE FROM sessions WHERE account_id=(SELECT account_id FROM players WHERE id=$1)',[targetId]);return{ok:true};}
 async function deleteChatMessage(actorId,token,messageId){const a=await roomAuth(actorId,token);requireAdmin(a);const q=await global.db.query('DELETE FROM chat_messages WHERE id=$1 RETURNING id',[messageId]);if(!q.rowCount)throw Object.assign(new Error('Mensagem não encontrada.'),{status:404});return{ok:true};}
 async function adminAntiCheat(actorId,token){const a=await roomAuth(actorId,token);requireAdmin(a);const r=await global.db.query('SELECT ac.id,ac.player_id AS "playerId",p.name,ac.score,ac.risk,ac.flagged,ac.details,ac.created_at AS "createdAt" FROM anti_cheat_runs ac JOIN players p ON p.id=ac.player_id WHERE ac.flagged=TRUE ORDER BY ac.created_at DESC LIMIT 100');return{runs:r.rows};}
+async function auditSecurity(actorId,action,targetId=null,metadata={}){try{await global.db.query('INSERT INTO security_audit(id,actor_id,action,target_id,metadata) VALUES($1,$2,$3,$4,$5::jsonb)',[crypto.randomUUID(),actorId||null,String(action).slice(0,80),targetId||null,JSON.stringify(metadata||{})]);}catch(_){}}
+async function presencePing(id,token){const p=await roomAuth(id,token);await global.db.query('INSERT INTO online_presence(player_id,last_seen) VALUES($1,NOW()) ON CONFLICT(player_id) DO UPDATE SET last_seen=EXCLUDED.last_seen',[p.id]);return{ok:true};}
+async function adminMetrics(actorId,token){const a=await roomAuth(actorId,token);requireAdmin(a);const q=await global.db.query(`
+ SELECT
+  (SELECT COUNT(*)::int FROM players) AS "totalPlayers",
+  (SELECT COUNT(*)::int FROM players WHERE created_at>=NOW()-INTERVAL '24 hours') AS "new24h",
+  (SELECT COUNT(*)::int FROM players WHERE created_at>=NOW()-INTERVAL '7 days') AS "new7d",
+  (SELECT COUNT(*)::int FROM online_presence WHERE last_seen>=NOW()-INTERVAL '90 seconds') AS "onlineNow",
+  (SELECT COUNT(*)::int FROM online_presence WHERE last_seen>=NOW()-INTERVAL '24 hours') AS "active24h",
+  (SELECT COUNT(*)::int FROM players WHERE vip_level>0) AS "vipPlayers",
+  (SELECT COUNT(*)::int FROM players WHERE banned_permanent=TRUE) AS "permanentBans",
+  (SELECT COUNT(*)::int FROM players WHERE banned_permanent=FALSE AND banned_until>NOW()) AS "temporaryBans",
+  (SELECT COUNT(*)::int FROM background_claims) AS "backgroundClaims",
+  (SELECT COUNT(*)::int FROM rooms) AS "rooms",
+  (SELECT COUNT(*)::int FROM chat_messages WHERE created_at>=NOW()-INTERVAL '24 hours') AS "messages24h",
+  (SELECT COUNT(*)::int FROM anti_cheat_runs) AS "gamesRecorded",
+  (SELECT COUNT(*)::int FROM anti_cheat_runs WHERE created_at>=NOW()-INTERVAL '24 hours') AS "games24h",
+  (SELECT COUNT(*)::int FROM anti_cheat_runs WHERE flagged=TRUE AND created_at>=NOW()-INTERVAL '24 hours') AS "antiCheatFlags24h"`);
+ const countries=await global.db.query('SELECT country,COUNT(*)::int count FROM players GROUP BY country ORDER BY count DESC,country ASC LIMIT 8');
+ const vip=await global.db.query('SELECT vip_level AS level,COUNT(*)::int count FROM players WHERE vip_level>0 GROUP BY vip_level ORDER BY vip_level');
+ return{...q.rows[0],uptimeSeconds:Math.floor(process.uptime()),countries:countries.rows,vipBreakdown:vip.rows};
+}
+async function adminBans(actorId,token,query=''){const a=await roomAuth(actorId,token);requireAdmin(a);const q=String(query||'').trim().slice(0,40);const params=[];let filter="WHERE (p.banned_permanent=TRUE OR p.banned_until>NOW())";if(q){params.push('%'+q+'%');filter+=' AND (p.name ILIKE $1 OR p.name_key ILIKE $1)';}const r=await global.db.query('SELECT p.id,p.name,p.country,p.role,p.vip_level AS "vipLevel",p.banned_permanent AS "permanent",p.banned_until AS "until",p.ban_reason AS "reason" FROM players p '+filter+' ORDER BY p.banned_permanent DESC,p.banned_until DESC NULLS LAST,p.name ASC LIMIT 200',params);return{bans:r.rows};}
+async function adminUnban(actorId,token,targetId){const a=await roomAuth(actorId,token);requireAdmin(a);targetId=await resolveTarget(targetId);const r=await global.db.query('UPDATE players SET banned_permanent=FALSE,banned_until=NULL,ban_reason=NULL,updated_at=NOW() WHERE id=$1 RETURNING id,name',[targetId]);if(!r.rowCount)throw Object.assign(new Error('Jogador não encontrado.'),{status:404});await auditSecurity(a.id,'admin.unban',targetId,{});return{ok:true,player:r.rows[0]};}
 function claimLimitForVip(vip){return Number(vip)>=6?12:Math.max(1,Math.min(6,Number(vip||0)+1));}
 function validClaimColor(v){return /^#[0-9a-f]{6}$/i.test(String(v||''));}
 async function listBackgroundClaims(){if(!dbReady)return[];const r=await global.db.query('SELECT bc.x,bc.y,bc.color,bc.owner_id AS "ownerId",p.name AS "ownerName",p.country,bc.created_at AS "createdAt" FROM background_claims bc JOIN players p ON p.id=bc.owner_id ORDER BY bc.created_at ASC LIMIT 10000');return r.rows;}
@@ -198,7 +226,15 @@ function clientIp(req) {
 }
 async function handleApi(req,res,url){
  try{
-  if(['POST','PUT','PATCH','DELETE'].includes(req.method)){const origin=req.headers.origin;if(origin){let ok=false;try{ok=new URL(origin).host===String(req.headers.host||'').split(',')[0].trim()}catch(_){}if(!ok)return json(res,403,{error:'Origem não autorizada.'});}}
+  if(['POST','PUT','PATCH','DELETE'].includes(req.method)){
+    const fetchSite=String(req.headers['sec-fetch-site']||'').toLowerCase();
+    if(fetchSite==='cross-site')return json(res,403,{error:'Origem não autorizada.'});
+    const targetHost=String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().toLowerCase();
+    const source=String(req.headers.origin||req.headers.referer||'').trim();
+    if(!source)return json(res,403,{error:'Origem não autorizada.'});
+    let ok=false;try{ok=new URL(source).host.toLowerCase()===targetHost}catch(_){}
+    if(!ok)return json(res,403,{error:'Origem não autorizada.'});
+  }
   const cookieToken=parseCookies(req)[SESSION_COOKIE];
   if(cookieToken)url.searchParams.set('token',cookieToken);
   if(req.method==='GET'&&url.pathname==='/api/chat'){return json(res,200,{channel:url.searchParams.get('channel')||'global',messages:await getChatMessages(url.searchParams.get('id'),url.searchParams.get('token'),url.searchParams.get('channel')||'global')});}
@@ -224,6 +260,10 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/moderation/kick'){const d=await body(req);return json(res,200,await kickPlayer(d.id,d.token,d.targetId));}
   if(req.method==='DELETE'&&url.pathname==='/api/admin/chat'){const d=await body(req);return json(res,200,await deleteChatMessage(d.id,d.token,d.messageId));}
   if(req.method==='GET'&&url.pathname==='/api/admin/anti-cheat'){return json(res,200,await adminAntiCheat(url.searchParams.get('id'),url.searchParams.get('token')));}
+  if(req.method==='POST'&&url.pathname==='/api/presence/ping'){const d=await body(req);return json(res,200,await presencePing(d.id,d.token));}
+  if(req.method==='GET'&&url.pathname==='/api/admin/metrics'){return json(res,200,await adminMetrics(url.searchParams.get('id'),url.searchParams.get('token')));}
+  if(req.method==='GET'&&url.pathname==='/api/admin/bans'){return json(res,200,await adminBans(url.searchParams.get('id'),url.searchParams.get('token'),url.searchParams.get('q')||''));}
+  if(req.method==='POST'&&url.pathname==='/api/admin/unban'){const d=await body(req);return json(res,200,await adminUnban(d.id,d.token,d.targetId));}
   if(req.method==='GET'&&url.pathname==='/api/background/claims'){return json(res,200,{claims:await listBackgroundClaims()});}
   if(req.method==='POST'&&url.pathname==='/api/background/claim'){const d=await body(req);return json(res,200,await claimBackgroundTile(d.id,d.token,d.x,d.y,d.color));}
   if(req.method==='POST'&&url.pathname==='/api/admin/background/clear'){const d=await body(req);return json(res,200,await adminClearBackground(d.id,d.token,d.x,d.y,!!d.allOwner));}
