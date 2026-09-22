@@ -45,6 +45,7 @@ async function initDb(db){
   )`);
   await db.query(`ALTER TABLE vip_payments ADD COLUMN IF NOT EXISTS payment_type VARCHAR(16) NOT NULL DEFAULT 'VIP'`);
   await db.query(`ALTER TABLE vip_payments ALTER COLUMN vip_level DROP NOT NULL`);
+  await db.query(`ALTER TABLE vip_payments ADD COLUMN IF NOT EXISTS last_checked_at TIMESTAMPTZ`);
   await db.query(`CREATE INDEX IF NOT EXISTS vip_payments_player_created_idx ON vip_payments(player_id,created_at DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS vip_payments_status_idx ON vip_payments(status)`);
   await db.query(`CREATE INDEX IF NOT EXISTS vip_payments_type_idx ON vip_payments(payment_type)`);
@@ -215,12 +216,54 @@ async function captureOrder(db,player,orderId){
 
   if(q.rows[0].status==='CAPTURED'){
     const p=await db.query('SELECT vip_level AS "vipLevel" FROM players WHERE id=$1',[player.id]);
-    return{ok:true,type:String(q.rows[0].paymentType||'VIP').toLowerCase(),level:Number(p.rows[0]?.vipLevel||0),already:true};
+    return{ok:true,captured:true,type:String(q.rows[0].paymentType||'VIP').toLowerCase(),level:Number(p.rows[0]?.vipLevel||0),already:true};
   }
 
   const result=await captureKnownOrder(db,id,'capture-'+id);
+  if(!result.fulfilled)throw Object.assign(new Error('PayPal capture could not be confirmed.'),{status:409});
   const p=await db.query('SELECT vip_level AS "vipLevel" FROM players WHERE id=$1',[player.id]);
-  return{ok:true,type:String(result.type||q.rows[0].paymentType||'VIP').toLowerCase(),level:Number(p.rows[0]?.vipLevel||result.level||0),orderId:id,captureId:result.captureId||null};
+  return{ok:true,captured:true,type:String(result.type||q.rows[0].paymentType||'VIP').toLowerCase(),level:Number(p.rows[0]?.vipLevel||result.level||0),orderId:id,captureId:result.captureId||null};
+}
+
+
+/* Read-only payment confirmation for the browser. We reconcile only a PayPal-
+   approved order; a mere popup close or CREATED order can never count as paid. */
+async function orderStatus(db,player,orderId){
+  const id=String(orderId||'').trim();
+  if(!/^[A-Z0-9-]{10,40}$/i.test(id))throw Object.assign(new Error('Invalid PayPal order ID.'),{status:400});
+  const owned=await db.query(
+    'SELECT id,status,created_at FROM vip_payments WHERE paypal_order_id=$1 AND player_id=$2',
+    [id,player.id]
+  );
+  if(!owned.rowCount)throw Object.assign(new Error('Unknown PayPal order.'),{status:404});
+  const first=owned.rows[0];
+  const terminal=new Set(['CAPTURED','DECLINED','DENIED','REVERSED','CREATE_FAILED']);
+  const fresh=Date.now()-new Date(first.created_at).getTime()<20*60*1000;
+  if(configured()&&!terminal.has(first.status)&&fresh){
+    // One PayPal reconciliation per order every five seconds, even across processes.
+    const claim=await db.query(`UPDATE vip_payments SET last_checked_at=NOW()
+      WHERE id=$1 AND status NOT IN ('CAPTURED','DECLINED','DENIED','REVERSED','CREATE_FAILED')
+        AND (last_checked_at IS NULL OR last_checked_at<NOW()-INTERVAL '5 seconds')
+      RETURNING id`,[first.id]);
+    if(claim.rowCount){
+      try{
+        const order=await pp('/v2/checkout/orders/'+encodeURIComponent(id),{method:'GET'});
+        const {capture}=captureFromOrder(order);
+        if(capture?.status==='COMPLETED'){
+          await fulfillCapture(db,id,capture);
+        }else if(String(order?.status||'').toUpperCase()==='APPROVED'){
+          await captureKnownOrder(db,id,'capture-'+id);
+        }
+      }catch(e){
+        console.error('PayPal order status reconciliation failed:',e.message);
+      }
+    }
+  }
+  const q=await db.query('SELECT status,payment_type,vip_level FROM vip_payments WHERE id=$1',[first.id]);
+  const pay=q.rows[0];
+  return{ok:true,orderId:id,captured:pay.status==='CAPTURED',
+    type:String(pay.payment_type||'VIP').toLowerCase(),
+    status:pay.status,level:pay.vip_level==null?null:Number(pay.vip_level)};
 }
 
 async function verifyWebhook(headers,event){
@@ -274,4 +317,4 @@ async function handleWebhook(db,headers,event){
   return{ok:true};
 }
 
-module.exports={VIP_PRICES_CENTS,CURRENCY,SUPPORT_MIN_CENTS,SUPPORT_MAX_CENTS,configured,mode,initDb,publicStore,createOrder,captureOrder,handleWebhook};
+module.exports={VIP_PRICES_CENTS,CURRENCY,SUPPORT_MIN_CENTS,SUPPORT_MAX_CENTS,configured,mode,initDb,publicStore,createOrder,captureOrder,orderStatus,handleWebhook};
