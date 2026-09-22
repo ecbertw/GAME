@@ -7,6 +7,5 @@
  document.addEventListener('change',e=>{if(e.target?.id==='customizeColor')refresh()});
  const observer=new MutationObserver(()=>{observer.disconnect();requestAnimationFrame(()=>{refresh();observer.observe(document.body,{childList:true,subtree:true})})});
  observer.observe(document.body,{childList:true,subtree:true});refresh();
- const load=(src)=>{const x=document.createElement('script');x.src=src+'?v=20260922-menu-rank-tap';document.head.appendChild(x)};
- load('i18n-fix.js');load('customize-i18n.js');load('effects-fix.js');load('rgb-fix.js');load('initial-en-fix.js');load('audio-fix.js');
+
 })();
