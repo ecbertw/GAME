@@ -115,3 +115,27 @@ main{padding:18px 24px 24px}.hero{max-width:920px;margin:0 auto}.game-frame{posi
 
 /* EIXO V2.1 staff/chat account visuals */
 .chat-delete{margin-left:auto;border:1px solid #e83e45;background:#160b0d;color:#ff6b6b;width:18px;height:18px;padding:0;font:10px/16px monospace;cursor:pointer}.chat-delete:hover{background:#e83e45;color:#fff}.chat-avatar{transition:border-color .15s,box-shadow .15s}.topbar .account-actions{flex:0 0 auto}
+
+/* EIXO avatar cosmetics */
+.chat-avatar{font-family:Arial,sans-serif!important;font-size:15px!important;font-weight:700;position:relative;overflow:visible}
+.chat-avatar.avatar-crystal,.chat-avatar.avatar-spark,.chat-avatar.avatar-comet,.chat-avatar.avatar-crown,.chat-avatar.avatar-thunder,.chat-avatar.avatar-skull,.chat-avatar.avatar-phoenix,.chat-avatar.avatar-vortex,.chat-avatar.avatar-titan,.chat-avatar.avatar-plasma,.chat-avatar.avatar-infinity,.chat-avatar.avatar-cosmic,.chat-avatar.avatar-prism{font-size:17px!important;color:#fff;text-shadow:0 0 6px currentColor}
+.chat-avatar.avatar-border-glow-blue{border-color:#00d4ff!important;box-shadow:0 0 8px #00d4ff}
+.chat-avatar.avatar-border-glow-yellow{border-color:#ffd43b!important;box-shadow:0 0 8px #ffd43b}
+.chat-avatar.avatar-border-pulse-green{border-color:#39d98a!important;animation:avatarPulseGreen 1.1s ease-in-out infinite}
+.chat-avatar.avatar-border-pulse-purple{border-color:#b66cff!important;animation:avatarPulsePurple 1.1s ease-in-out infinite}
+.chat-avatar.avatar-border-electric-yellow{border-color:#ffd43b!important;animation:avatarElectricYellow .32s steps(2,end) infinite}
+.chat-avatar.avatar-border-electric-blue{border-color:#00d4ff!important;animation:avatarElectricBlue .32s steps(2,end) infinite}
+.chat-avatar.avatar-border-flame-orange{border-color:#ff7a2f!important;box-shadow:0 -3px 6px #ff7a2f,0 -6px 10px #ef4444;animation:avatarFlame .7s ease-in-out infinite alternate}
+.chat-avatar.avatar-border-flame-red{border-color:#ef4444!important;box-shadow:0 -3px 6px #ef4444,0 -6px 10px #ff7a2f;animation:avatarFlame .7s ease-in-out infinite alternate}
+.chat-avatar.avatar-border-plasma-cyan{border-color:#00e5ff!important;box-shadow:0 0 7px #00e5ff,0 0 13px #7c4dff;animation:avatarPlasma 1.2s linear infinite}
+.chat-avatar.avatar-border-plasma-purple{border-color:#c084fc!important;box-shadow:0 0 7px #c084fc,0 0 13px #ff4fd8;animation:avatarPlasma 1.2s linear infinite}
+.chat-avatar.avatar-border-cosmic{border-color:#7c4dff!important;box-shadow:0 0 7px #7c4dff,0 0 14px #00e5ff,0 0 20px #ff4fd8;animation:avatarCosmic 1.8s ease-in-out infinite}
+.chat-avatar.avatar-border-infinity-rgb,.chat-avatar.avatar-border-rainbow{border:2px solid transparent!important;background:linear-gradient(#101820,#101820) padding-box,linear-gradient(90deg,#ff3b30,#ffcc00,#34c759,#0a84ff,#bf5af2,#ff2d55,#ff3b30) border-box!important;background-size:100% 100%,400% 100%!important;animation:avatarRgb 2s linear infinite!important}
+@keyframes avatarPulseGreen{50%{box-shadow:0 0 12px #39d98a}}
+@keyframes avatarPulsePurple{50%{box-shadow:0 0 12px #b66cff}}
+@keyframes avatarElectricYellow{50%{box-shadow:3px -2px 0 #ffd43b,-2px 2px 0 #fff;filter:brightness(1.8)}}
+@keyframes avatarElectricBlue{50%{box-shadow:3px -2px 0 #00d4ff,-2px 2px 0 #fff;filter:brightness(1.8)}}
+@keyframes avatarFlame{to{transform:translateY(-1px);filter:brightness(1.25)}}
+@keyframes avatarPlasma{50%{filter:hue-rotate(90deg) brightness(1.25)}}
+@keyframes avatarCosmic{50%{transform:scale(1.06);filter:hue-rotate(100deg)}}
+@keyframes avatarRgb{to{background-position:0 0,400% 0}}
