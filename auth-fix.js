@@ -59,7 +59,7 @@
   function countryName(code){try{return new Intl.DisplayNames(['en'],{type:'region'}).of(code)||code}catch(_){return window.eixoCountryNames?.[code]||code}}
   function flagUrl(code){return 'https://flagcdn.com/24x18/'+String(code).toLowerCase()+'.png'}
   function flagEmoji(code){return [...String(code||'')].map(c=>String.fromCodePoint(127397+c.charCodeAt())).join('')}
-  function flagMarkup(code){const safe=String(code||'').toUpperCase();return '<img class="auth-country-flag" src="'+flagUrl(safe)+'" alt="" aria-hidden="true" onerror="this.classList.add(\'is-missing\')"><span class="auth-country-emoji" aria-hidden="true">'+flagEmoji(safe)+'</span>'}
+  function flagMarkup(code){const safe=String(code||'').toUpperCase();return '<img class="auth-country-flag" src="'+flagUrl(safe)+'" alt="" aria-hidden="true"><span class="auth-country-emoji" aria-hidden="true">'+flagEmoji(safe)+'</span>'}
   function populateCountries(){
     const select=$('authRegisterCountry');if(!select)return;
     const codes=[...(window.eixoCountryCodes||['PT'])].sort((a,b)=>{if(a==='PT')return-1;if(b==='PT')return 1;return countryName(a).localeCompare(countryName(b),'en')});
@@ -71,6 +71,10 @@
     const button=document.createElement('button');button.type='button';button.id='authCountryButton';button.className='auth-country-button';button.setAttribute('aria-haspopup','listbox');button.setAttribute('aria-expanded','false');
     const menu=document.createElement('div');menu.id='authCountryMenu';menu.className='auth-country-menu';menu.setAttribute('role','listbox');
     wrap.append(button,menu);
+    // A delegated image error handler works under the site's strict CSP.
+    wrap.addEventListener('error',event=>{
+      if(event.target?.classList?.contains('auth-country-flag'))event.target.classList.add('is-missing');
+    },true);
     button.addEventListener('click',e=>{e.stopPropagation();const isOpen=menu.classList.toggle('open');button.setAttribute('aria-expanded',String(isOpen));});
     menu.addEventListener('click',e=>{const option=e.target.closest('[data-country]');if(!option)return;select.value=option.dataset.country;updateCountryPicker();menu.classList.remove('open');button.setAttribute('aria-expanded','false');});
     document.addEventListener('click',e=>{if(!e.target.closest('.auth-country-picker')){menu.classList.remove('open');button.setAttribute('aria-expanded','false');}});
