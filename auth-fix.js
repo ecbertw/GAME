@@ -25,6 +25,7 @@
     if(clean){localStorage.setItem('eixo_player',JSON.stringify(clean));localStorage.setItem('eixo_country',clean.country);}
     else localStorage.removeItem('eixo_player');
     window.eixoSetPlayer?.(clean);
+    if(clean?.country)window.changeCountry?.(String(clean.country).toUpperCase());
     const name=$('playerName');if(name)name.textContent=clean?.visualName||clean?.name||'SIGN IN';
     window.dispatchEvent(new Event('eixo-player-updated'));
   };
