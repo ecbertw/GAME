@@ -33,11 +33,11 @@ const countrySelect = document.getElementById('countrySelect');
 const countryButton = document.getElementById('countryButton');
 const countryMenu = document.getElementById('countryMenu');
 
-function getLang(){ return translations[languageByCountry[currentCountryCode] || 'en'] || translations.en; }
+function getLang(){ return !player ? translations.en : (translations[languageByCountry[currentCountryCode] || 'en'] || translations.en); }
 function applyLanguage(){
   const t=getLang();
   document.querySelectorAll('[data-i18n]').forEach(el=>{if(t[el.dataset.i18n])el.textContent=t[el.dataset.i18n];});
-  document.documentElement.lang=languageByCountry[currentCountryCode]||'en';
+  document.documentElement.lang=!player?'en':(languageByCountry[currentCountryCode]||'en');
   const c=country(currentCountryCode||'PT');
   const flagEl=document.getElementById('countryFlag'),nameEl=document.getElementById('countryName'),nationalFlag=document.getElementById('nationalFlag'),nationalTitle=document.getElementById('nationalTitle'),modalCountryTab=document.getElementById('modalCountryTab');
   if(flagEl)flagEl.textContent=c.flag;if(nameEl)nameEl.textContent=c.name;if(nationalFlag)nationalFlag.textContent=c.flag;if(nationalTitle)nationalTitle.textContent=`TOP ${c.name}`;if(modalCountryTab)modalCountryTab.textContent=`${c.flag} ${c.name}`;
@@ -90,14 +90,14 @@ async function submitScore(value){
   catch(e){console.warn('Score could not be submitted:',e.message);}
 }
 
-function renderTop(target,rows,empty='AINDA SEM JOGADORES'){target.innerHTML=rows.length?rows.slice(0,10).map((p,i)=>`<li><span class="rank-number">${i+1}</span><span>${escapeHtml(p.name)}</span><span class="rank-score">${Number(p.score)}</span></li>`).join(''):`<li class="empty-row">${empty}</li>`;}
+function renderTop(target,rows,empty='NO PLAYERS YET'){target.innerHTML=rows.length?rows.slice(0,10).map((p,i)=>`<li><span class="rank-number">${i+1}</span><span>${escapeHtml(p.name)}</span><span class="rank-score">${Number(p.score)}</span></li>`).join(''):`<li class="empty-row">${empty}</li>`;}
 function escapeHtml(value){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
-async function fetchRankings(countryCode=null,page=1){const params=new URLSearchParams({page:String(page)});if(countryCode)params.set('country',countryCode);const res=await fetch(`/api/rankings?${params}`);if(!res.ok)throw new Error('Ranking indisponível');return res.json();}
+async function fetchRankings(countryCode=null,page=1){const params=new URLSearchParams({page:String(page)});if(countryCode)params.set('country',countryCode);const res=await fetch(`/api/rankings?${params}`);if(!res.ok)throw new Error('Ranking unavailable');return res.json();}
 async function loadTopRankings(){try{const[n,w]=await Promise.all([fetchRankings(currentCountryCode),fetchRankings()]);renderTop(document.getElementById('nationalRanking'),n.players);renderTop(document.getElementById('worldRanking'),w.players);}catch(e){console.warn(e.message);}}
 
 async function openFullRanking(mode){rankingMode=mode;rankingPage=1;rankingModal.classList.remove('hidden');updateRankingTabs();await loadFullRanking();}
 function updateRankingTabs(){document.getElementById('modalCountryTab').classList.toggle('active',rankingMode==='country');document.getElementById('modalWorldTab').classList.toggle('active',rankingMode==='world');}
-async function loadFullRanking(){const code=rankingMode==='country'?currentCountryCode:null;const data=await fetchRankings(code,rankingPage);rankingPages=data.pages;const list=document.getElementById('fullRankingList');list.innerHTML=data.players.length?data.players.map((p,i)=>{const rank=(rankingPage-1)*25+i+1;const c=country(p.country);return `<li><span class="full-rank-number">${rank}</span><span class="full-player"><b>${escapeHtml(p.name)}</b><small>${c.flag} ${c.name}</small></span><span class="full-score">${Number(p.score)}</span></li>`}).join(''):`<li class="empty-full">AINDA NÃO EXISTEM JOGADORES</li>`;document.getElementById('pageInfo').textContent=`${rankingPage} / ${rankingPages}`;document.getElementById('prevPage').disabled=rankingPage<=1;document.getElementById('nextPage').disabled=rankingPage>=rankingPages;}
+async function loadFullRanking(){const code=rankingMode==='country'?currentCountryCode:null;const data=await fetchRankings(code,rankingPage);rankingPages=data.pages;const list=document.getElementById('fullRankingList');list.innerHTML=data.players.length?data.players.map((p,i)=>{const rank=(rankingPage-1)*25+i+1;const c=country(p.country);return `<li><span class="full-rank-number">${rank}</span><span class="full-player"><b>${escapeHtml(p.name)}</b><small>${c.flag} ${c.name}</small></span><span class="full-score">${Number(p.score)}</span></li>`}).join(''):`<li class="empty-full">THERE ARE NO PLAYERS YET</li>`;document.getElementById('pageInfo').textContent=`${rankingPage} / ${rankingPages}`;document.getElementById('prevPage').disabled=rankingPage<=1;document.getElementById('nextPage').disabled=rankingPage>=rankingPages;}
 
 document.getElementById('nationalFullButton').addEventListener('click',()=>openFullRanking('country'));
 document.getElementById('worldFullButton').addEventListener('click',()=>openFullRanking('world'));
@@ -201,7 +201,7 @@ async function bootPlayer(){
       const data=await res.json();
       if(data?.player){player={...data.player,token:'session'};localStorage.setItem('eixo_player',JSON.stringify(player));}
     }else{
-      player=null;localStorage.removeItem('eixo_player');localStorage.removeItem('eixo_country');
+      player=null;currentCountryCode='PT';localStorage.removeItem('eixo_player');localStorage.removeItem('eixo_country');
     }
   }catch(_){}
   if(player){currentCountryCode=String(player.country||currentCountryCode||'PT').toUpperCase();localStorage.setItem('eixo_country',currentCountryCode);applyLanguage();loadTopRankings();}
