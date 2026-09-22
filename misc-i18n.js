@@ -28,7 +28,7 @@
  };
  const player=()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
  const lang=()=>String(document.documentElement.lang||'en').split('-')[0];
- const tr=()=>({...EN,...(T[lang()]||{})});
+ const tr=()=>({...EN,...(T[lang()]||{}),...(window.EixoExtraLocales?.[lang()]?.misc||{})});
  function apply(){
   if(!player())return;
   const x=tr(),s=document.getElementById('suggestionModal');
