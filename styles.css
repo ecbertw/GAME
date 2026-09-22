@@ -139,3 +139,7 @@ main{padding:18px 24px 24px}.hero{max-width:920px;margin:0 auto}.game-frame{posi
 @keyframes avatarPlasma{50%{filter:hue-rotate(90deg) brightness(1.25)}}
 @keyframes avatarCosmic{50%{transform:scale(1.06);filter:hue-rotate(100deg)}}
 @keyframes avatarRgb{to{background-position:0 0,400% 0}}
+
+/* Adaptive performance mode */
+.eixo-low-power .chat-avatar[class*="avatar-border-"],.eixo-low-power .vip-rank-tag,.eixo-low-power .rank-tag.tag-rainbow{animation:none!important;filter:none!important}
+@media (prefers-reduced-motion:reduce){.name-letter,.name-rainbow,.vip-rank-tag,.rank-tag,.chat-avatar{animation:none!important;transition:none!important}.pixel-wall i{will-change:auto!important}}
