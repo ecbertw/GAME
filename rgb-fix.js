@@ -23,30 +23,29 @@
    });
  }
 
- // Uma única fase percorre as letras: cada letra tem uma tonalidade diferente
- // e a onda avança sempre para a direita. O efeito CSS da letra continua separado.
+ // Animate only while RGB names are actually present.
+ let rgbEls=[],running=false;
+ function refreshRgb(){
+   rgbEls=[...document.querySelectorAll('.rank-player-name.name-rgb,.name-preview.name-rgb')];
+   if(rgbEls.length&&!running){running=true;requestAnimationFrame(tick)}
+ }
  const start=performance.now();
  function tick(now){
+   if(document.hidden){running=false;return}
+   if(!rgbEls.length){running=false;return}
    const phase=((now-start)/18)%360;
-   document.querySelectorAll('.rank-player-name.name-rgb,.name-preview.name-rgb').forEach(el=>{
+   for(const el of rgbEls){
      el.querySelectorAll(':scope > .name-letter').forEach((letter,i)=>{
-       const hue=(phase+i*28)%360;
-       letter.style.color='hsl('+hue+',100%,60%)';
-       letter.style.webkitTextFillColor='hsl('+hue+',100%,60%)';
-       letter.style.background='none';
+       const hue=(phase+i*28)%360,color='hsl('+hue+',100%,60%)';
+       letter.style.color=color;letter.style.webkitTextFillColor=color;letter.style.background='none';
      });
-   });
+   }
    requestAnimationFrame(tick);
  }
-
- fix();
- requestAnimationFrame(tick);
+ fix();refreshRgb();
  const observer=new MutationObserver(()=>{
-   observer.disconnect();
-   requestAnimationFrame(()=>{
-     fix();
-     observer.observe(document.body,{childList:true,subtree:true});
-   });
+   observer.disconnect();requestAnimationFrame(()=>{fix();refreshRgb();observer.observe(document.body,{childList:true,subtree:true})});
  });
  observer.observe(document.body,{childList:true,subtree:true});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshRgb()});
 })();
