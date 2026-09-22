@@ -4,7 +4,7 @@
 
   const supported = new Set([
     'pt','en','es','fr','de','it','ja','ko','zh','ru','pl','nl','tr','ar',
-    'sv','no','da','fi','el','cs','sk','hu','ro','bg','hr','sr','sl','uk','he',
+    'sv','no','da','fi','is','el','cs','sk','hu','ro','bg','hr','sr','sl','uk','he',
     'id','ms','th','vi'
   ]);
 
