@@ -32,7 +32,7 @@
  function apply(){
   if(!player())return;
   const x=tr(),s=document.getElementById('suggestionModal');
-  if(s){const h=s.querySelector('h2'),p=s.querySelector('p'),f=s.querySelector('form');if(h)h.textContent=x.suggestionTitle;if(p)p.textContent=x.suggestionText;if(f){const sub=f.querySelector('[name="subject"]'),msg=f.querySelector('[name="message"]'),b=f.querySelector('button[type="submit"]');if(sub)sub.placeholder=x.suggestionSubject;if(msg)msg.placeholder=x.suggestionMessage;if(b)b.textContent=x.suggestionSend;}}
+  if(s){const h=s.querySelector('h2'),p=s.querySelector('p'),f=s.querySelector('form');if(h)h.textContent=x.suggestionTitle;if(p)p.textContent=x.suggestionText;if(f){const name=f.querySelector('[name="name"]'),email=f.querySelector('[name="email"]'),sub=f.querySelector('[name="subject"]'),msg=f.querySelector('[name="message"]'),b=f.querySelector('button[type="submit"]');if(name)name.placeholder=window.eixoT?window.eixoT('name','NAME'):'NAME';if(email)email.placeholder=window.eixoT?window.eixoT('email','EMAIL'):'EMAIL';if(sub)sub.placeholder=x.suggestionSubject;if(msg)msg.placeholder=x.suggestionMessage;if(b)b.textContent=x.suggestionSend;}}
   const a=document.getElementById('abandonRoomModal');
   if(a){const h=a.querySelector('h2'),ps=a.querySelectorAll('p');if(h)h.textContent=x.abandonTitle;if(ps[0])ps[0].textContent=x.abandonQuestion;if(ps[1])ps[1].textContent=x.abandonWarning;const n=document.getElementById('abandonRoomCancel'),y=document.getElementById('abandonRoomConfirm');if(n)n.textContent=x.no;if(y)y.textContent=x.yes;}
   const leave=document.getElementById('leaveActiveRoom'),abandon=document.getElementById('abandonActiveRoom'),prev=document.getElementById('prevPage'),next=document.getElementById('nextPage');
