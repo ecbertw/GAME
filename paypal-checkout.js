@@ -109,7 +109,7 @@
   function supportAmount(){
     const input=$('vipSupportAmount'),raw=String(input?.value||'').trim().replace(',','.'),value=Number(raw);
     const min=Number(store?.supportMin||0.5),max=Number(store?.supportMax||1000);
-    if(!Number.isFinite(value)||value<min||value>max||!/^\\d+(?:\\.\\d{1,2})?$/.test(raw))throw Error(tr().invalidAmount);
+    if(!Number.isFinite(value)||value<min||value>max||!/^\d+(?:\.\d{1,2})?$/.test(raw))throw Error(tr().invalidAmount);
     return value.toFixed(2);
   }
   async function setupPayPal(){
