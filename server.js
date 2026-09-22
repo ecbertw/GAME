@@ -48,6 +48,7 @@ function clearSessionCookie(res){res.setHeader('Set-Cookie',SESSION_COOKIE+'=; M
 function sessionHash(v){return crypto.createHash('sha256').update(String(v||'')).digest('hex');}
 const chatRate=new Map();
 const feedbackRate=new Map();
+const paypalRate=new Map();
 function boundedRate(map,key,limit,windowMs,maxEntries=10000){
   const now=Date.now();
   if(map.size>maxEntries){
@@ -400,8 +401,8 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/profile/customize'){const d=await body(req);return json(res,200,await customize(d.id,d.token,d));}
   if(req.method==='POST'&&url.pathname==='/api/profile/account'){const d=await body(req);return json(res,200,await updateAccountProfile(d.id,d.token,d));}
   if(req.method==='GET'&&url.pathname==='/api/paypal/store'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,paypalService.publicStore(p));}
-  if(req.method==='POST'&&url.pathname==='/api/paypal/orders/create'){const d=await body(req);const p=await roomAuth(d.id,d.token);const out=await paypalService.createOrder(global.db,p);await auditSecurity(p.id,'payment.paypal_order_created',p.id,{orderId:out.orderId,level:out.level,price:out.price,currency:out.currency});return json(res,201,out);}
-  if(req.method==='POST'&&url.pathname==='/api/paypal/orders/capture'){const d=await body(req);const p=await roomAuth(d.id,d.token);const out=await paypalService.captureOrder(global.db,p,d.orderId);await auditSecurity(p.id,'payment.paypal_captured',p.id,{orderId:out.orderId||d.orderId,level:out.level,captureId:out.captureId||null});return json(res,200,out);}
+  if(req.method==='POST'&&url.pathname==='/api/paypal/orders/create'){const d=await body(req);const p=await roomAuth(d.id,d.token);if(!boundedRate(paypalRate,'create:'+p.id,6,10*60*1000))throw Object.assign(new Error('Demasiadas tentativas de pagamento. Tenta novamente dentro de alguns minutos.'),{status:429});const out=await paypalService.createOrder(global.db,p);await auditSecurity(p.id,'payment.paypal_order_created',p.id,{orderId:out.orderId,level:out.level,price:out.price,currency:out.currency});return json(res,201,out);}
+  if(req.method==='POST'&&url.pathname==='/api/paypal/orders/capture'){const d=await body(req);const p=await roomAuth(d.id,d.token);if(!boundedRate(paypalRate,'capture:'+p.id,12,10*60*1000))throw Object.assign(new Error('Demasiadas tentativas de captura. Tenta novamente dentro de alguns minutos.'),{status:429});const out=await paypalService.captureOrder(global.db,p,d.orderId);await auditSecurity(p.id,'payment.paypal_captured',p.id,{orderId:out.orderId||d.orderId,level:out.level,captureId:out.captureId||null});return json(res,200,out);}
   if(req.method==='POST'&&url.pathname==='/api/paypal/webhook'){const event=await body(req);return json(res,200,await paypalService.handleWebhook(global.db,req.headers,event));}
   if(req.method==='POST'&&url.pathname==='/api/admin/vip'){const d=await body(req);return json(res,200,await adminSetVip(d.id,d.token,d.targetId,d.level));}
   if(req.method==='POST'&&url.pathname==='/api/admin/role'){const d=await body(req);return json(res,200,await adminSetRole(d.id,d.token,d.targetId,String(d.role||'')));}
