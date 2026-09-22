@@ -115,7 +115,7 @@
     }).join('');
   }
 
-  async function openRoomFromList(roomId){
+  async function openRoomFromList(roomId,options={}){
     try{
       const c=credentials();
       const data=await api(`/api/rooms/rankings?id=${encodeURIComponent(c.id)}&token=${encodeURIComponent(c.token)}&roomId=${encodeURIComponent(roomId)}`);
@@ -130,17 +130,19 @@
       const vip=n=>n>0?`<span class="vip-rank-tag vip-rank-${Math.min(n,6)}">${n>=6?'VIP ∞':'VIP #'+n}</span>`:'';
       list.innerHTML=(data.players||[]).map(p=>{
         const styles=Array.isArray(p.letterStyles)?p.letterStyles:[],visual=String(p.visualName||p.name||'');
-        const letters=[...visual].map((ch,i)=>{const st=styles[i]||{};const color=/^#[0-9a-f]{6}$/i.test(String(st.color||''))?st.color:'';const effect=/^[a-z]+$/.test(String(st.effect||'none'))?st.effect:'none';return `<span class="name-letter effect-${effect}" style="${color?'color:'+escHtml(color)+';':''}">${escHtml(ch)}</span>`;}).join('');
+        const letters=[...visual].map((ch,i)=>{const st=styles[i]||{},rawColor=String(st.color||'').toLowerCase(),rainbow=rawColor==='rainbow',color=/^#[0-9a-f]{6}$/i.test(rawColor)?rawColor:'',effect=/^[a-z]+$/.test(String(st.effect||'none'))?st.effect:'none';return `<span class="name-letter${rainbow?' name-rainbow':''} effect-${effect}"${color?' style="color:'+escHtml(color)+';"':''}>${escHtml(ch)}</span>`;}).join('');
         const w=Number(p.worldRank||9999),cr=Number(p.countryRank||9999);
         return `<li><span class="rank-number">${p.roomRank}</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name${String(p.nameColor||'').toLowerCase()==='rainbow'?' name-rainbow':''}${styles.length?' vip-letter-styled':''}">${letters||escHtml(visual)}</span>${tag('world',w,'')}${tag('country',cr,String(p.country||'').toUpperCase())}${vip(Number(p.vipLevel||0))}</span></span><span class="rank-score-wrap"><span class="rank-flag" title="${escHtml(p.country)}">${escHtml(flag(p.country))}</span><span class="rank-score">${Number(p.score||0)}</span></span></li>`;
       }).join('')||'<li class="empty-row">AINDA SEM JOGADORES</li>';
       window.eixoActiveRoomId=roomId;
       board.classList.remove('hidden');
-      roomsModal.classList.add('hidden');
-      board.scrollIntoView({behavior:'smooth',block:'start'});
+      if(options.closeModal!==false)roomsModal.classList.add('hidden');
+      if(options.scroll!==false)board.scrollIntoView({behavior:'smooth',block:'start'});
     }catch(e){alert(e.message||'Não foi possível abrir a sala.');}
   }
   window.eixoOpenRoom=openRoomFromList;
+  window.eixoRefreshActiveRoom=()=>window.eixoActiveRoomId?openRoomFromList(window.eixoActiveRoomId,{scroll:false,closeModal:false}):Promise.resolve();
+  window.addEventListener('eixo-room-score-updated',e=>{if(e.detail?.roomId&&e.detail.roomId===window.eixoActiveRoomId)window.eixoRefreshActiveRoom();});
   roomsList.addEventListener('click', event => {
     const button=event.target.closest('.enter-room-button');
     if(!button)return;
@@ -245,5 +247,9 @@
 
   renderLanguage();
   window.eixoOpenRooms = openRooms;
-  setInterval(() => { if (!roomsModal.classList.contains('hidden')) loadRooms(); }, 3000);
+  setInterval(() => {
+    if (!roomsModal.classList.contains('hidden')) loadRooms();
+    const board=document.getElementById('roomBoard');
+    if(window.eixoActiveRoomId&&board&&!board.classList.contains('hidden'))window.eixoRefreshActiveRoom?.();
+  }, 3000);
 })();
