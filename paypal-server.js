@@ -21,7 +21,7 @@ const SUPPORT_MIN_CENTS=50;
 const SUPPORT_MAX_CENTS=100000;
 function supportCents(value){
   const normalized=String(value??'').trim().replace(',','.');
-  if(!/^(?:\\d+)(?:\\.\\d{1,2})?$/.test(normalized))throw Object.assign(new Error('Introduz um valor válido para o apoio.'),{status:400});
+  if(!/^(?:\d+)(?:\.\d{1,2})?$/.test(normalized))throw Object.assign(new Error('Introduz um valor válido para o apoio.'),{status:400});
   const cents=Math.round(Number(normalized)*100);
   if(!Number.isSafeInteger(cents)||cents<SUPPORT_MIN_CENTS||cents>SUPPORT_MAX_CENTS){
     throw Object.assign(new Error('O valor do apoio deve estar entre €0,50 e €1000,00.'),{status:400});
