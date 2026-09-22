@@ -91,6 +91,7 @@ function analyzeRunTelemetry(score,raw){
   const events=Array.isArray(raw)?raw.slice(0,600):[];
   const hits=events.filter(e=>e&&Number(e.points)>0).map(e=>({t:Number(e.t),offset:Number(e.offset),points:Number(e.points)})).filter(e=>Number.isFinite(e.t)&&Number.isFinite(e.offset)&&[1,2].includes(e.points));
   let risk=0;const reasons=[];const pointSum=hits.reduce((a,e)=>a+e.points,0);
+  if(Number(score)>=20&&!hits.length){risk+=60;reasons.push('missing-telemetry');}
   if(hits.length&&pointSum!==Number(score)){risk+=100;reasons.push('score-mismatch');}
   if(hits.length>=20){
     const buckets=new Map();for(const e of hits){const k=(Math.round(e.offset*10)/10).toFixed(1);buckets.set(k,(buckets.get(k)||0)+1);}
@@ -212,8 +213,8 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/players'){return json(res,410,{error:'Este endpoint foi substituído pelo sistema de contas EIXO.'});}
   if(req.method==='POST'&&url.pathname==='/api/scores'){const d=await body(req);return json(res,200,await submitScore(d.id,d.token,d.score,d.telemetry));}
   if(req.method==='GET'&&url.pathname==='/api/auth/me'){const p=await authenticateSession(url.searchParams.get('token'));if(p&&(p.bannedPermanent||(p.bannedUntil&&new Date(p.bannedUntil)>new Date())))return json(res,423,{error:'Conta bloqueada.',ban:{permanent:!!p.bannedPermanent,until:p.bannedUntil||null,reason:p.banReason||null}});return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
-  if(req.method==='GET'&&url.pathname==='/api/me'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
-  if(req.method==='GET'&&url.pathname==='/api/profile/ranks'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));if(!p)return json(res,401,{error:'Sessão inválida.'});const r=await ranked();return json(res,200,{worldRank:r.world.get(p.id)||null,countryRank:r.country.get(p.id)||null});}
+  if(req.method==='GET'&&url.pathname==='/api/me'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));if(p&&(p.bannedPermanent||(p.bannedUntil&&new Date(p.bannedUntil)>new Date())))return json(res,423,{error:'Conta bloqueada.',ban:{permanent:!!p.bannedPermanent,until:p.bannedUntil||null,reason:p.banReason||null}});return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
+  if(req.method==='GET'&&url.pathname==='/api/profile/ranks'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));const r=await ranked();return json(res,200,{worldRank:r.world.get(p.id)||null,countryRank:r.country.get(p.id)||null});}
   if(req.method==='POST'&&url.pathname==='/api/profile/customize'){const d=await body(req);return json(res,200,await customize(d.id,d.token,d));}
   if(req.method==='POST'&&url.pathname==='/api/vip/test-purchase'){return json(res,403,{error:'As compras VIP ainda não estão disponíveis.'});}
   if(req.method==='POST'&&url.pathname==='/api/profile/account'){const d=await body(req);return json(res,200,await updateAccountProfile(d.id,d.token,d));}
