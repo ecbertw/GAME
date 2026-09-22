@@ -6,16 +6,19 @@ DEST="/var/backups/eixo/${STAMP}"
 APP="/opt/eixo"
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "Run as root: sudo $0" >&2
+  echo "Run as root: sudo bash $0" >&2
   exit 1
 fi
 
+test -d "$APP/.git" || { echo "Missing Git repository at $APP" >&2; exit 1; }
 install -d -m 700 "$DEST"
 
-echo "[1/5] Git repository bundle..."
-git -C "$APP" bundle create "$DEST/eixo-repository.bundle" --all
-git -C "$APP" rev-parse HEAD > "$DEST/git-head.txt"
-git -C "$APP" status --porcelain=v1 > "$DEST/git-status.txt"
+echo "[1/5] EIXO application + complete Git history..."
+tar   --exclude='eixo/node_modules'   --exclude='eixo/.deploy'   --exclude='eixo/.git/objects/pack/tmp_*'   -C "$(dirname "$APP")"   -czf "$DEST/eixo-app-and-git.tar.gz"   "$(basename "$APP")"
+chmod 600 "$DEST/eixo-app-and-git.tar.gz"
+
+sudo -u eixo git -C "$APP" rev-parse HEAD > "$DEST/git-head.txt"
+sudo -u eixo git -C "$APP" status --porcelain=v1 > "$DEST/git-status.txt" || true
 
 echo "[2/5] PostgreSQL cluster..."
 sudo -u postgres pg_dumpall --clean --if-exists > "$DEST/postgresql-all.sql"
@@ -23,20 +26,7 @@ chmod 600 "$DEST/postgresql-all.sql"
 
 echo "[3/5] EIXO/server configuration..."
 CONFIG_PATHS=()
-for p in \
-  /etc/eixo \
-  /etc/nginx/nginx.conf \
-  /etc/nginx/conf.d \
-  /etc/nginx/sites-available \
-  /etc/nginx/sites-enabled \
-  /etc/systemd/system/eixo.service \
-  /etc/systemd/system/eixo.service.d \
-  /etc/fail2ban \
-  /etc/ufw \
-  /etc/ssh/sshd_config \
-  /etc/ssh/sshd_config.d \
-  /etc/sysctl.d/99-eixo-hardening.conf \
-  /etc/systemd/resolved.conf.d/99-eixo-hardening.conf
+for p in   /etc/eixo   /etc/nginx/nginx.conf   /etc/nginx/conf.d   /etc/nginx/sites-available   /etc/nginx/sites-enabled   /etc/systemd/system/eixo.service   /etc/systemd/system/eixo.service.d   /etc/fail2ban   /etc/ufw   /etc/ssh/sshd_config   /etc/ssh/sshd_config.d   /etc/sysctl.d/99-eixo-hardening.conf   /etc/systemd/resolved.conf.d/99-eixo-hardening.conf
 do
   [ -e "$p" ] && CONFIG_PATHS+=("$p")
 done
@@ -72,8 +62,10 @@ chmod 600 "$DEST/system-state.txt"
 echo "[5/5] Checksums..."
 (
   cd "$DEST"
-  sha256sum * > SHA256SUMS
+  sha256sum eixo-app-and-git.tar.gz postgresql-all.sql system-state.txt git-head.txt git-status.txt \
+    ${CONFIG_PATHS:+system-config.tar.gz} 2>/dev/null > SHA256SUMS || true
 )
+chmod 600 "$DEST/SHA256SUMS"
 chmod -R go-rwx "$DEST"
 
 echo
