@@ -250,11 +250,13 @@ html.eixo-modal-open,body.eixo-modal-open{overflow:hidden!important;overscroll-b
 .vip-support-amount small{display:block;margin-top:9px;color:#7f8a94;font-size:5px;line-height:1.6}
 @media(max-width:600px){.vip-support-amount{padding:10px}.vip-support-input input{font-size:8px;padding:11px 8px}}
 
-.eixo-support-thanks{position:fixed;left:50%;bottom:28px;z-index:180;width:min(520px,calc(100% - 32px));transform:translate(-50%,24px);opacity:0;pointer-events:none;background:#0b1117;border:3px solid #68747f;outline:3px solid #151c23;box-shadow:8px 8px 0 #020407,inset 0 0 0 2px #202a33;padding:22px 44px 20px 22px;transition:opacity .2s ease,transform .2s ease}
-.eixo-support-thanks.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
-.eixo-support-thanks-mark{color:#2fc875;font-size:11px;margin-bottom:10px}
-.eixo-support-thanks strong{display:block;color:#fff;font-size:10px;line-height:1.7;margin-bottom:8px}
-.eixo-support-thanks p{margin:0;color:#9aa4ad;font-size:7px;line-height:1.9}
-.eixo-support-thanks-close{position:absolute;right:12px;top:9px;border:0;background:transparent;color:#9da7b0;font-size:18px;cursor:pointer}
-.eixo-support-thanks-close:hover{color:#fff}
-@media(max-width:480px){.eixo-support-thanks{bottom:18px;padding:18px 38px 16px 16px}.eixo-support-thanks strong{font-size:8px}.eixo-support-thanks p{font-size:6px}}
+/* Verified donations: centered, accessible thank-you dialog in EIXO style. */
+.eixo-support-thanks{z-index:190}
+.eixo-support-thanks-card{text-align:center;width:min(500px,100%);padding:34px 30px 28px;border-color:#42cb7a}
+.eixo-support-thanks-mark{color:#42cb7a;font-size:20px;line-height:1.5;margin-bottom:10px}
+.eixo-support-thanks-brand{font-family:'Press Start 2P',monospace;font-size:24px;letter-spacing:2px;color:#f7f9fb;margin:0 0 25px}
+.eixo-support-thanks-brand span{color:#f34d5b}
+.eixo-support-thanks-card h2{color:#fff;font-size:11px;line-height:2;margin:0 0 15px}
+.eixo-support-thanks-card p{color:#a8b6be;font-size:8px;line-height:2.2;margin:0 auto 22px;max-width:380px}
+.eixo-support-thanks-back{max-width:360px;margin:8px auto 0}
+@media(max-width:480px){.eixo-support-thanks-card{padding:28px 17px 22px}.eixo-support-thanks-brand{font-size:19px}.eixo-support-thanks-card h2{font-size:9px}.eixo-support-thanks-card p{font-size:7px}}
