@@ -4,7 +4,7 @@ const path=require('path');
 const crypto=require('crypto');
 const authService=require('./auth-server');
 const PORT=Number(process.env.PORT)||3000;
-const HOST='0.0.0.0';
+const HOST=String(process.env.HOST||'127.0.0.1');
 const ROOT=__dirname;
 const DATABASE_URL=process.env.DATABASE_URL;
 const MIME_TYPES={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.svg':'image/svg+xml','.webp':'image/webp','.ico':'image/x-icon'};
