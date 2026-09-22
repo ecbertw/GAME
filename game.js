@@ -47,10 +47,10 @@ function fillCountryControls(){
   if(countrySelect)countrySelect.innerHTML=countryCodes.map(code=>{const c=country(code);return `<option value="${code}">${c.flag} ${c.name}</option>`}).join('');
   if(countryMenu){countryMenu.innerHTML=countryCodes.map(code=>{const c=country(code);return `<button class="country-option" type="button" data-country="${code}">${c.flag} ${c.name}</button>`}).join('');countryMenu.querySelectorAll('.country-option').forEach(btn=>btn.addEventListener('click',()=>changeCountry(btn.dataset.country)));}
 }
-function setCountry(code){if(!countryNames[code])return;currentCountryCode=code;localStorage.setItem('eixo_country',code);applyLanguage();loadTopRankings();}
+function setCountry(code){if(!countryNames[code])return;currentCountryCode=code;localStorage.setItem('eixo_country',code);if(player?.id)localStorage.setItem('eixo_ui_country_'+player.id,code);applyLanguage();loadTopRankings();}
 countryButton?.addEventListener('click',()=>{if(!player)return;const open=countryMenu?.classList.toggle('open');countryButton.setAttribute('aria-expanded',String(!!open));});
 document.addEventListener('click',e=>{if(!e.target.closest('.profile-area')){countryMenu?.classList.remove('open');countryButton?.setAttribute('aria-expanded','false');}});
-function changeCountry(code){if(player&&player.country&&player.country!==code){countryMenu?.classList.remove('open');return;}setCountry(code);countryMenu?.classList.remove('open');countryButton?.setAttribute('aria-expanded','false');}
+function changeCountry(code){setCountry(code);countryMenu?.classList.remove('open');countryButton?.setAttribute('aria-expanded','false');}
 if(typeof window!=='undefined'){window.eixoGetPlayer=()=>player;window.eixoSetPlayer=p=>{player=p||null;window.dispatchEvent(new Event('eixo-player-updated'));};window.eixoGetCountry=()=>currentCountryCode;}
 
 function dimensions(){const rect=canvas.getBoundingClientRect();return{w:rect.width,h:rect.height};}
@@ -195,17 +195,24 @@ window.eixoCountryNames=countryNames;
 window.eixoCountryCodes=countryCodes;
 
 async function bootPlayer(){
+  const initialId=player?.id||null;
   try{
-    const res=await fetch('/api/auth/me',{cache:'no-store'});
+    const res=await fetch('/api/auth/me',{cache:'no-store',credentials:'same-origin'});
+    if(player?.id&&player.id!==initialId)return; // A newer login/registration has completed.
     if(res.ok){
       const data=await res.json();
+      if(player?.id&&player.id!==initialId)return;
       if(data?.player){player={...data.player,token:'session'};localStorage.setItem('eixo_player',JSON.stringify(player));}
     }else{
       player=null;currentCountryCode='PT';localStorage.removeItem('eixo_player');localStorage.removeItem('eixo_country');
     }
   }catch(_){}
-  if(player){currentCountryCode=String(player.country||currentCountryCode||'PT').toUpperCase();localStorage.setItem('eixo_country',currentCountryCode);applyLanguage();loadTopRankings();}
-  else{applyLanguage();if(window.eixoOpenAuth)window.eixoOpenAuth('login');else window.addEventListener('eixo-auth-ready',()=>window.eixoOpenAuth?.('login'),{once:true});}
+  if(player){
+    const preferred=localStorage.getItem('eixo_ui_country_'+player.id);
+    currentCountryCode=String(preferred&&countryNames[preferred]?preferred:player.country||'PT').toUpperCase();
+    localStorage.setItem('eixo_country',currentCountryCode);
+    applyLanguage();loadTopRankings();
+  }else{applyLanguage();if(window.eixoOpenAuth)window.eixoOpenAuth('login');else window.addEventListener('eixo-auth-ready',()=>window.eixoOpenAuth?.('login'),{once:true});}
   window.dispatchEvent(new Event('eixo-player-updated'));
 }
 
