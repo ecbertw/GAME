@@ -3,13 +3,14 @@ const fs=require('fs');
 const path=require('path');
 const crypto=require('crypto');
 const authService=require('./auth-server');
+const paypalService=require('./paypal-server');
 const PORT=Number(process.env.PORT)||3000;
 const HOST=String(process.env.HOST||'127.0.0.1');
 const ALLOWED_HOSTS=new Set(String(process.env.PUBLIC_HOSTS||'eixo.at,www.eixo.at,127.0.0.1,localhost').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean));
 function requestHost(req){return String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().toLowerCase().replace(/:\d+$/,'')}
 function allowedRequestHost(req){return ALLOWED_HOSTS.has(requestHost(req))}
 const ROOT=__dirname;
-const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','package.json','package-lock.json','README.md','.gitignore']);
+const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
 const PUBLIC_STATIC_EXTS=new Set(['.html','.css','.js','.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.woff','.woff2']);
 function isPublicStaticRequestPath(pathname){
   const clean=String(pathname||'').replace(/^\/+/,''),parts=clean.split('/');
@@ -72,7 +73,7 @@ function validRoomSize(v){return Number.isInteger(Number(v))&&Number(v)>=1&&Numb
 function vipLevelOf(p){return Number(p.vipLevel||0);}
 function validVipVisualName(v){const s=String(v??'').trim();return s.length>=1&&s.length<=16;}
 function parseLetterStyles(v){try{return Array.isArray(v)?v:JSON.parse(v||'[]')}catch(_){return[]}}
-function securityHeaders(){return {'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','X-Permitted-Cross-Domain-Policies':'none','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=(self)','Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Resource-Policy':'same-origin','Vary':'Origin, Sec-Fetch-Site','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://flagcdn.com data:; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",'Strict-Transport-Security':'max-age=63072000; includeSubDomains; preload'};}
+function securityHeaders(){return {'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','X-Permitted-Cross-Domain-Policies':'none','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=(self)','Cross-Origin-Opener-Policy':'same-origin-allow-popups','Cross-Origin-Resource-Policy':'same-origin','Vary':'Origin, Sec-Fetch-Site','Content-Security-Policy':"default-src 'self'; script-src 'self' https://www.paypal.com https://www.sandbox.paypal.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://flagcdn.com https://www.paypalobjects.com https://www.paypal.com https://www.sandbox.paypal.com data:; connect-src 'self' https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypal.com https://www.sandbox.paypal.com; frame-src https://www.paypal.com https://www.sandbox.paypal.com; base-uri 'self'; form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests",'Strict-Transport-Security':'max-age=63072000; includeSubDomains; preload'};}
 function json(res,status,payload){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store',...securityHeaders()});res.end(JSON.stringify(payload));}
 function body(req){return new Promise((resolve,reject)=>{let raw='',done=false;const fail=e=>{if(done)return;done=true;reject(e)};req.on('data',chunk=>{if(done)return;raw+=chunk;if(Buffer.byteLength(raw,'utf8')>30000){fail(Object.assign(new Error('Payload too large.'),{status:413}));req.resume();}});req.on('end',()=>{if(done)return;try{const data=raw?JSON.parse(raw):{};if(!data||typeof data!=='object'||Array.isArray(data))throw Object.assign(new Error('Invalid JSON'),{status:400});const c=parseCookies(req);if(c[SESSION_COOKIE])data.token=c[SESSION_COOKIE];done=true;resolve(data);}catch(e){fail(Object.assign(e,{status:e.status||400}));}});req.on('error',fail);});}
 function tokenHash(v){return crypto.createHash('sha256').update(String(v)).digest('hex');}
@@ -113,6 +114,7 @@ async function initDb(){
   await pool.query(`CREATE TABLE IF NOT EXISTS room_members(room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(room_id,player_id))`);
   await pool.query(`ALTER TABLE room_members ADD COLUMN IF NOT EXISTS best_score INTEGER NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS score_updated_at TIMESTAMPTZ`);
   await pool.query(`CREATE TABLE IF NOT EXISTS messages(id UUID PRIMARY KEY,type VARCHAR(20) NOT NULL,name VARCHAR(80),email VARCHAR(200),subject VARCHAR(160),message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await paypalService.initDb(pool);
   await pool.query(`CREATE TABLE IF NOT EXISTS background_claims(x INTEGER NOT NULL,y INTEGER NOT NULL,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,color VARCHAR(7) NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(x,y))`);
   await pool.query(`ALTER TABLE background_claims ALTER COLUMN color TYPE VARCHAR(16)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS background_claims_owner_idx ON background_claims(owner_id)`);
@@ -367,7 +369,8 @@ function clientIp(req) {
 }
 async function handleApi(req,res,url){
  try{
-  if(['POST','PUT','PATCH','DELETE'].includes(req.method)){
+  const paypalWebhook=req.method==='POST'&&url.pathname==='/api/paypal/webhook';
+  if(['POST','PUT','PATCH','DELETE'].includes(req.method)&&!paypalWebhook){
     const fetchSite=String(req.headers['sec-fetch-site']||'').toLowerCase();
     if(fetchSite==='cross-site')return json(res,403,{error:'Origem não autorizada.'});
     const targetHost=requestHost(req);
@@ -396,6 +399,10 @@ async function handleApi(req,res,url){
   if(req.method==='GET'&&url.pathname==='/api/profile/ranks'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));const r=await ranked();return json(res,200,{worldRank:r.world.get(p.id)||null,countryRank:r.country.get(p.id)||null});}
   if(req.method==='POST'&&url.pathname==='/api/profile/customize'){const d=await body(req);return json(res,200,await customize(d.id,d.token,d));}
   if(req.method==='POST'&&url.pathname==='/api/profile/account'){const d=await body(req);return json(res,200,await updateAccountProfile(d.id,d.token,d));}
+  if(req.method==='GET'&&url.pathname==='/api/paypal/store'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,paypalService.publicStore(p));}
+  if(req.method==='POST'&&url.pathname==='/api/paypal/orders/create'){const d=await body(req);const p=await roomAuth(d.id,d.token);const out=await paypalService.createOrder(global.db,p);await auditSecurity(p.id,'payment.paypal_order_created',p.id,{orderId:out.orderId,level:out.level,price:out.price,currency:out.currency});return json(res,201,out);}
+  if(req.method==='POST'&&url.pathname==='/api/paypal/orders/capture'){const d=await body(req);const p=await roomAuth(d.id,d.token);const out=await paypalService.captureOrder(global.db,p,d.orderId);await auditSecurity(p.id,'payment.paypal_captured',p.id,{orderId:out.orderId||d.orderId,level:out.level,captureId:out.captureId||null});return json(res,200,out);}
+  if(req.method==='POST'&&url.pathname==='/api/paypal/webhook'){const event=await body(req);return json(res,200,await paypalService.handleWebhook(global.db,req.headers,event));}
   if(req.method==='POST'&&url.pathname==='/api/admin/vip'){const d=await body(req);return json(res,200,await adminSetVip(d.id,d.token,d.targetId,d.level));}
   if(req.method==='POST'&&url.pathname==='/api/admin/role'){const d=await body(req);return json(res,200,await adminSetRole(d.id,d.token,d.targetId,String(d.role||'')));}
   if(req.method==='POST'&&url.pathname==='/api/moderation/ban'){const d=await body(req);return json(res,200,await moderateBan(d.id,d.token,d.targetId,d.hours,!!d.permanent,d.reason));}
