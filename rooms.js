@@ -36,7 +36,7 @@
     ar: { createRoom:'إنشاء غرفة', createRoomTitle:'إنشاء غرفة', roomName:'اسم الغرفة', players:'اللاعبون', create:'إنشاء الغرفة', roomCreated:'تم إنشاء الغرفة', shareCode:'أرسل هذا الرمز لأصدقائك للانضمام.', copyCode:'نسخ الرمز', copied:'تم نسخ الرمز', myRoomsTitle:'غرفي', addRoom:'إضافة غرفة', roomCode:'رمز الغرفة', join:'انضمام', loading:'جارٍ التحميل...', empty:'لم تنضم إلى أي غرفة بعد.', full:'ممتلئة', playersLabel:'اللاعبون', invalidName:'اسم الغرفة غير صالح.', invalidCode:'رمز غير صالح.', notFound:'لم يتم العثور على الغرفة.', fullError:'الغرفة ممتلئة بالفعل.', createdError:'تعذر إنشاء الغرفة.' }
   };
 
-  const t = () => texts[document.documentElement.lang] || texts.en;
+  const t = () => window.EixoExtraLocales?.[String(document.documentElement.lang||'en').split('-')[0]]?.rooms || texts[document.documentElement.lang] || texts.en;
   const playerData = () => {
     try { return JSON.parse(localStorage.getItem('eixo_player') || 'null'); } catch (_) { return null; }
   };
