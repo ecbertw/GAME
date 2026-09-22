@@ -56,9 +56,9 @@
     if (!countryNames[code]) return;
     currentCountryCode = code;
     localStorage.setItem('eixo_country', code);
-    countrySelect.value = code;
-    countryMenu.classList.remove('open');
-    countryButton.setAttribute('aria-expanded', 'false');
+    if (countrySelect) countrySelect.value = code;
+    countryMenu?.classList.remove('open');
+    countryButton?.setAttribute('aria-expanded', 'false');
     window.applyLanguage();
     if (typeof window.eixoRefreshRankings === 'function') window.eixoRefreshRankings();
     if (typeof window.loadTopRankings === 'function') window.loadTopRankings();
