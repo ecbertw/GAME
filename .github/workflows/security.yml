@@ -108,10 +108,7 @@ jobs:
             code="$(curl --path-as-is -sS -o /dev/null -w '%{http_code}' -H 'Host: 127.0.0.1:3100' "http://127.0.0.1:3100$p")"
             case "$code" in 400|403|404) ;; *) echo "Traversal probe $p returned $code"; exit 1;; esac
           done
-          python3 - <<'PY' >/tmp/eixo-big.json
-import json
-print(json.dumps({"message":"A"*40000}))
-PY
+          python3 -c 'import json; print(json.dumps({"message":"A"*40000}))' >/tmp/eixo-big.json
           code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'Host: 127.0.0.1:3100' -H 'Origin: http://127.0.0.1:3100' -H 'Content-Type: application/json' --data-binary @/tmp/eixo-big.json http://127.0.0.1:3100/api/contact)"
           test "$code" = "413" || { echo "Oversized body returned $code"; exit 1; }
       - name: Bounded resilience check
