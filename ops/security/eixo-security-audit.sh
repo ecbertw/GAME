@@ -19,6 +19,8 @@ done
 
 # 2) Security headers
 H="$(curl -k -sSI --max-time 10 "$BASE/" || true)"
+HTTP_CODE="$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "http://eixo.at/" || true)"
+case "$HTTP_CODE" in 301|302|307|308) green "HTTP redirects to HTTPS ($HTTP_CODE)";; *) red "HTTP returned $HTTP_CODE instead of redirect";; esac
 for h in "strict-transport-security:" "content-security-policy:" "x-content-type-options: nosniff" "x-frame-options: DENY" "referrer-policy:"; do
   if printf "%s" "$H" | tr "[:upper:]" "[:lower:]" | grep -q "$(printf "%s" "$h" | tr "[:upper:]" "[:lower:]")"; then green "header $h"; else red "missing/weak header $h"; fi
 done
@@ -39,7 +41,40 @@ if ! ss -ltn | grep -qE "0\.0\.0\.0:5432|\[::\]:5432"; then green "PostgreSQL no
 
 # 5) Service/security config
 nginx -t >/tmp/eixo-nginx-test 2>&1 && green "nginx -t" || { red "nginx -t"; cat /tmp/eixo-nginx-test; }
+NGX="$(nginx -T 2>/dev/null || true)"
+printf "%s" "$NGX" | grep -qE 'proxy_pass[[:space:]]+http://127\.0\.0\.1:3000' && green "Nginx proxies only to local Node" || red "Nginx local proxy target not confirmed"
+printf "%s" "$NGX" | grep -q 'real_ip_header CF-Connecting-IP' && green "Cloudflare real visitor IP configured" || red "Cloudflare real_ip_header missing"
+printf "%s" "$NGX" | grep -q 'limit_req_zone.*eixo_auth' && green "Nginx auth rate-limit zone loaded" || red "Nginx auth rate-limit zone missing"
 ufw status | grep -q "Status: active" && green "UFW active" || red "UFW inactive"
+if ufw status | grep -Eq '^80/tcp[[:space:]]+ALLOW IN[[:space:]]+Anywhere$|^443/tcp[[:space:]]+ALLOW IN[[:space:]]+Anywhere
+if [ -f /etc/eixo/security.env ]; then
+  MODE="$(stat -c "%a" /etc/eixo/security.env)"
+  [ "$MODE" = "600" ] && green "/etc/eixo/security.env mode 600" || red "/etc/eixo/security.env mode $MODE (expected 600)"
+else red "/etc/eixo/security.env missing"; fi
+
+# 6) PostgreSQL hardening
+LA="$(sudo -u postgres psql -Atqc "SHOW listen_addresses;" 2>/dev/null || true)"
+[ "$LA" = "localhost" ] && green "PostgreSQL listen_addresses=localhost" || red "PostgreSQL listen_addresses=$LA"
+PE="$(sudo -u postgres psql -Atqc "SHOW password_encryption;" 2>/dev/null || true)"
+[ "$PE" = "scram-sha-256" ] && green "PostgreSQL SCRAM-SHA-256" || red "PostgreSQL password_encryption=$PE"
+
+# 7) Optional bounded resilience test — intentionally not a DDoS flood
+if [ "$LOAD" = "--load" ]; then
+  echo
+  echo "Running bounded local load check: 300 requests, max concurrency 15..."
+  START="$(date +%s)"
+  seq 1 300 | xargs -P15 -I{} sh -c 'curl -sS --max-time 3 -o /dev/null http://127.0.0.1:3000/health || exit 1'
+  END="$(date +%s)"
+  green "bounded local load completed in $((END-START))s"
+fi
+
+echo
+echo "PASS=$PASS FAIL=$FAIL"
+[ "$FAIL" -eq 0 ]; then
+  red "Origin HTTP/HTTPS is still allowed from Anywhere (Cloudflare can be bypassed)"
+else
+  green "No broad IPv4 origin allow for HTTP/HTTPS"
+fi
 fail2ban-client status sshd >/dev/null 2>&1 && green "Fail2ban sshd jail active" || red "Fail2ban sshd jail missing"
 if [ -f /etc/eixo/security.env ]; then
   MODE="$(stat -c "%a" /etc/eixo/security.env)"
