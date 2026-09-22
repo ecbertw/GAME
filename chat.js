@@ -86,8 +86,9 @@
       const world=Number(m.worldRank||9999),countryRank=Number(m.countryRank||9999);
       const top=channel==='global'?(world<=3?tag('global',world,m.country,m):''):(countryRank<=3?tag('national',countryRank,m.country,m):'');
       const v=Number(m.vipLevel||0),visual=m.visualName||m.name;
-      const color=String(m.nameColor||'#fff').toLowerCase(),rainbow=color==='rainbow';
+      const color=String(m.nameColor||'#fff').toLowerCase();
       const hasLetters=v>0&&Array.isArray(m.letterStyles)&&m.letterStyles.length;
+      const rainbow=color==='rainbow'&&!hasLetters;
       const style=!hasLetters&&!rainbow&&safeColor(color)?' style="color:'+esc(color)+'!important"':'';
       const effect=hasLetters?'none':safeEffect(m.nameEffect);
       const name=hasLetters?letters(visual,m.letterStyles):[...String(visual)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
