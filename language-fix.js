@@ -165,7 +165,7 @@
   const originalApply = window.applyLanguage;
   window.applyLanguage = function () {
     originalApply();
-    const lang = effectiveLanguage(currentCountryCode || 'PT');
+    const lang = !player ? 'en' : effectiveLanguage(currentCountryCode || 'PT');
     const rankingCode = playerCountryCode();
     const c = country(currentCountryCode || 'PT');
     const rankingCountry = country(rankingCode);
