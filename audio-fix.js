@@ -35,21 +35,27 @@
  function hit(){if(!fxGate('hit')||!ensure())return;note(659.25,.075,'square',.075,gameGain,0);note(987.77,.11,'triangle',.052,gameGain,.055)}
  function perfect(){if(!fxGate('perfect')||!ensure())return;note(523.25,.07,'square',.08,gameGain,0);note(659.25,.07,'square',.07,gameGain,.055);note(783.99,.08,'triangle',.062,gameGain,.11);note(1046.5,.13,'triangle',.045,gameGain,.17)}
  function miss(){if(!fxGate('miss')||!ensure())return;note(247,.09,'triangle',.05,gameGain,0);note(185,.13,'sawtooth',.034,gameGain,.055);note(138.59,.2,'triangle',.028,gameGain,.12)}
- function pixel(){if(!fxGate('pixel')||!ensure())return;note(880,.045,'triangle',.055,gameGain,0);note(1174.66,.065,'triangle',.035,gameGain,.035)}
- let windUntil=0;
- function pixelWind(intensity=.35){
-  if(!ensure())return;
+ // Both particle interactions share one quiet voice, so dense movement cannot stack sounds.
+ let nextPixelAt=0;
+ function softPixel(intensity=.35,direct=false){
+  if(state.game<=0||!ensure())return;
   const now=ctx.currentTime;
-  if(now<windUntil)return;
-  windUntil=now+.085;
-  const dur=.16,buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*dur),ctx.sampleRate),data=buffer.getChannelData(0);
-  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1);
-  const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),g=ctx.createGain();
-  filter.type='bandpass';filter.frequency.value=1050;filter.Q.value=.55;
-  const level=Math.min(.014,.004+Math.max(0,Math.min(1,intensity))*.01);
-  g.gain.setValueAtTime(.0001,now);g.gain.linearRampToValueAtTime(level,now+.035);g.gain.exponentialRampToValueAtTime(.0001,now+dur);
-  src.buffer=buffer;src.connect(filter);filter.connect(g);g.connect(gameGain);src.start(now);src.stop(now+dur);
+  if(now<nextPixelAt)return;
+  nextPixelAt=now+(direct?.24:.42);
+  const strength=clamp(intensity),dur=direct?.12:.15;
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type='sine';
+  o.frequency.setValueAtTime(direct?440:349.23,now);
+  o.frequency.exponentialRampToValueAtTime(direct?392:329.63,now+dur);
+  g.gain.setValueAtTime(.0001,now);
+  g.gain.linearRampToValueAtTime(direct?.018:.006+strength*.004,now+.018);
+  g.gain.exponentialRampToValueAtTime(.0001,now+dur);
+  o.connect(g);g.connect(gameGain);
+  o.onended=()=>{o.disconnect();g.disconnect()};
+  o.start(now);o.stop(now+dur+.02);
  }
+ function pixel(){softPixel(1,true)}
+ function pixelWind(intensity=.35){softPixel(intensity)}
  function bindGameFeedback(){const el=document.getElementById('feedback');if(!el||el.dataset.audioBridge)return;el.dataset.audioBridge='1';new MutationObserver(()=>{const v=(el.textContent||'').trim();if(v==='+2')perfect();else if(v==='+1')hit();else if(v==='MISS')miss()}).observe(el,{childList:true,characterData:true,subtree:true})}
  function controls(){
   const frame=document.querySelector('.game-frame');

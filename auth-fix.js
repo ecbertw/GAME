@@ -4,14 +4,13 @@
   const modal=$('authModal'),loginForm=$('authLoginForm'),registerForm=$('authRegisterForm'),resetForm=$('authResetForm');
   const style=document.createElement('style');style.textContent='.auth-tabs{display:flex;gap:8px;margin:16px 0}.auth-tab{flex:1;padding:10px 8px;border:1px solid rgba(255,255,255,.18);background:#111820;color:#9aa6b2;font:700 11px/1 monospace;cursor:pointer}.auth-tab.active{color:#fff;border-color:#00d4ff}.auth-link{display:block;margin:12px auto 0;background:none;border:0;color:#7fdfff;text-decoration:underline;font:700 10px/1 monospace;cursor:pointer}.auth-modal .form-error{min-height:18px;margin:8px 0;color:#ff6b6b;font:700 10px/1.3 monospace}.auth-modal select.pixel-input{appearance:auto}';document.head.appendChild(style);
   if(!modal)return;
-  const syncPlayerMenu=()=>{const menu=$('playerMenu');if(!menu)return;let b=menu.querySelector('[data-auth-logout]');if(!window.eixoGetPlayer?.()){b?.remove();return;}if(!b){b=document.createElement('button');b.type='button';b.dataset.authLogout='1';b.textContent='TERMINAR SESSÃO';b.addEventListener('click',()=>window.eixoLogout?.());menu.appendChild(b);}};
   const setPlayer=p=>{
     const clean=p?{...p,token:'session'}:null;
     if(clean){localStorage.setItem('eixo_player',JSON.stringify(clean));localStorage.setItem('eixo_country',clean.country);}
     else localStorage.removeItem('eixo_player');
     window.eixoSetPlayer?.(clean);
     const name=$('playerName');if(name)name.textContent=clean?.visualName||clean?.name||'ENTRAR';
-    window.dispatchEvent(new Event('eixo-player-updated'));syncPlayerMenu();
+    window.dispatchEvent(new Event('eixo-player-updated'));
   };
   const open=mode=>{
     modal.classList.remove('hidden');
@@ -64,6 +63,6 @@
     setPlayer(null);localStorage.removeItem('eixo_country');location.reload();
   };
   populateCountries();
+  const p=window.eixoGetPlayer?.();if(p){$('playerName').textContent=p.visualName||p.name;modal.classList.add('hidden');}else{$('playerName').textContent='ENTRAR';}
   window.dispatchEvent(new Event('eixo-auth-ready'));
-  const p=window.eixoGetPlayer?.();if(p){$('playerName').textContent=p.visualName||p.name;modal.classList.add('hidden');}else{$('playerName').textContent='ENTRAR';}syncPlayerMenu();
 })();

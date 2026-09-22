@@ -201,9 +201,11 @@ async function bootPlayer(){
   }catch(_){}
   if(player){currentCountryCode=String(player.country||currentCountryCode||'PT').toUpperCase();localStorage.setItem('eixo_country',currentCountryCode);applyLanguage();loadTopRankings();}
   else{applyLanguage();if(window.eixoOpenAuth)window.eixoOpenAuth('login');else window.addEventListener('eixo-auth-ready',()=>window.eixoOpenAuth?.('login'),{once:true});}
+  window.dispatchEvent(new Event('eixo-player-updated'));
 }
 
 
 resizeCanvas();stopGame();buildPixelWall();
 bootPlayer();
+
 

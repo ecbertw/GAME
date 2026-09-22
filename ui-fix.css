@@ -54,3 +54,17 @@ html,body,body *{cursor:crosshair!important}
 
 /* EIXO V1.1.15 — VIP submenu readability */
 .vip-top-menu{width:250px!important;padding:4px!important}.vip-top-menu button,.vip-top-menu button:first-child,.vip-top-menu button:last-child{font-size:7px!important;padding:12px 10px!important;line-height:1.5!important;min-height:38px!important}@media(max-width:820px){.vip-top-menu{width:240px!important}.vip-top-menu button{font-size:6px!important;padding:11px 9px!important;min-height:36px!important}}@media(max-width:480px){.vip-top-menu{width:235px!important;right:-8px!important}.vip-top-menu button{font-size:6px!important;padding:10px 8px!important;min-height:34px!important}}
+
+/* Keep the player/VIP group in the header flow and account actions in its submenu. */
+.topbar{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"brand player profile";gap:12px;padding:12px 16px}
+.topbar>.brand{grid-area:brand}
+.topbar>.player-area,.topbar>.profile-area{position:relative!important;inset:auto!important;transform:none!important;min-width:0}
+.topbar>.player-area{grid-area:player;justify-self:center!important;max-width:100%}
+.topbar>.profile-area{grid-area:profile;justify-self:end!important}
+.topbar #playerButton{min-width:0;line-height:1.5!important}
+.topbar #playerName{overflow-wrap:anywhere}
+#playerMenu .account-menu-option{border-top:1px solid #2c353e;min-height:38px}
+@media(max-width:600px){
+ .topbar{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand profile" "player player";gap:10px;padding:12px 14px}
+ .topbar .country-button{font-size:6px;gap:5px;padding:8px 0}
+}
