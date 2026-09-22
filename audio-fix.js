@@ -35,24 +35,26 @@
  function hit(){if(!fxGate('hit')||!ensure())return;note(659.25,.075,'square',.075,gameGain,0);note(987.77,.11,'triangle',.052,gameGain,.055)}
  function perfect(){if(!fxGate('perfect')||!ensure())return;note(523.25,.07,'square',.08,gameGain,0);note(659.25,.07,'square',.07,gameGain,.055);note(783.99,.08,'triangle',.062,gameGain,.11);note(1046.5,.13,'triangle',.045,gameGain,.17)}
  function miss(){if(!fxGate('miss')||!ensure())return;note(247,.09,'triangle',.05,gameGain,0);note(185,.13,'sawtooth',.034,gameGain,.055);note(138.59,.2,'triangle',.028,gameGain,.12)}
- // Both particle interactions share one quiet voice, so dense movement cannot stack sounds.
+ // Short dry tap (22–32 ms), inspired by compact UI clicks; no ringing tail.
+ // Reference: https://kenney.nl/assets/interface-sounds (original synthesis, no sample used).
+ // Both particle interactions share one voice, so dense movement cannot stack sounds.
  let nextPixelAt=0;
  function softPixel(intensity=.35,direct=false){
   if(state.game<=0||!ensure())return;
   const now=ctx.currentTime;
   if(now<nextPixelAt)return;
-  nextPixelAt=now+(direct?.24:.42);
-  const strength=clamp(intensity),dur=direct?.12:.15;
+  nextPixelAt=now+(direct?.10:.18);
+  const strength=clamp(intensity),dur=direct?.032:.022;
   const o=ctx.createOscillator(),g=ctx.createGain();
   o.type='sine';
-  o.frequency.setValueAtTime(direct?440:349.23,now);
-  o.frequency.exponentialRampToValueAtTime(direct?392:329.63,now+dur);
+  o.frequency.setValueAtTime(direct?620:470,now);
+  o.frequency.exponentialRampToValueAtTime(direct?260:230,now+dur);
   g.gain.setValueAtTime(.0001,now);
-  g.gain.linearRampToValueAtTime(direct?.018:.006+strength*.004,now+.018);
+  g.gain.linearRampToValueAtTime(direct?.022:.006+strength*.003,now+.002);
   g.gain.exponentialRampToValueAtTime(.0001,now+dur);
   o.connect(g);g.connect(gameGain);
   o.onended=()=>{o.disconnect();g.disconnect()};
-  o.start(now);o.stop(now+dur+.02);
+  o.start(now);o.stop(now+dur+.003);
  }
  function pixel(){softPixel(1,true)}
  function pixelWind(intensity=.35){softPixel(intensity)}

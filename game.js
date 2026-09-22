@@ -90,7 +90,7 @@ async function submitScore(value){
   catch(e){console.warn('Score could not be submitted:',e.message);}
 }
 
-function renderTop(target,rows,empty='AINDA SEM JOGADORES'){target.innerHTML=rows.length?rows.slice(0,5).map((p,i)=>`<li><span class="rank-number">${i+1}</span><span>${escapeHtml(p.name)}</span><span class="rank-score">${Number(p.score)}</span></li>`).join(''):`<li class="empty-row">${empty}</li>`;}
+function renderTop(target,rows,empty='AINDA SEM JOGADORES'){target.innerHTML=rows.length?rows.slice(0,10).map((p,i)=>`<li><span class="rank-number">${i+1}</span><span>${escapeHtml(p.name)}</span><span class="rank-score">${Number(p.score)}</span></li>`).join(''):`<li class="empty-row">${empty}</li>`;}
 function escapeHtml(value){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 async function fetchRankings(countryCode=null,page=1){const params=new URLSearchParams({page:String(page)});if(countryCode)params.set('country',countryCode);const res=await fetch(`/api/rankings?${params}`);if(!res.ok)throw new Error('Ranking indisponível');return res.json();}
 async function loadTopRankings(){try{const[n,w]=await Promise.all([fetchRankings(currentCountryCode),fetchRankings()]);renderTop(document.getElementById('nationalRanking'),n.players);renderTop(document.getElementById('worldRanking'),w.players);}catch(e){console.warn(e.message);}}
@@ -119,7 +119,7 @@ function buildPixelWall(){
   const colors=['#e83e45','#f1c438','#2f9bd1','#39b86a','#7d4ac7','#ef7b2d','#e7e7df','#172b3b'];
   const count=Math.min(2500,Math.floor(innerWidth*innerHeight/400));
   const particles=[];
-  let mouseX=-9999,mouseY=-9999;
+  let mouseX=-9999,mouseY=-9999,movingUntil=0;
 
   for(let i=0;i<count;i++){
     const tile=document.createElement('i');
@@ -137,23 +137,26 @@ function buildPixelWall(){
 
   window.addEventListener('pointermove',e=>{
     if(e.pointerType&&e.pointerType!=='mouse')return;
+    if(Math.hypot(e.clientX-mouseX,e.clientY-mouseY)>1)movingUntil=performance.now()+65;
     mouseX=e.clientX;mouseY=e.clientY;
   },{passive:true});
   window.addEventListener('pointerleave',()=>{mouseX=-9999;mouseY=-9999},{passive:true});
   window.addEventListener('blur',()=>{mouseX=-9999;mouseY=-9999},{passive:true});
 
   function animate(){
+    const under=document.elementFromPoint(mouseX,mouseY);
+    const protectedUi=under?.closest('.site-shell,.chat-sidebar,.modal-backdrop,.acct-overlay');
+    const canSound=!protectedUi&&performance.now()<movingUntil;
+    let directHit=false,windStrength=0;
     for(const p of particles){
       const dx=p.x-mouseX,dy=p.y-mouseY;
       const dist=Math.hypot(dx,dy);
       const radius=120;
       if(dist<radius){
-        const under=document.elementFromPoint(mouseX,mouseY);
-        const protectedUi=under&&under.closest&&under.closest('.site-shell,.chat-panel,#chatPanel,.chat-shell');
-        if(!protectedUi&&window.EixoAudio&&window.EixoAudio.pixelWind&&Math.hypot(p.vx,p.vy)>.025)window.EixoAudio.pixelWind(1-dist/radius);
+        if(canSound&&Math.hypot(p.vx,p.vy)>.025)windStrength=Math.max(windStrength,1-dist/radius);
         if(dist<10&&!p.pixelHit){
           p.pixelHit=true;
-          if(!protectedUi&&window.EixoAudio)window.EixoAudio.pixel();
+          if(canSound)directHit=true;
         }
         const d=Math.max(dist,1);
         const force=Math.pow(1-d/radius,2)*0.95;
@@ -179,6 +182,8 @@ function buildPixelWall(){
 
       p.el.style.transform='translate3d('+Math.round(p.x)+'px,'+Math.round(p.y)+'px,0)';
     }
+    if(directHit)window.EixoAudio?.pixel();
+    else if(windStrength>0)window.EixoAudio?.pixelWind(windStrength);
     requestAnimationFrame(animate);
   }
   requestAnimationFrame(animate);
@@ -194,7 +199,7 @@ async function bootPlayer(){
     const res=await fetch('/api/auth/me',{cache:'no-store'});
     if(res.ok){
       const data=await res.json();
-      if(data?.player){player=data.player;localStorage.setItem('eixo_player',JSON.stringify({...data.player,token:'session'}));}
+      if(data?.player){player={...data.player,token:'session'};localStorage.setItem('eixo_player',JSON.stringify(player));}
     }else{
       player=null;localStorage.removeItem('eixo_player');localStorage.removeItem('eixo_country');
     }
