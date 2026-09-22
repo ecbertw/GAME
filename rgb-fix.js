@@ -1,7 +1,8 @@
-/* EIXO rainbow runtime: color animation that does not override per-letter movement effects. */
+/* EIXO rainbow runtime.
+   Rainbow uses hue rotation on a visible base color so it can coexist with
+   transform/opacity/text-shadow effects such as BOUNCE, WAVE and GLOW. */
 (function(){
  'use strict';
- const COLORS=['#ff3b30','#ffcc00','#34c759','#00e5ff','#0a84ff','#bf5af2','#ff2d55','#ff3b30'];
  const running=new WeakMap();
 
  function rainbowLetters(){
@@ -13,21 +14,30 @@
    return [...found];
  }
 
- function animateLetter(el,index){
+ function prepare(el,index){
    if(running.has(el))return;
+   // Never depend on transparent text/background clipping: if animation is
+   // paused or unsupported, the name remains visible in red instead of vanishing.
+   el.style.setProperty('color','#ff3b30','important');
+   el.style.setProperty('-webkit-text-fill-color','currentColor','important');
    el.style.setProperty('background','none','important');
    el.style.setProperty('background-image','none','important');
    el.style.setProperty('-webkit-background-clip','initial','important');
    el.style.setProperty('background-clip','initial','important');
-   el.style.setProperty('-webkit-text-fill-color','currentColor','important');
-   const frames=COLORS.map(color=>({color}));
-   const animation=el.animate(frames,{duration:1900,iterations:Infinity,easing:'linear',delay:-(index%8)*150});
-   running.set(el,animation);
+
+   try{
+     const animation=el.animate(
+       [{filter:'hue-rotate(0deg)'},{filter:'hue-rotate(360deg)'}],
+       {duration:1800,iterations:Infinity,easing:'linear',delay:-(index%10)*120}
+     );
+     running.set(el,animation);
+   }catch(_){
+     // CSS fallback below still keeps the text visible and animated.
+     el.classList.add('eixo-rainbow-fallback');
+   }
  }
 
- function refresh(){
-   rainbowLetters().forEach((el,i)=>animateLetter(el,i));
- }
+ function refresh(){rainbowLetters().forEach((el,i)=>prepare(el,i));}
 
  let queued=false;
  const observer=new MutationObserver(()=>{
