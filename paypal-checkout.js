@@ -13,7 +13,7 @@
       max:'Já tens VIP ∞. Podes continuar a apoiar o EIXO com o valor que quiseres.',supportTitle:'APOIAR EIXO',
       supportSubtitle:'Escolhe o valor que queres dar ao EIXO. Este pagamento não altera o teu nível VIP.',supportAmount:'VALOR',
       supportHint:'Mínimo €{min} · máximo €{max}',success:'PAGAMENTO CONCLUÍDO · VIP ATUALIZADO',
-      supportSuccess:'OBRIGADO PELO APOIO · PAGAMENTO CONCLUÍDO',cancel:'Pagamento cancelado.',
+      supportSuccess:'OBRIGADO POR APOIARES O EIXO!',supportThanks:'A tua contribuição ajuda-nos a manter o EIXO vivo e a continuar a fazê-lo crescer. Obrigado por fazeres parte disto. ❤',cancel:'',
       error:'Não foi possível concluir o pagamento.',invalidAmount:'Introduz um valor válido.',close:'FECHAR'
     },
     en:{
@@ -22,7 +22,7 @@
       max:'You already have VIP ∞. You can keep supporting EIXO with any amount.',supportTitle:'SUPPORT EIXO',
       supportSubtitle:'Choose how much you want to give EIXO. This payment does not change your VIP level.',supportAmount:'AMOUNT',
       supportHint:'Minimum €{min} · maximum €{max}',success:'PAYMENT COMPLETED · VIP UPDATED',
-      supportSuccess:'THANK YOU FOR THE SUPPORT · PAYMENT COMPLETED',cancel:'Payment cancelled.',
+      supportSuccess:'THANK YOU FOR SUPPORTING EIXO!',supportThanks:'Your contribution helps us keep EIXO alive and continue making it grow. Thank you for being part of it. ❤',cancel:'',
       error:'Unable to complete payment.',invalidAmount:'Enter a valid amount.',close:'CLOSE'
     }
   };
@@ -44,6 +44,22 @@
   }
   function supportMode(){
     return view==='donation'||!store?.nextLevel;
+  }
+  function showSupportThanks(){
+    const x=tr();
+    modal?.classList.add('hidden');
+    document.getElementById('eixoSupportThanks')?.remove();
+    const note=document.createElement('div');
+    note.id='eixoSupportThanks';
+    note.className='eixo-support-thanks';
+    note.setAttribute('role','status');
+    note.setAttribute('aria-live','polite');
+    note.innerHTML='<button class="eixo-support-thanks-close" type="button" aria-label="'+esc(x.close)+'">×</button><div class="eixo-support-thanks-mark">◆</div><strong>'+esc(x.supportSuccess)+'</strong><p>'+esc(x.supportThanks)+'</p>';
+    document.body.appendChild(note);
+    requestAnimationFrame(()=>note.classList.add('show'));
+    const dismiss=()=>{note.classList.remove('show');setTimeout(()=>note.remove(),220)};
+    note.querySelector('.eixo-support-thanks-close').onclick=dismiss;
+    setTimeout(()=>{if(document.body.contains(note))dismiss()},7000);
   }
   function ensureModal(){
     if(modal)return modal;
@@ -132,12 +148,16 @@
             window.dispatchEvent(new Event('eixo-player-updated'));
           }
         }
-        status.textContent=wasSupport?tr().supportSuccess:tr().success+' · '+label(out.level);
+        if(wasSupport){
+          showSupportThanks();
+          return;
+        }
+        status.textContent=tr().success+' · '+label(out.level);
         store=await loadStore();
         render();
         await setupPayPal().catch(()=>{});
       },
-      onCancel:()=>{status.textContent=tr().cancel},
+      onCancel:()=>{status.textContent=''},
       onError:e=>{console.error('PayPal checkout',e);status.textContent=tr().error}
     });
     const btn=$('vipPaypalButton');
