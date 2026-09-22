@@ -9,3 +9,7 @@ node_modules/
 Thumbs.db
 coverage/
 tmp/
+
+.deploy/
+*.pem
+*.key
