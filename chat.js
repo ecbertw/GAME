@@ -94,9 +94,9 @@
       const when=m.createdAt?new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
       const role=m.role==='admin'?'<span class="role-tag admin">ADMIN</span>':m.role==='moderator'?'<span class="role-tag">MOD</span>':'';
       const me=getPlayer(),canDelete=me?.role==='admin';
-      const border=safeColor(m.avatarBorder)?' style="border-color:'+esc(m.avatarBorder)+'"':'';
-      const glyph={default:'◆',diamond:'◆',square:'■',circle:'●',star:'★',bolt:'ϟ'}[m.avatar]||'◆';
-      return '<article class="chat-message" data-message-id="'+esc(m.id)+'"><div class="chat-avatar"'+border+' aria-hidden="true">'+glyph+'</div><div class="chat-content"><div class="chat-author"><span class="chat-name'+(rainbow?' name-rainbow':'')+(effect!=='none'?' effect-'+esc(effect):'')+'"'+style+'>'+name+'</span>'+role+top+vip(v)+'<span class="chat-time">'+esc(when)+'</span>'+(canDelete?'<button class="chat-delete" data-delete-message="'+esc(m.id)+'" title="Delete message">×</button>':'')+'</div><div class="chat-text">'+esc(m.message)+'</div></div></article>';
+      const rawBorder=String(m.avatarBorder||'#46535f').toLowerCase(),border=safeColor(rawBorder)?' style="border-color:'+esc(rawBorder)+'"':'',borderClass=' avatar-border-'+rawBorder.replace(/[^a-z0-9-]/g,''),avatarClass=' avatar-'+String(m.avatar||'default').replace(/[^a-z0-9-]/g,'');
+      const glyph={default:'◆',diamond:'◇',square:'■',circle:'●',star:'★',bolt:'⚡',shield:'⬢',hex:'⬡',crystal:'✦',spark:'✧',comet:'☄',crown:'♛',thunder:'ϟ',skull:'☠',phoenix:'♨',vortex:'◉',titan:'♜',plasma:'✺',infinity:'∞',cosmic:'✹',prism:'◈'}[m.avatar]||'◆';
+      return '<article class="chat-message" data-message-id="'+esc(m.id)+'"><div class="chat-avatar'+avatarClass+borderClass+'"'+border+' aria-hidden="true">'+glyph+'</div><div class="chat-content"><div class="chat-author"><span class="chat-name'+(rainbow?' name-rainbow':'')+(effect!=='none'?' effect-'+esc(effect):'')+'"'+style+'>'+name+'</span>'+role+top+vip(v)+'<span class="chat-time">'+esc(when)+'</span>'+(canDelete?'<button class="chat-delete" data-delete-message="'+esc(m.id)+'" title="Delete message">×</button>':'')+'</div><div class="chat-text">'+esc(m.message)+'</div></div></article>';
     }).join('');
     if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
   }
