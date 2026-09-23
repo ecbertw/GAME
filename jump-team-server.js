@@ -212,7 +212,11 @@ function createService({now=Date.now,physics=P}={}){
  }
  function input(p,d){
   const t=mine(p);tick();
-  if(t.status!=='playing'||d.runId!==t.runId)throw fail('Partida antiga.',409);
+  // A client can legitimately have one last packet in flight when a fall ends
+  // the run or the automatic rematch has already created a new run. Returning
+  // the authoritative current room state lets it recover immediately instead
+  // of getting stuck on "Partida antiga.".
+  if(t.status!=='playing'||d.runId!==t.runId)return view(t,p);
   const m=t.members.get(String(p.id));if(!m.present)throw fail('Sessão expirada.',409);
   if(!Number.isSafeInteger(d.seq)||d.seq<0)throw fail('Sequência inválida.');
   if(d.seq>m.seq){m.seq=d.seq;m.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};m.inputAt=now();m.seen=now();if(m.keys.left!==m.keys.right)m.facing=m.keys.left?-1:1;}

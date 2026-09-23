@@ -80,10 +80,10 @@ test('team cannot start until the complete roster is present and ready',async()=
  assert.equal(out.status,'countdown');f.advance(3100);assert.equal(s.state(users[0]).status,'playing');
 });
 
-test('team progression ignores submitted scores and rejects stale runs',async()=>{
+test('team progression ignores submitted scores and stale packets recover current state',async()=>{
  const f=await fixture(),s=f.service,t=await f.fill();
  const out=s.input(users[0],{runId:t.runId,seq:1,platform:99999,score:99999});assert.equal(out.score,0);
- assert.throws(()=>s.input(users[0],{runId:'old',seq:2}),/antiga/);
+ const stale=s.input(users[0],{runId:'old',seq:2});assert.equal(stale.runId,t.runId);assert.equal(stale.status,'playing');
  assert.throws(()=>s.input(users[4],{runId:t.runId,seq:2}),/Entra primeiro/);
  s.input(users[0],{runId:t.runId,seq:3,right:true});s.input(users[0],{runId:t.runId,seq:2,left:true});
  f.advance(100);assert.ok(s.state(users[0]).members.find(x=>x.id===users[0].id).state.x>199);

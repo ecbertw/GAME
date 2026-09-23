@@ -44,7 +44,7 @@ async function switchGame(next){
  if(next==='eat'){modal('EAT','<p>'+txt('soon')+'</p>');return}
  if(current===next&&next==='jump'){await newRun({biome,mode,roomId});return}
  if(current===next)return;
- if(current==='jump')await stopRun();
+ if(current==='jump'){await stopRun();window.EixoAudio?.jumpStop?.();}
  current=next;window.eixoJumpActive=current==='jump';closePanel();showMode();
  if(current==='jump'){
    window.stopGame?.();await newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
@@ -71,6 +71,7 @@ async function newRun(options={}){
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
    run=out;seed=out.seed;biome=out.biome;mode=out.mode;outfit=out.outfit||outfit;wardrobe=out.parts?{parts:out.parts}:wardrobe;fixedAppearance=out.fixedAppearance||fixedAppearance;
+   window.EixoAudio?.jumpBiome?.(biome);
    local=P.create(seed);local.time=Number(out.worldTime)||0;last=performance.now();updateHud();draw();refreshRoomBoard();clearInterval(networkTimer);
    networkTimer=setInterval(sync,60);sync();
  }catch(e){run=null;showError(e.message)}
@@ -90,7 +91,7 @@ async function sync(){
  finally{busy=false}
 }
 async function die(){
- if(gameOver||finishing)return;finishing=true;gameOver=true;const old=run,platform=Number(local?.bestPlatform||0);run=null;clearInterval(networkTimer);
+ if(gameOver||finishing)return;window.EixoAudio?.jumpLose?.();finishing=true;gameOver=true;const old=run,platform=Number(local?.bestPlatform||0);run=null;clearInterval(networkTimer);
  let result={score:confirmedScore||platform*P.SCORE_PER_PLATFORM};
  try{if(old)result=await api('/api/jump/run/finish',{method:'POST',body:JSON.stringify({runId:old.runId,platform})})}catch(e){showError(e.message)}
  confirmedScore=Number(result.score||0);updateHud();
@@ -112,7 +113,7 @@ function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
  const bob=moving&&ground?Math.round(Math.abs(Math.sin(time*14))):0,bodyY=(rising?-2:falling?1:0)-bob;
  const arm=Math.round(walk*3),leg=Math.round(walk*3),outline='#101923',deep='#0a1119';
  const spriteScale=.72;
- c.save();c.globalAlpha=ghost?0.72:1;c.translate(Math.round(x),Math.round(y));c.scale(dir*spriteScale,spriteScale);c.translate(0,-17);
+ c.save();c.globalAlpha=ghost?0.72:1;c.translate(Math.round(x),Math.round(y));c.scale(dir*spriteScale,spriteScale);c.translate(0,-14);
  const q=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(xx),Math.round(yy),w,h)};
  const effect=String(O.effect||'none'),aura=outfitColor(O.accent,time,120);
  if(effect!=='none'){
@@ -173,14 +174,20 @@ function draw(){
  drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time,{facing,ground:local.ground,vy:local.vy,moving:keys.left||keys.right});
  c.fillStyle='#ffffffaa';c.fillRect(0,0,P.W,1);
 }
+function stepLocalWithAudio(dt){
+ const wasGround=!!local.ground;
+ P.step(local,keys,dt);
+ if(wasGround&&!local.ground&&Number(local.vy)>40)window.EixoAudio?.jumpJump?.();
+ else if(!wasGround&&local.ground)window.EixoAudio?.jumpLand?.();
+}
 function loop(now){
  if(current!=='jump'){animation=null;return}
  let dt=Math.min(.04,(now-last)/1000||0);last=now;
  if(local&&!gameOver&&run){
   if(keys.left&&!keys.right)facing=-1;else if(keys.right&&!keys.left)facing=1;
   if(team){
-   if(team.status==='playing')P.step(local,keys,dt);
-  }else{P.step(local,keys,dt);if(!local.alive)die();}
+   if(team.status==='playing')stepLocalWithAudio(dt);
+  }else{stepLocalWithAudio(dt);if(!local.alive)die();}
   updateHud();
  }
  draw();animation=requestAnimationFrame(loop);
@@ -301,14 +308,14 @@ async function customize(){
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  let out;try{out=await api('/api/jump/cosmetics')}catch(e){showError(e.message);return}
  outfit={...out.outfit};wardrobe={parts:out.parts};fixedAppearance=out.fixedAppearance||fixedAppearance;
- const vip=Number(out.vipLevel||0),labels={hair:'CABELO',top:'CASACO',accent:'DETALHES',pants:'CALÇAS',shoes:'SAPATILHAS',effect:'EFEITO'};
+ const vip=Math.max(Number(out.vipLevel||0),Number(getPlayer()?.vipLevel||0)),labels={hair:'CABELO',top:'CASACO',accent:'DETALHES',pants:'CALÇAS',shoes:'SAPATILHAS',effect:'EFEITO'};
  const options=part=>(out.parts?.[part]||[]).map(item=>{
    const level=Number(item.minVip||0),locked=vip<level,vipOnly=level>0,suffix=vipOnly?' · VIP '+level:'';
    const prefix=vipOnly?(lang()==='pt'?'COR VIP · ':'VIP COLOR · '):'';
-   return '<option value="'+esc(item.value)+'" data-eixo-color-label="'+(vipOnly?'keep':'auto')+'"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+prefix+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
+   return '<option value="'+esc(item.value)+'" data-eixo-color-label="keep"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+prefix+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
  }).join('');
- modal(txt('character'),'<div class="jump-custom-note">EIXO RUNNER · ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="140" height="100"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
- const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,140,100);c.save();c.translate(70,54);c.scale(3.1,3.1);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true});c.restore()};
+ modal(txt('character'),'<div class="jump-custom-note">EIXO RUNNER · ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="180" height="130"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
+ const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,180,130);c.save();c.translate(90,105);c.scale(3,3);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true});c.restore()};
  panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.onchange=()=>{outfit[sel.dataset.jumpOutfit]=sel.value;preview()}});
  let previewTimer=setInterval(()=>{if(!panel||!$('jumpAvatarPreview')){clearInterval(previewTimer);return}preview()},70);preview();
  $('jumpSave').onclick=async()=>{
@@ -415,7 +422,8 @@ let team=null,teamTimer=null,teamSeq=0,teamPoll=0,teamSignature='',lastTeamMode=
 const teamText=(pt,en)=>lang()==='pt'?pt:en;
 async function teamPost(action,data={}){return api('/api/jump/teams/'+action,{method:'POST',body:JSON.stringify(data)});}
 function acceptTeam(out){
- const previousRun=team?.runId,previousStatus=team?.status;team=out;lastTeamMode=out.mode||lastTeamMode;
+ const previousRun=team?.runId,previousStatus=team?.status,previousBiome=team?.biome;team=out;lastTeamMode=out.mode||lastTeamMode;
+ if(previousBiome!==out.biome)window.EixoAudio?.jumpBiome?.(out.biome);
  const me=out.members.find(m=>m.id===getPlayer()?.id);
  if(me?.state){
   const fresh=previousRun!==out.runId||!local||local.seed!==out.seed,st=me.state;
@@ -447,6 +455,7 @@ function acceptTeam(out){
    if((previousRun!==out.runId||previousStatus!=='playing')&&$('jumpTeamLobby'))closePanel();
   }
   if(out.status==='ended'){
+   if(previousStatus==='playing')window.EixoAudio?.jumpLose?.();
    gameOver=true;local.alive=false;$('jumpFinal').textContent=out.score;$('jumpEndTitle').textContent=txt('gameOver')+' · '+out.mode.toUpperCase();
    const seconds=Math.max(0,Math.ceil(Number(out.restartMs||0)/1000));
    $('jumpRestart').disabled=seconds>0;$('jumpRestart').textContent=seconds>0?teamText('RECOMEÇA EM ','RESTARTS IN ')+seconds:teamText('VOLTAR À EQUIPA','BACK TO TEAM');
@@ -456,15 +465,21 @@ function acceptTeam(out){
   }
  }
  // Do not rebuild the persistent-team cards on every network snapshot.
- // Replacing those buttons 8-10 times/second detached click targets and could
- // leave the modal backdrop intercepting the user's click.
+ // Replacing those buttons repeatedly can detach click targets while a modal is open.
  updateHud();renderTeamLobby();
 }
 let teamClosing=false;
-async function leaveTeamSessionToSolo(message=''){
+async function leaveTeamSessionToSolo(message='',autoStart=true){
  if(teamClosing)return;teamClosing=true;
- team=null;run=null;local=null;peers=[];clearInterval(teamTimer);teamTimer=null;teamSeq=0;closePanel();
- try{await newRun({biome,mode:'solo'});if(message)showError(message);}finally{teamClosing=false;}
+ team=null;run=null;peers=[];clearInterval(teamTimer);teamTimer=null;teamSeq=0;closePanel();mode='solo';roomId=null;roomLabel='';
+ try{
+  if(autoStart){local=null;await newRun({biome,mode:'solo'});if(message)showError(message);}
+  else{
+   gameOver=true;confirmedScore=0;updateHud();showError(message);
+   $('jumpEndTitle').textContent=teamText('SESSÃO DA EQUIPA TERMINOU','TEAM SESSION ENDED');
+   $('jumpFinal').textContent='0';$('jumpRestart').disabled=false;$('jumpRestart').textContent=teamText('JOGAR SOLO','PLAY SOLO');$('jumpEnd').classList.remove('hidden');
+  }
+ }finally{teamClosing=false;}
 }
 async function syncTeam(){
  if(!team||busy||current!=='jump')return;
@@ -475,8 +490,10 @@ async function syncTeam(){
   const out=team.status==='playing'?await teamPost('input',{runId:team.runId,seq:teamSeq++,left:keys.left,right:keys.right,jump:keys.jump}):await api('/api/jump/teams/state');
   if(team?.teamId===identity)acceptTeam(out);
  }catch(e){
-  if(/Entra primeiro numa das tuas equipas|Sessão expirada|Já não pertences/.test(String(e.message||'')))void leaveTeamSessionToSolo(teamText('A sessão da equipa terminou. Voltaste ao SOLO.','The team session ended. You returned to SOLO.'));
-  else showError(e.message);
+  const msg=String(e.message||'');
+  if(/Partida antiga/.test(msg)){try{const out=await api('/api/jump/teams/state');if(team?.teamId===identity)acceptTeam(out);}catch(x){showError(x.message);} }
+  else if(/Entra primeiro numa das tuas equipas|Sessão expirada|Já não pertences/.test(msg))void leaveTeamSessionToSolo(teamText('A sessão da equipa terminou. Voltaste ao SOLO.','The team session ended. You returned to SOLO.'),false);
+  else showError(msg);
  }finally{busy=false;}
 }
 function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,60);}
@@ -499,7 +516,7 @@ async function loadTeamChooserList(kind){
 }
 async function openTeam(kind){
  lastTeamMode=kind;
- modal(kind.toUpperCase(),'<div class="jump-team-section-title">'+teamText('AS TUAS EQUIPAS','YOUR TEAMS')+'</div><div id="jumpTeamSavedList" class="jump-team-saved-list"><div class="jump-team-empty">LOADING...</div></div><div class="jump-team-divider"><span>'+teamText('NOVA EQUIPA OU CONVITE','NEW TEAM OR INVITE')+'</span></div><p class="jump-team-help">'+teamText('DUO joga com 2 pessoas e TRIO com 3. Entra numa equipa, todos ficam visíveis no mesmo mapa e, quando o último jogador carregar em PRONTO, começa automaticamente uma contagem de 3 segundos.','DUO has 2 players and TRIO has 3. Enter a team, everyone appears on the same map and the final READY automatically starts a 3-second countdown.')+'</p><div class="jump-team-create-grid"><label class="room-field"><span>'+teamText('NOME DA EQUIPA','TEAM NAME')+'</span><input id="jumpTeamName" class="pixel-input" maxlength="24" placeholder="PIXEL CREW"></label><label class="room-field"><span>'+txt('choose')+'</span><select id="jumpTeamBiome" class="pixel-input">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select></label></div><button class="modal-button primary" id="jumpTeamCreate">'+teamText('CRIAR EQUIPA','CREATE TEAM')+'</button><div class="jump-team-invite-row"><input id="jumpTeamCode" class="pixel-input" maxlength="12" autocomplete="off" placeholder="'+teamText('CÓDIGO DE CONVITE','INVITE CODE')+'"><button class="modal-button" id="jumpTeamJoin">'+teamText('ACEITAR CONVITE','ACCEPT INVITE')+'</button></div><p id="jumpTeamError" role="status"></p>');
+ modal(kind.toUpperCase(),'<div class="jump-team-section-title">'+teamText('AS TUAS EQUIPAS','YOUR TEAMS')+'</div><div id="jumpTeamSavedList" class="jump-team-saved-list"><div class="jump-team-empty">LOADING...</div></div><div class="jump-team-divider"><span>'+teamText('NOVA EQUIPA OU CONVITE','NEW TEAM OR INVITE')+'</span></div><p class="jump-team-help">'+teamText('DUO joga com 2 pessoas e TRIO com 3. Entra numa equipa, todos ficam visíveis no mesmo mapa e, quando o último jogador carregar em PRONTO, começa automaticamente uma contagem de 3 segundos.','DUO has 2 players and TRIO has 3. Enter a team, everyone appears on the same map and the final READY automatically starts a 3-second countdown.')+'</p><div class="jump-team-create-grid"><label class="room-field"><span>'+teamText('NOME DA EQUIPA','TEAM NAME')+'</span><input id="jumpTeamName" class="pixel-input" maxlength="24" placeholder="PIXEL CREW"></label><label class="room-field"><span>'+txt('choose')+'</span><select id="jumpTeamBiome" class="pixel-input">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select></label></div><button class="modal-button primary" id="jumpTeamCreate">'+teamText('CRIAR EQUIPA','CREATE TEAM')+'</button><div class="jump-team-invite-row"><input id="jumpTeamCode" class="pixel-input" maxlength="12" autocomplete="off" placeholder="'+teamText('CÓDIGO DE CONVITE','INVITE CODE')+'"><button class="modal-button primary" id="jumpTeamJoin">'+teamText('ACEITAR CONVITE','ACCEPT INVITE')+'</button></div><p id="jumpTeamError" role="status"></p>');
  void loadTeamChooserList(kind);
  $('jumpTeamCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-F0-9]/g,'').slice(0,12)});
  const action=async(create)=>{
@@ -526,7 +543,7 @@ function renderTeamLobby(){
  const perform=async(action,data)=>{try{acceptTeam(await teamPost(action,data));}catch(e){if($('jumpTeamError'))$('jumpTeamError').textContent=e.message;}};
  $('jumpTeamReady').onclick=()=>perform('ready',{ready:!me?.ready});
  $('jumpCopyInvite').onclick=async()=>{try{await navigator.clipboard.writeText(team.code);$('jumpCopyInvite').textContent=teamText('COPIADO','COPIED');}catch(_){$('jumpCopyInvite').textContent=team.code;}};
- $('jumpTeamLeave').onclick=async()=>{try{await teamPost('leave');await leaveTeamSessionToSolo();void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
+ $('jumpTeamLeave').onclick=async()=>{try{await teamPost('leave');await leaveTeamSessionToSolo('',true);void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
  $('jumpTeamAbandon').onclick=async()=>{try{const id=team.teamId;await teamPost('abandon',{teamId:id});await leaveTeamSessionToSolo();void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
 }
 let myTeamsCache=[],myTeamsRenderSignature='';
@@ -562,7 +579,7 @@ function teamRankPlayer(p){
  if(Number(p.countryRank)>=1&&Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
  return '<span class="jump-team-player"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(styles.length?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span><span class="jump-team-player-tags">'+tags+rankVip(vip)+'</span></span>';
 }
-function teamRows(rows){return rows.map(r=>'<li><span class="rank-number">'+Number(r.rank)+'</span><span class="rank-name-wrap jump-team-rank-name"><strong>'+esc(r.name)+'</strong><span class="jump-team-roster">'+(r.members||[]).map(teamRankPlayer).join('')+'</span></span><span class="rank-score">'+Number(r.score)+'</span></li>').join('')||'<li class="empty-row">'+txt('empty')+'</li>';}
+function teamRows(rows){return rows.map(r=>'<li><span class="rank-number">'+Number(r.rank)+'</span><span class="rank-name-wrap jump-team-rank-name"><strong>'+esc(r.name)+'</strong><span class="jump-team-roster">'+(r.members||[]).map(teamRankPlayer).join('<span class="jump-team-plus">+</span>')+'</span></span><span class="rank-score">'+Number(r.score)+'</span></li>').join('')||'<li class="empty-row">'+txt('empty')+'</li>';}
 async function refreshTeamRanks(){
  void refreshMyTeamsBoard();
  for(const mode of ['duo','trio'])try{const out=await api('/api/jump/teams/rankings?mode='+mode);if($('jumpRank'+mode))$('jumpRank'+mode).innerHTML=teamRows(out.teams.slice(0,5));}catch(e){if($('jumpRank'+mode))$('jumpRank'+mode).innerHTML='<li class="empty-row">'+esc(e.message)+'</li>';}
