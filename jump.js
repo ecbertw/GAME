@@ -14,7 +14,7 @@ const themes={
   desert:{sky:'#83cae8',low:'#f9c688',hills:'#e9a16b',far:'#bd7657',near:'#8a513f',top:'#f4ce70',edge:'#b98845',under:'#ad7651'},
   snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
 };
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],outfit=null,wardrobe=null,fixedAppearance=null,keys={left:false,right:false,jump:false},confirmedScore=0,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],outfit=null,wardrobe=null,fixedAppearance=null,keys={left:false,right:false,jump:false},confirmedScore=0,facing=1,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
@@ -64,7 +64,7 @@ function updateHud(){
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
- await stopRun();keys={left:false,right:false,jump:false};confirmedScore=0;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
+ await stopRun();keys={left:false,right:false,jump:false};confirmedScore=0;facing=1;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
@@ -124,62 +124,80 @@ function outfitColor(value,time,offset=0){
  if(value!=='rainbow')return value||'#fff';
  return 'hsl('+Math.round(((time||0)*115+offset)%360)+' 92% 62%)';
 }
-function drawCharacter(c,x,y,style,name,ghost=false,time=0){
- const O={top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none',...(style||outfit||{})};
- const F={skin:'#f0c7a2',skinShade:'#dba982',hair:'#19222d',hairLight:'#2d3b4a',eyes:'#17202a',...(fixedAppearance||{})};
- const top=outfitColor(O.top,time,0),accent=outfitColor(O.accent,time,85),pants=outfitColor(O.pants,time,175),shoes=outfitColor(O.shoes,time,265);
+function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
+ const O={hair:'#19222d',top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none',...(style||outfit||{})};
+ const F={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a',...(fixedAppearance||{})};
+ const top=outfitColor(O.top,time,0),accent=outfitColor(O.accent,time,85),pants=outfitColor(O.pants,time,175),shoes=outfitColor(O.shoes,time,265),hair=outfitColor(O.hair,time,315);
+ const dir=motion.facing===-1?-1:1,moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0);
+ const airborne=!ground||Math.abs(vy)>5,walk=moving&&ground?Math.sin(time*13):0;
+ const rising=airborne&&vy>15,falling=airborne&&vy<-15;
+ const bodyY=rising?-1:falling?1:0;
+ const armSwing=moving&&ground?Math.round(walk*2):0;
+ const leftLeg=rising?-2:falling?1:Math.round(walk*2);
+ const rightLeg=rising?1:falling?-1:-Math.round(walk*2);
+
  c.save();c.globalAlpha=ghost?0.72:1;
+ c.translate(Math.round(x),Math.round(y));c.scale(dir,1);
  const q=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(xx),Math.round(yy),w,h)};
- const effect=String(O.effect||'none');
- const aura=outfitColor(O.accent,time,120);
+ const effect=String(O.effect||'none'),aura=outfitColor(O.accent,time,120);
  if(effect!=='none'){
    if(effect==='glow'||effect==='pulse'||effect==='plasma'||effect==='cosmic'){c.shadowColor=aura;c.shadowBlur=effect==='glow'?6:effect==='pulse'?5+3*Math.sin(time*6):8}
-   if(effect==='pulse'){c.globalAlpha=(ghost?0.72:1)*(0.82+0.18*(.5+.5*Math.sin(time*7)))}
-   if(effect==='plasma'||effect==='cosmic'){c.globalAlpha=(ghost?0.72:1)*0.18;q(x-9,y-22,18,24,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,210));c.globalAlpha=ghost?0.72:1}
+   if(effect==='pulse')c.globalAlpha=(ghost?0.72:1)*(0.82+0.18*(.5+.5*Math.sin(time*7)));
+   if(effect==='plasma'||effect==='cosmic'){c.globalAlpha=(ghost?0.72:1)*0.18;q(-9,-22,18,26,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,210));c.globalAlpha=ghost?0.72:1}
  }
- // EIXO Runner: fixed face/skin, cropped hair, jacket with accent stripe,
- // tapered trousers and trainers. Only clothing/effects are customisable.
- q(x-5,y-23,10,2,F.hair);q(x-6,y-21,12,3,F.hair);q(x-6,y-18,2,4,F.hairLight);
- q(x-5,y-18,10,7,F.skin);q(x-5,y-12,10,1,F.skinShade);
- q(x-3,y-16,2,2,F.eyes);q(x+2,y-16,2,2,F.eyes);q(x-1,y-13,2,1,F.skinShade);
- q(x-2,y-11,4,2,F.skin);
- q(x-6,y-9,12,8,top);q(x-1,y-9,2,8,accent);q(x-4,y-8,2,2,accent);q(x+2,y-8,2,2,accent);
- q(x-9,y-8,3,5,top);q(x+6,y-8,3,5,top);q(x-9,y-3,3,2,F.skin);q(x+6,y-3,3,2,F.skin);
- q(x-6,y-1,12,2,accent);
- q(x-5,y+1,4,6,pants);q(x+1,y+1,4,6,pants);q(x-1,y+1,2,3,outfitColor(O.accent,time,35));
- q(x-6,y+6,5,2,shoes);q(x+1,y+6,5,2,shoes);q(x-6,y+7,5,1,'#111820');q(x+1,y+7,5,1,'#111820');
+
+ // EIXO Runner: skin/face stay identical for everyone; hair and clothes vary.
+ q(-5,-23+bodyY,10,2,hair);q(-6,-21+bodyY,12,3,hair);q(-6,-18+bodyY,2,4,hair);
+ q(-5,-18+bodyY,10,7,F.skin);q(-5,-12+bodyY,10,1,F.skinShade);
+ q(-3,-16+bodyY,2,2,F.eyes);q(2,-16+bodyY,2,2,F.eyes);q(-1,-13+bodyY,2,1,F.skinShade);q(-2,-11+bodyY,4,2,F.skin);
+
+ // Jacket and arms. The arms counter-swing while running.
+ q(-6,-9+bodyY,12,8,top);q(-1,-9+bodyY,2,8,accent);q(-4,-8+bodyY,2,2,accent);q(2,-8+bodyY,2,2,accent);
+ q(-9,-8+bodyY+armSwing,3,5,top);q(6,-8+bodyY-armSwing,3,5,top);
+ q(-9,-3+bodyY+armSwing,3,2,F.skin);q(6,-3+bodyY-armSwing,3,2,F.skin);q(-6,-1+bodyY,12,2,accent);
+
+ // Basic jump animation: legs push apart on ascent, tuck slightly on fall,
+ // and alternate by a couple of pixels while running on a platform.
+ q(-5,1+leftLeg,4,6,pants);q(1,1+rightLeg,4,6,pants);q(-1,1+bodyY,2,3,accent);
+ q(-6,6+leftLeg,5,2,shoes);q(1,6+rightLeg,5,2,shoes);q(-6,7+leftLeg,5,1,'#111820');q(1,7+rightLeg,5,1,'#111820');
+
  c.shadowBlur=0;
  if(effect==='spark'||effect==='electric'||effect==='cosmic'){
    const phase=Math.floor(time*12);
    for(let i=0;i<4;i++){
-     const sx=x-10+((phase*7+i*11)%21),sy=y-23+((phase*5+i*13)%25);
+     const sx=-10+((phase*7+i*11)%21),sy=-23+((phase*5+i*13)%25);
      q(sx,sy,effect==='electric'?3:2,2,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,i*70));
    }
  }
- if(name){c.fillStyle=ghost?'#e5f4ff':'#fff';c.textAlign='center';c.font='5px monospace';c.fillText(String(name).slice(0,12),x,y-29)}
  c.restore();
+ if(name){c.save();c.globalAlpha=ghost?0.8:1;c.fillStyle=ghost?'#e5f4ff':'#fff';c.textAlign='center';c.font='5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-29);c.restore()}
 }
 function draw(){
  if(!ctx||current!=='jump')return;const c=ctx;drawBackground();
  if(!local)return;
- const cam=local.cam,screen=y=>P.H-30-(y-cam),t=themes[biome];
- for(const p of local.platforms){if(p.y<cam-12||p.y>cam+P.H+30)continue;const y=Math.round(screen(p.y)),x=Math.round(P.platformX(p,local.time));
-   // Moving platforms deliberately keep the exact same biome palette as
-   // static ones; the movement itself is the difficulty cue.
+ const cam=local.cam,screen=y=>P.H-30-(y-cam),t=themes[biome],activeMin=Math.max(0,Number(local.activeMinPlatform)||0);
+ for(let i=activeMin;i<local.platforms.length;i++){
+   const p=local.platforms[i];if(!p||p.y<cam-12||p.y>cam+P.H+30)continue;
+   const y=Math.round(screen(p.y)),x=Math.round(P.platformX(p,local.time));
+   // Old lower platforms are retired completely; only active/future platforms
+   // are rendered. Moving platforms keep the same biome palette.
    c.fillStyle='#00000026';c.fillRect(x+2,y+4,p.w,7);
    c.fillStyle=t.under;c.fillRect(x,y+2,p.w,6);c.fillStyle=t.edge;c.fillRect(x,y,p.w,3);c.fillStyle=t.top;c.fillRect(x+2,y-3,p.w-4,4);
    if(biome==='forest'){c.fillStyle='#c8f18e';for(let j=11;j<p.w;j+=24)c.fillRect(x+j,y-5,2,2)}
    if(biome==='desert'){c.fillStyle='#f7e0a6';c.fillRect(x+9,y-1,12,2)}
    if(biome==='snow'){c.fillStyle='#fff';c.fillRect(x+3,y-5,p.w-6,3)}
  }
- for(const peer of peers){let y=screen(peer.y);if(y>-10&&y<P.H+35)drawCharacter(c,peer.x,y,peer.outfit,peer.name,true,local.time)}
- drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time);
+ for(const peer of peers){
+   const y=screen(peer.y);if(y>-12&&y<P.H+34)drawCharacter(c,peer.x,y,peer.outfit,peer.name,true,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving});
+ }
+ drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time,{facing,ground:local.ground,vy:local.vy,moving:keys.left||keys.right});
  c.fillStyle='#ffffffaa';c.fillRect(0,0,P.W,1);
 }
 function loop(now){
  if(current!=='jump'){animation=null;return}
  let dt=Math.min(.04,(now-last)/1000||0);last=now;
  if(local&&!gameOver&&run){
+  if(keys.left&&!keys.right)facing=-1;else if(keys.right&&!keys.left)facing=1;
   P.step(local,keys,dt);if(!local.alive)die();
   updateHud();
  }
@@ -300,13 +318,14 @@ async function customize(){
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  let out;try{out=await api('/api/jump/cosmetics')}catch(e){showError(e.message);return}
  outfit={...out.outfit};wardrobe={parts:out.parts};fixedAppearance=out.fixedAppearance||fixedAppearance;
- const vip=Number(out.vipLevel||0),labels={top:'CASACO',accent:'DETALHES',pants:'CALÇAS',shoes:'SAPATILHAS',effect:'EFEITO'};
+ const vip=Number(out.vipLevel||0),labels={hair:'CABELO',top:'CASACO',accent:'DETALHES',pants:'CALÇAS',shoes:'SAPATILHAS',effect:'EFEITO'};
  const options=part=>(out.parts?.[part]||[]).map(item=>{
-   const locked=vip<Number(item.minVip||0),suffix=item.minVip?' · VIP '+item.minVip:'';
-   return '<option value="'+esc(item.value)+'"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
+   const level=Number(item.minVip||0),locked=vip<level,vipOnly=level>0,suffix=vipOnly?' · VIP '+level:'';
+   const prefix=vipOnly?(lang()==='pt'?'COR VIP · ':'VIP COLOR · '):'';
+   return '<option value="'+esc(item.value)+'" data-eixo-color-label="'+(vipOnly?'keep':'auto')+'"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+prefix+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
  }).join('');
- modal(txt('character'),'<div class="jump-custom-note">EIXO RUNNER · ROSTO E PELE FIXOS PARA TODOS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="140" height="100"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
- const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,140,100);c.save();c.translate(70,54);c.scale(3.1,3.1);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000);c.restore()};
+ modal(txt('character'),'<div class="jump-custom-note">EIXO RUNNER · ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="140" height="100"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
+ const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,140,100);c.save();c.translate(70,54);c.scale(3.1,3.1);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true});c.restore()};
  panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.onchange=()=>{outfit[sel.dataset.jumpOutfit]=sel.value;preview()}});
  let previewTimer=setInterval(()=>{if(!panel||!$('jumpAvatarPreview')){clearInterval(previewTimer);return}preview()},70);preview();
  $('jumpSave').onclick=async()=>{

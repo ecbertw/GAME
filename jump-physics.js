@@ -53,10 +53,10 @@
         // Movement speed ramps quickly from the first moving platforms and
         // reaches its cap after roughly a dozen jumps, not after a long run.
         const speedProgress=Math.min(1,Math.max(0,(i-3)/12));
-        const desiredSpeed=0.84+0.92*speedProgress+hash(seed,i*9+8)*0.18;
-        // Cap peak horizontal velocity as well as angular speed so even the
-        // widest oscillations stay catchable by a 136px/s player.
-        moveSpeed=Math.min(1.95,desiredSpeed,92/Math.max(1,moveAmp));
+        const desiredSpeed=0.90+1.00*speedProgress+hash(seed,i*9+8)*0.20;
+        // Slightly faster than the previous curve, but still capped by peak
+        // horizontal velocity so the platform remains physically catchable.
+        moveSpeed=Math.min(2.08,desiredSpeed,98/Math.max(1,moveAmp));
         movePhase=hash(seed,i*9+9)*Math.PI*2;
       }
       out.push({x:Math.round(x),y,w:width,moving,moveCenter,moveAmp,moveSpeed,movePhase,difficulty});
@@ -64,7 +64,7 @@
     }
   }
   function create(seed,sharedPlatforms){
-    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,groundPlatform:0,jumpOrigin:0,bestPlatform:0,score:0,time:0,jumpBuffer:0,seed,platforms:sharedPlatforms||platforms(seed,30)};
+    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,groundPlatform:0,jumpOrigin:0,bestPlatform:0,activeMinPlatform:0,score:0,time:0,jumpBuffer:0,seed,platforms:sharedPlatforms||platforms(seed,30)};
   }
   function step(s,keys,dt){
     if(!s.alive)return s;
@@ -103,33 +103,35 @@
     if(s.vy<=0){
       const firstAtLeast=(value)=>{let lo=0,hi=s.platforms.length;while(lo<hi){const mid=(lo+hi)>>1;if(s.platforms[mid].y<value)lo=mid+1;else hi=mid;}return lo;};
       const start=Math.max(0,firstAtLeast(s.y-2)-2),end=Math.min(s.platforms.length-1,firstAtLeast(lastY+2)+2);
-      // Once a jump begins, only the launch platform or the one immediately
-      // below it can rescue a miss. Older platforms can no longer catch a
-      // player far below the visible play area.
-      const lowestAllowed=Math.max(0,(Number.isInteger(s.jumpOrigin)?s.jumpOrigin:0)-1);
+      // Platforms older than the current best platform - 1 are retired from
+      // gameplay completely: they are never collidable again and the renderer
+      // also hides them. This prevents "invisible floor" rescues.
+      const lowestAllowed=Math.max(0,Number(s.activeMinPlatform)||0);
       let landed=false;
       for(let i=start;i<=end;i++){
         if(i<lowestAllowed)continue;
         const p=s.platforms[i],px=platformX(p,s.time);
         if(lastY>=p.y-.05&&s.y<=p.y&&s.x+7>px&&s.x-7<px+p.w){
           s.y=p.y;s.vy=0;s.ground=true;s.groundPlatform=i;s.jumpOrigin=i;landed=true;
-          if(i>s.bestPlatform){s.bestPlatform=i;s.score=i*SCORE_PER_PLATFORM;}
+          if(i>s.bestPlatform){
+            s.bestPlatform=i;s.score=i*SCORE_PER_PLATFORM;
+            s.activeMinPlatform=Math.max(0,i-1);
+          }
           break;
         }
       }
-      if(!landed){
-        s.ground=false;
-        const rescue=s.platforms[lowestAllowed];
-        if(rescue&&lastY>=rescue.y&&s.y<rescue.y){s.alive=false;return s;}
-      }
+      if(!landed)s.ground=false;
     }else{s.ground=false;s.groundPlatform=-1}
 
     s.best=Math.max(s.best,s.y);
     if(s.platforms[s.platforms.length-1].y<s.best+350)extend(s.platforms,s.seed,s.platforms.length+25);
     s.cam=Math.max(0,s.best-78);
-    if(s.y<s.cam-65||s.y<-60)s.alive=false;
+    // The run ends only when the avatar's feet touch the visible bottom edge.
+    // drawCharacter extends ~8px below s.y and screen(s.y)=H-30-(s.y-cam),
+    // therefore cam-22 aligns death with the bottom border.
+    if(s.y<=s.cam-22)s.alive=false;
     return s;
   }
-  function publicState(s){return{x:Math.round(s.x*10)/10,y:Math.round(s.y*10)/10,best:Math.max(0,Math.floor(s.best)),platform:Math.max(0,Number(s.bestPlatform)||0),score:Math.max(0,Number(s.score)||0),alive:s.alive,vy:Math.round(s.vy)};}
+  function publicState(s){return{x:Math.round(s.x*10)/10,y:Math.round(s.y*10)/10,best:Math.max(0,Math.floor(s.best)),platform:Math.max(0,Number(s.bestPlatform)||0),activeMinPlatform:Math.max(0,Number(s.activeMinPlatform)||0),score:Math.max(0,Number(s.score)||0),alive:s.alive,vy:Math.round(s.vy)};}
   return{W,H,SCORE_PER_PLATFORM,hash,platformX,platforms,create,step,publicState};
 });
