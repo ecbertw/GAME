@@ -99,7 +99,7 @@ async function sync(){
  try{
   const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jump:keys.jump,platform:Number(local?.bestPlatform||0),position:local?{x:local.x,y:local.y}:null})});
   if(run?.runId!==identity)return;
-  lastState=out;if(mode!=='solo'&&local&&Number.isFinite(out.worldTime))local.time=out.worldTime;mergePeerSnapshots(out.peers||[]);confirmedScore=Number(out.state?.score||0);
+  lastState=out;if(mode!=='solo'&&local&&Number.isFinite(out.worldTime)){const drift=Number(out.worldTime)-Number(local.time||0);local.time+=Math.max(-.08,Math.min(.08,drift))*.12;}mergePeerSnapshots(out.peers||[]);confirmedScore=Number(out.state?.score||0);
   // The HUD shows only server-confirmed platform points, while the local
   // physics remains smooth and is never teleported to an older snapshot.
   updateHud();
@@ -178,7 +178,8 @@ function draw(){
  if(team?.status==='playing'){
   const members=team.members;
   for(let i=1;i<members.length;i++){
-   const a=members[i-1].id===getPlayer()?.id?local:members[i-1].state,b=members[i].id===getPlayer()?.id?local:members[i].state;
+   const stateFor=m=>{if(m.id===getPlayer()?.id)return local;const p=peers.find(x=>String(x.id)===String(m.id));return p?{...m.state,x:Number(p.renderX??p.x),y:Number(p.renderY??p.y)}:m.state;};
+   const a=stateFor(members[i-1]),b=stateFor(members[i]);
    if(!a||!b)continue;
    const distance=Math.hypot(b.x-a.x,b.y-a.y),n=Math.max(2,Math.ceil(distance/5)),slack=Math.max(0,1-distance/team.chainLength)*12;
    for(let j=0;j<=n;j++){const f=j/n,x=Math.round(a.x+(b.x-a.x)*f),y=Math.round(screen(a.y+(b.y-a.y)*f)-4+Math.sin(f*Math.PI)*slack);c.fillStyle='#172638';c.fillRect(x-2,y-1,5,4);c.fillStyle=distance>team.chainLength?'#ffc581':'#d0e3ef';c.fillRect(x-1,y,3,2);}
