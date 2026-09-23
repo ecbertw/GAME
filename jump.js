@@ -111,7 +111,8 @@ function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
  const airborne=!ground||Math.abs(vy)>5,walk=moving&&ground?Math.sin(time*14):0,rising=airborne&&vy>15,falling=airborne&&vy<-15;
  const bob=moving&&ground?Math.round(Math.abs(Math.sin(time*14))):0,bodyY=(rising?-2:falling?1:0)-bob;
  const arm=Math.round(walk*3),leg=Math.round(walk*3),outline='#101923',deep='#0a1119';
- c.save();c.globalAlpha=ghost?0.72:1;c.translate(Math.round(x),Math.round(y));c.scale(dir,1);
+ const spriteScale=.72;
+ c.save();c.globalAlpha=ghost?0.72:1;c.translate(Math.round(x),Math.round(y));c.scale(dir*spriteScale,spriteScale);c.translate(0,-17);
  const q=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(xx),Math.round(yy),w,h)};
  const effect=String(O.effect||'none'),aura=outfitColor(O.accent,time,120);
  if(effect!=='none'){
@@ -142,7 +143,7 @@ function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
   const phase=Math.floor(time*13);for(let i=0;i<5;i++){const sx=-12+((phase*7+i*11)%25),sy=-27+((phase*5+i*13)%34);q(sx,sy,effect==='electric'?3:2,2,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,i*70));}
  }
  c.restore();
- if(name){c.save();c.globalAlpha=ghost?.82:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-32);c.restore()}
+ if(name){c.save();c.globalAlpha=ghost?.82:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-34);c.restore()}
 }
 function draw(){
  if(!ctx||current!=='jump')return;const c=ctx;drawBackground();
@@ -177,8 +178,9 @@ function loop(now){
  let dt=Math.min(.04,(now-last)/1000||0);last=now;
  if(local&&!gameOver&&run){
   if(keys.left&&!keys.right)facing=-1;else if(keys.right&&!keys.left)facing=1;
-  if(team){const target=team.members.find(m=>m.id===getPlayer()?.id)?.state;if(target){const blend=Math.min(1,dt*24);local.x+=(target.x-local.x)*blend;local.y+=(target.y-local.y)*blend;local.cam=target.cam;local.time=target.time;local.vy=target.vy;local.ground=target.ground;}}
-  else{P.step(local,keys,dt);if(!local.alive)die();}
+  if(team){
+   if(team.status==='playing')P.step(local,keys,dt);
+  }else{P.step(local,keys,dt);if(!local.alive)die();}
   updateHud();
  }
  draw();animation=requestAnimationFrame(loop);
@@ -416,42 +418,65 @@ function acceptTeam(out){
  const previousRun=team?.runId,previousStatus=team?.status;team=out;lastTeamMode=out.mode||lastTeamMode;
  const me=out.members.find(m=>m.id===getPlayer()?.id);
  if(me?.state){
-  if(previousRun!==out.runId||!local||local.seed!==out.seed){local=P.create(out.seed);teamSeq=0;}
-  const st=me.state;Object.assign(local,st);
+  const fresh=previousRun!==out.runId||!local||local.seed!==out.seed,st=me.state;
+  if(fresh){local=P.create(out.seed);Object.assign(local,st);teamSeq=0;}
+  else if(out.status==='playing'){
+   // Client prediction keeps DUO/TRIO as fluid as SOLO. The server remains
+   // authoritative and only nudges small drift; large chain corrections snap.
+   const dx=Number(st.x)-Number(local.x),dy=Number(st.y)-Number(local.y);
+   if(Math.abs(dx)>38||Math.abs(dy)>44){local.x=Number(st.x);local.y=Number(st.y);local.vy=Number(st.vy||0);}
+   else{local.x+=dx*.18;local.y+=dy*.14;local.vy+=(Number(st.vy||0)-Number(local.vy||0))*.16;}
+   local.cam+=((Number(st.cam)||0)-Number(local.cam||0))*.18;
+   local.time=Number(st.time)||local.time;
+   local.ground=!!st.ground;
+  }else Object.assign(local,st);
   local.bestPlatform=Number(st.platform||0);local.score=Number(st.score||0);local.seed=out.seed;
   local.brokenPlatforms=Object.fromEntries((st.broken||[]).map(i=>[i,true]));
   local.fragilePlatform=Number(st.fragilePlatform??-1);local.fragileRatio=Number(st.fragileRatio||0);
   const required=Math.max(34,...out.members.map(m=>Number(m.state?.platform||0)+34));
   if(local.platforms.length<required)local.platforms=P.platforms(out.seed,required);
-  local.activeMinPlatform=Number(st.activeMinPlatform||0);local.time=Number(st.time||0);local.cam=Number(st.cam||0);local.ground=!!st.ground;
+  local.activeMinPlatform=Number(st.activeMinPlatform||0);
   peers=out.members.filter(m=>m.id!==getPlayer()?.id&&m.present&&m.state).map(m=>({id:m.id,name:m.name,outfit:m.outfit,...m.state}));
   outfit=me.outfit||outfit;biome=out.biome;seed=out.seed;mode=out.mode;confirmedScore=Number(out.score||0);
   run={runId:out.runId||('team-lobby:'+out.teamId)};
-  if(out.status==='lobby'||out.status==='countdown'){gameOver=false;local.alive=true;$('jumpEnd').classList.add('hidden');}
+  if(out.status==='lobby'||out.status==='countdown'){
+   gameOver=false;local.alive=true;$('jumpEnd').classList.add('hidden');$('jumpRestart').disabled=false;
+  }
   if(out.status==='playing'){
-   gameOver=false;local.alive=true;$('jumpEnd').classList.add('hidden');
+   gameOver=false;local.alive=true;$('jumpEnd').classList.add('hidden');$('jumpRestart').disabled=false;
    if((previousRun!==out.runId||previousStatus!=='playing')&&$('jumpTeamLobby'))closePanel();
   }
   if(out.status==='ended'){
    gameOver=true;local.alive=false;$('jumpFinal').textContent=out.score;$('jumpEndTitle').textContent=txt('gameOver')+' · '+out.mode.toUpperCase();
-   $('jumpRestart').textContent=teamText('VOLTAR À EQUIPA','BACK TO TEAM');$('jumpEnd').classList.remove('hidden');
+   const seconds=Math.max(0,Math.ceil(Number(out.restartMs||0)/1000));
+   $('jumpRestart').disabled=seconds>0;$('jumpRestart').textContent=seconds>0?teamText('RECOMEÇA EM ','RESTARTS IN ')+seconds:teamText('VOLTAR À EQUIPA','BACK TO TEAM');
+   $('jumpEnd').classList.remove('hidden');
    if(out.saveError)showError(teamText('Pontuação por guardar — a tentar novamente.','Score pending — retrying.'));
    else if(out.saved)showError('');
   }
  }
  updateHud();renderTeamLobby();renderMyTeamsBoardFromCache();
 }
+let teamClosing=false;
+async function leaveTeamSessionToSolo(message=''){
+ if(teamClosing)return;teamClosing=true;
+ team=null;run=null;local=null;peers=[];clearInterval(teamTimer);teamTimer=null;teamSeq=0;closePanel();
+ try{await newRun({biome,mode:'solo'});if(message)showError(message);}finally{teamClosing=false;}
+}
 async function syncTeam(){
  if(!team||busy||current!=='jump')return;
- const identity=team.teamId,wait=team.status==='playing'?0:team.status==='countdown'?180:650;
+ const identity=team.teamId,wait=team.status==='playing'?110:team.status==='countdown'?150:team.status==='ended'?180:500;
  if(Date.now()-teamPoll<wait)return;
  busy=true;teamPoll=Date.now();
  try{
   const out=team.status==='playing'?await teamPost('input',{runId:team.runId,seq:teamSeq++,left:keys.left,right:keys.right,jump:keys.jump}):await api('/api/jump/teams/state');
   if(team?.teamId===identity)acceptTeam(out);
- }catch(e){showError(e.message);}finally{busy=false;}
+ }catch(e){
+  if(/Entra primeiro numa das tuas equipas|Sessão expirada|Já não pertences/.test(String(e.message||'')))void leaveTeamSessionToSolo(teamText('A sessão da equipa terminou. Voltaste ao SOLO.','The team session ended. You returned to SOLO.'));
+  else showError(e.message);
+ }finally{busy=false;}
 }
-function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,100);}
+function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,60);}
 async function enterTeamById(teamId){
  if(team?.teamId===teamId){showTeamLobby();return;}
  await stopRun();local=null;peers=[];run=null;
@@ -498,8 +523,8 @@ function renderTeamLobby(){
  const perform=async(action,data)=>{try{acceptTeam(await teamPost(action,data));}catch(e){if($('jumpTeamError'))$('jumpTeamError').textContent=e.message;}};
  $('jumpTeamReady').onclick=()=>perform('ready',{ready:!me?.ready});
  $('jumpCopyInvite').onclick=async()=>{try{await navigator.clipboard.writeText(team.code);$('jumpCopyInvite').textContent=teamText('COPIADO','COPIED');}catch(_){$('jumpCopyInvite').textContent=team.code;}};
- $('jumpTeamLeave').onclick=async()=>{try{await teamPost('leave');team=null;run=null;local=null;peers=[];clearInterval(teamTimer);closePanel();await newRun({biome,mode:'solo'});void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
- $('jumpTeamAbandon').onclick=async()=>{try{const id=team.teamId;await teamPost('abandon',{teamId:id});team=null;run=null;local=null;peers=[];clearInterval(teamTimer);closePanel();await newRun({biome,mode:'solo'});void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
+ $('jumpTeamLeave').onclick=async()=>{try{await teamPost('leave');await leaveTeamSessionToSolo();void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
+ $('jumpTeamAbandon').onclick=async()=>{try{const id=team.teamId;await teamPost('abandon',{teamId:id});await leaveTeamSessionToSolo();void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
 }
 let myTeamsCache=[];
 function renderMyTeamsBoardFromCache(){
@@ -523,7 +548,16 @@ function initTeamBoards(boards){
  section.innerHTML=['duo','trio'].map(m=>'<article class="board"><div class="board-title"><span class="jump-team-rank-icon '+m+'">◆</span><span>'+m.toUpperCase()+' · TOP</span></div><ol id="jumpRank'+m+'"><li class="empty-row">—</li></ol><button class="board-more" data-team-rank="'+m+'">'+teamText('VER RANKING','VIEW RANKING')+'</button></article>').join('');
  mine.after(section);section.querySelectorAll('[data-team-rank]').forEach(b=>b.onclick=()=>fullTeamRank(b.dataset.teamRank,1));
 }
-function teamRows(rows){return rows.map(r=>'<li><span class="rank-number">'+Number(r.rank)+'</span><span class="rank-name-wrap"><strong>'+esc(r.name)+'</strong><small>'+esc((r.members||[]).map(m=>m.name).join(' + '))+'</small></span><span class="rank-score">'+Number(r.score)+'</span></li>').join('')||'<li class="empty-row">'+txt('empty')+'</li>';}
+function teamRankPlayer(p){
+ const visual=String(p.visualName||p.name||'PLAYER'),vip=Number(p.vipLevel||0),styles=Array.isArray(p.letterStyles)?p.letterStyles:[];
+ const color=String(p.nameColor||'#fff').toLowerCase(),rainbow=color==='rainbow'&&!styles.length,effect=p.nameEffect&&p.nameEffect!=='none'?' effect-'+esc(p.nameEffect):'';
+ const colorStyle=rainbow?'':(/^#[0-9a-f]{6}$/i.test(color)?' style="color:'+esc(color)+';"':'');
+ const name=styles.length?rankLetters(visual,styles):[...visual].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
+ let tags='';if(Number(p.worldRank)>=1&&Number(p.worldRank)<=3)tags+=rankTag('world',Number(p.worldRank),'',p);
+ if(Number(p.countryRank)>=1&&Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
+ return '<span class="jump-team-player"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(styles.length?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span><span class="jump-team-player-tags">'+tags+rankVip(vip)+'</span></span>';
+}
+function teamRows(rows){return rows.map(r=>'<li><span class="rank-number">'+Number(r.rank)+'</span><span class="rank-name-wrap jump-team-rank-name"><strong>'+esc(r.name)+'</strong><span class="jump-team-roster">'+(r.members||[]).map(teamRankPlayer).join('')+'</span></span><span class="rank-score">'+Number(r.score)+'</span></li>').join('')||'<li class="empty-row">'+txt('empty')+'</li>';}
 async function refreshTeamRanks(){
  void refreshMyTeamsBoard();
  for(const mode of ['duo','trio'])try{const out=await api('/api/jump/teams/rankings?mode='+mode);if($('jumpRank'+mode))$('jumpRank'+mode).innerHTML=teamRows(out.teams.slice(0,5));}catch(e){if($('jumpRank'+mode))$('jumpRank'+mode).innerHTML='<li class="empty-row">'+esc(e.message)+'</li>';}

@@ -47,6 +47,9 @@ function memoryDb(){
   if(q.startsWith('SELECT name,members,best_score AS score FROM jump_team_scores WHERE mode=')){
    const rows=[...scores.values()].filter(x=>x.mode===args[0]&&x.best_score>0).sort((a,b)=>b.best_score-a.best_score).slice(Number(args[1]||0),Number(args[1]||0)+25).map(x=>({name:x.name,members:x.members,score:x.best_score}));return{rows};
   }
+  if(q.includes('FROM players p LEFT JOIN ranked r ON r.id=p.id::text')){
+   const ids=args[0]||[];return{rows:ids.map((id,i)=>({id:String(id),name:'P'+i,visualName:'P'+i,country:'PT',vipLevel:i===0?2:0,letterStyles:[],nameColor:i===0?'#ff0000':'#ffffff',nameEffect:'none',tagGlobalColor:'#e53935',tagCountryColor:'#ff7a2f',worldRank:i+1,countryRank:i+1}))};
+  }
   throw new Error('Unhandled SQL in test: '+q);
  }};
 }
@@ -86,11 +89,10 @@ test('team progression ignores submitted scores and rejects stale runs',async()=
  f.advance(100);assert.ok(s.state(users[0]).members.find(x=>x.id===users[0].id).state.x>199);
 });
 
-test('one disconnected member ends everyone and never writes individual rankings',async()=>{
+test('one disconnected member ends the shared session and never writes individual rankings',async()=>{
  const f=await fixture(),s=f.service;await f.fill();f.advance(10001);
- const out=s.state(users[0]);assert.equal(out.status,'ended');assert.equal(out.reason,'disconnect');
- assert.ok(out.members.every(m=>!m.state||!m.state.alive));
- await s.finish(users[0],{runId:out.runId});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.throws(()=>s.state(users[0]),/Entra primeiro/);
  const scoreWrites=f.db.writes.filter(w=>w.sql.startsWith('INSERT INTO jump_team_scores'));
  assert.equal(scoreWrites.length,1);assert.ok(f.db.writes.every(w=>!w.sql.includes('INSERT INTO jump_scores')&&!w.sql.includes('UPDATE players')));
 });
@@ -104,6 +106,35 @@ test('joint score uses slowest member; one fall ends all and saves once',async()
  const out=s.state(users[0]);assert.equal(out.reason,'fall');assert.equal(out.score,24);
  await Promise.all(users.slice(0,3).map(p=>s.finish(p,{runId:t.runId})));
  assert.equal(f.db.writes.filter(w=>w.sql.startsWith('INSERT INTO jump_team_scores')).length,1);
+});
+
+test('a fall auto-starts a fresh run when the full team stays present',async()=>{
+ const physics={...P,step(s,k){if(k.left)s.alive=false;return s;}};
+ const f=await fixture(physics),s=f.service,t=await f.fill();
+ s.input(users[0],{runId:t.runId,seq:0,left:true});f.advance(20);
+ let ended=s.state(users[0]);assert.equal(ended.status,'ended');assert.ok(ended.restartMs>0);
+ await new Promise(resolve=>setImmediate(resolve));
+ const oldRun=ended.runId,oldSeed=ended.seed;f.advance(2300);
+ const next=s.state(users[0]);assert.equal(next.status,'playing');assert.notEqual(next.runId,oldRun);assert.notEqual(next.seed,oldSeed);
+});
+
+test('leaving an active room closes the session for every teammate but keeps the roster',async()=>{
+ const f=await fixture(),s=f.service,t=await f.fill();
+ await s.leave(users[0]);
+ assert.throws(()=>s.state(users[1]),/Entra primeiro/);
+ assert.equal((await s.list(users[0],'duo')).teams.length,1);
+ assert.equal((await s.list(users[1],'duo')).teams.length,1);
+});
+
+test('team rankings enrich member names with the same profile and rank tags data',async()=>{
+ const physics={...P,step(s){s.bestPlatform=2;return s;}};
+ const f=await fixture(physics),s=f.service,t=await f.fill();
+ // Controlled progress writes one team result; the mock profile query supplies rank styling.
+ s.input(users[0],{runId:t.runId,seq:0});s.input(users[1],{runId:t.runId,seq:0});f.advance(100);
+ await s.finish(users[0],{runId:t.runId});
+ const out=await s.rankings('duo',1);assert.equal(out.teams.length,1);
+ assert.equal(out.teams[0].members[0].country,'PT');assert.equal(out.teams[0].members[0].worldRank,1);
+ assert.ok('nameColor' in out.teams[0].members[0]);
 });
 
 test('taut chain pulls both endpoints, slack does not move a stationary team',async()=>{
