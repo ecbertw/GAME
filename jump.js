@@ -455,7 +455,10 @@ function acceptTeam(out){
    else if(out.saved)showError('');
   }
  }
- updateHud();renderTeamLobby();renderMyTeamsBoardFromCache();
+ // Do not rebuild the persistent-team cards on every network snapshot.
+ // Replacing those buttons 8-10 times/second detached click targets and could
+ // leave the modal backdrop intercepting the user's click.
+ updateHud();renderTeamLobby();
 }
 let teamClosing=false;
 async function leaveTeamSessionToSolo(message=''){
@@ -526,10 +529,12 @@ function renderTeamLobby(){
  $('jumpTeamLeave').onclick=async()=>{try{await teamPost('leave');await leaveTeamSessionToSolo();void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
  $('jumpTeamAbandon').onclick=async()=>{try{const id=team.teamId;await teamPost('abandon',{teamId:id});await leaveTeamSessionToSolo();void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
 }
-let myTeamsCache=[];
+let myTeamsCache=[],myTeamsRenderSignature='';
 function renderMyTeamsBoardFromCache(){
  const board=$('jumpMyTeamsBoard'),list=$('jumpMyTeamsList');if(!board||!list)return;
- const visible=current==='jump'&&myTeamsCache.length>0;board.classList.toggle('hidden',!visible);if(!visible)return;
+ const visible=current==='jump'&&myTeamsCache.length>0;board.classList.toggle('hidden',!visible);if(!visible){myTeamsRenderSignature='';return;}
+ const signature=JSON.stringify(myTeamsCache.map(r=>[r.id,r.mode,r.name,r.biome,r.memberCount,r.capacity,team?.teamId===r.id]));
+ if(signature===myTeamsRenderSignature)return;myTeamsRenderSignature=signature;
  list.innerHTML=myTeamsCache.map(savedTeamCard).join('');
  list.querySelectorAll('[data-enter-team]').forEach(b=>b.onclick=()=>enterTeamById(b.dataset.enterTeam).catch(e=>showError(e.message)));
 }
