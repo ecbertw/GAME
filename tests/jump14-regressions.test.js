@@ -46,14 +46,19 @@ test('JUMP VIP wardrobe adds gold pants and natural effect variants',()=>{
  assert.match(jump,/effect==='comet'/);
 });
 
-test('README keeps exactly the two latest update reports',()=>{
+test('README keeps exactly two update reports in descending version order',()=>{
  const readme=fs.readFileSync(path.join(root,'README.md'),'utf8');
  const reports=readme.match(/^# EIXO V\d+\.\d+\.\d+/gm)||[];
- assert.deepEqual(reports,['# EIXO V2.3.1','# EIXO V2.3.0']);
+ assert.equal(reports.length,2);
+ const versions=reports.map(x=>x.match(/V(\d+)\.(\d+)\.(\d+)/).slice(1).map(Number));
+ const score=v=>v[0]*1000000+v[1]*1000+v[2];
+ assert.ok(score(versions[0])>score(versions[1]),'newest report must stay first');
  assert.match(readme,/apenas os dois relatórios de atualização mais recentes/);
 });
 
-test('deploy script does not reference retired JUMP team files',()=>{
+test('deploy script does not reference retired JUMP team files and self-reexecs after updating itself',()=>{
  const deploy=fs.readFileSync(path.join(root,'ops/deploy/eixo-deploy.sh'),'utf8');
  assert.doesNotMatch(deploy,/jump-team-server\.js/);
+ assert.match(deploy,/EIXO_DEPLOY_REEXEC/);
+ assert.match(deploy,/exec env EIXO_DEPLOY_REEXEC=1 bash/);
 });

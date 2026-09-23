@@ -18,6 +18,14 @@ sudo -u eixo git -C "$APP" pull --ff-only origin main
 NEW="$(sudo -u eixo git -C "$APP" rev-parse HEAD)"
 echo "New: $NEW"
 
+# If the pull updated this deploy script, the currently running Bash process
+# still has the old file contents loaded. Re-exec the freshly pulled script
+# once so the rest of the deploy always uses the new version.
+if [ "$NEW" != "$PREV" ] && [ "${EIXO_DEPLOY_REEXEC:-0}" != "1" ]; then
+  echo "Deploy script updated; restarting with the new version..."
+  exec env EIXO_DEPLOY_REEXEC=1 bash "$APP/ops/deploy/eixo-deploy.sh"
+fi
+
 echo "[2/5] Dependencies"
 cd "$APP"
 sudo -u eixo npm install --omit=dev --ignore-scripts --package-lock=false
