@@ -3,13 +3,44 @@
 const crypto=require('crypto');
 const physics=require('./jump-physics');
 const BIOMES=['city','forest','desert','snow'];
-const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#ffcc99','#c68642','#6f4228','#111827'];
-const PARTS=['skin','hair','shirt','arms','pants','shoes','eyes'];
-const DEFAULTS={skin:'#ffcc99',hair:'#172b3b',shirt:'#00e5ff',arms:'#ffcc99',pants:'#3b82f6',shoes:'#ffffff',eyes:'#172b3b'};
+const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#111827'];
+const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',hair:'#19222d',hairLight:'#2d3b4a',eyes:'#17202a'};
+const OUTFIT_DEFAULTS={top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none'};
+const PARTS=['top','accent','pants','shoes','effect'];
+const special=(value,label,minVip)=>({value,label,minVip});
+const baseColors=PALETTE.map(value=>special(value,value.toUpperCase(),0));
+const WARDROBE={
+  top:[...baseColors,special('#ffd84d','GOLD RUNNER',1),special('#00f5ff','NEON CYAN',2),special('#ff3cf7','NEON MAGENTA',3),special('#a6ff38','ACID LIME',4),special('#ff6238','PLASMA ORANGE',5),special('rainbow','INFINITY RGB',6)],
+  accent:[...baseColors,special('#ffe66d','VIP GOLD',1),special('#56f7ff','ELECTRIC ICE',2),special('#ff70dc','LASER PINK',3),special('#b8ff66','TOXIC GLOW',4),special('#ff8a4c','SOLAR',5),special('rainbow','COSMIC RGB',6)],
+  pants:[...baseColors,special('#5b4bff','ROYAL VIOLET',1),special('#00d9ff','CYBER BLUE',2),special('#da4cff','VOID PURPLE',3),special('#68ff84','NEON GREEN',4),special('#ff425f','PLASMA RED',5),special('rainbow','INFINITY RGB',6)],
+  shoes:[...baseColors,special('#ffe66d','GOLD SOLES',1),special('#75f8ff','ICE SOLES',2),special('#ff8be8','PINK LIGHT',3),special('#c8ff75','LIME LIGHT',4),special('#ff9a62','FIRE LIGHT',5),special('rainbow','COSMIC SOLES',6)],
+  effect:[special('none','NONE',0),special('glow','GLOW',1),special('pulse','PULSE',2),special('spark','SPARKS',3),special('electric','ELECTRIC',4),special('plasma','PLASMA',5),special('cosmic','COSMIC RGB',6)]
+};
+const DEFAULTS=OUTFIT_DEFAULTS;
 const instances=new Map(),sessions=new Map(),activeByPlayer=new Map();
 const error=(message,status=400)=>Object.assign(new Error(message),{status});
 function validBiome(v){const b=String(v||'forest').toLowerCase();if(!BIOMES.includes(b))throw error('Ambiente inválido.');return b;}
-function validColors(data){const result={};for(const k of PARTS){const c=String(data&&data[k]||DEFAULTS[k]).toLowerCase();if(!PALETTE.includes(c))throw error('Cor inválida: '+k);result[k]=c;}return result;}
+function vipLevel(p){return Math.max(0,Math.min(6,Number(p?.vipLevel)||0));}
+function normalizeOutfit(data){
+  const raw=data&&typeof data==='object'?data:{};
+  return{
+    top:String(raw.top||raw.shirt||OUTFIT_DEFAULTS.top).toLowerCase(),
+    accent:String(raw.accent||raw.arms||OUTFIT_DEFAULTS.accent).toLowerCase(),
+    pants:String(raw.pants||OUTFIT_DEFAULTS.pants).toLowerCase(),
+    shoes:String(raw.shoes||OUTFIT_DEFAULTS.shoes).toLowerCase(),
+    effect:String(raw.effect||OUTFIT_DEFAULTS.effect).toLowerCase()
+  };
+}
+function validOutfit(data,p){
+  const outfit=normalizeOutfit(data),vip=vipLevel(p);
+  for(const key of PARTS){
+    const option=(WARDROBE[key]||[]).find(x=>x.value===outfit[key]);
+    if(!option)throw error('Opção de roupa inválida: '+key);
+    if(vip<option.minVip)throw error('Esta opção requer VIP '+option.minVip+'.',403);
+  }
+  return outfit;
+}
+function wardrobeFor(p){return{vipLevel:vipLevel(p),parts:WARDROBE,fixedAppearance:FIXED_APPEARANCE};}
 async function initDb(db){
   await db.query('CREATE TABLE IF NOT EXISTS jump_scores(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query("CREATE TABLE IF NOT EXISTS jump_cosmetics(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,colors JSONB NOT NULL DEFAULT '{}'::jsonb)");
@@ -50,13 +81,25 @@ function findInstance(biome,kind,roomId){
   }
   return newInstance(biome,kind,roomId);
 }
-async function getColors(db,p){const r=await db.query('SELECT colors FROM jump_cosmetics WHERE player_id=$1',[p.id]);return validColors(r.rows[0]?.colors||DEFAULTS);}
-async function saveColors(db,p,d){
-  const colors=validColors(d.colors);
-  await db.query('INSERT INTO jump_cosmetics(player_id,colors) VALUES($1,$2::jsonb) ON CONFLICT(player_id) DO UPDATE SET colors=EXCLUDED.colors',[p.id,JSON.stringify(colors)]);
-  const run=sessions.get(activeByPlayer.get(p.id));if(run)run.colors=colors;
-  return{ok:true,colors};
+async function getOutfit(db,p){
+  const r=await db.query('SELECT colors FROM jump_cosmetics WHERE player_id=$1',[p.id]);
+  const normalized=normalizeOutfit(r.rows[0]?.colors||OUTFIT_DEFAULTS);
+  // If a player's VIP expired, silently fall back from locked pieces instead
+  // of rendering an item they no longer have access to.
+  const safe={...normalized};
+  for(const key of PARTS){
+    const option=(WARDROBE[key]||[]).find(x=>x.value===safe[key]);
+    if(!option||vipLevel(p)<option.minVip)safe[key]=OUTFIT_DEFAULTS[key];
+  }
+  return safe;
 }
+async function saveOutfit(db,p,d){
+  const outfit=validOutfit(d.outfit||d.colors,p);
+  await db.query('INSERT INTO jump_cosmetics(player_id,colors) VALUES($1,$2::jsonb) ON CONFLICT(player_id) DO UPDATE SET colors=EXCLUDED.colors',[p.id,JSON.stringify(outfit)]);
+  const run=sessions.get(activeByPlayer.get(p.id));if(run)run.outfit=outfit;
+  return{ok:true,outfit,...wardrobeFor(p)};
+}
+const getColors=getOutfit,saveColors=saveOutfit;
 async function start(db,p,d){
   purge();
   let roomId=null,biome=validBiome(d.biome),kind=d.multiplayer?'public':'solo';
@@ -68,11 +111,11 @@ async function start(db,p,d){
   removeSession(sessions.get(activeByPlayer.get(p.id)));
   let inst=kind==='solo'?newInstance(biome,kind,null):findInstance(biome,kind,roomId);
   if(inst.players.size>=5)throw error('Instância cheia.',409);
-  const id=crypto.randomUUID(),colors=await getColors(db,p);
-  const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,colors,instanceId:inst.id,roomId,biome,kind,
+  const id=crypto.randomUUID(),outfit=await getOutfit(db,p);
+  const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,outfit,instanceId:inst.id,roomId,biome,kind,
     state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},confirmedPlatform:0,confirmedScore:0,last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
   sessions.set(id,run);activeByPlayer.set(p.id,id);inst.players.set(p.id,run);
-  return{ok:true,runId:id,seed:inst.seed,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,colors};
+  return{ok:true,runId:id,seed:inst.seed,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,outfit,...wardrobeFor(p)};
 }
 function requireRun(p,id){purge();const run=sessions.get(String(id||''));if(!run||run.playerId!==p.id||activeByPlayer.get(p.id)!==run.id)throw error('Partida JUMP expirada. Começa novamente.',404);return run;}
 function advance(run){
@@ -85,7 +128,7 @@ function advance(run){
 function playersIn(run){
   const inst=instances.get(run.instanceId);
   if(!inst)return[];
-  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,colors:r.colors}));
+  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,outfit:r.outfit}));
 }
 function confirmProgress(run,raw){
   const claimed=Number(raw??run.confirmedPlatform??0);
@@ -210,4 +253,4 @@ async function roomRankings(db,p,id){
     worldRank:Number(x.worldRank||0)||null,countryRank:Number(x.countryRank||0)||null,
     letterStyles:Array.isArray(x.letterStyles)?x.letterStyles:(()=>{try{return JSON.parse(x.letterStyles||'[]')}catch(_){return[]}})()}))};
 }
-module.exports={initDb,BIOMES,PALETTE,PARTS,DEFAULTS,getColors,saveColors,start,input,state,finish,leave,rankings,playerRank,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
+module.exports={initDb,BIOMES,PALETTE,PARTS,DEFAULTS,FIXED_APPEARANCE,WARDROBE,wardrobeFor,getOutfit,saveOutfit,getColors,saveColors,start,input,state,finish,leave,rankings,playerRank,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
