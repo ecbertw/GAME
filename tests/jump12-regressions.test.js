@@ -29,9 +29,13 @@ test('DUO TRIO top renders names only without ranking or VIP tags',()=>{
  assert.doesNotMatch(fn,/rankVip\(/);
 });
 
-test('visible VIP tag colours are accepted and wardrobe standard colours have names',()=>{
+test('VIP tag colours use the visible palette except white; wardrobe standard colours have names',()=>{
  const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
+ assert.match(server,/tagBlocked=new Set\(\['#ffffff','#f5f7ff'\]\)/);
  assert.match(server,/tagAllowed=\[\.\.\.new Set\(\[\.\.\.normalAllowed,\.\.\.VIP_COLORS\.map/);
+ const vip=fs.readFileSync(path.join(root,'vip-fix.js'),'utf8');
+ assert.match(vip,/tagColors=\[\.\.\.colors\.filter/);
+ assert.match(vip,/!\['#f5f7ff','#ffffff'\]/);
  const jumpServer=fs.readFileSync(path.join(root,'jump-server.js'),'utf8');
  assert.match(jumpServer,/const COLOR_LABELS=\{/);
  assert.match(jumpServer,/'#ffffff':'BRANCO'/);

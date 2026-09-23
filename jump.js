@@ -5,7 +5,7 @@ const P=window.EixoJumpPhysics;if(!P)return;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lang=()=>String(document.documentElement.lang||'en').startsWith('pt')?'pt':'en';
-const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'PONTOS',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'A / D OU ← / → PARA MOVER • W / ESPAÇO / ↑ PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'POINTS',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'A / D OR ← / → TO MOVE • W / SPACE / ↑ TO JUMP',soon:'COMING SOON'}};
+const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'PONTOS',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'A / D OU ◀ / ▶ PARA MOVER • W / ESPAÇO / ▲ PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'POINTS',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'A / D OR ◀ / ▶ TO MOVE • W / SPACE / ▲ TO JUMP',soon:'COMING SOON'}};
 const txt=k=>T[lang()][k]||k;
 const BIOMES=['city','forest','desert','snow'];
 const themes={
@@ -34,7 +34,9 @@ function showError(message){$('jumpStatus').textContent=String(message||'');}
 function showMode(){
  $('jumpTeamBoards')?.classList.toggle('hidden',current!=='jump');
  const switcher=$('eixoGameSwitcher');switcher.querySelectorAll('[data-game]').forEach(b=>b.classList.toggle('active',b.dataset.game===current));
- $('gameIntro').querySelector('[data-i18n="aboutText"]').textContent=current==='jump'?' — JUMP: '+txt('help'):current==='eat'?' — '+txt('soon'):window.eixoT?.('aboutText',' — a simple reflex game. Hit the center, score points and climb the ranking.')||' — a simple reflex game.';
+ const intro=$('gameIntro'),brand=intro?.querySelector('strong'),copy=intro?.querySelector('[data-i18n="aboutText"]');
+ if(brand)brand.textContent=current==='jump'?'JUMP':current==='eat'?'EAT':'PULSE';
+ if(copy)copy.textContent=current==='jump'?' — '+txt('help'):current==='eat'?' — '+txt('soon'):window.eixoT?.('aboutText',' — a simple reflex game. Hit the center, score points and climb the ranking.')||' — a simple reflex game.';
  $('jumpRoot').classList.toggle('hidden',current!=='jump');frame.classList.toggle('jump-mode',current==='jump');
  document.body.classList.toggle('eixo-jump-view',current==='jump');
  if($('jumpRoomBoard'))$('jumpRoomBoard').classList.toggle('hidden',current!=='jump'||!roomId);
@@ -62,7 +64,7 @@ async function stopRun(){
 function updateHud(){
  $('jumpHeight').textContent=String(Math.max(0,Number(confirmedScore)||0)).padStart(3,'0');
  $('jumpWorld').textContent=biome.toUpperCase()+(team?' · '+team.mode.toUpperCase()+' · '+team.members.length+'/'+team.capacity:mode==='solo'?' · SOLO':' · ONLINE '+(lastState?.players||1)+'/5');
- $('jumpSoloButton').textContent=txt('solo');$('jumpJoinButton').textContent='ONLINE';$('jumpCustomizeButton').textContent=txt('character');$('jumpHelp').textContent=txt('help');
+ $('jumpSoloButton').textContent=txt('solo');$('jumpJoinButton').textContent='ONLINE';$('jumpCustomizeButton').textContent=txt('character');if($('jumpHelp'))$('jumpHelp').textContent=txt('help');
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
@@ -318,8 +320,9 @@ function openRank(modeName='world',number=1){
  modalEl.classList.remove('hidden');renderJumpFull();
 }
 function chooseWorld(){
- modal(txt('choose'),'<div class="jump-world-grid">'+BIOMES.map(b=>'<button class="jump-world-option '+b+'" data-biome="'+b+'"><canvas width="450" height="195" aria-hidden="true"></canvas><strong>'+b.toUpperCase()+'</strong><small>ONLINE</small></button>').join('')+'</div><p>5 PLAYERS MAX / INSTANCE · AUTO MATCHMAKING</p>');
- panel.querySelectorAll('[data-biome]').forEach(btn=>{window.EixoJumpWorlds.draw(btn.querySelector('canvas').getContext('2d'),btn.dataset.biome,73,0,0);btn.onclick=()=>{const b=btn.dataset.biome;closePanel();newRun({biome:b,mode:'public'})};});
+ modal(teamText('JOGAR ONLINE','PLAY ONLINE'),'<div class="jump-world-grid jump-online-grid"><button class="jump-world-option forest jump-online-option" id="jumpOnlineMatch"><canvas width="450" height="195" aria-hidden="true"></canvas><strong>'+teamText('JOGAR ONLINE','PLAY ONLINE')+'</strong><small>'+teamText('ENTRA NUMA INSTÂNCIA COM JOGADORES · MAPA AUTOMÁTICO','JOINS AN INSTANCE WITH PLAYERS · AUTOMATIC MAP')+'</small></button></div><p>'+teamText('O matchmaking procura primeiro a instância pública mais cheia com espaço. Só cria outra quando as existentes estiverem cheias.','Matchmaking fills the busiest public instance first. A new one opens only when existing instances are full.')+'</p>');
+ const btn=$('jumpOnlineMatch');window.EixoJumpWorlds.draw(btn.querySelector('canvas').getContext('2d'),'forest',73,0,1.2);
+ btn.onclick=()=>{closePanel();newRun({mode:'public'})};
 }
 async function customize(){
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
@@ -631,7 +634,7 @@ function init(){
  root.innerHTML='<canvas id="jumpCanvas" width="450" height="195" aria-label="JUMP platformer"></canvas>'+
  '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">FOREST · SOLO</div></div>'+
  '<div class="jump-tools"><button id="jumpSoloButton">SOLO</button><button id="jumpJoinButton">ONLINE</button><button id="jumpDuoButton">DUO</button><button id="jumpTrioButton">TRIO</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
- '<div class="jump-help" id="jumpHelp"></div><div class="jump-status" id="jumpStatus" role="status"></div>'+
+ '<div class="jump-status" id="jumpStatus" role="status"></div>'+
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
  '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>'+txt('height')+': <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
  frame.appendChild(root);canvas=$('jumpCanvas');ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;

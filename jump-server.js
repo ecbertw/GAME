@@ -98,6 +98,13 @@ function findInstance(biome,kind,roomId){
   }
   return newInstance(biome,kind,roomId);
 }
+function findPublicInstance(){
+  const open=[...instances.values()].filter(inst=>inst.kind==='public'&&!inst.roomId&&inst.players.size>0&&inst.players.size<5)
+    .sort((a,b)=>b.players.size-a.players.size||a.epoch-b.epoch);
+  if(open[0])return open[0];
+  const biome=BIOMES[crypto.randomInt(0,BIOMES.length)];
+  return newInstance(biome,'public',null);
+}
 async function getOutfit(db,p){
   const r=await db.query('SELECT colors FROM jump_cosmetics WHERE player_id=$1',[p.id]);
   const normalized=normalizeOutfit(r.rows[0]?.colors||OUTFIT_DEFAULTS);
@@ -121,14 +128,16 @@ async function start(db,p,d){
   purge();
   await teams.leave(p);
   const outfit=await getOutfit(db,p);
-  let roomId=null,biome=validBiome(d.biome),kind=d.mode==='online'||d.mode==='public'||d.multiplayer?'public':'solo';
+  let roomId=null,kind=d.mode==='online'||d.mode==='public'||d.multiplayer?'public':'solo';
+  let biome=kind==='public'?'forest':validBiome(d.biome);
   if(d.roomId){
     const r=await db.query('SELECT r.id,r.biome FROM jump_rooms r JOIN jump_room_members m ON m.room_id=r.id AND m.player_id=$2 WHERE r.id=$1',[d.roomId,p.id]);
     if(!r.rowCount)throw error('Não pertences a esta sala JUMP.',403);
     roomId=r.rows[0].id;biome=r.rows[0].biome;kind='private';
   }
   removeSession(sessions.get(activeByPlayer.get(p.id)));
-  let inst=kind==='solo'?newInstance(biome,kind,null):findInstance(biome,kind,roomId);
+  let inst=kind==='solo'?newInstance(biome,kind,null):kind==='public'?findPublicInstance():findInstance(biome,kind,roomId);
+  biome=inst.biome;
   if(inst.players.size>=5)throw error('Instância cheia.',409);
   const id=crypto.randomUUID();
   const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,outfit,instanceId:inst.id,roomId,biome,kind,

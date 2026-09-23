@@ -176,3 +176,8 @@ body:not(.eixo-jump-view) #jumpMyTeamsBoard{display:none!important}
  .jump-color-list{grid-template-columns:1fr}
  .jump-custom-preview{height:150px}
 }
+
+.jump-online-grid{grid-template-columns:1fr!important}
+.jump-online-option{min-height:190px}
+.jump-online-option strong{font-size:13px}
+.jump-online-option small{max-width:92%;line-height:1.6}
