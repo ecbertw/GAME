@@ -9,6 +9,7 @@ function createService({now=Date.now,physics=P}={}){
  const teams=new Map(),membership=new Map();
  let db;
  const cap=mode=>mode==='duo'?2:3;
+ const rosterKey=t=>crypto.createHash('sha256').update(t.mode+':'+[...t.members.keys()].sort().join(':')).digest('hex');
  async function init(storage){
   db=storage;
   await db.query(`CREATE TABLE IF NOT EXISTS jump_team_scores(
@@ -81,7 +82,7 @@ function createService({now=Date.now,physics=P}={}){
  function end(t,reason){
   if(t.status!=='playing')return;
   t.status='ended';t.reason=reason;t.updated=now();t.startsAt=0;t.restartAt=reason==='fall'?now()+2200:0;
-  t.result={key:crypto.createHash('sha256').update(t.mode+':'+[...t.members.keys()].sort().join(':')).digest('hex'),score:t.score,
+  t.result={key:rosterKey(t),score:t.score,
    members:[...t.members.values()].map(m=>({id:m.id,name:m.name}))};
   t.saved=false;
   for(const m of t.members.values()){if(m.state)m.state.alive=false;m.ready=false;m.keys={};}
@@ -244,6 +245,11 @@ function createService({now=Date.now,physics=P}={}){
   if(membership.get(String(p.id))===teamId)await leave(p);
   const t=teams.get(teamId)||await hydrate(teamId);
   if(!t.members.has(String(p.id)))throw fail('Não pertences a esta equipa.',403);
+  // A DUO/TRIO ranking belongs to the exact roster that earned it. If a
+  // member abandons the persistent team, that old roster must disappear from
+  // TOP immediately rather than keep showing a player who is no longer there.
+  const oldRosterKey=rosterKey(t);
+  await db.query('DELETE FROM jump_team_scores WHERE roster_key=$1',[oldRosterKey]);
   await db.query('DELETE FROM jump_team_members WHERE team_id=$1::uuid AND player_id=$2',[teamId,String(p.id)]);
   t.members.delete(String(p.id));
   if(!t.members.size){await db.query('DELETE FROM jump_teams WHERE id=$1::uuid',[teamId]);teams.delete(teamId);return{ok:true,deleted:true};}
