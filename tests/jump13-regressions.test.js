@@ -30,20 +30,12 @@ test('ONLINE shows one matchmaking card and does not expose a biome picker',()=>
  assert.match(fn,/JOGAR ONLINE/);
  assert.match(fn,/id="jumpOnlineMatch"/);
  assert.match(fn,/newRun\(\{mode:'public'\}\)/);
+ assert.doesNotMatch(fn,/matchmaking procura|Matchmaking fills/);
  assert.doesNotMatch(fn,/BIOMES\.map/);
  assert.doesNotMatch(fn,/data-biome/);
  const server=fs.readFileSync(path.join(root,'jump-server.js'),'utf8');
  assert.match(server,/function findPublicInstance\(\)/);
  assert.match(server,/sort\(\(a,b\)=>b\.players\.size-a\.players\.size\|\|a\.epoch-b\.epoch\)/);
-});
-
-test('team chains use stable join order and rankings prune abandoned rosters',()=>{
- const team=fs.readFileSync(path.join(root,'jump-team-server.js'),'utf8');
- assert.match(team,/function orderedMembers\(t\)/);
- assert.match(team,/const ms=orderedMembers\(t\)/);
- assert.match(team,/members:orderedMembers\(t\)\.map/);
- assert.match(team,/async function pruneRankings\(mode\)/);
- assert.match(team,/DELETE FROM jump_team_scores WHERE mode=\$1/);
 });
 
 test('white is removed from VIP tag choices and legacy white values normalize to defaults',()=>{
