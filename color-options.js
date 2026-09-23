@@ -69,9 +69,10 @@
       for(const option of options){
         const value=String(option.value||'').toLowerCase();
         if(!isColor(value))continue;
+        const keepLabel=option.dataset.eixoColorLabel==='keep';
         const key=value==='rainbow'||value==='rgb'?'rainbow':value==='glow'?'glow':named[value]||'custom';
         const title=(value==='rgb'?'RGB / ':value==='rainbow'?'🌈 ':'')+label(key);
-        if(option.textContent!==title)option.textContent=title;
+        if(!keepLabel&&option.textContent!==title)option.textContent=title;
         const textColor=hex.test(value)?value:'#e2e8f0';
         option.style.setProperty('color',textColor);
         option.style.setProperty('background-color','#0b1117');
