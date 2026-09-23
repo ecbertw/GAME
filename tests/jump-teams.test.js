@@ -128,9 +128,10 @@ test('leaving an active room closes the session for every teammate but keeps the
 });
 
 test('team rankings enrich member names with the same profile and rank tags data',async()=>{
- const f=await fixture(),s=f.service,t=await f.fill();
- // Controlled finish writes one team result; the mock profile query supplies rank styling.
- s.input(users[0],{runId:t.runId,seq:0});s.input(users[1],{runId:t.runId,seq:0});
+ const physics={...P,step(s){s.bestPlatform=2;return s;}};
+ const f=await fixture(physics),s=f.service,t=await f.fill();
+ // Controlled progress writes one team result; the mock profile query supplies rank styling.
+ s.input(users[0],{runId:t.runId,seq:0});s.input(users[1],{runId:t.runId,seq:0});f.advance(100);
  await s.finish(users[0],{runId:t.runId});
  const out=await s.rankings('duo',1);assert.equal(out.teams.length,1);
  assert.equal(out.teams[0].members[0].country,'PT');assert.equal(out.teams[0].members[0].worldRank,1);
