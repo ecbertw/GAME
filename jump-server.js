@@ -4,16 +4,22 @@ const crypto=require('crypto');
 const physics=require('./jump-physics');
 const BIOMES=['city','forest','desert','snow'];
 const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#263c5c','#111827'];
-const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',hair:'#19222d',hairLight:'#2d3b4a',eyes:'#17202a'};
-const OUTFIT_DEFAULTS={top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none'};
-const PARTS=['top','accent','pants','shoes','effect'];
+const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a'};
+const OUTFIT_DEFAULTS={hair:'#19222d',top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none'};
+const PARTS=['hair','top','accent','pants','shoes','effect'];
 const special=(value,label,minVip)=>({value,label,minVip});
 const baseColors=PALETTE.map(value=>special(value,value.toUpperCase(),0));
 const WARDROBE={
-  top:[...baseColors,special('#ffd84d','GOLD RUNNER',1),special('#00f5ff','NEON CYAN',2),special('#ff3cf7','NEON MAGENTA',3),special('#a6ff38','ACID LIME',4),special('#ff6238','PLASMA ORANGE',5),special('rainbow','INFINITY RGB',6)],
-  accent:[...baseColors,special('#ffe66d','VIP GOLD',1),special('#56f7ff','ELECTRIC ICE',2),special('#ff70dc','LASER PINK',3),special('#b8ff66','TOXIC GLOW',4),special('#ff8a4c','SOLAR',5),special('rainbow','COSMIC RGB',6)],
-  pants:[...baseColors,special('#5b4bff','ROYAL VIOLET',1),special('#00d9ff','CYBER BLUE',2),special('#da4cff','VOID PURPLE',3),special('#68ff84','NEON GREEN',4),special('#ff425f','PLASMA RED',5),special('rainbow','INFINITY RGB',6)],
-  shoes:[...baseColors,special('#ffe66d','GOLD SOLES',1),special('#75f8ff','ICE SOLES',2),special('#ff8be8','PINK LIGHT',3),special('#c8ff75','LIME LIGHT',4),special('#ff9a62','FIRE LIGHT',5),special('rainbow','COSMIC SOLES',6)],
+  hair:[
+    special('#19222d','PRETO',0),special('#3f2a20','CASTANHO ESCURO',0),special('#754c32','CASTANHO',0),
+    special('#d8b05d','LOIRO',0),special('#9aa2ad','CINZENTO',0),special('#e9edf2','BRANCO',0),special('#8f3038','RUIVO',0),
+    special('#00f5ff','NEON CIANO',2),special('#ff3cf7','NEON MAGENTA',3),special('#a6ff38','NEON LIMA',4),
+    special('#ff6238','PLASMA LARANJA',5),special('rainbow','ARCO-ÍRIS VIP',6)
+  ],
+  top:[...baseColors,special('#ffd84d','DOURADO',1),special('#00f5ff','NEON CIANO',2),special('#ff3cf7','NEON MAGENTA',3),special('#a6ff38','NEON LIMA',4),special('#ff6238','PLASMA LARANJA',5),special('rainbow','ARCO-ÍRIS VIP',6)],
+  accent:[...baseColors,special('#ffe66d','DOURADO',1),special('#56f7ff','GELO ELÉTRICO',2),special('#ff70dc','ROSA LASER',3),special('#b8ff66','BRILHO TÓXICO',4),special('#ff8a4c','SOLAR',5),special('rainbow','ARCO-ÍRIS VIP',6)],
+  pants:[...baseColors,special('#5b4bff','VIOLETA REAL',1),special('#00d9ff','AZUL CYBER',2),special('#da4cff','ROXO VOID',3),special('#68ff84','VERDE NEON',4),special('#ff425f','VERMELHO PLASMA',5),special('rainbow','ARCO-ÍRIS VIP',6)],
+  shoes:[...baseColors,special('#ffe66d','SOLAS DOURADAS',1),special('#75f8ff','SOLAS DE GELO',2),special('#ff8be8','LUZ ROSA',3),special('#c8ff75','LUZ LIMA',4),special('#ff9a62','LUZ DE FOGO',5),special('rainbow','ARCO-ÍRIS VIP',6)],
   effect:[special('none','NONE',0),special('glow','GLOW',1),special('pulse','PULSE',2),special('spark','SPARKS',3),special('electric','ELECTRIC',4),special('plasma','PLASMA',5),special('cosmic','COSMIC RGB',6)]
 };
 const DEFAULTS=OUTFIT_DEFAULTS;
@@ -24,6 +30,7 @@ function vipLevel(p){return Math.max(0,Math.min(6,Number(p?.vipLevel)||0));}
 function normalizeOutfit(data){
   const raw=data&&typeof data==='object'?data:{};
   return{
+    hair:String(raw.hair||OUTFIT_DEFAULTS.hair).toLowerCase(),
     top:String(raw.top||raw.shirt||OUTFIT_DEFAULTS.top).toLowerCase(),
     accent:String(raw.accent||raw.arms||OUTFIT_DEFAULTS.accent).toLowerCase(),
     pants:String(raw.pants||OUTFIT_DEFAULTS.pants).toLowerCase(),
