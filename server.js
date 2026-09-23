@@ -390,6 +390,7 @@ async function handleApi(req,res,url){
   if(req.method==='GET'&&url.pathname==='/api/player-rank'){return json(res,200,await playerRanks(url.searchParams.get('id'),url.searchParams.get('token')));}
   /* JUMP uses its own tables and live instances; PULSE routes remain unchanged. */
   if(url.pathname==='/api/jump/teams/rankings'&&req.method==='GET')return json(res,200,await jumpService.teams.rankings(url.searchParams.get('mode'),url.searchParams.get('page')));
+  if(url.pathname==='/api/jump/teams/list'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.teams.list(p,url.searchParams.get('mode')));}
   if(url.pathname==='/api/jump/teams/state'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,jumpService.teams.state(p));}
   if(url.pathname==='/api/jump/player-rank'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.playerRank(global.db,p));}
   if(url.pathname==='/api/jump/rankings'&&req.method==='GET')return json(res,200,await jumpService.rankings(global.db,url.searchParams.get('country'),url.searchParams.get('page')));
@@ -402,11 +403,11 @@ async function handleApi(req,res,url){
     if(url.pathname.startsWith('/api/jump/teams/')){
       const action=url.pathname.slice('/api/jump/teams/'.length),service=jumpService.teams;
       if(!boundedRate(paypalRate,'jump-team:'+action+':'+p.id,action==='input'?250:30,10*1000))throw Object.assign(new Error('Aguarda um momento.'),{status:429});
-      if(action==='create'||action==='join'){
+      if(['create','join','enter'].includes(action)){
         const outfit=await jumpService.getOutfit(global.db,p);
-        const out=service[action](p,d,outfit);jumpService.leave(p);return json(res,200,out);
+        const out=await service[action](p,d,outfit);jumpService.leave(p);return json(res,200,out);
       }
-      if(['ready','start','input','finish','leave'].includes(action))return json(res,200,await service[action](p,d));
+      if(['ready','start','input','finish','leave','abandon'].includes(action))return json(res,200,await service[action](p,d));
       return json(res,404,{error:'Not found'});
     }
     if(url.pathname==='/api/jump/run/start'){if(!boundedRate(paypalRate,'jump-start:'+p.id,15,60*1000))throw Object.assign(new Error('Aguarda um momento antes de recomeçar.'),{status:429});return json(res,201,await jumpService.start(global.db,p,d));}
