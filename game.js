@@ -113,8 +113,8 @@ document.getElementById('prevPage').addEventListener('click',()=>{if(rankingPage
 document.getElementById('nextPage').addEventListener('click',()=>{if(rankingPage<rankingPages){rankingPage++;loadFullRanking();}});
 document.getElementById('rankingClose').addEventListener('click',()=>closeModal(rankingModal));
 rankingModal.addEventListener('click',e=>{if(e.target===rankingModal)closeModal(rankingModal);});
-playButton.addEventListener('click',resetGame);canvas.addEventListener('pointerdown',hit);
-window.addEventListener('keydown',e=>{if(['Space','Enter'].includes(e.code)){e.preventDefault();hit();}});
+playButton.addEventListener('click',()=>{if(!window.eixoJumpActive)resetGame()});canvas.addEventListener('pointerdown',hit);
+window.addEventListener('keydown',e=>{if(window.eixoJumpActive)return;if(['Space','Enter'].includes(e.code)){e.preventDefault();hit();}});
 countryButton.addEventListener('click',()=>{if(player)return;const open=countryMenu.classList.toggle('open');countryButton.setAttribute('aria-expanded',String(open));});
 document.addEventListener('click',e=>{if(!e.target.closest('.profile-area')){countryMenu.classList.remove('open');countryButton.setAttribute('aria-expanded','false');}});
 
