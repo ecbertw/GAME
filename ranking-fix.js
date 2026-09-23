@@ -32,6 +32,7 @@
      const results=await Promise.all(requests);
      if(!results[0].ok||!results[1].ok)throw Error();
      const [w,c]=await Promise.all([results[0].json(),results[1].json()]);
+     if(window.eixoJumpActive)return;
      render(w.players,worldEl,true);render(c.players,countryEl,false);
      if(results[2]){
        if(results[2].ok){const me=await results[2].json();setMyRank('worldMyRank',me.worldRank);setMyRank('nationalMyRank',me.countryRank);}
