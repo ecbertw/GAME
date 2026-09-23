@@ -22,7 +22,7 @@
       const lateral=130+Math.round(52*difficulty);
       y+=gap;
       x=Math.max(12,Math.min(W-width-12,x+(b-.5)*lateral));
-      out.push({x:Math.round(x),y,w});
+      out.push({x:Math.round(x),y,w:width});
     }
   }
   function create(seed,sharedPlatforms){
