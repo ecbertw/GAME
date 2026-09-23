@@ -75,101 +75,17 @@ body:not(.eixo-jump-view) #jumpRoomBoard,body:not(.eixo-jump-view) #jumpRoomCrea
 .jump-room-board .rank-name-wrap{min-width:0}
 .jump-room-board .rank-score-wrap{justify-self:end}
 
-/* Team controls retain the site's pixel borders, type and board components. */
-.jump-team-help{font:12px/1.7 monospace;color:#b6cad6;margin:14px 0}
-.jump-team-members{padding:0;list-style:none;font:12px/1.8 monospace;color:#dcf1e9}
-.jump-team-boards .rank-name-wrap{display:flex;flex-direction:column;gap:6px;min-width:0;overflow-wrap:anywhere}
-.jump-team-boards small,.jump-rank-list small{display:block;font:10px/1.5 monospace;color:#9fb1c4}
-body:not(.eixo-jump-view) #jumpTeamBoards{display:none!important}
 .jump-tools{flex-wrap:wrap;max-width:78%;justify-content:flex-end}
-.jump-tools #jumpDuoButton,.jump-tools #jumpTrioButton{background:#30264b;border-color:#b599ef}
-#jumpTeamError{font:12px/1.6 monospace;color:#ffb4a7}
 .jump-panel button:disabled{opacity:.45;cursor:default}
 @media(max-width:420px){.jump-tools{gap:3px;top:32px;max-width:80%}.jump-tools button{padding:6px 4px;font-size:5px}.jump-status{top:94px}}
 
 .jump-world-option{position:relative;overflow:hidden}.jump-world-option canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}.jump-world-option strong,.jump-world-option small{position:relative;z-index:1;background:#101b2bc9;padding:5px;width:fit-content}
 
 
-/* jump9 — team rooms and clearer hierarchy. */
-.jump-team-section-title{margin:2px 0 12px;font-size:10px;line-height:1.5;color:#eaf4ff;letter-spacing:.05em}
-.jump-team-saved-list,.jump-my-teams-list{display:grid;gap:8px}
-.jump-team-room-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:11px;padding:11px 12px;border:2px solid #3d5367;background:#0b1722;box-shadow:2px 2px 0 #05090d}.jump-team-card-actions{display:flex;align-items:center;gap:7px}.jump-team-card-actions .board-more{margin:0}.jump-team-card-actions .ready{border-color:#52dd92;color:#9fffc6;background:#123622}
-.jump-team-room-card.active{border-color:#5ee69b;background:#0e241d}
-.jump-team-room-main{display:flex;min-width:0;flex-direction:column;gap:6px}
-.jump-team-room-main strong{font-size:8px;color:#eef8ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.jump-team-room-main small{font-size:6px;color:#9db4c5}
-.jump-team-room-mode{min-width:47px;padding:7px 6px;border:2px solid;text-align:center;font-size:7px;font-weight:700;background:#17142a;color:#cdbdff;border-color:#8f72d9}
-.jump-team-room-mode.trio{background:#10282c;color:#7fe9e1;border-color:#4ca9ae}
-.jump-team-room-mode.duo{background:#201737;color:#cdbdff;border-color:#9576df}
-.jump-team-empty{padding:17px;border:1px dashed #40566a;background:#0a141e;color:#8fa7b8;font-size:7px;line-height:1.8;text-align:center}
-.jump-team-divider{display:flex;align-items:center;gap:10px;margin:18px 0 14px;color:#7890a2;font-size:6px}
-.jump-team-divider:before,.jump-team-divider:after{content:"";height:1px;background:#34495a;flex:1}
-.jump-team-help{font:7px/1.9 monospace;color:#b6cad6;margin:12px 0}
-.jump-team-create-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.jump-team-invite-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:stretch;gap:8px;margin-top:12px}
-.jump-team-invite-row .modal-button{margin:0;min-width:150px}
-.jump-team-lobby-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:11px;border:2px solid #344d61;background:#0b1722}
-.jump-team-lobby-head>div:first-child{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:7px 9px;min-width:0}
-.jump-team-lobby-head strong{font-size:10px;color:#f1f8ff}
-.jump-team-lobby-head small{grid-column:2;font-size:6px;color:#90aabc}
-.jump-team-lobby-head .room-code{font-size:10px;color:#f4c86a;background:#171d23;border-color:#826d3c}
-.jump-team-members{display:grid;gap:7px;margin:13px 0;padding:0;list-style:none}
-.jump-team-members li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px;border:1px solid #334b5d;background:#0b1721;font:7px/1.4 monospace;color:#9cb1c1}
-.jump-team-members li strong{color:#e9f5fb;font-size:8px}
-.jump-team-members li.present{border-color:#336e58;background:#0d211a;color:#73d4a7}
-.jump-team-members li.offline{opacity:.75}
-.jump-member-dot{width:7px;height:7px;background:#697783;box-shadow:0 0 0 2px #111b23}
-.jump-team-members li.present .jump-member-dot{background:#55e69a}
-.jump-team-countdown{margin:0 0 12px;padding:14px;border:3px solid #f0bf60;background:#392915;color:#ffe6a7;text-align:center;font-size:15px;letter-spacing:.08em;box-shadow:4px 4px 0 #0a0d11}
-.jump-team-live{margin:0 0 12px;padding:9px;border:2px solid #52dd92;background:#0e2a1d;color:#92ffc4;text-align:center;font-size:8px}
-.jump-team-exit-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.jump-team-exit-row .board-more{min-height:38px}
-.jump-team-exit-row .danger{border-color:#a44d57!important;color:#ffb5bd!important;background:#2e151a!important}
-.jump-my-teams-board{margin-top:14px}
-.jump-my-teams-board .room-board-heading{margin-bottom:10px}
-.jump-team-rank-icon{color:#b79af5}.jump-team-rank-icon.trio{color:#62d6d6}
-.jump-team-boards .board-title{gap:8px}
-.jump-team-boards .rank-name-wrap strong{color:#eaf4ff;font-size:8px}
-.jump-team-boards small,.jump-rank-list small{font:6px/1.6 monospace;color:#9fb1c4}
-#jumpTeamError{font:7px/1.7 monospace;color:#ff9e90;min-height:1em;margin-top:9px}
-.jump-panel hr{border:0;border-top:1px solid #354b5d;margin:18px 0}
-
 /* Fragile-platform warning key, kept subtle and in-world rather than white. */
 .jump-status{color:#ffe7ca;border:1px solid #9d4f52;background:#4b2029e8}
 
-@media(max-width:650px){
- .jump-team-create-grid{grid-template-columns:1fr}
- .jump-team-invite-row{grid-template-columns:1fr}
- .jump-team-invite-row .modal-button{min-width:0}
- .jump-team-room-card{grid-template-columns:auto minmax(0,1fr);gap:8px}
- .jump-team-room-card .jump-team-card-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}.jump-team-room-card .board-more{width:100%}
- .jump-team-lobby-head{align-items:flex-start;flex-direction:column}
- .jump-team-lobby-head .room-code{width:100%;box-sizing:border-box;text-align:center}
- .jump-team-exit-row{grid-template-columns:1fr}
- .jump-team-section-title{font-size:9px}
- .jump-team-help{font-size:6px}
-}
-
-body:not(.eixo-jump-view) #jumpMyTeamsBoard{display:none!important}
-
-
-/* jump10 — readable team rosters and automatic rematch feedback. */
-.jump-team-rank-name{gap:5px!important}
-.jump-team-rank-name>strong{font-size:8px!important;line-height:1.35}
-.jump-team-roster{display:flex;flex-direction:row;align-items:center;flex-wrap:nowrap;gap:3px;min-width:0;white-space:nowrap;overflow:hidden}
-.jump-team-player{display:inline-flex;align-items:center;flex:0 1 auto;min-width:0;gap:3px;min-height:15px;font-size:7px;line-height:1.25}
-.jump-team-player .rank-player-name{font-size:7px;line-height:1.25;white-space:nowrap}
-.jump-team-player-tags{display:inline-flex;align-items:center;flex-wrap:nowrap;gap:2px}
-.jump-team-player-tags .rank-tag,.jump-team-player-tags .vip-rank-tag{transform:none;max-width:none;font-size:4px;padding:2px 3px}
-.jump-team-plus{font-size:5px;color:#708697;flex:0 0 auto}
-.jump-team-boards ol>li,.jump-rank-list>li{align-items:flex-start}
-.jump-team-boards .rank-number,.jump-team-boards .rank-score{padding-top:2px}
 .jump-end button:disabled{opacity:.72;cursor:default;border-color:#e8bf63;background:#4c351b;color:#ffe8a7}
-@media(max-width:650px){
- .jump-team-player,.jump-team-player .rank-player-name{font-size:6px}
- .jump-team-player-tags .rank-tag,.jump-team-player-tags .vip-rank-tag{font-size:3.5px;padding:2px}
- .jump-team-player-tags{gap:2px}
-}
 
 @media(max-width:700px){
  .jump-panel{width:calc(100vw - 18px)!important;padding:20px 12px!important}
