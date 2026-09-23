@@ -13,7 +13,7 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
  console.log('migrating');await J.initDb(db);await db.query('INSERT INTO jump_scores(player_id,best_score,score_version) VALUES($1,120,2)',[players[0].id]);
  await J.initDb(db);assert.equal((await db.query('SELECT best_score FROM jump_scores')).rows[0].best_score,120);
  assert.equal((await db.query('SELECT best_score FROM players')).rows[0].best_score,777);
- const server=http.createServer((req,res)=>{let file=path.join(root,req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0]);try{res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html');let body=fs.readFileSync(file);if(file.endsWith('.js')){const label=path.basename(file);body=Buffer.from('console.log("__START '+label+'");\\n'+body.toString()+'\\nconsole.log("__END '+label+'");');}res.end(body);}catch{res.statusCode=404;res.end();}});
+ const server=http.createServer((req,res)=>{let file=path.join(root,req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0]);try{res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html');let body=fs.readFileSync(file);if(file.endsWith('.js')){const label=path.basename(file);body=Buffer.from('console.log("__START '+label+'");\n'+body.toString()+'\nconsole.log("__END '+label+'");');}res.end(body);}catch{res.statusCode=404;res.end();}});
  await new Promise(r=>server.listen(3201,'127.0.0.1',r));
  console.log('launching browser');const browser=await chromium.launch({headless:true});const errors=[];
  try{
