@@ -26,7 +26,8 @@ function createService({now=Date.now,physics=P}={}){
    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(team_id,player_id))`);
   await db.query('CREATE INDEX IF NOT EXISTS jump_team_members_player_idx ON jump_team_members(player_id,joined_at DESC)');
  }
- function blankMember(row){return{id:String(row.player_id),name:String(row.player_name||'PLAYER'),outfit:null,ready:false,present:false,seen:0,inputAt:0,keys:{},seq:-1,state:null,facing:1};}
+ function blankMember(row){return{id:String(row.player_id),name:String(row.player_name||'PLAYER'),outfit:null,ready:false,present:false,seen:0,inputAt:0,keys:{},seq:-1,state:null,facing:1,position:null,positionAt:0};}
+ function rosterKey(t){return crypto.createHash('sha256').update(t.mode+':'+[...t.members.keys()].sort().join(':')).digest('hex');}
  function previewState(t,index){
   const s=physics.create(t.seed);
   s.x=physics.W/2+(index-(t.capacity-1)/2)*26;
@@ -65,7 +66,7 @@ function createService({now=Date.now,physics=P}={}){
    WHERE mine.player_id=$1 AND t.mode=$2
    GROUP BY t.id,t.code,t.mode,t.name,t.biome,t.owner_id,t.updated_at,t.created_at
    ORDER BY t.updated_at DESC,t.created_at DESC`,[String(p.id),mode]);
-  return{ok:true,mode,teams:r.rows.map(x=>({id:String(x.id),code:x.code,mode:x.mode,name:x.name,biome:x.biome,ownerId:String(x.owner_id),memberCount:Number(x.member_count||0),capacity:cap(x.mode),active:membership.get(String(p.id))===String(x.id)}))};
+  return{ok:true,mode,teams:r.rows.map(x=>{const id=String(x.id),active=membership.get(String(p.id))===id,live=teams.get(id),member=live?.members.get(String(p.id));return{id,code:x.code,mode:x.mode,name:x.name,biome:x.biome,ownerId:String(x.owner_id),memberCount:Number(x.member_count||0),capacity:cap(x.mode),active,ready:!!(active&&member?.ready),status:active?(live?.status||'lobby'):'idle'};})};
  }
  async function save(t){
   if(t.status!=='ended'||t.saved||t.saving)return t.saving||Promise.resolve();
@@ -81,7 +82,7 @@ function createService({now=Date.now,physics=P}={}){
  function end(t,reason){
   if(t.status!=='playing')return;
   t.status='ended';t.reason=reason;t.updated=now();t.startsAt=0;t.restartAt=reason==='fall'?now()+2200:0;
-  t.result={key:crypto.createHash('sha256').update(t.mode+':'+[...t.members.keys()].sort().join(':')).digest('hex'),score:t.score,
+  t.result={key:rosterKey(t),score:t.score,
    members:[...t.members.values()].map(m=>({id:m.id,name:m.name}))};
   t.saved=false;
   for(const m of t.members.values()){if(m.state)m.state.alive=false;m.ready=false;m.keys={};}
@@ -94,7 +95,7 @@ function createService({now=Date.now,physics=P}={}){
   const shared=physics.platforms(t.seed,34);let i=0;
   for(const m of t.members.values()){
    m.state=physics.create(t.seed,shared);m.state.x=physics.W/2+(i++-(t.capacity-1)/2)*26;
-   m.keys={};m.seq=-1;m.seen=now();m.inputAt=now();m.ready=false;
+   m.keys={};m.seq=-1;m.seen=now();m.inputAt=now();m.ready=false;m.position=null;m.positionAt=0;
   }
  }
  function allPresent(t){return t.members.size===t.capacity&&[...t.members.values()].every(m=>m.present&&now()-m.seen<=DISCONNECT);}
@@ -156,7 +157,7 @@ function createService({now=Date.now,physics=P}={}){
   const countdownMs=t.status==='countdown'?Math.max(0,t.startsAt-now()):0,restartMs=t.status==='ended'&&t.restartAt?Math.max(0,t.restartAt-now()):0;
   return{ok:true,teamId:t.id,mode:t.mode,name:t.name,code:t.code,ownerId:t.ownerId,capacity:t.capacity,biome:t.biome,seed:t.seed,runId:t.runId,status:t.status,score:t.score||0,reason:t.reason||null,saved:!!t.saved,saveError:!!t.saveError,countdownMs,restartMs,
    chainLength:LIMIT,members:[...t.members.values()].map(x=>({id:x.id,name:x.name,ready:!!x.ready,present:!!x.present,outfit:x.outfit,
-    state:x.state?{...physics.publicState(x.state),cam:x.state.cam,time:x.state.time,ground:x.state.ground,facing:x.facing||1,moving:!!(x.keys.left||x.keys.right)}:null}))};
+    state:x.state?{...physics.publicState(x.state),...(x.position?{x:x.position.x,y:x.position.y}:{}),cam:x.state.cam,time:x.state.time,ground:x.position?.ground??x.state.ground,vy:Number.isFinite(x.position?.vy)?x.position.vy:x.state.vy,facing:x.facing||1,moving:!!(x.keys.left||x.keys.right)}:null}))};
  }
  async function enter(p,d,outfit){
   const teamId=String(d.teamId||'');if(!/^[0-9a-f-]{36}$/i.test(teamId))throw fail('Equipa inválida.');
@@ -219,7 +220,19 @@ function createService({now=Date.now,physics=P}={}){
   if(t.status!=='playing'||d.runId!==t.runId)return view(t,p);
   const m=t.members.get(String(p.id));if(!m.present)throw fail('Sessão expirada.',409);
   if(!Number.isSafeInteger(d.seq)||d.seq<0)throw fail('Sequência inválida.');
-  if(d.seq>m.seq){m.seq=d.seq;m.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};m.inputAt=now();m.seen=now();if(m.keys.left!==m.keys.right)m.facing=m.keys.left?-1:1;}
+  if(d.seq>m.seq){
+   m.seq=d.seq;m.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};m.inputAt=now();m.seen=now();if(m.keys.left!==m.keys.right)m.facing=m.keys.left?-1:1;
+   // Relay the client's locally predicted pose for rendering only. The
+   // authoritative physics/score still live in m.state, so this removes visual
+   // rollback without making client positions authoritative for results.
+   if(d.position&&Number.isFinite(d.position.x)&&Number.isFinite(d.position.y)){
+    const x=Number(d.position.x),y=Number(d.position.y),stamp=now(),elapsed=Math.min(.5,Math.max(.04,(stamp-(m.positionAt||m.inputAt||stamp-60))/1000));
+    const previous=m.position||m.state;
+    if(x>=8&&x<=physics.W-8&&Math.abs(x-previous.x)<=190*elapsed+20&&Math.abs(y-previous.y)<=360*elapsed+28){
+     m.position={x,y,vy:Number(d.position.vy)||0,ground:d.position.ground===true};m.positionAt=stamp;
+    }
+   }
+  }
   advance(t);return view(t,p);
  }
  async function finish(p,d){
@@ -244,8 +257,12 @@ function createService({now=Date.now,physics=P}={}){
   if(membership.get(String(p.id))===teamId)await leave(p);
   const t=teams.get(teamId)||await hydrate(teamId);
   if(!t.members.has(String(p.id)))throw fail('Não pertences a esta equipa.',403);
+  const oldRosterKey=rosterKey(t);
   await db.query('DELETE FROM jump_team_members WHERE team_id=$1::uuid AND player_id=$2',[teamId,String(p.id)]);
   t.members.delete(String(p.id));
+  // A ranking entry represents the current roster, not a historical lineup.
+  // Removing any member invalidates the old roster score immediately.
+  await db.query('DELETE FROM jump_team_scores WHERE roster_key=$1',[oldRosterKey]);
   if(!t.members.size){await db.query('DELETE FROM jump_teams WHERE id=$1::uuid',[teamId]);teams.delete(teamId);return{ok:true,deleted:true};}
   if(t.ownerId===String(p.id)){
    t.ownerId=t.members.keys().next().value;await db.query('UPDATE jump_teams SET owner_id=$2,updated_at=NOW() WHERE id=$1::uuid',[teamId,t.ownerId]);
@@ -253,7 +270,7 @@ function createService({now=Date.now,physics=P}={}){
   if(t.status==='playing')end(t,'leave');
   if(t.status==='countdown'||t.status==='ended'){resetLobby(t,true);}
   for(const x of t.members.values())x.ready=false;
-  return{ok:true};
+  return{ok:true,ownerId:t.ownerId};
  }
  async function rankings(mode,page){
   if(!MODES.has(mode))throw fail('Modo inválido.');
