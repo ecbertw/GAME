@@ -1,4 +1,4 @@
-# JUMP — SOLO, ONLINE, DUO e TRIO (jump9)
+# JUMP — SOLO, ONLINE, DUO e TRIO (jump11)
 
 ## Como jogar
 
@@ -25,6 +25,10 @@ Depois de perder, VOLTAR À EQUIPA regressa à sala para nova tentativa. **SAIR 
 - PULSE, contas, cosméticos e rankings anteriores não são substituídos. Nenhuma alteração às tabelas PULSE é introduzida.
 
 As instâncias e lobbies vivem num único processo, como as instâncias ONLINE anteriores. Reiniciar o serviço termina tentativas em curso; recordes já gravados permanecem. Para vários processos/VPS será preciso distribuir a autoridade de cada sala e encaminhar pedidos para o processo correto. Esta versão não fornece esse encaminhamento. Um resultado ainda não gravado por indisponibilidade da base pode perder-se se o processo terminar antes da recuperação.
+
+## Estabilidade da interface
+
+Os snapshots de DUO/TRIO atualizam o estado do jogo sem recriar os cartões/botões de equipas a cada pedido. Os cartões persistentes só são renderizados novamente quando os respetivos dados mudam, evitando alvos de clique destacados do DOM e bloqueios pelo backdrop do modal.
 
 ## Validação e publicação
 
