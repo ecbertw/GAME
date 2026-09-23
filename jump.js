@@ -205,10 +205,21 @@ async function refreshRoomBoard(){
  board.classList.toggle('hidden',current!=='jump'||!roomId);
  if(current!=='jump'||!roomId)return;
  $('jumpRoomTitle').textContent=(roomLabel||'JUMP ROOM')+' · '+biome.toUpperCase();
+ $('jumpRoomMeta').textContent=' · '+biome.toUpperCase()+' · 5 MAX';
  try{
   const d=await api('/api/jump/rooms/rankings?roomId='+encodeURIComponent(roomId));
   if(!$('jumpRoomRanking'))return;
-  $('jumpRoomRanking').innerHTML=d.players.map((p,i)=>'<li><span class="rank-number">'+(i+1)+'</span><span class="rank-name-wrap">'+esc(p.name)+'</span><span class="rank-score-wrap">'+flags(p.country)+' <b>'+Number(p.score||0)+'</b></span></li>').join('');
+  const tag=(kind,n,country,color)=>n>=1&&n<=3?'<span class="rank-tag '+kind+'-'+n+'"'+(/^#[0-9a-f]{6}$/i.test(color||'')?' style="background:'+esc(color)+'!important;color:#fff!important"':'')+'>'+n+'# '+(kind==='country'?esc(country):'GLOBAL')+'</span>':'';
+  const vip=n=>n>0?'<span class="vip-rank-tag vip-rank-'+Math.min(n,6)+'">'+(n>=6?'VIP ∞':'VIP #'+n)+'</span>':'';
+  $('jumpRoomRanking').innerHTML=d.players.map((p,i)=>{
+    const styles=Array.isArray(p.letterStyles)?p.letterStyles:[],name=String(p.visualName||p.name||'');
+    const letters=[...name].map((ch,j)=>{
+      const st=styles[j]||{},color=String(st.color||'').toLowerCase(),effect=/^[a-z]+$/.test(String(st.effect||'none'))?String(st.effect||'none'):'none';
+      return '<span class="name-letter'+(color==='rainbow'?' name-rainbow':'')+' effect-'+effect+'"'+(/^#[0-9a-f]{6}$/i.test(color)?' style="color:'+color+'"':'')+'>'+esc(ch)+'</span>';
+    }).join('');
+    const rainbow=String(p.nameColor||'').toLowerCase()==='rainbow'&&!styles.length;
+    return '<li><span class="rank-number">'+(i+1)+'</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+(styles.length?' vip-letter-styled':'')+'">'+(letters||esc(name))+'</span>'+tag('world',Number(p.worldRank),p.country,p.tagGlobalColor)+tag('country',Number(p.countryRank),p.country,p.tagCountryColor)+vip(Number(p.vipLevel||0))+'</span></span><span class="rank-score-wrap"><span class="rank-flag" title="'+esc(p.country)+'">'+esc(flags(p.country))+'</span><span class="rank-score">'+Number(p.score||0)+'</span></span></li>';
+  }).join('');
  }catch(e){if($('jumpRoomRanking'))$('jumpRoomRanking').textContent=e.message}
 }
 async function jumpRooms(tab='list'){
