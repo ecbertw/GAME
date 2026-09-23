@@ -284,9 +284,26 @@ function init(){
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
  '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>HEIGHT: <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
  frame.appendChild(root);canvas=$('jumpCanvas');ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
- const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='board jump-room-board hidden';roomBoard.innerHTML='<div class="board-title"><span>◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><button id="jumpRoomLeave" type="button">LEAVE</button></div><ol id="jumpRoomRanking"></ol>';
+ const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='room-board jump-room-board hidden';
+ roomBoard.innerHTML='<div class="room-board-heading"><div><span class="room-panel-mark">◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><small id="jumpRoomMeta"></small></div><div class="room-board-actions"><button class="board-more" id="jumpRoomLeave" type="button">LEAVE ROOM</button><button class="board-more danger" id="jumpRoomAbandon" type="button">ABANDON ROOM</button></div></div><ol id="jumpRoomRanking"></ol>';
  document.querySelector('.boards')?.before(roomBoard);
- $('jumpRoomLeave').onclick=async()=>{const id=roomId;if(!id)return;await stopRun();await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})}).catch(e=>showError(e.message));roomId=null;roomLabel='';await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]})};
+ $('jumpRoomLeave').onclick=async()=>{
+   if(!roomId)return;
+   await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]});
+ };
+ $('jumpRoomAbandon').onclick=()=>{
+   if(!roomId)return;
+   modal('ABANDON JUMP ROOM','<p>Leave this room permanently? You will need the code to rejoin.</p><div class="abandon-room-actions"><button class="modal-button" id="jumpAbandonNo" type="button">NO</button><button class="modal-button primary" id="jumpAbandonYes" type="button">YES</button></div>');
+   $('jumpAbandonNo').onclick=closePanel;
+   $('jumpAbandonYes').onclick=async()=>{
+     const id=roomId,button=$('jumpAbandonYes');button.disabled=true;
+     try{
+       await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})});
+       closePanel();
+       await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]});
+     }catch(e){if($('jumpPanelBody'))$('jumpPanelBody').append(document.createTextNode(e.message));button.disabled=false}
+   };
+ };
 
  $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
  $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode,roomId,roomLabel});
