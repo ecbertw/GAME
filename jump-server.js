@@ -60,7 +60,7 @@ async function start(db,p,d){
   if(inst.players.size>=5)throw error('Instância cheia.',409);
   const id=crypto.randomUUID(),colors=await getColors(db,p);
   const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,colors,instanceId:inst.id,roomId,biome,kind,
-    state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
+    state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},lastJumpSeq:0,last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
   sessions.set(id,run);activeByPlayer.set(p.id,id);inst.players.set(p.id,run);
   return{ok:true,runId:id,seed:inst.seed,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,colors};
 }
@@ -78,8 +78,14 @@ function playersIn(run){
   return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),alive:r.state.alive,colors:r.colors}));
 }
 function input(p,d){
-  const run=requireRun(p,d.runId);advance(run);
-  run.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};
+  const run=requireRun(p,d.runId);
+  const seq=Number(d.jumpSeq??0);
+  if(!Number.isSafeInteger(seq)||seq<0||seq>1000000||seq<run.lastJumpSeq||seq-run.lastJumpSeq>5)throw error('Controlo de salto inválido.');
+  // Apply current controls before advancing the authoritative simulation.
+  // A monotonic jump sequence preserves quick Space taps between network polls.
+  if(seq>run.lastJumpSeq){run.state.jumpBuffer=.13;run.lastJumpSeq=seq;}
+  run.keys={left:d.left===true,right:d.right===true,jump:false};
+  advance(run);
   const inst=instances.get(run.instanceId);
   return{ok:true,state:physics.publicState(run.state),peers:run.kind==='solo'?[]:playersIn(run),players:inst?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
 }
