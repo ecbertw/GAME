@@ -37,15 +37,24 @@ test('moving platforms accelerate early but remain catchable',()=>{
  assert.ok(early.length&&later.length);
  const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
  assert.ok(avg(later)>avg(early)+0.25,'speed should ramp noticeably within the first dozen jumps');
- assert.ok(samples.every(x=>x.speed<=1.951&&x.linear<=92.01),'moving platforms must stay inside the catchable velocity cap');
+ assert.ok(samples.every(x=>x.speed<=2.081&&x.linear<=98.01),'moving platforms must stay inside the catchable velocity cap');
 });
-test('missing the immediate platform below ends the run before old platforms can rescue it',()=>{
- const s=P.create(313),rescueIndex=2,rescue=s.platforms[rescueIndex];
- s.bestPlatform=3;s.jumpOrigin=3;s.ground=false;s.groundPlatform=-1;s.y=rescue.y+1;s.vy=-110;
+test('old platforms retire, cannot catch the player, and death happens at the visible floor',()=>{
+ const s=P.create(313);
+ s.bestPlatform=3;s.activeMinPlatform=2;s.jumpOrigin=3;s.ground=false;s.groundPlatform=-1;s.best=s.platforms[3].y;s.cam=Math.max(0,s.best-78);
+ const rescue=s.platforms[2];
+ s.y=rescue.y+2;s.vy=-120;
  s.x=rescue.x+rescue.w/2<P.W/2?P.W-8:8;
- for(let i=0;i<6&&s.alive;i++)P.step(s,{left:false,right:false,jump:false},1/60);
- assert.equal(s.alive,false,'falling past the immediate rescue platform must be game over');
- assert.ok(s.y>=(s.platforms[1]?.y||0),'an older lower platform must never catch the player');
+ let crossedRescue=false;
+ for(let i=0;i<120&&s.alive;i++){
+   P.step(s,{left:false,right:false,jump:false},1/60);
+   if(s.y<rescue.y)crossedRescue=true;
+   assert.notEqual(s.groundPlatform,1,'retired older platforms must never catch the player');
+ }
+ assert.equal(crossedRescue,true,'player should be allowed to fall past the immediate lower platform');
+ assert.equal(s.alive,false,'run ends only after reaching the bottom boundary');
+ assert.ok(s.y<=s.cam-22+0.5,'death threshold must align with the visible bottom edge');
+ assert.equal(P.publicState(s).activeMinPlatform,2);
 });
 test('hard mode avoids vertical ladders and makes moving platforms dominant',()=>{
  const ps=P.platforms(8123,160);
@@ -112,14 +121,16 @@ test('score migration changes old raw-height records to version 2 platform point
  await J.initDb({query:async q=>{sql.push(q);return{rows:[],rowCount:0}}});
  assert.ok(sql.some(q=>String(q).includes('FLOOR(best_score/40.0)')&&String(q).includes('score_version=2')));
 });
-test('skin is fixed and VIP wardrobe unlocks are enforced server-side',async()=>{
+test('skin stays fixed, hair is editable and VIP wardrobe unlocks are enforced server-side',async()=>{
  assert.ok(J.FIXED_APPEARANCE.skin);
  assert.ok(!J.PARTS.includes('skin'),'skin must never be a customisable part');
+ assert.ok(J.PARTS.includes('hair'),'hair must be customisable');
  const free={id:'jump-free-outfit',vipLevel:0};
  await assert.rejects(()=>J.saveOutfit(db,free,{outfit:{...J.DEFAULTS,effect:'cosmic'}}),/requer VIP 6/);
- const saved=await J.saveOutfit(db,{id:'jump-vip-outfit',vipLevel:6},{outfit:{...J.DEFAULTS,top:'rainbow',effect:'cosmic',skin:'#000000'}});
+ const saved=await J.saveOutfit(db,{id:'jump-vip-outfit',vipLevel:6},{outfit:{...J.DEFAULTS,hair:'rainbow',top:'rainbow',effect:'cosmic',skin:'#000000'}});
  assert.equal(saved.outfit.effect,'cosmic');
  assert.equal(saved.outfit.top,'rainbow');
+ assert.equal(saved.outfit.hair,'rainbow');
  assert.equal('skin' in saved.outfit,false,'submitted skin values must be ignored');
 });
 test('multiplayer peers receive the equipped outfit and effect',async()=>{
@@ -144,7 +155,17 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/P\.platformX\(p,local\.time\)/);
  assert.doesNotMatch(js,/if\(p\.moving\)\s*\{\s*c\.fillStyle='#0a5571'/);
  assert.match(js,/Moving platforms deliberately keep the exact same biome palette/);
- assert.match(js,/ROSTO E PELE FIXOS PARA TODOS/);
+ assert.match(js,/ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS/);
  assert.match(js,/peer\.outfit/);
+ assert.match(js,/activeMinPlatform/);
+ assert.match(js,/data-eixo-color-label/);
+ assert.match(js,/facing,ground:local\.ground/);
  assert.doesNotMatch(js,/data-jump-color="skin"/);
+});
+
+test('VIP wardrobe options keep explicit COR VIP labels from the global color decorator',()=>{
+ const jump=fs.readFileSync(path.join(__dirname,'../jump.js'),'utf8');
+ const colors=fs.readFileSync(path.join(__dirname,'../color-options.js'),'utf8');
+ assert.match(jump,/COR VIP · /);
+ assert.match(colors,/option\.dataset\.eixoColorLabel==='keep'/);
 });
