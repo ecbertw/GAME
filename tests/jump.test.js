@@ -47,7 +47,7 @@ test('cosmetic colors must come from the approved EIXO palette',()=>{
 });
 
 test('holding Space does not trigger repeated jumps on every landing',()=>{
-  const p=P.create(17);
+  const p=P.create(17);p.x=8; // Upper platforms cannot land under the far-left edge.
   for(let i=0;i<240;i++)P.step(p,{left:false,right:false,jump:true},1/60);
   assert.equal(p.y,0,'holding the key must not automatically jump again after landing');
   P.step(p,{left:false,right:false,jump:false},1/60);
