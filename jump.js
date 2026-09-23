@@ -297,6 +297,7 @@ async function refreshRoomBoard(){
  $('jumpRoomMeta').textContent=' · '+biome.toUpperCase();
  try{
   const d=await api('/api/jump/rooms/rankings?roomId='+encodeURIComponent(roomId));
+  $('jumpRoomMeta').textContent=' · '+biome.toUpperCase()+' · '+d.players.length+' JOGADORES';
   if($('jumpRoomRanking'))$('jumpRoomRanking').innerHTML=renderJumpRoomMembers(d.players);
  }catch(e){if($('jumpRoomRanking'))$('jumpRoomRanking').innerHTML='<li class="empty-row">'+esc(e.message)+'</li>'}
 }
