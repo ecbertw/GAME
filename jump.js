@@ -137,16 +137,13 @@ function draw(){
  if(!local)return;
  const cam=local.cam,screen=y=>P.H-30-(y-cam),t=themes[biome];
  for(const p of local.platforms){if(p.y<cam-12||p.y>cam+P.H+30)continue;const y=Math.round(screen(p.y)),x=Math.round(P.platformX(p,local.time));
+   // Moving platforms deliberately keep the exact same biome palette as
+   // static ones; the movement itself is the difficulty cue.
    c.fillStyle='#00000026';c.fillRect(x+2,y+4,p.w,7);
-   if(p.moving){
-     c.fillStyle='#0a5571';c.fillRect(x,y+2,p.w,6);c.fillStyle='#00e5ff';c.fillRect(x,y,p.w,3);c.fillStyle='#9af5ff';c.fillRect(x+2,y-3,p.w-4,4);
-     c.fillStyle='#083b55';for(let j=9;j<p.w-5;j+=16)c.fillRect(x+j,y-1,5,2);
-   }else{
-     c.fillStyle=t.under;c.fillRect(x,y+2,p.w,6);c.fillStyle=t.edge;c.fillRect(x,y,p.w,3);c.fillStyle=t.top;c.fillRect(x+2,y-3,p.w-4,4);
-     if(biome==='forest'){c.fillStyle='#c8f18e';for(let j=11;j<p.w;j+=24)c.fillRect(x+j,y-5,2,2)}
-     if(biome==='desert'){c.fillStyle='#f7e0a6';c.fillRect(x+9,y-1,12,2)}
-     if(biome==='snow'){c.fillStyle='#fff';c.fillRect(x+3,y-5,p.w-6,3)}
-   }
+   c.fillStyle=t.under;c.fillRect(x,y+2,p.w,6);c.fillStyle=t.edge;c.fillRect(x,y,p.w,3);c.fillStyle=t.top;c.fillRect(x+2,y-3,p.w-4,4);
+   if(biome==='forest'){c.fillStyle='#c8f18e';for(let j=11;j<p.w;j+=24)c.fillRect(x+j,y-5,2,2)}
+   if(biome==='desert'){c.fillStyle='#f7e0a6';c.fillRect(x+9,y-1,12,2)}
+   if(biome==='snow'){c.fillStyle='#fff';c.fillRect(x+3,y-5,p.w-6,3)}
  }
  for(const peer of peers){let y=screen(peer.y);if(y>-10&&y<P.H+35)drawCharacter(c,peer.x,y,peer.colors,peer.name,true)}
  drawCharacter(c,local.x,screen(local.y),colors,'');
