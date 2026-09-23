@@ -6,7 +6,7 @@ const {chromium}=require('playwright');
  page.on('pageerror',e=>errors.push(e.stack||e.message));
  page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
  page.on('requestfailed',r=>failed.push({url:r.url(),failure:r.failure()?.errorText}));
- const response=await page.goto('https://eixo.at/',{waitUntil:'networkidle',timeout:45000});
+ const response=await page.goto('https://eixo.at/',{waitUntil:'domcontentloaded',timeout:45000});
  console.log('HTTP',response?.status());
  console.log('TITLE',await page.title());
  console.log('BODY',await page.locator('body').evaluate(el=>({pointer:getComputedStyle(el).pointerEvents,overflow:getComputedStyle(el).overflow,html:el.innerText.slice(0,500)})));
