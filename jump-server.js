@@ -15,6 +15,16 @@ async function initDb(db){
   await db.query("CREATE TABLE IF NOT EXISTS jump_cosmetics(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,colors JSONB NOT NULL DEFAULT '{}'::jsonb)");
   await db.query('CREATE TABLE IF NOT EXISTS jump_rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,biome VARCHAR(12) NOT NULL,max_players INTEGER NOT NULL DEFAULT 5,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query('CREATE TABLE IF NOT EXISTS jump_room_members(room_id UUID NOT NULL REFERENCES jump_rooms(id) ON DELETE CASCADE,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(room_id,player_id))');
+  // Score v2 is platform-based: each new highest platform is worth 12 points.
+  // Existing development scores stored raw height, so migrate them once.
+  await db.query('ALTER TABLE jump_scores ADD COLUMN IF NOT EXISTS score_version INTEGER');
+  await db.query('UPDATE jump_scores SET best_score=GREATEST(0,FLOOR(best_score/40.0)::int*12),score_version=2 WHERE score_version IS NULL OR score_version<2');
+  await db.query('ALTER TABLE jump_scores ALTER COLUMN score_version SET DEFAULT 2');
+  await db.query('ALTER TABLE jump_scores ALTER COLUMN score_version SET NOT NULL');
+  await db.query('ALTER TABLE jump_room_members ADD COLUMN IF NOT EXISTS score_version INTEGER');
+  await db.query('UPDATE jump_room_members SET best_score=GREATEST(0,FLOOR(best_score/40.0)::int*12),score_version=2 WHERE score_version IS NULL OR score_version<2');
+  await db.query('ALTER TABLE jump_room_members ALTER COLUMN score_version SET DEFAULT 2');
+  await db.query('ALTER TABLE jump_room_members ALTER COLUMN score_version SET NOT NULL');
   await db.query('CREATE INDEX IF NOT EXISTS jump_score_rank_idx ON jump_scores(best_score DESC,updated_at)');
 }
 function removeSession(run){
@@ -60,7 +70,7 @@ async function start(db,p,d){
   if(inst.players.size>=5)throw error('Instância cheia.',409);
   const id=crypto.randomUUID(),colors=await getColors(db,p);
   const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,colors,instanceId:inst.id,roomId,biome,kind,
-    state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},lastJumpSeq:0,last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
+    state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},confirmedPlatform:0,confirmedScore:0,last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
   sessions.set(id,run);activeByPlayer.set(p.id,id);inst.players.set(p.id,run);
   return{ok:true,runId:id,seed:inst.seed,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,colors};
 }
@@ -75,33 +85,46 @@ function advance(run){
 function playersIn(run){
   const inst=instances.get(run.instanceId);
   if(!inst)return[];
-  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),alive:r.state.alive,colors:r.colors}));
+  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,colors:r.colors}));
+}
+function confirmProgress(run,raw){
+  const claimed=Number(raw??run.confirmedPlatform??0);
+  if(!Number.isSafeInteger(claimed)||claimed<0||claimed>100000)throw error('Progressão JUMP inválida.');
+  if(claimed<=run.confirmedPlatform)return;
+  if(claimed-run.confirmedPlatform>3)throw error('Progressão JUMP demasiado rápida.');
+  const elapsed=Math.max(0,Date.now()-run.started);
+  const maxByTime=1+Math.floor(elapsed/220);
+  if(claimed>maxByTime)throw error('Progressão JUMP demasiado rápida.');
+  run.confirmedPlatform=claimed;
+  run.confirmedScore=claimed*physics.SCORE_PER_PLATFORM;
+}
+function responseState(run){
+  const state=physics.publicState(run.state);
+  state.platform=run.confirmedPlatform||0;
+  state.score=run.confirmedScore||0;
+  return state;
 }
 function input(p,d){
   const run=requireRun(p,d.runId);
-  const seq=Number(d.jumpSeq??0);
-  if(!Number.isSafeInteger(seq)||seq<0||seq>1000000||seq<run.lastJumpSeq||seq-run.lastJumpSeq>5)throw error('Controlo de salto inválido.');
-  if(seq>run.lastJumpSeq){run.state.jumpBuffer=.13;run.state.jumpHeld=false;run.lastJumpSeq=seq;}
-  run.keys={left:d.left===true,right:d.right===true,jump:false};
-  // Apply the newest controls before simulating elapsed time. The old order
-  // added one full network tick of input latency and caused visible divergence.
+  run.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};
   advance(run);
+  confirmProgress(run,d.platform);
   const inst=instances.get(run.instanceId);
-  return{ok:true,state:physics.publicState(run.state),peers:run.kind==='solo'?[]:playersIn(run),players:inst?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
+  return{ok:true,state:responseState(run),peers:run.kind==='solo'?[]:playersIn(run),players:inst?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
 }
 function state(p,runId){
   const run=requireRun(p,runId);advance(run);
-  return{ok:true,state:physics.publicState(run.state),peers:run.kind==='solo'?[]:playersIn(run),players:instances.get(run.instanceId)?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
+  return{ok:true,state:responseState(run),peers:run.kind==='solo'?[]:playersIn(run),players:instances.get(run.instanceId)?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
 }
-async function finish(db,p,runId){
-  const run=requireRun(p,runId);advance(run);
-  const score=Math.min(2000000000,Math.max(0,Math.floor(run.state.best)));
+async function finish(db,p,runId,platform){
+  const run=requireRun(p,runId);advance(run);confirmProgress(run,platform);
+  const score=Math.max(0,run.confirmedScore||0);
   removeSession(run);
   if(score>0){
-    await db.query('INSERT INTO jump_scores(player_id,best_score) VALUES($1,$2) ON CONFLICT(player_id) DO UPDATE SET best_score=GREATEST(jump_scores.best_score,EXCLUDED.best_score),updated_at=CASE WHEN EXCLUDED.best_score>jump_scores.best_score THEN NOW() ELSE jump_scores.updated_at END',[p.id,score]);
-    if(run.roomId)await db.query('UPDATE jump_room_members SET best_score=GREATEST(best_score,$3) WHERE room_id=$1 AND player_id=$2',[run.roomId,p.id,score]);
+    await db.query('INSERT INTO jump_scores(player_id,best_score,score_version) VALUES($1,$2,2) ON CONFLICT(player_id) DO UPDATE SET best_score=GREATEST(jump_scores.best_score,EXCLUDED.best_score),score_version=2,updated_at=CASE WHEN EXCLUDED.best_score>jump_scores.best_score THEN NOW() ELSE jump_scores.updated_at END',[p.id,score]);
+    if(run.roomId)await db.query('UPDATE jump_room_members SET best_score=GREATEST(best_score,$3),score_version=2 WHERE room_id=$1 AND player_id=$2',[run.roomId,p.id,score]);
   }
-  return{ok:true,score,dead:!run.state.alive};
+  return{ok:true,score,platform:run.confirmedPlatform||0,dead:!run.state.alive};
 }
 function leave(p){const run=sessions.get(activeByPlayer.get(p.id));if(run)removeSession(run);return{ok:true};}
 async function rankings(db,country,page){

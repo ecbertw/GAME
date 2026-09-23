@@ -5,7 +5,7 @@ const P=window.EixoJumpPhysics;if(!P)return;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lang=()=>String(document.documentElement.lang||'en').startsWith('pt')?'pt':'en';
-const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'ALTURA',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'A / D PARA MOVER • W OU ESPAÇO PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'HEIGHT',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'A / D TO MOVE • W OR SPACE TO JUMP',soon:'COMING SOON'}};
+const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'PONTOS',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'A / D OU ← / → PARA MOVER • W / ESPAÇO / ↑ PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'POINTS',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'A / D OR ← / → TO MOVE • W / SPACE / ↑ TO JUMP',soon:'COMING SOON'}};
 const txt=k=>T[lang()][k]||k;
 const BIOMES=['city','forest','desert','snow'];
 const themes={
@@ -14,7 +14,7 @@ const themes={
   desert:{sky:'#83cae8',low:'#f9c688',hills:'#e9a16b',far:'#bd7657',near:'#8a513f',top:'#f4ce70',edge:'#b98845',under:'#ad7651'},
   snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
 };
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},jumpSeq=0,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},confirmedScore=0,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
@@ -54,17 +54,17 @@ async function switchGame(next){
  }
 }
 async function stopRun(){
- if(!run)return;const old=run;run=null;clearInterval(networkTimer);
- try{await api('/api/jump/run/finish',{method:'POST',body:JSON.stringify({runId:old.runId})})}catch(e){console.warn('JUMP finalization:',e.message)}
+ if(!run)return;const old=run,platform=Number(local?.bestPlatform||0);run=null;clearInterval(networkTimer);
+ try{await api('/api/jump/run/finish',{method:'POST',body:JSON.stringify({runId:old.runId,platform})})}catch(e){console.warn('JUMP finalization:',e.message)}
 }
 function updateHud(){
- $('jumpHeight').textContent=String(Math.floor(local?.best||0)).padStart(3,'0');
+ $('jumpHeight').textContent=String(Math.max(0,Number(confirmedScore)||0)).padStart(3,'0');
  $('jumpWorld').textContent=biome.toUpperCase()+(mode==='solo'?' · SOLO':' · '+(lastState?.players||1)+'/5');
  $('jumpSoloButton').textContent=txt('solo');$('jumpJoinButton').textContent=txt('join');$('jumpCustomizeButton').textContent=txt('character');$('jumpHelp').textContent=txt('help');
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
- await stopRun();keys={left:false,right:false,jump:false};jumpSeq=0;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
+ await stopRun();keys={left:false,right:false,jump:false};confirmedScore=0;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
@@ -77,20 +77,21 @@ async function sync(){
  if(!run||busy||current!=='jump')return;
  const identity=run.runId;busy=true;
  try{
-  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jumpSeq})});
+  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jump:keys.jump,platform:Number(local?.bestPlatform||0)})});
   if(run?.runId!==identity)return;
-  lastState=out;peers=out.peers||[];
-  // Remote snapshots are for validation/other players only. Replacing the local
-  // Y position with an older HTTP response was the source of the visible rollback.
+  lastState=out;peers=out.peers||[];confirmedScore=Number(out.state?.score||0);
+  // The HUD shows only server-confirmed platform points, while the local
+  // physics remains smooth and is never teleported to an older snapshot.
   updateHud();
  }catch(e){if(run?.runId===identity)showError(e.message)}
  finally{busy=false}
 }
 async function die(){
- if(gameOver||finishing)return;finishing=true;gameOver=true;const old=run;run=null;clearInterval(networkTimer);
- let result={score:Math.floor(local?.best||0)};
- try{if(old)result=await api('/api/jump/run/finish',{method:'POST',body:JSON.stringify({runId:old.runId})})}catch(e){showError(e.message)}
- $('jumpFinal').textContent=String(result.score||0);$('jumpEnd').classList.remove('hidden');
+ if(gameOver||finishing)return;finishing=true;gameOver=true;const old=run,platform=Number(local?.bestPlatform||0);run=null;clearInterval(networkTimer);
+ let result={score:confirmedScore||platform*P.SCORE_PER_PLATFORM};
+ try{if(old)result=await api('/api/jump/run/finish',{method:'POST',body:JSON.stringify({runId:old.runId,platform})})}catch(e){showError(e.message)}
+ confirmedScore=Number(result.score||0);updateHud();
+ $('jumpFinal').textContent=String(confirmedScore);$('jumpEnd').classList.remove('hidden');
  $('jumpEndTitle').textContent=txt('gameOver');$('jumpRestart').textContent=txt('restart');
  refreshRankings();refreshRoomBoard();finishing=false;
 }
@@ -135,11 +136,17 @@ function draw(){
  if(!ctx||current!=='jump')return;const c=ctx;drawBackground();
  if(!local)return;
  const cam=local.cam,screen=y=>P.H-30-(y-cam),t=themes[biome];
- for(const p of local.platforms){if(p.y<cam-12||p.y>cam+P.H+30)continue;const y=Math.round(screen(p.y)),x=Math.round(p.x);
-   c.fillStyle='#00000026';c.fillRect(x+2,y+4,p.w,7);c.fillStyle=t.under;c.fillRect(x,y+2,p.w,6);c.fillStyle=t.edge;c.fillRect(x,y,p.w,3);c.fillStyle=t.top;c.fillRect(x+2,y-3,p.w-4,4);
-   if(biome==='forest'){c.fillStyle='#c8f18e';for(let j=11;j<p.w;j+=24)c.fillRect(x+j,y-5,2,2)}
-   if(biome==='desert'){c.fillStyle='#f7e0a6';c.fillRect(x+9,y-1,12,2)}
-   if(biome==='snow'){c.fillStyle='#fff';c.fillRect(x+3,y-5,p.w-6,3)}
+ for(const p of local.platforms){if(p.y<cam-12||p.y>cam+P.H+30)continue;const y=Math.round(screen(p.y)),x=Math.round(P.platformX(p,local.time));
+   c.fillStyle='#00000026';c.fillRect(x+2,y+4,p.w,7);
+   if(p.moving){
+     c.fillStyle='#0a5571';c.fillRect(x,y+2,p.w,6);c.fillStyle='#00e5ff';c.fillRect(x,y,p.w,3);c.fillStyle='#9af5ff';c.fillRect(x+2,y-3,p.w-4,4);
+     c.fillStyle='#083b55';for(let j=9;j<p.w-5;j+=16)c.fillRect(x+j,y-1,5,2);
+   }else{
+     c.fillStyle=t.under;c.fillRect(x,y+2,p.w,6);c.fillStyle=t.edge;c.fillRect(x,y,p.w,3);c.fillStyle=t.top;c.fillRect(x+2,y-3,p.w-4,4);
+     if(biome==='forest'){c.fillStyle='#c8f18e';for(let j=11;j<p.w;j+=24)c.fillRect(x+j,y-5,2,2)}
+     if(biome==='desert'){c.fillStyle='#f7e0a6';c.fillRect(x+9,y-1,12,2)}
+     if(biome==='snow'){c.fillStyle='#fff';c.fillRect(x+3,y-5,p.w-6,3)}
+   }
  }
  for(const peer of peers){let y=screen(peer.y);if(y>-10&&y<P.H+35)drawCharacter(c,peer.x,y,peer.colors,peer.name,true)}
  drawCharacter(c,local.x,screen(local.y),colors,'');
@@ -155,16 +162,13 @@ function loop(now){
  draw();animation=requestAnimationFrame(loop);
 }
 function setKey(code,on){
- if(code==='KeyA')keys.left=on;
- if(code==='KeyD')keys.right=on;
- if(code==='KeyW'||code==='Space'){
-   if(on&&!keys.jump)jumpSeq++;
-   keys.jump=on;
- }
+ if(code==='KeyA'||code==='ArrowLeft')keys.left=on;
+ if(code==='KeyD'||code==='ArrowRight')keys.right=on;
+ if(code==='KeyW'||code==='Space'||code==='ArrowUp')keys.jump=on;
 }
 function onKeyboard(e){
  if(current!=='jump'||panel||e.target?.matches('input,select,textarea,[contenteditable]'))return;
- if(['KeyA','KeyD','KeyW','Space'].includes(e.code)){
+ if(['KeyA','KeyD','KeyW','Space','ArrowLeft','ArrowRight','ArrowUp'].includes(e.code)){
    e.preventDefault();e.stopImmediatePropagation();
    if(e.type==='keydown'&&e.repeat)return;
    setKey(e.code,e.type==='keydown');
@@ -175,7 +179,7 @@ function bindControls(){
  window.addEventListener('keydown',onKeyboard,true);window.addEventListener('keyup',onKeyboard,true);
  window.addEventListener('blur',()=>{keys={left:false,right:false,jump:false}});
  for(const button of document.querySelectorAll('[data-jump-key]')){
-  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);if(k==='jump'&&!keys.jump)jumpSeq++;keys[k]=true;void sync()});
+  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);keys[k]=true;void sync()});
   for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false;void sync()});
  }
 }
@@ -380,7 +384,7 @@ function init(){
  '<div class="jump-tools"><button id="jumpSoloButton">SOLO</button><button id="jumpJoinButton">JOIN SERVER</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
  '<div class="jump-help" id="jumpHelp"></div><div class="jump-status" id="jumpStatus" role="status"></div>'+
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
- '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>HEIGHT: <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
+ '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>'+txt('height')+': <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
  frame.appendChild(root);canvas=$('jumpCanvas');ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
  const boards=document.querySelector('.boards');
  const createPanel=document.createElement('section');createPanel.id='jumpRoomCreatePanel';createPanel.className='room-create-panel hidden';
