@@ -178,35 +178,89 @@ function bindControls(){
  }
 }
 const flags=c=>[...String(c||'PT')].map(x=>String.fromCodePoint(127397+x.charCodeAt())).join('');
-function scoreRows(players,type,start=0){
- return players?.length?players.map((p,i)=>'<li><span class="rank-number">'+(start+i+1)+'</span><span class="rank-name-wrap">'+esc(p.visualName||p.name)+(Number(p.vipLevel||0)>0?' <span class="vip-rank-tag">VIP</span>':'')+'</span><span class="rank-score-wrap">'+flags(p.country)+' <span class="rank-score">'+Number(p.score||0)+'</span></span></li>').join(''):'<li class="empty-row">'+txt('empty')+'</li>';
+const rankLabels={pt:'O TEU RANK É:',en:'YOUR RANK IS:'};
+const rankLabel=()=>rankLabels[lang()]||rankLabels.en;
+const rankTag=(type,n,country,p)=>{
+ const me=getPlayer();
+ const raw=type==='country'?(p?.tagCountryColor||(me&&me.id===p?.id?me.tagCountryColor:'#ff7a2f')):(p?.tagGlobalColor||(me&&me.id===p?.id?me.tagGlobalColor:'#e53935'));
+ const c=String(raw||'').toLowerCase(),rainbow=c==='rainbow';
+ return '<span class="rank-tag '+type+'-'+n+(rainbow?' tag-rainbow':'')+'"'+(!rainbow&&/^#[0-9a-f]{6}$/.test(c)?' style="background:'+c+'!important;color:#fff!important"':'')+'>'+n+'# '+(type==='country'?esc(country):'GLOBAL')+'</span>';
+};
+const rankVip=n=>n>0?'<span class="vip-rank-tag vip-rank-'+Math.min(n,6)+'">'+(n>=6?'VIP ∞':'VIP #'+n)+'</span>':'';
+const rankLetters=(text,styles)=>{
+ const arr=Array.isArray(styles)?styles:[];
+ return [...String(text||'')].map((ch,i)=>{
+  const st=arr[i]||{},color=String(st.color||'').toLowerCase(),effect=String(st.effect||'none'),rainbow=color==='rainbow';
+  const safeColor=/^#[0-9a-f]{6}$/i.test(color)?color:'',safeEffect=/^[a-z]+$/.test(effect)?effect:'none';
+  return '<span class="name-letter'+(rainbow?' name-rainbow':'')+' effect-'+safeEffect+'"'+(safeColor?' style="color:'+safeColor+';"':'')+'>'+esc(ch)+'</span>';
+ }).join('');
+};
+function renderTopRank(players,target,isWorld){
+ if(!players?.length){target.innerHTML='<li class="empty-row">'+(window.eixoT?window.eixoT('emptyRanking','NO PLAYERS YET'):'NO PLAYERS YET')+'</li>';return}
+ target.innerHTML=players.slice(0,10).map((p,i)=>{
+  let tags='';
+  if(isWorld){
+   if(Number(p.worldRank)<=3)tags+=rankTag('world',Number(p.worldRank),'',p);
+   if(Number(p.worldRank)>3&&Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
+  }else if(Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
+  const color=String(p.nameColor||'#fff').toLowerCase(),effect=p.nameEffect&&p.nameEffect!=='none'?' effect-'+esc(p.nameEffect):'',vip=Number(p.vipLevel||0);
+  const hasLetters=vip>0&&Array.isArray(p.letterStyles)&&p.letterStyles.length,rainbow=color==='rainbow'&&!hasLetters,colorStyle=rainbow?'':' style="color:'+esc(color)+';"';
+  const name=hasLetters?rankLetters(p.visualName||p.name,p.letterStyles):[...String(p.visualName||p.name)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
+  return '<li><span class="rank-number">'+(i+1)+'</span><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(hasLetters?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span>'+tags+rankVip(vip)+'</span><span class="rank-score-wrap"><span class="rank-flag" title="'+esc(p.country)+'">'+flags(p.country)+'</span><span class="rank-score">'+Number(p.score||0)+'</span></span></li>';
+ }).join('');
+}
+function setJumpMyRank(id,value){
+ const el=$(id);if(!el)return;
+ const n=Number(value),ok=Number.isInteger(n)&&n>0;
+ el.textContent=ok?rankLabel()+' '+n:'';
+ el.title=el.textContent;el.hidden=!ok;
 }
 async function refreshRankings(){
  if(current!=='jump')return;
  try{
-  const p=getPlayer(),code=p?.country||'PT';
-  const [w,c]=await Promise.all([api('/api/jump/rankings?page=1'),api('/api/jump/rankings?page=1&country='+encodeURIComponent(code))]);
+  const p=getPlayer(),code=String(p?.country||'PT').toUpperCase();
+  const requests=[api('/api/jump/rankings?page=1'),api('/api/jump/rankings?page=1&country='+encodeURIComponent(code))];
+  if(p?.id)requests.push(api('/api/jump/player-rank'));
+  const [w,c,mine]=await Promise.all(requests);
   if(current!=='jump')return;
-  $('worldRanking').innerHTML=scoreRows(w.players,'world');$('nationalRanking').innerHTML=scoreRows(c.players,'country');
-  const my=w.players.find(x=>x.id===p?.id),myC=c.players.find(x=>x.id===p?.id);
-  if($('worldMyRank'))$('worldMyRank').textContent=my?txt('rank')+' #'+my.worldRank:'';
-  if($('nationalMyRank'))$('nationalMyRank').textContent=myC?txt('rank')+' #'+myC.countryRank:'';
-  $('nationalTitle').textContent='TOP '+String(code).toUpperCase();
+  renderTopRank(w.players,$('worldRanking'),true);
+  renderTopRank(c.players,$('nationalRanking'),false);
+  setJumpMyRank('worldMyRank',mine?.worldRank??w.players.find(x=>x.id===p?.id)?.worldRank);
+  setJumpMyRank('nationalMyRank',mine?.countryRank??c.players.find(x=>x.id===p?.id)?.countryRank);
+  $('nationalTitle').textContent='TOP '+code;
  }catch(e){console.warn('JUMP rankings:',e.message)}
 }
-async function openRank(modeName='world',number=1){
- rankTab=modeName;page=number;
- modal(txt('rank'),'<div class="jump-panel-tabs"><button id="jumpWorldTab">'+txt('world')+'</button><button id="jumpCountryTab">'+txt('country')+'</button></div><ol class="jump-rank-list" id="jumpFullRank"></ol><div class="jump-pager"><button id="jumpPrev">◀</button><span id="jumpPage"></span><button id="jumpNext">▶</button></div>');
- $('jumpWorldTab').onclick=()=>openRank('world',1);$('jumpCountryTab').onclick=()=>openRank('country',1);
- $('jumpPrev').onclick=()=>openRank(rankTab,page-1);$('jumpNext').onclick=()=>openRank(rankTab,page+1);
+function renderFullRows(players,start){
+ return players?.length?players.map((x,i)=>{
+  let tags='';
+  if(Number(x.worldRank)<=3)tags+=rankTag('world',Number(x.worldRank),'',x);
+  if(Number(x.countryRank)<=3)tags+=rankTag('country',Number(x.countryRank),String(x.country||'').toUpperCase(),x);
+  const color=String(x.nameColor||'#fff').toLowerCase(),effect=x.nameEffect&&x.nameEffect!=='none'?' effect-'+esc(x.nameEffect):'',vip=Number(x.vipLevel||0);
+  const hasLetters=vip>0&&Array.isArray(x.letterStyles)&&x.letterStyles.length,rainbow=color==='rainbow'&&!hasLetters,colorStyle=rainbow?'':' style="color:'+esc(color)+';"';
+  const name=hasLetters?rankLetters(x.visualName||x.name,x.letterStyles):[...String(x.visualName||x.name)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
+  return '<li><span class="full-rank-number">'+(start+i+1)+'</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(hasLetters?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span>'+tags+rankVip(vip)+'</span></span><span class="full-score rank-score-wrap"><span class="rank-flag" title="'+esc(x.country)+'">'+flags(x.country)+'</span><span class="rank-score">'+Number(x.score||0)+'</span></span></li>';
+ }).join(''):'<li class="empty-full">'+(window.eixoT?window.eixoT('emptyFull','THERE ARE NO PLAYERS YET'):'THERE ARE NO PLAYERS YET')+'</li>';
+}
+async function renderJumpFull(){
+ if(current!=='jump')return;
+ const modalEl=$('rankingModal'),list=$('fullRankingList');if(!modalEl||modalEl.classList.contains('hidden')||!list)return;
+ const country=String(getPlayer()?.country||'PT').toUpperCase();
+ const q='/api/jump/rankings?page='+page+(rankTab==='country'?'&country='+encodeURIComponent(country):'');
  try{
-  const q='/api/jump/rankings?page='+page+(rankTab==='country'?'&country='+encodeURIComponent(getPlayer()?.country||'PT'):'');
-  rankingData=await api(q);if(!$('jumpFullRank'))return;
-  $('jumpFullRank').innerHTML=scoreRows(rankingData.players,rankTab,(page-1)*25);
-  $('jumpPage').textContent=page+' / '+rankingData.pages;
-  $('jumpPrev').disabled=page<=1;$('jumpNext').disabled=page>=rankingData.pages;
-  $('jumpWorldTab').classList.toggle('active',rankTab==='world');$('jumpCountryTab').classList.toggle('active',rankTab==='country');
+  rankingData=await api(q);
+  if(current!=='jump'||modalEl.classList.contains('hidden'))return;
+  list.innerHTML=renderFullRows(rankingData.players,(page-1)*25);
+  $('rankingModalTitle').textContent='RANKING · JUMP';
+  $('pageInfo').textContent=page+' / '+rankingData.pages;
+  $('prevPage').disabled=page<=1;$('nextPage').disabled=page>=rankingData.pages;
+  $('modalWorldTab').classList.toggle('active',rankTab==='world');
+  $('modalCountryTab').classList.toggle('active',rankTab==='country');
  }catch(e){showError(e.message)}
+}
+function openRank(modeName='world',number=1){
+ rankTab=modeName;page=Math.max(1,number);
+ const modalEl=$('rankingModal');if(!modalEl)return;
+ modalEl.classList.remove('hidden');renderJumpFull();
 }
 function chooseWorld(){
  modal(txt('choose'),'<div class="jump-world-grid">'+BIOMES.map(b=>'<button class="jump-world-option '+b+'" data-biome="'+b+'"><strong>'+b.toUpperCase()+'</strong><small>JOIN SERVER</small></button>').join('')+'</div><p>5 PLAYERS MAX / INSTANCE · AUTO MATCHMAKING</p>');
