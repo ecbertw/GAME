@@ -399,7 +399,7 @@ async function handleApi(req,res,url){
     const d=await body(req),p=await roomAuth(d.id,d.token);
     if(url.pathname==='/api/jump/run/start'){if(!boundedRate(paypalRate,'jump-start:'+p.id,15,60*1000))throw Object.assign(new Error('Aguarda um momento antes de recomeçar.'),{status:429});return json(res,201,await jumpService.start(global.db,p,d));}
     if(url.pathname==='/api/jump/run/input'){if(!boundedRate(paypalRate,'jump-input:'+p.id,150,10*1000))throw Object.assign(new Error('Demasiadas atualizações JUMP.'),{status:429});return json(res,200,jumpService.input(p,d));}
-    if(url.pathname==='/api/jump/run/finish')return json(res,200,await jumpService.finish(global.db,p,d.runId));
+    if(url.pathname==='/api/jump/run/finish')return json(res,200,await jumpService.finish(global.db,p,d.runId,d.platform));
     if(url.pathname==='/api/jump/run/leave')return json(res,200,jumpService.leave(p));
     if(url.pathname==='/api/jump/cosmetics')return json(res,200,await jumpService.saveColors(global.db,p,d));
     if(url.pathname==='/api/jump/rooms/create')return json(res,201,await jumpService.roomCreate(global.db,p,d));
