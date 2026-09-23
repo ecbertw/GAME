@@ -175,6 +175,9 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/if\(team\.status==='playing'\)P\.step\(local,keys,dt\)/);
  assert.match(js,/RECOMEÇA EM/);
  assert.match(js,/function teamRankPlayer\(p\)/);
+ assert.match(js,/myTeamsRenderSignature/);
+ const accept=(js.match(/function acceptTeam\(out\)\{[\s\S]*?\n\}/)||[''])[0];
+ assert.doesNotMatch(accept,/renderMyTeamsBoardFromCache\(\)/,'network snapshots must not recreate clickable team cards');
  assert.doesNotMatch(js,/data-jump-color="skin"/);
 });
 
