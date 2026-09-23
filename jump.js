@@ -135,7 +135,7 @@ function drawCharacter(c,x,y,style,name,ghost=false,time=0){
  if(effect!=='none'){
    if(effect==='glow'||effect==='pulse'||effect==='plasma'||effect==='cosmic'){c.shadowColor=aura;c.shadowBlur=effect==='glow'?6:effect==='pulse'?5+3*Math.sin(time*6):8}
    if(effect==='pulse'){c.globalAlpha=(ghost?0.72:1)*(0.82+0.18*(.5+.5*Math.sin(time*7)))}
-   if(effect==='plasma'||effect==='cosmic'){c.globalAlpha=(ghost?0.72:1)*0.92;q(x-9,y-22,18,24,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,210));c.globalAlpha=ghost?0.72:1}
+   if(effect==='plasma'||effect==='cosmic'){c.globalAlpha=(ghost?0.72:1)*0.18;q(x-9,y-22,18,24,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,210));c.globalAlpha=ghost?0.72:1}
  }
  // EIXO Runner: fixed face/skin, cropped hair, jacket with accent stripe,
  // tapered trousers and trainers. Only clothing/effects are customisable.
