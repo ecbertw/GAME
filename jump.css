@@ -74,3 +74,17 @@ body.eixo-jump-view #roomBoard,body.eixo-jump-view #roomCreatePanel{display:none
 body:not(.eixo-jump-view) #jumpRoomBoard,body:not(.eixo-jump-view) #jumpRoomCreatePanel{display:none!important}
 .jump-room-board .rank-name-wrap{min-width:0}
 .jump-room-board .rank-score-wrap{justify-self:end}
+
+/* Team controls retain the site's pixel borders, type and board components. */
+.jump-team-help{font:12px/1.7 monospace;color:#b6cad6;margin:14px 0}
+.jump-team-members{padding:0;list-style:none;font:12px/1.8 monospace;color:#dcf1e9}
+.jump-team-boards .rank-name-wrap{display:flex;flex-direction:column;gap:6px;min-width:0;overflow-wrap:anywhere}
+.jump-team-boards small,.jump-rank-list small{display:block;font:10px/1.5 monospace;color:#9fb1c4}
+body:not(.eixo-jump-view) #jumpTeamBoards{display:none!important}
+.jump-tools{flex-wrap:wrap;max-width:78%;justify-content:flex-end}
+.jump-tools #jumpDuoButton,.jump-tools #jumpTrioButton{background:#30264b;border-color:#b599ef}
+#jumpTeamError{font:12px/1.6 monospace;color:#ffb4a7}
+.jump-panel button:disabled{opacity:.45;cursor:default}
+@media(max-width:420px){.jump-tools{gap:3px;top:32px;max-width:80%}.jump-tools button{padding:6px 4px;font-size:5px}.jump-status{top:94px}}
+
+.jump-world-option{position:relative;overflow:hidden}.jump-world-option canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}.jump-world-option strong,.jump-world-option small{position:relative;z-index:1;background:#101b2bc9;padding:5px;width:fit-content}

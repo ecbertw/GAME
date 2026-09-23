@@ -11,7 +11,7 @@ const ALLOWED_HOSTS=new Set(String(process.env.PUBLIC_HOSTS||'eixo.at,www.eixo.a
 function requestHost(req){return String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().toLowerCase().replace(/:\d+$/,'')}
 function allowedRequestHost(req){return ALLOWED_HOSTS.has(requestHost(req))}
 const ROOT=__dirname;
-const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','jump-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
+const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','jump-server.js','jump-team-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
 const PUBLIC_STATIC_EXTS=new Set(['.html','.css','.js','.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.woff','.woff2']);
 function isPublicStaticRequestPath(pathname){
   const clean=String(pathname||'').replace(/^\/+/,''),parts=clean.split('/');
@@ -389,6 +389,8 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/chat'){const d=await body(req);return json(res,201,await sendChatMessage(d.id,d.token,d.channel,d.message));}
   if(req.method==='GET'&&url.pathname==='/api/player-rank'){return json(res,200,await playerRanks(url.searchParams.get('id'),url.searchParams.get('token')));}
   /* JUMP uses its own tables and live instances; PULSE routes remain unchanged. */
+  if(url.pathname==='/api/jump/teams/rankings'&&req.method==='GET')return json(res,200,await jumpService.teams.rankings(url.searchParams.get('mode'),url.searchParams.get('page')));
+  if(url.pathname==='/api/jump/teams/state'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,jumpService.teams.state(p));}
   if(url.pathname==='/api/jump/player-rank'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.playerRank(global.db,p));}
   if(url.pathname==='/api/jump/rankings'&&req.method==='GET')return json(res,200,await jumpService.rankings(global.db,url.searchParams.get('country'),url.searchParams.get('page')));
   if(url.pathname==='/api/jump/cosmetics'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,{ok:true,outfit:await jumpService.getOutfit(global.db,p),...jumpService.wardrobeFor(p)});}
@@ -397,8 +399,18 @@ async function handleApi(req,res,url){
   if(url.pathname==='/api/jump/run/state'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,jumpService.state(p,url.searchParams.get('runId')));}
   if(url.pathname.startsWith('/api/jump/')&&req.method==='POST'){
     const d=await body(req),p=await roomAuth(d.id,d.token);
+    if(url.pathname.startsWith('/api/jump/teams/')){
+      const action=url.pathname.slice('/api/jump/teams/'.length),service=jumpService.teams;
+      if(!boundedRate(paypalRate,'jump-team:'+action+':'+p.id,action==='input'?250:30,10*1000))throw Object.assign(new Error('Aguarda um momento.'),{status:429});
+      if(action==='create'||action==='join'){
+        const outfit=await jumpService.getOutfit(global.db,p);
+        const out=service[action](p,d,outfit);jumpService.leave(p);return json(res,200,out);
+      }
+      if(['ready','start','input','finish','leave'].includes(action))return json(res,200,await service[action](p,d));
+      return json(res,404,{error:'Not found'});
+    }
     if(url.pathname==='/api/jump/run/start'){if(!boundedRate(paypalRate,'jump-start:'+p.id,15,60*1000))throw Object.assign(new Error('Aguarda um momento antes de recomeçar.'),{status:429});return json(res,201,await jumpService.start(global.db,p,d));}
-    if(url.pathname==='/api/jump/run/input'){if(!boundedRate(paypalRate,'jump-input:'+p.id,150,10*1000))throw Object.assign(new Error('Demasiadas atualizações JUMP.'),{status:429});return json(res,200,jumpService.input(p,d));}
+    if(url.pathname==='/api/jump/run/input'){if(!boundedRate(paypalRate,'jump-input:'+p.id,250,10*1000))throw Object.assign(new Error('Demasiadas atualizações JUMP.'),{status:429});return json(res,200,jumpService.input(p,d));}
     if(url.pathname==='/api/jump/run/finish')return json(res,200,await jumpService.finish(global.db,p,d.runId,d.platform));
     if(url.pathname==='/api/jump/run/leave')return json(res,200,jumpService.leave(p));
     if(url.pathname==='/api/jump/cosmetics')return json(res,200,await jumpService.saveOutfit(global.db,p,d));

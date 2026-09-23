@@ -2,6 +2,8 @@
 /* Isolated JUMP storage and five-player instances. PULSE tables remain untouched. */
 const crypto=require('crypto');
 const physics=require('./jump-physics');
+const teams=require('./jump-team-server').createService();
+setInterval(()=>teams.tick(),1000/60).unref();
 const BIOMES=['city','forest','desert','snow'];
 const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#263c5c','#111827'];
 const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a'};
@@ -49,6 +51,7 @@ function validOutfit(data,p){
 }
 function wardrobeFor(p){return{vipLevel:vipLevel(p),parts:WARDROBE,fixedAppearance:FIXED_APPEARANCE};}
 async function initDb(db){
+  await teams.init(db);
   await db.query('CREATE TABLE IF NOT EXISTS jump_scores(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query("CREATE TABLE IF NOT EXISTS jump_cosmetics(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,colors JSONB NOT NULL DEFAULT '{}'::jsonb)");
   await db.query('CREATE TABLE IF NOT EXISTS jump_rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,biome VARCHAR(12) NOT NULL,max_players INTEGER NOT NULL DEFAULT 5,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
@@ -78,7 +81,7 @@ function purge(){
   for(const inst of [...instances.values()])if(!inst.players.size)instances.delete(inst.id);
 }
 function newInstance(biome,kind,roomId){
-  const inst={id:crypto.randomUUID(),biome,kind,roomId:roomId||null,seed:crypto.randomInt(1,2147483647),players:new Map(),platforms:null};
+  const inst={id:crypto.randomUUID(),biome,kind,roomId:roomId||null,seed:crypto.randomInt(1,2147483647),players:new Map(),platforms:null,epoch:Date.now()};
   inst.platforms=physics.platforms(inst.seed,30);
   instances.set(inst.id,inst);return inst;
 }
@@ -109,7 +112,9 @@ async function saveOutfit(db,p,d){
 const getColors=getOutfit,saveColors=saveOutfit;
 async function start(db,p,d){
   purge();
-  let roomId=null,biome=validBiome(d.biome),kind=d.multiplayer?'public':'solo';
+  await teams.leave(p);
+  const outfit=await getOutfit(db,p);
+  let roomId=null,biome=validBiome(d.biome),kind=d.mode==='online'||d.mode==='public'||d.multiplayer?'public':'solo';
   if(d.roomId){
     const r=await db.query('SELECT r.id,r.biome FROM jump_rooms r JOIN jump_room_members m ON m.room_id=r.id AND m.player_id=$2 WHERE r.id=$1',[d.roomId,p.id]);
     if(!r.rowCount)throw error('Não pertences a esta sala JUMP.',403);
@@ -118,11 +123,12 @@ async function start(db,p,d){
   removeSession(sessions.get(activeByPlayer.get(p.id)));
   let inst=kind==='solo'?newInstance(biome,kind,null):findInstance(biome,kind,roomId);
   if(inst.players.size>=5)throw error('Instância cheia.',409);
-  const id=crypto.randomUUID(),outfit=await getOutfit(db,p);
+  const id=crypto.randomUUID();
   const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,outfit,instanceId:inst.id,roomId,biome,kind,
     state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},facing:1,confirmedPlatform:0,confirmedScore:0,last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
+  run.state.time=(Date.now()-inst.epoch)/1000;
   sessions.set(id,run);activeByPlayer.set(p.id,id);inst.players.set(p.id,run);
-  return{ok:true,runId:id,seed:inst.seed,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,outfit,...wardrobeFor(p)};
+  return{ok:true,runId:id,seed:inst.seed,worldTime:run.state.time,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,outfit,...wardrobeFor(p)};
 }
 function requireRun(p,id){purge();const run=sessions.get(String(id||''));if(!run||run.playerId!==p.id||activeByPlayer.get(p.id)!==run.id)throw error('Partida JUMP expirada. Começa novamente.',404);return run;}
 function advance(run){
@@ -135,7 +141,7 @@ function advance(run){
 function playersIn(run){
   const inst=instances.get(run.instanceId);
   if(!inst)return[];
-  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,vy:Math.round(r.state.vy||0),ground:!!r.state.ground,facing:r.facing||1,moving:!!(r.keys.left||r.keys.right),outfit:r.outfit}));
+  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round((r.position||r.state).x),y:Math.round((r.position||r.state).y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,vy:Math.round(r.state.vy||0),ground:!!r.state.ground,facing:r.facing||1,moving:!!(r.keys.left||r.keys.right),outfit:r.outfit}));
 }
 function confirmProgress(run,raw){
   const claimed=Number(raw??run.confirmedPlatform??0);
@@ -161,8 +167,16 @@ function input(p,d){
   else if(run.keys.right&&!run.keys.left)run.facing=1;
   advance(run);
   confirmProgress(run,d.platform);
+  // Relay bounded client prediction for independent public cameras.
+  if(d.position&&Number.isFinite(d.position.x)&&Number.isFinite(d.position.y)){
+    const x=d.position.x,y=d.position.y,elapsed=Math.min(.5,Math.max(.06,(Date.now()-(run.positionAt||run.started))/1000));
+    const previous=run.position||run.state;
+    if(x>=8&&x<=physics.W-8&&Math.abs(x-previous.x)<=136*elapsed+12&&Math.abs(y-previous.y)<=282*elapsed+16){
+      run.position={x,y};run.positionAt=Date.now();
+    }
+  }
   const inst=instances.get(run.instanceId);
-  return{ok:true,state:responseState(run),peers:run.kind==='solo'?[]:playersIn(run),players:inst?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
+  return{ok:true,worldTime:inst?(Date.now()-inst.epoch)/1000:run.state.time,state:responseState(run),peers:run.kind==='solo'?[]:playersIn(run),players:inst?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
 }
 function state(p,runId){
   const run=requireRun(p,runId);advance(run);
@@ -262,4 +276,4 @@ async function roomRankings(db,p,id){
     worldRank:Number(x.worldRank||0)||null,countryRank:Number(x.countryRank||0)||null,
     letterStyles:Array.isArray(x.letterStyles)?x.letterStyles:(()=>{try{return JSON.parse(x.letterStyles||'[]')}catch(_){return[]}})()}))};
 }
-module.exports={initDb,BIOMES,PALETTE,PARTS,DEFAULTS,FIXED_APPEARANCE,WARDROBE,wardrobeFor,getOutfit,saveOutfit,getColors,saveColors,start,input,state,finish,leave,rankings,playerRank,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
+module.exports={teams,initDb,BIOMES,PALETTE,PARTS,DEFAULTS,FIXED_APPEARANCE,WARDROBE,wardrobeFor,getOutfit,saveOutfit,getColors,saveColors,start,input,state,finish,leave,rankings,playerRank,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
