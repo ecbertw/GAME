@@ -35,7 +35,9 @@ function showMode(){
  const switcher=$('eixoGameSwitcher');switcher.querySelectorAll('[data-game]').forEach(b=>b.classList.toggle('active',b.dataset.game===current));
  $('gameIntro').querySelector('[data-i18n="aboutText"]').textContent=current==='jump'?' — JUMP: '+txt('help'):current==='eat'?' — '+txt('soon'):window.eixoT?.('aboutText',' — a simple reflex game. Hit the center, score points and climb the ranking.')||' — a simple reflex game.';
  $('jumpRoot').classList.toggle('hidden',current!=='jump');frame.classList.toggle('jump-mode',current==='jump');
- document.body.classList.toggle('eixo-jump-view',current==='jump');if($('jumpRoomBoard'))$('jumpRoomBoard').classList.toggle('hidden',current!=='jump'||!roomId);
+ document.body.classList.toggle('eixo-jump-view',current==='jump');
+ if($('jumpRoomBoard'))$('jumpRoomBoard').classList.toggle('hidden',current!=='jump'||!roomId);
+ if(current!=='jump')$('jumpRoomCreatePanel')?.classList.add('hidden');
 }
 async function switchGame(next){
  if(next==='eat'){modal('EAT','<p>'+txt('soon')+'</p>');return}
@@ -379,18 +381,39 @@ function init(){
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
  '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>HEIGHT: <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
  frame.appendChild(root);canvas=$('jumpCanvas');ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
- const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='board jump-room-board hidden';roomBoard.innerHTML='<div class="board-title"><span>◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><button id="jumpRoomLeave" type="button">LEAVE</button></div><ol id="jumpRoomRanking"></ol>';
- document.querySelector('.boards')?.before(roomBoard);
- $('jumpRoomLeave').onclick=async()=>{const id=roomId;if(!id)return;await stopRun();await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})}).catch(e=>showError(e.message));roomId=null;roomLabel='';await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]})};
+ const boards=document.querySelector('.boards');
+ const createPanel=document.createElement('section');createPanel.id='jumpRoomCreatePanel';createPanel.className='room-create-panel hidden';
+ createPanel.innerHTML='<div class="room-panel-heading"><span class="room-panel-mark">◆</span><span>CRIAR UMA SALA · JUMP</span></div><div class="room-create-grid"><label class="room-field"><span>NOME DA SALA</span><input id="jumpRoomNameInput" class="pixel-input" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="EX: JUMP NIGHT"></label><label class="room-field"><span>AMBIENTE</span><select id="jumpRoomBiomeInput" class="pixel-input">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select></label><button class="modal-button primary room-create-submit" id="jumpRoomCreateSubmit" type="button">CRIAR SALA</button></div><div class="form-error" id="jumpRoomCreateError"></div><div class="room-created hidden" id="jumpRoomCreated"><div class="room-created-label">SALA CRIADA</div><div class="room-code" id="jumpCreatedRoomCode">ABC123</div><div class="room-created-hint">Dá este código aos teus amigos para entrarem.</div><button class="board-more" id="jumpCopyRoomCode" type="button">COPIAR CÓDIGO</button></div>';
+ boards?.after(createPanel);
+ $('jumpRoomCreateSubmit').onclick=submitJumpRoom;
+ $('jumpCopyRoomCode').onclick=async()=>{const code=$('jumpCreatedRoomCode').textContent;try{await navigator.clipboard.writeText(code);$('jumpCopyRoomCode').textContent='COPIADO';setTimeout(()=>{$('jumpCopyRoomCode').textContent='COPIAR CÓDIGO'},1400)}catch(_){$('jumpCopyRoomCode').textContent=code}};
+
+ const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='room-board jump-room-board hidden';
+ roomBoard.innerHTML='<div class="room-board-heading"><div><span class="room-panel-mark">◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><small id="jumpRoomMeta"></small></div><div class="room-board-actions"><button class="board-more" id="jumpRoomLeave" type="button">SAIR DA SALA</button><button class="board-more danger" id="jumpRoomAbandon" type="button">ABANDONAR SALA</button></div></div><ol id="jumpRoomRanking"></ol>';
+ createPanel.after(roomBoard);
+ $('jumpRoomLeave').onclick=async()=>{roomId=null;roomLabel='';await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]})};
+ $('jumpRoomAbandon').onclick=confirmAbandonJumpRoom;
 
  $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
  $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode,roomId,roomLabel});
  captureNative('.action.blue[href="#ranking"]',()=>openRank('world'));
- captureNative('.action.purple[href="#rooms"]',()=>jumpRooms('list'));
- captureNative('#createRoomButton',()=>jumpRooms('create'));
+ captureNative('.action.purple[href="#rooms"]',()=>jumpRooms());
+ captureNative('#createRoomButton',toggleJumpCreateRoom);
  captureNative('#worldFullButton',()=>openRank('world'));
  captureNative('#nationalFullButton',()=>openRank('country'));
- bindControls();updateHud();document.addEventListener('visibilitychange',()=>{last=performance.now();if(!document.hidden&&current==='jump')refreshRankings()});
+
+ for(const id of ['modalWorldTab','modalCountryTab','prevPage','nextPage']){
+  $(id)?.addEventListener('click',e=>{
+   if(current!=='jump')return;
+   e.preventDefault();e.stopImmediatePropagation();
+   if(id==='modalWorldTab'){rankTab='world';page=1}
+   else if(id==='modalCountryTab'){rankTab='country';page=1}
+   else if(id==='prevPage')page=Math.max(1,page-1);
+   else page=Math.min(Number(rankingData?.pages||page+1),page+1);
+   renderJumpFull();
+  },true);
+ }
+ bindControls();updateHud();document.addEventListener('visibilitychange',()=>{last=performance.now();if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}});
  window.eixoJump={switchGame,isActive:()=>current==='jump',refreshRankings};
 }
 init();
