@@ -36,7 +36,7 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
      await route.fulfill({json:out});
     }catch(e){await route.fulfill({status:e.status||500,json:{error:e.message}});}
    });
-   console.log('opening',p.name);await page.goto('http://127.0.0.1:3201/',{waitUntil:'domcontentloaded'});await page.locator('[data-game="jump"]').click();await page.waitForTimeout(300);return page;
+   console.log('opening',p.name);await page.goto('http://127.0.0.1:3201/',{waitUntil:'commit',timeout:10000});await page.locator('#eixoGameSwitcher').waitFor({state:'visible',timeout:10000});await page.locator('[data-game="jump"]').click();await page.waitForTimeout(300);return page;
   }
   const a=await pageFor(players[0]),b=await pageFor(players[1]);
   // Real renderer contact sheet, with platforms, at native pixel scale x2.
