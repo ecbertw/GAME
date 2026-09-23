@@ -99,21 +99,21 @@ test('landing on the next highest platform awards exactly 12 points',()=>{
  assert.equal(s.score,12);
  assert.equal(P.publicState(s).score,12);
 });
-test('public instances autospawn at five players per biome; slots are reusable',async()=>{
+test('public matchmaking fills the busiest open instance before creating another',async()=>{
  const starts=[];
- const users=Array.from({length:13},(_,i)=>({id:'jump-test-forest-'+i,name:'J'+i,country:'PT'}));
- for(const u of users)starts.push(await J.start(db,u,{biome:'forest',multiplayer:true}));
- const sizes=[...new Set(starts.map(x=>x.instanceId))].map(id=>starts.filter(x=>x.instanceId===id).length);
+ const users=Array.from({length:13},(_,i)=>({id:'jump-test-public-'+i,name:'J'+i,country:'PT'}));
+ for(const u of users)starts.push(await J.start(db,u,{biome:i%2?'forest':'city',multiplayer:true}));
+ const ids=[...new Set(starts.map(x=>x.instanceId))],sizes=ids.map(id=>starts.filter(x=>x.instanceId===id).length);
  assert.deepEqual(sizes,[5,5,3]);
  const first=J.input(users[0],{runId:starts[0].runId,left:false,right:false,jump:false,platform:0});
  assert.equal(first.peers.length,4);
- const city=await J.start(db,{id:'jump-test-city',name:'C',country:'PT'},{biome:'city',multiplayer:true});
- assert.notEqual(city.instanceId,starts[0].instanceId);
+ const extra=await J.start(db,{id:'jump-test-extra',name:'C',country:'PT'},{biome:'snow',multiplayer:true});
+ assert.equal(extra.instanceId,ids[2],'requested biome must not fragment public matchmaking');
  J.leave(users[0]);
- const newUser=await J.start(db,{id:'jump-test-new',name:'N',country:'PT'},{biome:'forest',multiplayer:true});
- assert.equal(newUser.instanceId,starts[0].instanceId);
+ const newUser=await J.start(db,{id:'jump-test-new',name:'N',country:'PT'},{biome:'desert',multiplayer:true});
+ assert.equal(newUser.instanceId,ids[0],'an older open four-player instance should be filled first');
  for(const u of users)J.leave(u);
- J.leave({id:'jump-test-city'});J.leave({id:'jump-test-new'});
+ J.leave({id:'jump-test-extra'});J.leave({id:'jump-test-new'});
 });
 test('server confirms platform points and rate-limits impossible progression',async()=>{
  const player={id:'jump-score-player',name:'SCORE',country:'PT'};
