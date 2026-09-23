@@ -102,7 +102,7 @@ test('landing on the next highest platform awards exactly 12 points',()=>{
 test('public matchmaking fills the busiest open instance before creating another',async()=>{
  const starts=[];
  const users=Array.from({length:13},(_,i)=>({id:'jump-test-public-'+i,name:'J'+i,country:'PT'}));
- for(const u of users)starts.push(await J.start(db,u,{biome:i%2?'forest':'city',multiplayer:true}));
+ for(const [i,u] of users.entries())starts.push(await J.start(db,u,{biome:i%2?'forest':'city',multiplayer:true}));
  const ids=[...new Set(starts.map(x=>x.instanceId))],sizes=ids.map(id=>starts.filter(x=>x.instanceId===id).length);
  assert.deepEqual(sizes,[5,5,3]);
  const first=J.input(users[0],{runId:starts[0].runId,left:false,right:false,jump:false,platform:0});
