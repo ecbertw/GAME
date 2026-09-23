@@ -35,6 +35,7 @@ function memoryDb(){
   if(q.startsWith('DELETE FROM jump_team_members WHERE team_id=')){
    const ok=members.get(String(args[0]))?.delete(String(args[1]));return{rows:[],rowCount:ok?1:0};
   }
+  if(q.startsWith('DELETE FROM jump_team_scores WHERE roster_key=')){const ok=scores.delete(String(args[0]));return{rows:[],rowCount:ok?1:0};}
   if(q.startsWith('DELETE FROM jump_teams WHERE id=')){teams.delete(String(args[0]));members.delete(String(args[0]));return{rows:[],rowCount:1};}
   if(q.startsWith('UPDATE jump_teams SET owner_id=')){const t=teams.get(String(args[0]));if(t)t.owner_id=String(args[1]);return{rows:[],rowCount:t?1:0};}
   if(q.includes('FROM jump_team_members mine')){
@@ -87,6 +88,15 @@ test('team progression ignores submitted scores and stale packets recover curren
  assert.throws(()=>s.input(users[4],{runId:t.runId,seq:2}),/Entra primeiro/);
  s.input(users[0],{runId:t.runId,seq:3,right:true});s.input(users[0],{runId:t.runId,seq:2,left:true});
  f.advance(100);assert.ok(s.state(users[0]).members.find(x=>x.id===users[0].id).state.x>199);
+});
+
+test('client-predicted team pose is relayed for rendering without replacing authoritative score state',async()=>{
+ const stationary={...P,step:s=>s},f=await fixture(stationary),s=f.service,t=await f.fill();
+ const before=s.state(users[0]).members.find(x=>x.id===users[0].id).state;
+ const out=s.input(users[0],{runId:t.runId,seq:2,right:true,position:{x:before.x+8,y:before.y+4,vy:55,ground:false}});
+ const me=out.members.find(x=>x.id===users[0].id);
+ assert.equal(me.state.x,before.x+8);assert.equal(me.state.y,before.y+4);assert.equal(me.state.vy,55);assert.equal(me.state.ground,false);
+ assert.equal(out.score,0);
 });
 
 test('one disconnected member ends the shared session and never writes individual rankings',async()=>{
@@ -152,12 +162,17 @@ test('save failures block rematch until retry succeeds',async()=>{
  f.breakDb(false);out=await s.finish(users[0],{runId:t.runId});assert.equal(out.saved,true);
 });
 
-test('leaving a room keeps membership; abandoning removes it and transfers ownership',async()=>{
- const f=await fixture(),s=f.service,t=await f.create();
- await s.join(users[1],{code:t.code},J.DEFAULTS);await s.leave(users[0]);
- assert.equal((await s.list(users[0],'duo')).teams.length,1);
- await s.abandon(users[0],{teamId:t.teamId});assert.equal((await s.list(users[0],'duo')).teams.length,0);
+test('abandoning removes the old roster from TOP, transfers ownership, and deletes an empty team',async()=>{
+ const physics={...P,step(s){s.bestPlatform=3;return s;}};
+ const f=await fixture(physics),s=f.service,t=await f.fill();
+ s.input(users[0],{runId:t.runId,seq:1});s.input(users[1],{runId:t.runId,seq:1});f.advance(100);
+ await s.finish(users[0],{runId:t.runId});assert.equal((await s.rankings('duo',1)).teams.length,1);
+ await s.abandon(users[0],{teamId:t.teamId});
+ assert.equal((await s.list(users[0],'duo')).teams.length,0);
  const listed=await s.list(users[1],'duo');assert.equal(listed.teams[0].ownerId,users[1].id);
+ assert.equal((await s.rankings('duo',1)).teams.length,0,'old roster must disappear from the TOP when a member abandons');
+ await s.abandon(users[1],{teamId:t.teamId});
+ assert.equal(f.db.teams.has(t.teamId),false,'team row must disappear when the last member abandons');
 });
 
 test('invalid team data and full rosters are rejected',async()=>{

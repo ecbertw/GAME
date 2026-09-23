@@ -23,8 +23,15 @@ test('JUMP customizer is wide, clips no horizontal content and rankings stay com
  assert.match(css,/width:min\(760px,calc\(100vw - 28px\)\)/);
  assert.match(css,/overflow-x:hidden/);
  assert.match(css,/jump-team-roster\{display:flex;flex-direction:row/);
- assert.match(css,/jump-team-player \.rank-player-name\{font-size:6px/);
+ assert.match(css,/jump-team-player \.rank-player-name\{font-size:7px/);
  const colors=fs.readFileSync(path.join(root,'color-options.js'),'utf8');
  assert.match(colors,/jumpOutfit=select\.matches/);
  assert.match(colors,/jumpOutfit\?'#f4f5f6':color/);
+});
+
+
+test('JUMP wardrobe uses names instead of raw hex labels and VIP tags accept VIP white',()=>{
+ const jump=fs.readFileSync(path.join(root,'jump.js'),'utf8'),server=fs.readFileSync(path.join(root,'server.js'),'utf8');
+ assert.match(jump,/OUTFIT_COLOR_NAMES/);assert.match(jump,/BRANCO/);assert.match(jump,/CINZENTO ESCURO/);
+ assert.match(server,/tagAllowed=\[\.\.\.new Set\(\[\.\.\.normalAllowed,\.\.\.VIP_COLORS\.map/);
 });
