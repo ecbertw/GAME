@@ -98,7 +98,7 @@ function draw(c,biome,seed,cam=0,time=0){
   q(0,182,W,13,'#b8d2dc');q(0,187,W,8,'#668da7');
   // Small warm cabin creates a focal point.
   q(38,154,31,25,'#5c4d4b');q(34,151,39,6,'#8a6258');q(41,160,8,7,'#ffc77b');q(56,160,8,7,'#ffc77b');q(51,168,7,11,'#342f35');q(63,143,4,11,'#51454a');q(64,141,5,3,'#d2dfe2');
-  for(let i=0;i<38;i++){const x=wrap(rand(i+100)*W+time*(5+i%5),W),y=wrap(rand(i+130)*H+time*(8+i%4),H);q(x,y,1+i%3===0?2:1,1+i%4===0?2:1,'#dbeaf0');}
+  for(let i=0;i<38;i++){const x=wrap(rand(i+100)*W+time*(5+i%5),W),y=wrap(rand(i+130)*H+time*(8+i%4),H);q(x,y,i%3===0?2:1,i%4===0?2:1,'#dbeaf0');}
  }
  // Subtle dark pixel vignette at the floor improves avatar/platform contrast.
  q(0,H-1,W,1,'#09121f55');
