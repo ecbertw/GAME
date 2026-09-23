@@ -120,7 +120,7 @@ async function start(db,p,d){
   if(inst.players.size>=5)throw error('Instância cheia.',409);
   const id=crypto.randomUUID(),outfit=await getOutfit(db,p);
   const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,outfit,instanceId:inst.id,roomId,biome,kind,
-    state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},confirmedPlatform:0,confirmedScore:0,last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
+    state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},facing:1,confirmedPlatform:0,confirmedScore:0,last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
   sessions.set(id,run);activeByPlayer.set(p.id,id);inst.players.set(p.id,run);
   return{ok:true,runId:id,seed:inst.seed,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,outfit,...wardrobeFor(p)};
 }
@@ -135,7 +135,7 @@ function advance(run){
 function playersIn(run){
   const inst=instances.get(run.instanceId);
   if(!inst)return[];
-  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,outfit:r.outfit}));
+  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,vy:Math.round(r.state.vy||0),ground:!!r.state.ground,facing:r.facing||1,moving:!!(r.keys.left||r.keys.right),outfit:r.outfit}));
 }
 function confirmProgress(run,raw){
   const claimed=Number(raw??run.confirmedPlatform??0);
@@ -157,6 +157,8 @@ function responseState(run){
 function input(p,d){
   const run=requireRun(p,d.runId);
   run.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};
+  if(run.keys.left&&!run.keys.right)run.facing=-1;
+  else if(run.keys.right&&!run.keys.left)run.facing=1;
   advance(run);
   confirmProgress(run,d.platform);
   const inst=instances.get(run.instanceId);
