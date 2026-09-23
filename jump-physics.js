@@ -15,32 +15,46 @@
     const out=[{x:0,y:0,w:W,moving:false}];extend(out,seed,count);return out;
   }
   function extend(out,seed,count){
-    let prev=out[out.length-1],x=out.length===1?W/2-45:prev.x,y=prev.y;
+    let prev=out[out.length-1],y=prev.y;
     for(let i=out.length;i<=count;i++){
-      const a=hash(seed,i*7+1),b=hash(seed,i*7+2),c=hash(seed,i*7+3);
-      // Difficulty becomes clearly visible after the first few safe jumps:
-      // narrower platforms, slightly larger gaps and stronger zig-zags.
-      const difficulty=Math.min(1,Math.max(0,(i-4)/22));
-      const gap=32+Math.floor(a*(9+7*difficulty))+Math.floor(3*difficulty);
-      const width=Math.round(90-(34*difficulty)+c*(10-3*difficulty));
-      const lateral=128+Math.round(32*difficulty);
-      y+=gap;
-      x=Math.max(12,Math.min(W-width-12,x+(b-.5)*lateral));
+      const a=hash(seed,i*9+1),b=hash(seed,i*9+2),c=hash(seed,i*9+3);
+      // Hard-mode curve inspired by endless vertical climbers:
+      // the tutorial ends quickly, then precision ramps aggressively.
+      const difficulty=Math.min(1,Math.max(0,(i-3)/18));
+      const gap=Math.min(50,34+Math.floor(a*(8+7*difficulty))+Math.floor(5*difficulty));
+      const width=Math.round(88-(38*difficulty)+c*(8-3*difficulty));
 
-      // Like classic vertical climbers, moving platforms are introduced
-      // progressively instead of appearing everywhere from the first jump.
-      const moveRoll=hash(seed,i*7+4);
-      const moveChance=i<5?0:(0.16+0.30*difficulty);
-      const moving=moveRoll<moveChance;
+      // Never allow long "elevator shafts" of nearly vertical platforms.
+      // Every new platform has a meaningful horizontal displacement while
+      // remaining within the player's physical jump envelope.
+      const prevCenter=Number(prev.x||0)+Number(prev.w||W)/2;
+      const minShift=i<=3?28:46+Math.round(32*difficulty);
+      const maxShift=i<=3?58:68+Math.round(40*difficulty);
+      const shift=minShift+hash(seed,i*9+4)*(maxShift-minShift);
+      let direction=hash(seed,i*9+5)<.5?-1:1;
+      const minCenter=12+width/2,maxCenter=W-12-width/2;
+      let target=prevCenter+direction*shift;
+      if(target<minCenter||target>maxCenter){direction*=-1;target=prevCenter+direction*shift}
+      target=Math.max(minCenter,Math.min(maxCenter,target));
+      let x=target-width/2;
+      y+=gap;
+
+      // Moving platforms rapidly become the dominant platform type.
+      // By the mid-game roughly 2/3–4/5 platforms move horizontally.
+      const moveChance=i<4?0:(0.34+0.46*difficulty);
+      const forcedMover=i>=11&&(i%3===0||i%7===0);
+      const moving=i>=4&&(forcedMover||hash(seed,i*9+6)<moveChance);
       let moveCenter=x,moveAmp=0,moveSpeed=0,movePhase=0;
       if(moving){
-        const desired=16+hash(seed,i*7+5)*(17+10*difficulty);
+        const desired=18+hash(seed,i*9+7)*(20+12*difficulty);
         const min=Math.max(12,x-desired),max=Math.min(W-width-12,x+desired);
-        moveCenter=(min+max)/2;moveAmp=Math.max(0,(max-min)/2);
-        moveSpeed=0.72+hash(seed,i*7+6)*0.72+0.12*difficulty;
-        movePhase=hash(seed,i*7+7)*Math.PI*2;
+        moveCenter=(min+max)/2;
+        moveAmp=Math.max(8,(max-min)/2);
+        moveSpeed=0.95+hash(seed,i*9+8)*(0.65+0.28*difficulty);
+        movePhase=hash(seed,i*9+9)*Math.PI*2;
       }
-      out.push({x:Math.round(x),y,w:width,moving,moveCenter,moveAmp,moveSpeed,movePhase});
+      out.push({x:Math.round(x),y,w:width,moving,moveCenter,moveAmp,moveSpeed,movePhase,difficulty});
+      prev=out[out.length-1];
     }
   }
   function create(seed,sharedPlatforms){
