@@ -14,8 +14,45 @@ const themes={
   desert:{sky:'#83cae8',low:'#f9c688',hills:'#e9a16b',far:'#bd7657',near:'#8a513f',top:'#f4ce70',edge:'#b98845',under:'#ad7651'},
   snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
 };
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],outfit=null,wardrobe=null,fixedAppearance=null,keys={left:false,right:false,jump:false},confirmedScore=0,facing=1,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],peerVisuals=new Map(),outfit=null,wardrobe=null,fixedAppearance=null,keys={left:false,right:false,jump:false},confirmedScore=0,facing=1,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
+function mergePeers(rows=[]){
+ const seen=new Set();
+ for(const raw of rows){
+  if(!raw||raw.id==null||!Number.isFinite(Number(raw.x))||!Number.isFinite(Number(raw.y)))continue;
+  const id=String(raw.id);seen.add(id);
+  let v=peerVisuals.get(id);
+  if(!v){v={...raw,x:Number(raw.x),y:Number(raw.y),targetX:Number(raw.x),targetY:Number(raw.y)};peerVisuals.set(id,v);}
+  else{
+   const x=v.x,y=v.y;Object.assign(v,raw);v.x=x;v.y=y;v.targetX=Number(raw.x);v.targetY=Number(raw.y);
+  }
+ }
+ for(const id of peerVisuals.keys())if(!seen.has(id))peerVisuals.delete(id);
+ peers=[...peerVisuals.values()];
+}
+function smoothPeers(dt){
+ const alpha=1-Math.exp(-Math.max(0,dt)*15);
+ for(const p of peerVisuals.values()){
+  const tx=Number(p.targetX),ty=Number(p.targetY);
+  if(Number.isFinite(tx))p.x+=Math.max(-16,Math.min(16,(tx-p.x)*alpha));
+  if(Number.isFinite(ty))p.y+=Math.max(-22,Math.min(22,(ty-p.y)*alpha));
+ }
+ peers=[...peerVisuals.values()];
+}
+function applyTeamTether(dt){
+ if(!team||team.status!=='playing'||!local)return;
+ const me=String(getPlayer()?.id||''),members=team.members||[],index=members.findIndex(m=>String(m.id)===me);if(index<0)return;
+ const ids=[];if(index>0)ids.push(String(members[index-1].id));if(index<members.length-1)ids.push(String(members[index+1].id));
+ for(const id of ids){
+  const p=peerVisuals.get(id);if(!p)continue;
+  const dx=Number(p.x)-local.x,dy=Number(p.y)-local.y,dist=Math.hypot(dx,dy),limit=Number(team.chainLength)||110;
+  if(!(dist>limit+4))continue;
+  const excess=dist-limit,nx=dx/dist,ny=dy/dist,pull=Math.min(120,excess*4.2);
+  local.x=Math.max(8,Math.min(P.W-8,local.x+nx*pull*dt));
+  local.vy+=ny*pull*dt*2.25;
+  if(Math.abs(ny)>.5&&excess>26){local.ground=false;local.groundPlatform=-1;}
+ }
+}
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
  const opts={credentials:'same-origin',cache:'no-store',...options};
@@ -66,7 +103,7 @@ function updateHud(){
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
- await stopRun();keys={left:false,right:false,jump:false};confirmedScore=0;facing=1;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
+ await stopRun();keys={left:false,right:false,jump:false};confirmedScore=0;facing=1;local=null;gameOver=false;finishing=false;peers=[];peerVisuals.clear();lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
@@ -83,7 +120,7 @@ async function sync(){
  try{
   const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jump:keys.jump,platform:Number(local?.bestPlatform||0),position:local?{x:local.x,y:local.y}:null})});
   if(run?.runId!==identity)return;
-  lastState=out;if(mode!=='solo'&&local&&Number.isFinite(out.worldTime))local.time=out.worldTime;peers=out.peers||[];confirmedScore=Number(out.state?.score||0);
+  lastState=out;mergePeers(out.peers||[]);confirmedScore=Number(out.state?.score||0);
   // The HUD shows only server-confirmed platform points, while the local
   // physics remains smooth and is never teleported to an older snapshot.
   updateHud();
@@ -182,7 +219,7 @@ function stepLocalWithAudio(dt){
 }
 function loop(now){
  if(current!=='jump'){animation=null;return}
- let dt=Math.min(.04,(now-last)/1000||0);last=now;
+ let dt=Math.min(.04,(now-last)/1000||0);last=now;smoothPeers(dt);
  if(local&&!gameOver&&run){
   if(keys.left&&!keys.right)facing=-1;else if(keys.right&&!keys.left)facing=1;
   if(team){
@@ -304,6 +341,17 @@ function chooseWorld(){
  modal(txt('choose'),'<div class="jump-world-grid">'+BIOMES.map(b=>'<button class="jump-world-option '+b+'" data-biome="'+b+'"><canvas width="450" height="195" aria-hidden="true"></canvas><strong>'+b.toUpperCase()+'</strong><small>ONLINE</small></button>').join('')+'</div><p>5 PLAYERS MAX / INSTANCE · AUTO MATCHMAKING</p>');
  panel.querySelectorAll('[data-biome]').forEach(btn=>{window.EixoJumpWorlds.draw(btn.querySelector('canvas').getContext('2d'),btn.dataset.biome,73,0,0);btn.onclick=()=>{const b=btn.dataset.biome;closePanel();newRun({biome:b,mode:'public'})};});
 }
+const OUTFIT_COLOR_NAMES={
+ '#ffffff':['BRANCO','WHITE'],'#e83e45':['VERMELHO','RED'],'#ff7a2f':['LARANJA','ORANGE'],'#f1c438':['AMARELO','YELLOW'],
+ '#39b86a':['VERDE','GREEN'],'#7bdc5a':['VERDE-LIMA','LIME'],'#00e5ff':['CIANO','CYAN'],'#2f9bd1':['AZUL','BLUE'],
+ '#3b82f6':['AZUL ROYAL','ROYAL BLUE'],'#6f5cff':['ÍNDIGO','INDIGO'],'#a855f7':['ROXO','PURPLE'],'#ff4fd8':['MAGENTA','MAGENTA'],
+ '#ff6b9d':['ROSA','PINK'],'#94a3b8':['CINZENTO','GRAY'],'#46535f':['CINZENTO ESCURO','DARK GRAY'],'#172b3b':['AZUL NOITE','MIDNIGHT BLUE'],
+ '#263c5c':['AZUL AÇO','STEEL BLUE'],'#111827':['PRETO AZULADO','BLUE BLACK']
+};
+function outfitColorLabel(item){
+ const value=String(item?.value||'').toLowerCase(),pair=OUTFIT_COLOR_NAMES[value];
+ return pair?(lang()==='pt'?pair[0]:pair[1]):String(item?.label||item?.value||'');
+}
 async function customize(){
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  let out;try{out=await api('/api/jump/cosmetics')}catch(e){showError(e.message);return}
@@ -312,7 +360,7 @@ async function customize(){
  const options=part=>(out.parts?.[part]||[]).map(item=>{
    const level=Number(item.minVip||0),locked=vip<level,vipOnly=level>0,suffix=vipOnly?' · VIP '+level:'';
    const prefix=vipOnly?(lang()==='pt'?'COR VIP · ':'VIP COLOR · '):'';
-   return '<option value="'+esc(item.value)+'" data-eixo-color-label="keep"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+prefix+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
+   return '<option value="'+esc(item.value)+'" data-eixo-color-label="keep"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+prefix+esc(outfitColorLabel(item))+suffix+(locked?' · BLOQUEADO':'')+'</option>';
  }).join('');
  modal(txt('character'),'<div class="jump-custom-note">EIXO RUNNER · ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="180" height="130"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
  const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,180,130);c.save();c.translate(90,105);c.scale(3,3);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true});c.restore()};
@@ -429,22 +477,18 @@ function acceptTeam(out){
   const fresh=previousRun!==out.runId||!local||local.seed!==out.seed,st=me.state;
   if(fresh){local=P.create(out.seed);Object.assign(local,st);teamSeq=0;}
   else if(out.status==='playing'){
-   // Client prediction keeps DUO/TRIO as fluid as SOLO. The server remains
-   // authoritative and only nudges small drift; large chain corrections snap.
-   const dx=Number(st.x)-Number(local.x),dy=Number(st.y)-Number(local.y);
-   if(Math.abs(dx)>38||Math.abs(dy)>44){local.x=Number(st.x);local.y=Number(st.y);local.vy=Number(st.vy||0);}
-   else{local.x+=dx*.18;local.y+=dy*.14;local.vy+=(Number(st.vy||0)-Number(local.vy||0))*.16;}
-   local.cam+=((Number(st.cam)||0)-Number(local.cam||0))*.18;
-   local.time=Number(st.time)||local.time;
-   local.ground=!!st.ground;
+   // Local movement is predicted entirely on this client. Server snapshots are
+   // confirmation/score data only; never rewind x/y/vy/camera/ground on a live
+   // run, which was the visible "rollback" with 2–3 players.
+   local.serverPlatform=Number(st.platform||0);local.serverScore=Number(st.score||0);
   }else Object.assign(local,st);
-  local.bestPlatform=Number(st.platform||0);local.score=Number(st.score||0);local.seed=out.seed;
-  local.brokenPlatforms=Object.fromEntries((st.broken||[]).map(i=>[i,true]));
-  local.fragilePlatform=Number(st.fragilePlatform??-1);local.fragileRatio=Number(st.fragileRatio||0);
+  local.bestPlatform=Math.max(Number(local.bestPlatform||0),Number(st.platform||0));local.score=Number(st.score||0);local.seed=out.seed;
+  const broken=Object.fromEntries((st.broken||[]).map(i=>[i,true]));local.brokenPlatforms={...(local.brokenPlatforms||{}),...broken};
+  if(out.status!=='playing'){local.fragilePlatform=Number(st.fragilePlatform??-1);local.fragileRatio=Number(st.fragileRatio||0);}
   const required=Math.max(34,...out.members.map(m=>Number(m.state?.platform||0)+34));
   if(local.platforms.length<required)local.platforms=P.platforms(out.seed,required);
   local.activeMinPlatform=Number(st.activeMinPlatform||0);
-  peers=out.members.filter(m=>m.id!==getPlayer()?.id&&m.present&&m.state).map(m=>({id:m.id,name:m.name,outfit:m.outfit,...m.state}));
+  mergePeers(out.members.filter(m=>m.id!==getPlayer()?.id&&m.present&&m.state).map(m=>({id:m.id,name:m.name,outfit:m.outfit,...m.state})));
   outfit=me.outfit||outfit;biome=out.biome;seed=out.seed;mode=out.mode;confirmedScore=Number(out.score||0);
   run={runId:out.runId||('team-lobby:'+out.teamId)};
   if(out.status==='lobby'||out.status==='countdown'){
@@ -487,7 +531,7 @@ async function syncTeam(){
  if(Date.now()-teamPoll<wait)return;
  busy=true;teamPoll=Date.now();
  try{
-  const out=team.status==='playing'?await teamPost('input',{runId:team.runId,seq:teamSeq++,left:keys.left,right:keys.right,jump:keys.jump}):await api('/api/jump/teams/state');
+  const out=team.status==='playing'?await teamPost('input',{runId:team.runId,seq:teamSeq++,left:keys.left,right:keys.right,jump:keys.jump,position:local?{x:local.x,y:local.y,vy:local.vy,ground:!!local.ground}:null}):await api('/api/jump/teams/state');
   if(team?.teamId===identity)acceptTeam(out);
  }catch(e){
   const msg=String(e.message||'');
@@ -499,19 +543,36 @@ async function syncTeam(){
 function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,60);}
 async function enterTeamById(teamId){
  if(team?.teamId===teamId){showTeamLobby();return;}
- await stopRun();local=null;peers=[];run=null;
+ await stopRun();local=null;peers=[];peerVisuals.clear();run=null;
  const out=await teamPost('enter',{teamId});watchTeam(out);showTeamLobby();void refreshMyTeamsBoard();
 }
 function savedTeamCard(r){
- const active=team?.teamId===r.id;
- return '<article class="jump-team-room-card '+(active?'active':'')+'"><div class="jump-team-room-mode '+esc(r.mode)+'">'+esc(r.mode.toUpperCase())+'</div><div class="jump-team-room-main"><strong>'+esc(r.name)+'</strong><small>'+esc(r.biome.toUpperCase())+' · '+Number(r.memberCount)+'/'+Number(r.capacity)+'</small></div><button type="button" class="board-more" data-enter-team="'+esc(r.id)+'">'+(active?teamText('ABRIR','OPEN'):txt('enter'))+'</button></article>';
+ const active=team?.teamId===r.id,me=active?team.members?.find(m=>m.id===getPlayer()?.id):null,ready=!!(me?.ready||r.ready);
+ return '<article class="jump-team-room-card '+(active?'active':'')+'"><div class="jump-team-room-mode '+esc(r.mode)+'">'+esc(r.mode.toUpperCase())+'</div><div class="jump-team-room-main"><strong>'+esc(r.name)+'</strong><small>'+esc(r.biome.toUpperCase())+' · '+Number(r.memberCount)+'/'+Number(r.capacity)+'</small></div><div class="jump-team-card-actions"><button type="button" class="board-more" data-enter-team="'+esc(r.id)+'">'+(active?teamText('ABRIR','OPEN'):txt('enter'))+'</button><button type="button" class="board-more jump-team-quick-ready '+(ready?'is-ready':'')+'" data-ready-team="'+esc(r.id)+'">'+(ready?teamText('PRONTO ✓','READY ✓'):teamText('PRONTO','READY'))+'</button></div></article>';
+}
+async function quickReadyTeam(teamId,button){
+ if(button)button.disabled=true;
+ try{
+  if(team?.teamId!==teamId){
+   await stopRun();local=null;peers=[];peerVisuals.clear();run=null;
+   const entered=await teamPost('enter',{teamId});watchTeam(entered);
+  }
+  const me=team?.members?.find(m=>m.id===getPlayer()?.id),out=await teamPost('ready',{ready:!me?.ready});acceptTeam(out);
+  if(out.status==='countdown')closePanel();
+  await refreshMyTeamsBoard();
+ }catch(e){showError(e.message);if($('jumpTeamError'))$('jumpTeamError').textContent=e.message;}
+ finally{if(button?.isConnected)button.disabled=false;}
+}
+function bindSavedTeamCards(target){
+ target?.querySelectorAll('[data-enter-team]').forEach(b=>b.onclick=()=>{b.disabled=true;enterTeamById(b.dataset.enterTeam).catch(e=>showError(e.message)).finally(()=>{if(b.isConnected)b.disabled=false;});});
+ target?.querySelectorAll('[data-ready-team]').forEach(b=>b.onclick=()=>quickReadyTeam(b.dataset.readyTeam,b));
 }
 async function loadTeamChooserList(kind){
  const target=$('jumpTeamSavedList');if(!target)return;
  try{
   const out=await api('/api/jump/teams/list?mode='+kind),rows=out.teams||[];
   target.innerHTML=rows.length?rows.map(savedTeamCard).join(''):'<div class="jump-team-empty">'+teamText('Ainda não estás ligado a nenhuma equipa '+kind.toUpperCase()+'.','You are not linked to any '+kind.toUpperCase()+' team yet.')+'</div>';
-  target.querySelectorAll('[data-enter-team]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await enterTeamById(b.dataset.enterTeam);}catch(e){if($('jumpTeamError'))$('jumpTeamError').textContent=e.message;}finally{if(b.isConnected)b.disabled=false;}});
+  bindSavedTeamCards(target);
  }catch(e){target.innerHTML='<div class="jump-team-empty">'+esc(e.message)+'</div>';}
 }
 async function openTeam(kind){
@@ -550,10 +611,10 @@ let myTeamsCache=[],myTeamsRenderSignature='';
 function renderMyTeamsBoardFromCache(){
  const board=$('jumpMyTeamsBoard'),list=$('jumpMyTeamsList');if(!board||!list)return;
  const visible=current==='jump'&&myTeamsCache.length>0;board.classList.toggle('hidden',!visible);if(!visible){myTeamsRenderSignature='';return;}
- const signature=JSON.stringify(myTeamsCache.map(r=>[r.id,r.mode,r.name,r.biome,r.memberCount,r.capacity,team?.teamId===r.id]));
+ const signature=JSON.stringify(myTeamsCache.map(r=>[r.id,r.mode,r.name,r.biome,r.memberCount,r.capacity,r.ready,team?.teamId===r.id,team?.members?.find(m=>m.id===getPlayer()?.id)?.ready]));
  if(signature===myTeamsRenderSignature)return;myTeamsRenderSignature=signature;
  list.innerHTML=myTeamsCache.map(savedTeamCard).join('');
- list.querySelectorAll('[data-enter-team]').forEach(b=>b.onclick=()=>enterTeamById(b.dataset.enterTeam).catch(e=>showError(e.message)));
+ bindSavedTeamCards(list);
 }
 async function refreshMyTeamsBoard(){
  if(current!=='jump'||!getPlayer()?.id){myTeamsCache=[];renderMyTeamsBoardFromCache();return;}
@@ -571,13 +632,11 @@ function initTeamBoards(boards){
  mine.after(section);section.querySelectorAll('[data-team-rank]').forEach(b=>b.onclick=()=>fullTeamRank(b.dataset.teamRank,1));
 }
 function teamRankPlayer(p){
- const visual=String(p.visualName||p.name||'PLAYER'),vip=Number(p.vipLevel||0),styles=Array.isArray(p.letterStyles)?p.letterStyles:[];
+ const visual=String(p.visualName||p.name||'PLAYER'),styles=Array.isArray(p.letterStyles)?p.letterStyles:[];
  const color=String(p.nameColor||'#fff').toLowerCase(),rainbow=color==='rainbow'&&!styles.length,effect=p.nameEffect&&p.nameEffect!=='none'?' effect-'+esc(p.nameEffect):'';
  const colorStyle=rainbow?'':(/^#[0-9a-f]{6}$/i.test(color)?' style="color:'+esc(color)+';"':'');
  const name=styles.length?rankLetters(visual,styles):[...visual].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
- let tags='';if(Number(p.worldRank)>=1&&Number(p.worldRank)<=3)tags+=rankTag('world',Number(p.worldRank),'',p);
- if(Number(p.countryRank)>=1&&Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
- return '<span class="jump-team-player"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(styles.length?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span><span class="jump-team-player-tags">'+tags+rankVip(vip)+'</span></span>';
+ return '<span class="jump-team-player"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(styles.length?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span></span>';
 }
 function teamRows(rows){return rows.map(r=>'<li><span class="rank-number">'+Number(r.rank)+'</span><span class="rank-name-wrap jump-team-rank-name"><strong>'+esc(r.name)+'</strong><span class="jump-team-roster">'+(r.members||[]).map(teamRankPlayer).join('<span class="jump-team-plus">+</span>')+'</span></span><span class="rank-score">'+Number(r.score)+'</span></li>').join('')||'<li class="empty-row">'+txt('empty')+'</li>';}
 async function refreshTeamRanks(){
