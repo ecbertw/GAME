@@ -164,7 +164,7 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/confirmedScore=Number\(out\.state\?\.score\|\|0\)/);
  assert.match(js,/P\.platformX\(p,local\.time\)/);
  assert.doesNotMatch(js,/if\(p\.moving\)\s*\{\s*c\.fillStyle='#0a5571'/);
- assert.match(js,/Moving platforms keep the same biome palette|Moving platforms deliberately keep the exact same biome palette/);
+ assert.match(js,/Moving platforms keep the same biome palette|Moving platforms deliberately keep the exact same biome palette|Moving platforms keep the biome material/);
  assert.match(js,/ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS/);
  assert.match(js,/peer\.outfit/);
  assert.match(js,/activeMinPlatform/);
