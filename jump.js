@@ -32,7 +32,6 @@ function modal(title,body){
 function closePanel(){panel?.remove();panel=null;}
 function showError(message){$('jumpStatus').textContent=String(message||'');}
 function showMode(){
- $('jumpTeamBoards')?.classList.toggle('hidden',current!=='jump');
  const switcher=$('eixoGameSwitcher');switcher.querySelectorAll('[data-game]').forEach(b=>b.classList.toggle('active',b.dataset.game===current));
  const intro=$('gameIntro'),brand=intro?.querySelector('strong'),copy=intro?.querySelector('[data-i18n="aboutText"]');
  if(brand)brand.textContent=current==='jump'?'JUMP':current==='eat'?'EAT':'PULSE';
@@ -57,13 +56,12 @@ async function switchGame(next){
  }
 }
 async function stopRun(){
- if(team){await api('/api/jump/teams/leave',{method:'POST'});team=null;clearInterval(teamTimer);run=null;local=null;peers=[];return;}
  if(!run)return;const old=run,platform=Number(local?.bestPlatform||0);run=null;clearInterval(networkTimer);
  try{await api('/api/jump/run/finish',{method:'POST',body:JSON.stringify({runId:old.runId,platform})})}catch(e){console.warn('JUMP finalization:',e.message)}
 }
 function updateHud(){
  $('jumpHeight').textContent=String(Math.max(0,Number(confirmedScore)||0)).padStart(3,'0');
- $('jumpWorld').textContent=biome.toUpperCase()+(team?' · '+team.mode.toUpperCase()+' · '+team.members.length+'/'+team.capacity:mode==='solo'?' · SOLO':' · ONLINE '+(lastState?.players||1)+'/5');
+ $('jumpWorld').textContent=biome.toUpperCase()+(mode==='solo'?' · SOLO':' · ONLINE '+(lastState?.players||run?.players||1)+'/'+(lastState?.maxPlayers||run?.maxPlayers||20));
  $('jumpSoloButton').textContent=txt('solo');$('jumpJoinButton').textContent='ONLINE';$('jumpCustomizeButton').textContent=txt('character');if($('jumpHelp'))$('jumpHelp').textContent=txt('help');
 }
 async function newRun(options={}){
@@ -95,7 +93,6 @@ function smoothPeerViews(dt){
  }
 }
 async function sync(){
- if(team){await syncTeam();return;}
  if(!run||busy||current!=='jump')return;
  const identity=run.runId;busy=true;
  try{
@@ -133,11 +130,20 @@ function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
  const spriteScale=.72;
  c.save();c.globalAlpha=ghost?0.72:1;c.translate(Math.round(x),Math.round(y));c.scale(dir*spriteScale,spriteScale);c.translate(0,-14);
  const q=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(xx),Math.round(yy),w,h)};
- const effect=String(O.effect||'none'),aura=outfitColor(O.accent,time,120);
- if(effect!=='none'){
-  if(['glow','pulse','plasma','cosmic'].includes(effect)){c.shadowColor=aura;c.shadowBlur=effect==='glow'?7:effect==='pulse'?5+3*Math.sin(time*6):9}
-  if(effect==='pulse')c.globalAlpha=(ghost?0.72:1)*(0.82+0.18*(.5+.5*Math.sin(time*7)));
-  if(effect==='plasma'||effect==='cosmic'){c.globalAlpha=(ghost?0.72:1)*.18;q(-11,-26,22,34,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,210));c.globalAlpha=ghost?.72:1}
+ const effect=String(O.effect||'none'),aura=outfitColor(O.accent,time,120),baseAlpha=ghost?.72:1;
+ const breathe=.5+.5*Math.sin(time*3.2),twinkle=.5+.5*Math.sin(time*5.1);
+ if(['glow','pulse','halo','plasma','cosmic','prismatic'].includes(effect)){
+  c.shadowColor=effect==='cosmic'||effect==='prismatic'?outfitColor('rainbow',time,150):aura;
+  c.shadowBlur=effect==='glow'?4:effect==='pulse'?4+breathe*3:effect==='halo'?6:effect==='plasma'?7:8;
+ }
+ if(effect==='halo'){
+  c.globalAlpha=baseAlpha*(.07+.04*breathe);q(-10,-27,20,35,aura);q(-12,-17,24,15,aura);c.globalAlpha=baseAlpha;
+ }
+ if(effect==='mist'){
+  c.globalAlpha=baseAlpha*.16;q(-13,9,26,3,aura);q(-9,12,18,2,'#d7f5ff');c.globalAlpha=baseAlpha;
+ }
+ if(effect==='comet'&&moving){
+  c.globalAlpha=baseAlpha*.13;q(dir>0?-18:8,-7,10,9,aura);q(dir>0?-22:12,-3,8,4,aura);c.globalAlpha=baseAlpha;
  }
  // A readable 18x31 runner silhouette with a real head, hair, jacket and limbs.
  q(-7,-25+bodyY,14,15,outline);q(-6,-24+bodyY,12,13,F.skin);
@@ -158,10 +164,19 @@ function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
  q(-6,4+lY,5,8,outline);q(-5,4+lY,4,7,pants);q(1,4+rY,5,8,outline);q(1,4+rY,4,7,pants);
  q(-7,11+lY,7,3,outline);q(-6,10+lY,6,2,shoes);q(0,11+rY,7,3,outline);q(1,10+rY,6,2,shoes);
  c.shadowBlur=0;
- if(effect==='spark'||effect==='electric'||effect==='cosmic'){
-  const phase=Math.floor(time*13);for(let i=0;i<5;i++){const sx=-12+((phase*7+i*11)%25),sy=-27+((phase*5+i*13)%34);q(sx,sy,effect==='electric'?3:2,2,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,i*70));}
+ // Cosmetic particles stay close to the runner instead of orbiting like props.
+ const px=(xx,yy,col,alpha=1,w=1,h=1)=>{const old=c.globalAlpha;c.globalAlpha=baseAlpha*alpha;q(xx,yy,w,h,col);c.globalAlpha=old;};
+ if(effect==='shimmer'){const y1=-22+Math.round(twinkle*5);px(-10,y1,'#fff',.72);px(9,-5-Math.round(twinkle*4),aura,.65);}
+ if(effect==='spark'){px(-10,-10+Math.round(breathe*3),aura,.8,1,2);px(9,4-Math.round(breathe*4),'#fff',.7,1,1);}
+ if(effect==='electric'){
+  const side=Math.sin(time*8)>0?1:-1,x=side*9;px(x,-17,aura,.78,2,1);px(x+side*2,-15,'#eaffff',.85,1,2);px(x,-12,aura,.72,2,1);
  }
- c.restore();
+ if(effect==='frost'){px(-9,7+Math.round(twinkle*3),'#bff6ff',.7,2,1);px(8,-7+Math.round(breathe*4),'#e9fdff',.72,1,2);px(4,11,'#8ee8ff',.55,1,1);}
+ if(effect==='ember'){px(-6,10-Math.round(breathe*5),'#ff9a62',.75,1,2);px(6,8-Math.round(twinkle*7),'#ffd27a',.72,1,1);px(1,12-Math.round(breathe*4),'#ff6238',.55,1,1);}
+ if(effect==='plasma'){px(-8,-7,aura,.55,1,6);px(7,-2,outfitColor(O.accent,time,210),.5,1,5);}
+ if(effect==='cosmic'){px(-10,-20,outfitColor('rainbow',time,20),.7,1,1);px(9,-5,outfitColor('rainbow',time,140),.68,1,1);px(-7,9,outfitColor('rainbow',time,260),.6,1,1);}
+ if(effect==='prismatic'){px(-8,-20,outfitColor('rainbow',time,20),.72,2,1);px(7,-8,outfitColor('rainbow',time,120),.68,1,2);px(-6,5,outfitColor('rainbow',time,240),.65,2,1);}
+ c.globalAlpha=baseAlpha;c.restore();
  if(name){c.save();c.globalAlpha=ghost?.82:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-34);c.restore()}
 }
 function draw(){
@@ -177,18 +192,8 @@ function draw(){
    // unrelated colour block.
    window.EixoJumpWorlds.platform(c,biome,x,y,p.w,i,{moving:p.moving,fragile:p.fragile,progress:fragileProgress});
  }
- if(team?.status==='playing'){
-  const members=team.members;
-  for(let i=1;i<members.length;i++){
-   const stateFor=m=>{if(m.id===getPlayer()?.id)return local;const p=peers.find(x=>String(x.id)===String(m.id));return p?{...m.state,x:Number(p.renderX??p.x),y:Number(p.renderY??p.y)}:m.state;};
-   const a=stateFor(members[i-1]),b=stateFor(members[i]);
-   if(!a||!b)continue;
-   const distance=Math.hypot(b.x-a.x,b.y-a.y),n=Math.max(2,Math.ceil(distance/5)),slack=Math.max(0,1-distance/team.chainLength)*12;
-   for(let j=0;j<=n;j++){const f=j/n,x=Math.round(a.x+(b.x-a.x)*f),y=Math.round(screen(a.y+(b.y-a.y)*f)-4+Math.sin(f*Math.PI)*slack);c.fillStyle='#172638';c.fillRect(x-2,y-1,5,4);c.fillStyle=distance>team.chainLength?'#ffc581':'#d0e3ef';c.fillRect(x-1,y,3,2);}
-  }
- }
  for(const peer of peers){
-   const px=Number(peer.renderX??peer.x),py=Number(peer.renderY??peer.y),y=screen(py);if(y>-12&&y<P.H+34)drawCharacter(c,px,y,peer.outfit,peer.name,!team,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving});
+   const px=Number(peer.renderX??peer.x),py=Number(peer.renderY??peer.y),y=screen(py);if(y>-12&&y<P.H+34)drawCharacter(c,px,y,peer.outfit,peer.name,true,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving});
  }
  drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time,{facing,ground:local.ground,vy:local.vy,moving:keys.left||keys.right});
  c.fillStyle='#ffffffaa';c.fillRect(0,0,P.W,1);
@@ -204,9 +209,7 @@ function loop(now){
  let dt=Math.min(.04,(now-last)/1000||0);last=now;smoothPeerViews(dt);
  if(local&&!gameOver&&run){
   if(keys.left&&!keys.right)facing=-1;else if(keys.right&&!keys.left)facing=1;
-  if(team){
-   if(team.status==='playing')stepLocalWithAudio(dt);
-  }else{stepLocalWithAudio(dt);if(!local.alive)die();}
+  stepLocalWithAudio(dt);if(!local.alive)die();
   updateHud();
  }
  draw();animation=requestAnimationFrame(loop);
@@ -272,7 +275,6 @@ function setJumpMyRank(id,value){
  el.title=el.textContent;el.hidden=!ok;
 }
 async function refreshRankings(){
- if(current==='jump')void refreshTeamRanks();
  if(current!=='jump')return;
  try{
   const p=getPlayer(),code=String(p?.country||'PT').toUpperCase();
@@ -320,7 +322,8 @@ function openRank(modeName='world',number=1){
  modalEl.classList.remove('hidden');renderJumpFull();
 }
 function chooseWorld(){
- modal(teamText('JOGAR ONLINE','PLAY ONLINE'),'<div class="jump-world-grid jump-online-grid"><button class="jump-world-option forest jump-online-option" id="jumpOnlineMatch"><canvas width="450" height="195" aria-hidden="true"></canvas><strong>'+teamText('JOGAR ONLINE','PLAY ONLINE')+'</strong><small>'+teamText('ENTRA NUMA INSTÂNCIA COM JOGADORES · MAPA AUTOMÁTICO','JOINS AN INSTANCE WITH PLAYERS · AUTOMATIC MAP')+'</small></button></div><p>'+teamText('O matchmaking procura primeiro a instância pública mais cheia com espaço. Só cria outra quando as existentes estiverem cheias.','Matchmaking fills the busiest public instance first. A new one opens only when existing instances are full.')+'</p>');
+ const onlineLabel=lang()==='pt'?'JOGAR ONLINE':'PLAY ONLINE',onlineHint=lang()==='pt'?'ENTRA NUMA INSTÂNCIA COM JOGADORES · MAPA AUTOMÁTICO':'JOINS AN INSTANCE WITH PLAYERS · AUTOMATIC MAP';
+ modal(onlineLabel,'<div class="jump-world-grid jump-online-grid"><button class="jump-world-option forest jump-online-option" id="jumpOnlineMatch"><canvas width="450" height="195" aria-hidden="true"></canvas><strong>'+onlineLabel+'</strong><small>'+onlineHint+'</small></button></div>');
  const btn=$('jumpOnlineMatch');window.EixoJumpWorlds.draw(btn.querySelector('canvas').getContext('2d'),'forest',73,0,1.2);
  btn.onclick=()=>{closePanel();newRun({mode:'public'})};
 }
@@ -331,10 +334,10 @@ async function customize(){
  const vip=Math.max(Number(out.vipLevel||0),Number(getPlayer()?.vipLevel||0)),labels={hair:'CABELO',top:'CASACO',accent:'DETALHES',pants:'CALÇAS',shoes:'SAPATILHAS',effect:'EFEITO'};
  const options=part=>(out.parts?.[part]||[]).map(item=>{
    const level=Number(item.minVip||0),locked=vip<level,vipOnly=level>0,suffix=vipOnly?' · VIP '+level:'';
-   const prefix=vipOnly?(lang()==='pt'?'COR VIP · ':'VIP COLOR · '):'';
+   const prefix=vipOnly?(part==='effect'?(lang()==='pt'?'EFEITO VIP · ':'VIP EFFECT · '):(lang()==='pt'?'COR VIP · ':'VIP COLOR · ')):'';
    return '<option value="'+esc(item.value)+'" data-eixo-color-label="keep"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+prefix+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
  }).join('');
- modal(txt('character'),'<div class="jump-custom-note">EIXO RUNNER · ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="180" height="130"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
+ modal(txt('character'),'<div class="jump-custom-note">JUMP RUNNER · ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="180" height="130"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
  const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,180,130);c.save();c.translate(90,105);c.scale(3,3);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true});c.restore()};
  panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.onchange=()=>{outfit[sel.dataset.jumpOutfit]=sel.value;preview()}});
  let previewTimer=setInterval(()=>{if(!panel||!$('jumpAvatarPreview')){clearInterval(previewTimer);return}preview()},70);preview();
@@ -438,192 +441,6 @@ function captureNative(selector,callback){
  el?.addEventListener('click',e=>{if(current!=='jump')return;e.preventDefault();e.stopImmediatePropagation();callback() },true);
 }
 
-let team=null,teamTimer=null,teamSeq=0,teamPoll=0,teamSignature='',lastTeamMode='duo';
-const teamText=(pt,en)=>lang()==='pt'?pt:en;
-async function teamPost(action,data={}){return api('/api/jump/teams/'+action,{method:'POST',body:JSON.stringify(data)});}
-function acceptTeam(out){
- const previousRun=team?.runId,previousStatus=team?.status,previousBiome=team?.biome;team=out;lastTeamMode=out.mode||lastTeamMode;
- if(previousBiome!==out.biome)window.EixoAudio?.jumpBiome?.(out.biome);
- const me=out.members.find(m=>m.id===getPlayer()?.id);
- if(me?.state){
-  const fresh=previousRun!==out.runId||!local||local.seed!==out.seed,st=me.state;
-  if(fresh){local=P.create(out.seed);Object.assign(local,st);teamSeq=0;}
-  else if(out.status==='playing'){
-   // Client prediction keeps DUO/TRIO as fluid as SOLO. The server remains
-   // authoritative and only nudges small drift; large chain corrections snap.
-   const dx=Number(st.x)-Number(local.x),dy=Number(st.y)-Number(local.y);
-   // Never hard-snap a live player to an older network snapshot. Small
-   // authoritative drift (mostly chain tension) converges gradually.
-   local.x+=Math.max(-5,Math.min(5,dx))*.08;
-   local.y+=Math.max(-6,Math.min(6,dy))*.06;
-   local.vy+=(Number(st.vy||0)-Number(local.vy||0))*.045;
-   local.cam+=((Number(st.cam)||0)-Number(local.cam||0))*.05;
-   local.time+=(Number(st.time||local.time)-Number(local.time||0))*.08;
-  }else Object.assign(local,st);
-  local.bestPlatform=Number(st.platform||0);local.score=Number(st.score||0);local.seed=out.seed;
-  local.brokenPlatforms=Object.fromEntries((st.broken||[]).map(i=>[i,true]));
-  local.fragilePlatform=Number(st.fragilePlatform??-1);local.fragileRatio=Number(st.fragileRatio||0);
-  const required=Math.max(34,...out.members.map(m=>Number(m.state?.platform||0)+34));
-  if(local.platforms.length<required)local.platforms=P.platforms(out.seed,required);
-  local.activeMinPlatform=Number(st.activeMinPlatform||0);
-  mergePeerSnapshots(out.members.filter(m=>m.id!==getPlayer()?.id&&m.present&&m.state).map(m=>({id:m.id,name:m.name,outfit:m.outfit,...m.state})));
-  outfit=me.outfit||outfit;biome=out.biome;seed=out.seed;mode=out.mode;confirmedScore=Number(out.score||0);
-  run={runId:out.runId||('team-lobby:'+out.teamId)};
-  if(out.status==='lobby'||out.status==='countdown'){
-   gameOver=false;local.alive=true;$('jumpEnd').classList.add('hidden');$('jumpRestart').disabled=false;
-  }
-  if(out.status==='playing'){
-   gameOver=false;local.alive=true;$('jumpEnd').classList.add('hidden');$('jumpRestart').disabled=false;
-   if((previousRun!==out.runId||previousStatus!=='playing')&&$('jumpTeamLobby'))closePanel();
-  }
-  if(out.status==='ended'){
-   if(previousStatus==='playing')window.EixoAudio?.jumpLose?.();
-   gameOver=true;local.alive=false;$('jumpFinal').textContent=out.score;$('jumpEndTitle').textContent=txt('gameOver')+' · '+out.mode.toUpperCase();
-   const seconds=Math.max(0,Math.ceil(Number(out.restartMs||0)/1000));
-   $('jumpRestart').disabled=seconds>0;$('jumpRestart').textContent=seconds>0?teamText('RECOMEÇA EM ','RESTARTS IN ')+seconds:teamText('VOLTAR À EQUIPA','BACK TO TEAM');
-   $('jumpEnd').classList.remove('hidden');
-   if(out.saveError)showError(teamText('Pontuação por guardar — a tentar novamente.','Score pending — retrying.'));
-   else if(out.saved)showError('');
-  }
- }
- // Do not rebuild the persistent-team cards on every network snapshot.
- // Replacing those buttons repeatedly can detach click targets while a modal is open.
- updateHud();renderTeamLobby();
-}
-let teamClosing=false;
-async function leaveTeamSessionToSolo(message='',autoStart=true){
- if(teamClosing)return;teamClosing=true;
- team=null;run=null;peers=[];clearInterval(teamTimer);teamTimer=null;teamSeq=0;closePanel();mode='solo';roomId=null;roomLabel='';
- try{
-  if(autoStart){local=null;await newRun({biome,mode:'solo'});if(message)showError(message);}
-  else{
-   gameOver=true;confirmedScore=0;updateHud();showError(message);
-   $('jumpEndTitle').textContent=teamText('SESSÃO DA EQUIPA TERMINOU','TEAM SESSION ENDED');
-   $('jumpFinal').textContent='0';$('jumpRestart').disabled=false;$('jumpRestart').textContent=teamText('JOGAR SOLO','PLAY SOLO');$('jumpEnd').classList.remove('hidden');
-  }
- }finally{teamClosing=false;}
-}
-async function syncTeam(){
- if(!team||busy||current!=='jump')return;
- const identity=team.teamId,wait=team.status==='playing'?110:team.status==='countdown'?150:team.status==='ended'?180:500;
- if(Date.now()-teamPoll<wait)return;
- busy=true;teamPoll=Date.now();
- try{
-  const out=team.status==='playing'?await teamPost('input',{runId:team.runId,seq:teamSeq++,left:keys.left,right:keys.right,jump:keys.jump}):await api('/api/jump/teams/state');
-  if(team?.teamId===identity)acceptTeam(out);
- }catch(e){
-  const msg=String(e.message||'');
-  if(/Partida antiga/.test(msg)){try{const out=await api('/api/jump/teams/state');if(team?.teamId===identity)acceptTeam(out);}catch(x){showError(x.message);} }
-  else if(/Entra primeiro numa das tuas equipas|Sessão expirada|Já não pertences/.test(msg))void leaveTeamSessionToSolo(teamText('A sessão da equipa terminou. Voltaste ao SOLO.','The team session ended. You returned to SOLO.'),false);
-  else showError(msg);
- }finally{busy=false;}
-}
-function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,60);}
-async function enterTeamById(teamId){
- if(team?.teamId===teamId){showTeamLobby();return;}
- await stopRun();local=null;peers=[];run=null;
- const out=await teamPost('enter',{teamId});watchTeam(out);showTeamLobby();void refreshMyTeamsBoard();
-}
-function savedTeamCard(r){
- const active=team?.teamId===r.id;
- return '<article class="jump-team-room-card '+(active?'active':'')+'"><div class="jump-team-room-mode '+esc(r.mode)+'">'+esc(r.mode.toUpperCase())+'</div><div class="jump-team-room-main"><strong>'+esc(r.name)+'</strong><small>'+esc(r.biome.toUpperCase())+' · '+Number(r.memberCount)+'/'+Number(r.capacity)+'</small></div><div class="jump-team-card-actions"><button type="button" class="board-more" data-enter-team="'+esc(r.id)+'">'+(active?teamText('ABRIR','OPEN'):txt('enter'))+'</button><button type="button" class="board-more ready" data-ready-team="'+esc(r.id)+'">'+teamText('PRONTO','READY')+'</button></div></article>';
-}
-async function quickReadyTeam(teamId){
- const card=document.querySelector('[data-ready-team="'+CSS.escape(String(teamId))+'"]'),was=card?.textContent;
- if(card){card.disabled=true;card.textContent=teamText('A ENTRAR…','JOINING…');}
- try{
-  if(team?.teamId!==teamId){await stopRun();local=null;peers=[];run=null;const out=await teamPost('enter',{teamId});watchTeam(out);}
-  const me=team?.members.find(m=>m.id===getPlayer()?.id);
-  if(team?.status==='lobby'||team?.status==='countdown'){
-   const out=await teamPost('ready',{ready:!me?.ready});acceptTeam(out);
-  }
-  closePanel();void refreshMyTeamsBoard();showError(teamText('Ficaste PRONTO. O jogo começa quando a equipa estiver completa e pronta.','You are READY. The game starts when the full team is ready.'));
- }catch(e){showError(e.message);}
- finally{if(card?.isConnected){card.disabled=false;card.textContent=was||teamText('PRONTO','READY');}}
-}
-function bindSavedTeamCards(target){
- target?.querySelectorAll('[data-enter-team]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await enterTeamById(b.dataset.enterTeam);}catch(e){showError(e.message);}finally{if(b.isConnected)b.disabled=false;}});
- target?.querySelectorAll('[data-ready-team]').forEach(b=>b.onclick=()=>quickReadyTeam(b.dataset.readyTeam));
-}
-async function loadTeamChooserList(kind){
- const target=$('jumpTeamSavedList');if(!target)return;
- try{
-  const out=await api('/api/jump/teams/list?mode='+kind),rows=out.teams||[];
-  target.innerHTML=rows.length?rows.map(savedTeamCard).join(''):'<div class="jump-team-empty">'+teamText('Ainda não estás ligado a nenhuma equipa '+kind.toUpperCase()+'.','You are not linked to any '+kind.toUpperCase()+' team yet.')+'</div>';
-  bindSavedTeamCards(target);
- }catch(e){target.innerHTML='<div class="jump-team-empty">'+esc(e.message)+'</div>';}
-}
-async function openTeam(kind){
- lastTeamMode=kind;
- modal(kind.toUpperCase(),'<div class="jump-team-section-title">'+teamText('AS TUAS EQUIPAS','YOUR TEAMS')+'</div><div id="jumpTeamSavedList" class="jump-team-saved-list"><div class="jump-team-empty">LOADING...</div></div><div class="jump-team-divider"><span>'+teamText('NOVA EQUIPA OU CONVITE','NEW TEAM OR INVITE')+'</span></div><p class="jump-team-help">'+teamText('DUO joga com 2 pessoas e TRIO com 3. Entra numa equipa, todos ficam visíveis no mesmo mapa e, quando o último jogador carregar em PRONTO, começa automaticamente uma contagem de 3 segundos.','DUO has 2 players and TRIO has 3. Enter a team, everyone appears on the same map and the final READY automatically starts a 3-second countdown.')+'</p><div class="jump-team-create-grid"><label class="room-field"><span>'+teamText('NOME DA EQUIPA','TEAM NAME')+'</span><input id="jumpTeamName" class="pixel-input" maxlength="24" placeholder="PIXEL CREW"></label><label class="room-field"><span>'+txt('choose')+'</span><select id="jumpTeamBiome" class="pixel-input">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select></label></div><button class="modal-button primary" id="jumpTeamCreate">'+teamText('CRIAR EQUIPA','CREATE TEAM')+'</button><div class="jump-team-invite-row"><input id="jumpTeamCode" class="pixel-input" maxlength="12" autocomplete="off" placeholder="'+teamText('CÓDIGO DE CONVITE','INVITE CODE')+'"><button class="modal-button primary" id="jumpTeamJoin">'+teamText('ACEITAR CONVITE','ACCEPT INVITE')+'</button></div><p id="jumpTeamError" role="status"></p>');
- void loadTeamChooserList(kind);
- $('jumpTeamCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-F0-9]/g,'').slice(0,12)});
- const action=async(create)=>{
-  const button=$(create?'jumpTeamCreate':'jumpTeamJoin');button.disabled=true;
-  try{
-   const data=create?{mode:kind,name:$('jumpTeamName').value,biome:$('jumpTeamBiome').value}:{code:$('jumpTeamCode').value};
-   await stopRun();local=null;peers=[];run=null;
-   const out=await teamPost(create?'create':'join',data);watchTeam(out);showTeamLobby();void refreshMyTeamsBoard();
-  }catch(e){if($('jumpTeamError'))$('jumpTeamError').textContent=e.message;}finally{if(button.isConnected)button.disabled=false;}
- };
- $('jumpTeamCreate').onclick=()=>action(true);$('jumpTeamJoin').onclick=()=>action(false);
-}
-function showTeamLobby(){
- if(!team)return;
- modal(team.mode.toUpperCase()+' · '+team.name,'<div id="jumpTeamLobby"></div>');teamSignature='';renderTeamLobby();
-}
-function renderTeamLobby(){
- const target=$('jumpTeamLobby');if(!target||!team)return;
- const seconds=team.status==='countdown'?Math.max(1,Math.ceil(Number(team.countdownMs||0)/1000)):0;
- const signature=JSON.stringify([team.status,team.saved,seconds,team.members.map(m=>[m.id,m.ready,m.present]),team.ownerId]);if(signature===teamSignature)return;teamSignature=signature;
- const me=team.members.find(m=>m.id===getPlayer()?.id),full=team.members.length===team.capacity;
- const status=team.status==='countdown'?'<div class="jump-team-countdown">'+teamText('COMEÇA EM ','STARTS IN ')+seconds+'</div>':team.status==='playing'?'<div class="jump-team-live">'+teamText('EM JOGO','LIVE')+'</div>':'';
- target.innerHTML=status+'<div class="jump-team-lobby-head"><div><span class="jump-team-room-mode '+esc(team.mode)+'">'+esc(team.mode.toUpperCase())+'</span><strong>'+esc(team.name)+'</strong><small>'+esc(team.biome.toUpperCase())+' · '+team.members.length+'/'+team.capacity+'</small></div><div class="room-code">'+esc(team.code)+'</div></div><button id="jumpCopyInvite" class="board-more">'+teamText('COPIAR CONVITE','COPY INVITE')+'</button><p class="jump-team-help">'+teamText('Fiquem os '+team.capacity+' nesta sala. Quando todos estiverem presentes e PRONTOS, o jogo arranca sozinho. Se um cair, a corrente leva a equipa inteira.','Keep all '+team.capacity+' players in this room. When everyone is present and READY, the game starts automatically. If one falls, the chain takes the whole team.')+'</p><ul class="jump-team-members">'+team.members.map(m=>'<li class="'+(m.present?'present':'offline')+'"><span class="jump-member-dot"></span><strong>'+esc(m.name)+'</strong><span>'+(m.present?(m.ready?'✓ '+teamText('PRONTO','READY'):teamText('NA SALA','IN ROOM')):teamText('FORA DA SALA','OUTSIDE'))+'</span></li>').join('')+'</ul><button class="modal-button primary" id="jumpTeamReady" '+((team.status==='countdown'||team.status==='playing')?'disabled':'')+'>'+(team.status==='countdown'?teamText('PREPARA-TE…','GET READY…'):me?.ready?teamText('CANCELAR PRONTO','NOT READY'):teamText('ESTOU PRONTO','READY'))+'</button><div class="jump-team-exit-row"><button class="board-more" id="jumpTeamLeave">'+teamText('SAIR DA SALA','LEAVE ROOM')+'</button><button class="board-more danger" id="jumpTeamAbandon">'+teamText('ABANDONAR EQUIPA','LEAVE TEAM')+'</button></div><p id="jumpTeamError" role="status"></p>';
- const perform=async(action,data)=>{try{acceptTeam(await teamPost(action,data));}catch(e){if($('jumpTeamError'))$('jumpTeamError').textContent=e.message;}};
- $('jumpTeamReady').onclick=()=>perform('ready',{ready:!me?.ready});
- $('jumpCopyInvite').onclick=async()=>{try{await navigator.clipboard.writeText(team.code);$('jumpCopyInvite').textContent=teamText('COPIADO','COPIED');}catch(_){$('jumpCopyInvite').textContent=team.code;}};
- $('jumpTeamLeave').onclick=async()=>{try{await teamPost('leave');await leaveTeamSessionToSolo('',true);void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
- $('jumpTeamAbandon').onclick=async()=>{try{const id=team.teamId;await teamPost('abandon',{teamId:id});await leaveTeamSessionToSolo();void refreshMyTeamsBoard();}catch(e){$('jumpTeamError').textContent=e.message;}};
-}
-let myTeamsCache=[],myTeamsRenderSignature='';
-function renderMyTeamsBoardFromCache(){
- const board=$('jumpMyTeamsBoard'),list=$('jumpMyTeamsList');if(!board||!list)return;
- const visible=current==='jump'&&myTeamsCache.length>0;board.classList.toggle('hidden',!visible);if(!visible){myTeamsRenderSignature='';return;}
- const signature=JSON.stringify(myTeamsCache.map(r=>[r.id,r.mode,r.name,r.biome,r.memberCount,r.capacity,team?.teamId===r.id]));
- if(signature===myTeamsRenderSignature)return;myTeamsRenderSignature=signature;
- list.innerHTML=myTeamsCache.map(savedTeamCard).join('');
- bindSavedTeamCards(list);
-}
-async function refreshMyTeamsBoard(){
- if(current!=='jump'||!getPlayer()?.id){myTeamsCache=[];renderMyTeamsBoardFromCache();return;}
- try{
-  const [d,t]=await Promise.all([api('/api/jump/teams/list?mode=duo'),api('/api/jump/teams/list?mode=trio')]);
-  myTeamsCache=[...(d.teams||[]),...(t.teams||[])];renderMyTeamsBoardFromCache();
- }catch(_){myTeamsCache=[];renderMyTeamsBoardFromCache();}
-}
-function initTeamBoards(boards){
- const mine=document.createElement('section');mine.id='jumpMyTeamsBoard';mine.className='room-board jump-my-teams-board hidden';
- mine.innerHTML='<div class="room-board-heading"><div><span class="room-panel-mark">◆</span><strong>'+teamText('AS MINHAS EQUIPAS · JUMP','MY TEAMS · JUMP')+'</strong><small>'+teamText('DUO E TRIO','DUO & TRIO')+'</small></div></div><div id="jumpMyTeamsList" class="jump-my-teams-list"></div>';
- boards?.after(mine);
- const section=document.createElement('section');section.id='jumpTeamBoards';section.className='boards jump-team-boards hidden';
- section.innerHTML=['duo','trio'].map(m=>'<article class="board"><div class="board-title"><span class="jump-team-rank-icon '+m+'">◆</span><span>'+m.toUpperCase()+' · TOP</span></div><ol id="jumpRank'+m+'"><li class="empty-row">—</li></ol><button class="board-more" data-team-rank="'+m+'">'+teamText('VER RANKING','VIEW RANKING')+'</button></article>').join('');
- mine.after(section);section.querySelectorAll('[data-team-rank]').forEach(b=>b.onclick=()=>fullTeamRank(b.dataset.teamRank,1));
-}
-function teamRankPlayer(p){
- const visual=String(p.visualName||p.name||'PLAYER'),styles=Array.isArray(p.letterStyles)?p.letterStyles:[];
- const color=String(p.nameColor||'#fff').toLowerCase(),rainbow=color==='rainbow'&&!styles.length,effect=p.nameEffect&&p.nameEffect!=='none'?' effect-'+esc(p.nameEffect):'';
- const colorStyle=rainbow?'':(/^#[0-9a-f]{6}$/i.test(color)?' style="color:'+esc(color)+';"':'');
- const name=styles.length?rankLetters(visual,styles):[...visual].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
- return '<span class="jump-team-player"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(styles.length?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span></span>';
-}
-function teamRows(rows){return rows.map(r=>'<li><span class="rank-number">'+Number(r.rank)+'</span><span class="rank-name-wrap jump-team-rank-name"><strong>'+esc(r.name)+'</strong><span class="jump-team-roster">'+(r.members||[]).map(teamRankPlayer).join('<span class="jump-team-plus">+</span>')+'</span></span><span class="rank-score">'+Number(r.score)+'</span></li>').join('')||'<li class="empty-row">'+txt('empty')+'</li>';}
-async function refreshTeamRanks(){
- void refreshMyTeamsBoard();
- for(const mode of ['duo','trio'])try{const out=await api('/api/jump/teams/rankings?mode='+mode);if($('jumpRank'+mode))$('jumpRank'+mode).innerHTML=teamRows(out.teams.slice(0,5));}catch(e){if($('jumpRank'+mode))$('jumpRank'+mode).innerHTML='<li class="empty-row">'+esc(e.message)+'</li>';}
-}
-async function fullTeamRank(mode,page){
- try{const out=await api('/api/jump/teams/rankings?mode='+mode+'&page='+page);modal('RANKING '+mode.toUpperCase(),'<ol class="jump-rank-list">'+teamRows(out.teams)+'</ol><div class="jump-pager"><button id="jumpTeamPrev">◀</button><span>'+out.page+' / '+out.pages+'</span><button id="jumpTeamNext">▶</button></div>');$('jumpTeamPrev').disabled=page<=1;$('jumpTeamNext').disabled=page>=out.pages;$('jumpTeamPrev').onclick=()=>fullTeamRank(mode,page-1);$('jumpTeamNext').onclick=()=>fullTeamRank(mode,page+1);}catch(e){showError(e.message);}
-}
 function init(){
  const main=document.querySelector('.site-shell main');frame=document.querySelector('.game-frame');if(!main||!frame)return;
  const switcher=document.createElement('nav');switcher.id='eixoGameSwitcher';switcher.className='eixo-game-switcher';switcher.setAttribute('aria-label','EIXO games');
@@ -633,7 +450,7 @@ function init(){
  const root=document.createElement('div');root.id='jumpRoot';root.className='jump-root hidden';
  root.innerHTML='<canvas id="jumpCanvas" width="450" height="195" aria-label="JUMP platformer"></canvas>'+
  '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">FOREST · SOLO</div></div>'+
- '<div class="jump-tools"><button id="jumpSoloButton">SOLO</button><button id="jumpJoinButton">ONLINE</button><button id="jumpDuoButton">DUO</button><button id="jumpTrioButton">TRIO</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
+ '<div class="jump-tools"><button id="jumpSoloButton">SOLO</button><button id="jumpJoinButton">ONLINE</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
  '<div class="jump-status" id="jumpStatus" role="status"></div>'+
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
  '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>'+txt('height')+': <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
@@ -652,9 +469,7 @@ function init(){
  $('jumpRoomAbandon').onclick=confirmAbandonJumpRoom;
 
  $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
- $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>team?showTeamLobby():newRun({biome,mode,roomId,roomLabel});
- $('jumpDuoButton').onclick=()=>openTeam('duo');$('jumpTrioButton').onclick=()=>openTeam('trio');
- initTeamBoards(boards);
+ $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode,roomId,roomLabel});
  captureNative('.action.blue[href="#ranking"]',()=>openRank('world'));
  captureNative('.action.purple[href="#rooms"]',()=>jumpRooms());
  captureNative('#createRoomButton',toggleJumpCreateRoom);

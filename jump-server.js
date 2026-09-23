@@ -1,10 +1,9 @@
 'use strict';
-/* Isolated JUMP storage and five-player instances. PULSE tables remain untouched. */
+/* Isolated JUMP storage with SOLO, private rooms and 20-player public instances. PULSE tables remain untouched. */
 const crypto=require('crypto');
 const physics=require('./jump-physics');
-const teams=require('./jump-team-server').createService();
-setInterval(()=>teams.tick(),1000/60).unref();
 const BIOMES=['city','forest','desert','snow'];
+const PUBLIC_CAPACITY=20;
 const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#263c5c','#111827'];
 const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a'};
 const OUTFIT_DEFAULTS={hair:'#19222d',top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none'};
@@ -27,12 +26,13 @@ const WARDROBE={
   ],
   top:[...baseColors,special('#ffd84d','DOURADO',1),special('#00f5ff','NEON CIANO',2),special('#ff3cf7','NEON MAGENTA',3),special('#a6ff38','NEON LIMA',4),special('#ff6238','PLASMA LARANJA',5),special('rainbow','ARCO-ÍRIS VIP',6)],
   accent:[...baseColors,special('#ffe66d','DOURADO',1),special('#56f7ff','GELO ELÉTRICO',2),special('#ff70dc','ROSA LASER',3),special('#b8ff66','BRILHO TÓXICO',4),special('#ff8a4c','SOLAR',5),special('rainbow','ARCO-ÍRIS VIP',6)],
-  pants:[...baseColors,special('#5b4bff','VIOLETA REAL',1),special('#00d9ff','AZUL CYBER',2),special('#da4cff','ROXO VOID',3),special('#68ff84','VERDE NEON',4),special('#ff425f','VERMELHO PLASMA',5),special('rainbow','ARCO-ÍRIS VIP',6)],
+  pants:[...baseColors,special('#ffd84d','DOURADO',1),special('#5b4bff','VIOLETA REAL',1),special('#00d9ff','AZUL CYBER',2),special('#da4cff','ROXO VOID',3),special('#68ff84','VERDE NEON',4),special('#ff425f','VERMELHO PLASMA',5),special('rainbow','ARCO-ÍRIS VIP',6)],
   shoes:[...baseColors,special('#ffe66d','SOLAS DOURADAS',1),special('#75f8ff','SOLAS DE GELO',2),special('#ff8be8','LUZ ROSA',3),special('#c8ff75','LUZ LIMA',4),special('#ff9a62','LUZ DE FOGO',5),special('rainbow','ARCO-ÍRIS VIP',6)],
-  effect:[special('none','NONE',0),special('glow','GLOW',1),special('pulse','PULSE',2),special('spark','SPARKS',3),special('electric','ELECTRIC',4),special('plasma','PLASMA',5),special('cosmic','COSMIC RGB',6)]
+  effect:[special('none','NONE',0),special('glow','BRILHO SUAVE',1),special('pulse','AURA RESPIRANTE',2),special('shimmer','CINTILAÇÃO',2),special('spark','FAÍSCAS SUAVES',3),special('halo','HALO',3),special('frost','GELO',3),special('electric','ELETRICIDADE',4),special('ember','BRASAS',4),special('mist','NÉVOA',4),special('plasma','PLASMA SUAVE',5),special('comet','RASTO',5),special('cosmic','AURA CÓSMICA',6),special('prismatic','PRISMÁTICO',6)]
 };
 const DEFAULTS=OUTFIT_DEFAULTS;
 const instances=new Map(),sessions=new Map(),activeByPlayer=new Map();
+let publicLobbyId=null;
 const error=(message,status=400)=>Object.assign(new Error(message),{status});
 function validBiome(v){const b=String(v||'forest').toLowerCase();if(!BIOMES.includes(b))throw error('Ambiente inválido.');return b;}
 function vipLevel(p){return Math.max(0,Math.min(6,Number(p?.vipLevel)||0));}
@@ -58,7 +58,11 @@ function validOutfit(data,p){
 }
 function wardrobeFor(p){return{vipLevel:vipLevel(p),parts:WARDROBE,fixedAppearance:FIXED_APPEARANCE};}
 async function initDb(db){
-  await teams.init(db);
+  // DUO/TRIO was removed from JUMP. Clean the retired persistent data so old
+  // teams/rankings cannot reappear after deploys or restarts.
+  await db.query('DROP TABLE IF EXISTS jump_team_members');
+  await db.query('DROP TABLE IF EXISTS jump_team_scores');
+  await db.query('DROP TABLE IF EXISTS jump_teams');
   await db.query('CREATE TABLE IF NOT EXISTS jump_scores(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query("CREATE TABLE IF NOT EXISTS jump_cosmetics(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,colors JSONB NOT NULL DEFAULT '{}'::jsonb)");
   await db.query('CREATE TABLE IF NOT EXISTS jump_rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,biome VARCHAR(12) NOT NULL,max_players INTEGER NOT NULL DEFAULT 5,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
@@ -80,7 +84,7 @@ function removeSession(run){
   sessions.delete(run.id);
   if(activeByPlayer.get(run.playerId)===run.id)activeByPlayer.delete(run.playerId);
   const inst=instances.get(run.instanceId);
-  if(inst){inst.players.delete(run.playerId);if(!inst.players.size)instances.delete(inst.id);}
+  if(inst){inst.players.delete(run.playerId);if(!inst.players.size){instances.delete(inst.id);if(publicLobbyId===inst.id)publicLobbyId=null;}}
 }
 function purge(){
   const now=Date.now();
@@ -99,11 +103,13 @@ function findInstance(biome,kind,roomId){
   return newInstance(biome,kind,roomId);
 }
 function findPublicInstance(){
-  const open=[...instances.values()].filter(inst=>inst.kind==='public'&&!inst.roomId&&inst.players.size>0&&inst.players.size<5)
-    .sort((a,b)=>b.players.size-a.players.size||a.epoch-b.epoch);
-  if(open[0])return open[0];
-  const biome=BIOMES[crypto.randomInt(0,BIOMES.length)];
-  return newInstance(biome,'public',null);
+  const current=publicLobbyId&&instances.get(publicLobbyId);
+  if(current&&current.kind==='public'&&!current.roomId&&current.players.size<PUBLIC_CAPACITY)return current;
+  const open=[...instances.values()].filter(inst=>inst.kind==='public'&&!inst.roomId&&inst.players.size>0&&inst.players.size<PUBLIC_CAPACITY)
+    .sort((a,b)=>a.epoch-b.epoch);
+  if(open[0]){publicLobbyId=open[0].id;return open[0];}
+  const biome=BIOMES[crypto.randomInt(0,BIOMES.length)],inst=newInstance(biome,'public',null);
+  publicLobbyId=inst.id;return inst;
 }
 async function getOutfit(db,p){
   const r=await db.query('SELECT colors FROM jump_cosmetics WHERE player_id=$1',[p.id]);
@@ -126,7 +132,6 @@ async function saveOutfit(db,p,d){
 const getColors=getOutfit,saveColors=saveOutfit;
 async function start(db,p,d){
   purge();
-  await teams.leave(p);
   const outfit=await getOutfit(db,p);
   let roomId=null,kind=d.mode==='online'||d.mode==='public'||d.multiplayer?'public':'solo';
   let biome=kind==='public'?'forest':validBiome(d.biome);
@@ -138,13 +143,14 @@ async function start(db,p,d){
   removeSession(sessions.get(activeByPlayer.get(p.id)));
   let inst=kind==='solo'?newInstance(biome,kind,null):kind==='public'?findPublicInstance():findInstance(biome,kind,roomId);
   biome=inst.biome;
-  if(inst.players.size>=5)throw error('Instância cheia.',409);
+  const capacity=kind==='public'?PUBLIC_CAPACITY:5;
+  if(inst.players.size>=capacity)throw error('Instância cheia.',409);
   const id=crypto.randomUUID();
   const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,outfit,instanceId:inst.id,roomId,biome,kind,
     state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},facing:1,confirmedPlatform:0,confirmedScore:0,last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
   run.state.time=(Date.now()-inst.epoch)/1000;
   sessions.set(id,run);activeByPlayer.set(p.id,id);inst.players.set(p.id,run);
-  return{ok:true,runId:id,seed:inst.seed,worldTime:run.state.time,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,outfit,...wardrobeFor(p)};
+  return{ok:true,runId:id,seed:inst.seed,worldTime:run.state.time,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:capacity,outfit,...wardrobeFor(p)};
 }
 function requireRun(p,id){purge();const run=sessions.get(String(id||''));if(!run||run.playerId!==p.id||activeByPlayer.get(p.id)!==run.id)throw error('Partida JUMP expirada. Começa novamente.',404);return run;}
 function advance(run){
@@ -192,11 +198,11 @@ function input(p,d){
     }
   }
   const inst=instances.get(run.instanceId);
-  return{ok:true,worldTime:inst?(Date.now()-inst.epoch)/1000:run.state.time,state:responseState(run),peers:run.kind==='solo'?[]:playersIn(run),players:inst?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
+  return{ok:true,worldTime:inst?(Date.now()-inst.epoch)/1000:run.state.time,state:responseState(run),peers:run.kind==='solo'?[]:playersIn(run),players:inst?.players.size||1,maxPlayers:run.kind==='public'?PUBLIC_CAPACITY:5,biome:run.biome,mode:run.kind};
 }
 function state(p,runId){
   const run=requireRun(p,runId);advance(run);
-  return{ok:true,state:responseState(run),peers:run.kind==='solo'?[]:playersIn(run),players:instances.get(run.instanceId)?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
+  return{ok:true,state:responseState(run),peers:run.kind==='solo'?[]:playersIn(run),players:instances.get(run.instanceId)?.players.size||1,maxPlayers:run.kind==='public'?PUBLIC_CAPACITY:5,biome:run.biome,mode:run.kind};
 }
 async function finish(db,p,runId,platform){
   const run=requireRun(p,runId);advance(run);confirmProgress(run,platform);
@@ -292,4 +298,4 @@ async function roomRankings(db,p,id){
     worldRank:Number(x.worldRank||0)||null,countryRank:Number(x.countryRank||0)||null,
     letterStyles:Array.isArray(x.letterStyles)?x.letterStyles:(()=>{try{return JSON.parse(x.letterStyles||'[]')}catch(_){return[]}})()}))};
 }
-module.exports={teams,initDb,BIOMES,PALETTE,PARTS,DEFAULTS,FIXED_APPEARANCE,WARDROBE,wardrobeFor,getOutfit,saveOutfit,getColors,saveColors,start,input,state,finish,leave,rankings,playerRank,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
+module.exports={initDb,BIOMES,PUBLIC_CAPACITY,PALETTE,PARTS,DEFAULTS,FIXED_APPEARANCE,WARDROBE,wardrobeFor,getOutfit,saveOutfit,getColors,saveColors,start,input,state,finish,leave,rankings,playerRank,roomCreate,roomJoin,roomList,roomLeave,roomRankings};

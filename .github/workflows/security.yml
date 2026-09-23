@@ -81,7 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3100/)" = "200"
-          for p in server.js auth-server.js paypal-server.js jump-server.js jump-team-server.js server-start.js package.json README.md .git/HEAD .env ops/nginx/eixo-security.conf.example; do
+          for p in server.js auth-server.js paypal-server.js jump-server.js server-start.js package.json README.md .git/HEAD .env ops/nginx/eixo-security.conf.example; do
             code="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:3100/$p")"
             test "$code" = "404" || { echo "$p returned $code"; exit 1; }
           done

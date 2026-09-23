@@ -99,21 +99,20 @@ test('landing on the next highest platform awards exactly 12 points',()=>{
  assert.equal(s.score,12);
  assert.equal(P.publicState(s).score,12);
 });
-test('public matchmaking fills the busiest open instance before creating another',async()=>{
+test('public matchmaking keeps one sequential 20-player lobby before opening the next',async()=>{
  const starts=[];
- const users=Array.from({length:13},(_,i)=>({id:'jump-test-public-'+i,name:'J'+i,country:'PT'}));
+ const users=Array.from({length:22},(_,i)=>({id:'jump-test-public-'+i,name:'J'+i,country:'PT'}));
  for(const [i,u] of users.entries())starts.push(await J.start(db,u,{biome:i%2?'forest':'city',multiplayer:true}));
  const ids=[...new Set(starts.map(x=>x.instanceId))],sizes=ids.map(id=>starts.filter(x=>x.instanceId===id).length);
- assert.deepEqual(sizes,[5,5,3]);
+ assert.deepEqual(sizes,[20,2]);
+ assert.equal(starts[0].maxPlayers,20);assert.equal(starts[19].instanceId,starts[0].instanceId);
+ assert.notEqual(starts[20].instanceId,starts[0].instanceId);assert.equal(starts[21].instanceId,starts[20].instanceId);
  const first=J.input(users[0],{runId:starts[0].runId,left:false,right:false,jump:false,platform:0});
- assert.equal(first.peers.length,4);
- const extra=await J.start(db,{id:'jump-test-extra',name:'C',country:'PT'},{biome:'snow',multiplayer:true});
- assert.equal(extra.instanceId,ids[2],'requested biome must not fragment public matchmaking');
+ assert.equal(first.peers.length,19);assert.equal(first.maxPlayers,20);
  J.leave(users[0]);
  const newUser=await J.start(db,{id:'jump-test-new',name:'N',country:'PT'},{biome:'desert',multiplayer:true});
- assert.equal(newUser.instanceId,ids[0],'an older open four-player instance should be filled first');
- for(const u of users)J.leave(u);
- J.leave({id:'jump-test-extra'});J.leave({id:'jump-test-new'});
+ assert.equal(newUser.instanceId,starts[20].instanceId,'new arrivals must keep filling the current public lobby instead of fragmenting players');
+ for(const u of users)J.leave(u);J.leave({id:'jump-test-new'});
 });
 test('server confirms platform points and rate-limits impossible progression',async()=>{
  const player={id:'jump-score-player',name:'SCORE',country:'PT'};
@@ -142,6 +141,8 @@ test('skin stays fixed, hair is editable and VIP wardrobe unlocks are enforced s
  assert.equal(saved.outfit.top,'rainbow');
  assert.equal(saved.outfit.hair,'rainbow');
  assert.equal('skin' in saved.outfit,false,'submitted skin values must be ignored');
+ const goldPants=J.WARDROBE.pants.find(x=>x.value==='#ffd84d');assert.equal(goldPants?.minVip,1,'gold pants should unlock at VIP 1');
+ for(const fx of ['shimmer','halo','frost','ember','mist','comet','prismatic'])assert.ok(J.WARDROBE.effect.some(x=>x.value===fx),'missing VIP effect '+fx);
 });
 test('multiplayer peers receive the equipped outfit and effect',async()=>{
  const a={id:'jump-outfit-a',name:'A',country:'PT',vipLevel:1};
@@ -172,14 +173,9 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/facing,ground:local\.ground/);
  assert.match(js,/const spriteScale=\.72/);
  assert.match(js,/c\.translate\(0,-14\)/);
- assert.match(js,/RECOMEÇA EM/);
- assert.match(js,/function teamRankPlayer\(p\)/);
  assert.match(js,/function stepLocalWithAudio\(dt\)/);
  assert.match(js,/jumpBiome\?\.\(biome\)/);
- assert.match(js,/modal-button primary\" id=\"jumpTeamJoin/);
- assert.match(js,/myTeamsRenderSignature/);
- const accept=(js.match(/function acceptTeam\(out\)\{[\s\S]*?\n\}/)||[''])[0];
- assert.doesNotMatch(accept,/renderMyTeamsBoardFromCache\(\)/,'network snapshots must not recreate clickable team cards');
+ assert.doesNotMatch(js,/jumpDuoButton|jumpTrioButton|\/api\/jump\/teams\//);
  assert.doesNotMatch(js,/data-jump-color="skin"/);
 });
 
