@@ -18,12 +18,11 @@ test('JUMP worlds contain the four requested detailed scene identities',()=>{
  assert.match(worlds,/version:'jump11'/);
 });
 
-test('JUMP customizer is wide, clips no horizontal content and rankings stay compact',()=>{
+test('JUMP customizer is wide, clips no horizontal content and retired team CSS is gone',()=>{
  const css=fs.readFileSync(path.join(root,'jump.css'),'utf8');
  assert.match(css,/width:min\(760px,calc\(100vw - 28px\)\)/);
  assert.match(css,/overflow-x:hidden/);
- assert.match(css,/jump-team-roster\{display:flex;flex-direction:row/);
- assert.match(css,/jump-team-player \.rank-player-name\{font-size:6px/);
+ assert.doesNotMatch(css,/jump-team|jumpTeam|jumpDuo|jumpTrio/);
  const colors=fs.readFileSync(path.join(root,'color-options.js'),'utf8');
  assert.match(colors,/jumpOutfit=select\.matches/);
  assert.match(colors,/jumpOutfit\?'#f4f5f6':color/);
