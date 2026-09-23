@@ -10,7 +10,14 @@ const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a'};
 const OUTFIT_DEFAULTS={hair:'#19222d',top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none'};
 const PARTS=['hair','top','accent','pants','shoes','effect'];
 const special=(value,label,minVip)=>({value,label,minVip});
-const baseColors=PALETTE.map(value=>special(value,value.toUpperCase(),0));
+const COLOR_LABELS={
+ '#ffffff':'BRANCO','#e83e45':'VERMELHO','#ff7a2f':'LARANJA','#f1c438':'AMARELO',
+ '#39b86a':'VERDE','#7bdc5a':'VERDE-LIMA','#00e5ff':'CIANO','#2f9bd1':'AZUL',
+ '#3b82f6':'AZUL FORTE','#6f5cff':'ÍNDIGO','#a855f7':'ROXO','#ff4fd8':'MAGENTA',
+ '#ff6b9d':'ROSA','#94a3b8':'CINZENTO','#46535f':'CINZENTO ESCURO',
+ '#172b3b':'AZUL PETRÓLEO','#263c5c':'AZUL NOITE','#111827':'PRETO AZULADO'
+};
+const baseColors=PALETTE.map(value=>special(value,COLOR_LABELS[value]||'COR',0));
 const WARDROBE={
   hair:[
     special('#19222d','PRETO',0),special('#3f2a20','CASTANHO ESCURO',0),special('#754c32','CASTANHO',0),
