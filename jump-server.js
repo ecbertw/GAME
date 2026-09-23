@@ -3,7 +3,7 @@
 const crypto=require('crypto');
 const physics=require('./jump-physics');
 const BIOMES=['city','forest','desert','snow'];
-const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#111827'];
+const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#263c5c','#111827'];
 const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',hair:'#19222d',hairLight:'#2d3b4a',eyes:'#17202a'};
 const OUTFIT_DEFAULTS={top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none'};
 const PARTS=['top','accent','pants','shoes','effect'];
