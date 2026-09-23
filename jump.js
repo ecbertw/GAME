@@ -223,23 +223,47 @@ async function refreshRoomBoard(){
  }catch(e){if($('jumpRoomRanking'))$('jumpRoomRanking').textContent=e.message}
 }
 async function jumpRooms(tab='list'){
- const body='<div class="jump-panel-tabs"><button id="jumpRoomsListTab">'+txt('rooms')+'</button><button id="jumpRoomsNewTab">'+txt('create')+'</button></div><div id="jumpRoomsBody"></div>';
- modal(txt('rooms'),body);
- $('jumpRoomsListTab').onclick=()=>renderJumpRooms('list');$('jumpRoomsNewTab').onclick=()=>renderJumpRooms('create');
+ modal(txt('rooms'),'<div class="rooms-modal-heading jump-room-modal-heading"><button id="jumpRoomsListTab" class="board-more" type="button">'+txt('rooms')+'</button><button id="jumpRoomsNewTab" class="rooms-add-button" type="button">'+txt('create')+'</button></div><div id="jumpRoomFeedback" class="form-error" role="status"></div><div id="jumpRoomsBody"></div>');
+ $('jumpRoomsListTab').onclick=()=>renderJumpRooms('list');
+ $('jumpRoomsNewTab').onclick=()=>renderJumpRooms('create');
  await renderJumpRooms(tab);
 }
 async function renderJumpRooms(tab){
  const body=$('jumpRoomsBody');if(!body)return;
+ $('jumpRoomFeedback').textContent='';
  if(tab==='create'){
-  body.innerHTML='<input class="pixel-input" id="jumpRoomName" maxlength="24" placeholder="ROOM NAME"><select class="pixel-input" id="jumpRoomBiome">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select><button class="modal-button primary" id="jumpCreateRoom">'+txt('create')+'</button><p id="jumpRoomError"></p>';
-  $('jumpCreateRoom').onclick=async()=>{try{const d=await api('/api/jump/rooms/create',{method:'POST',body:JSON.stringify({name:$('jumpRoomName').value,biome:$('jumpRoomBiome').value})});await jumpRooms('list');showError('ROOM CODE: '+d.room.code)}catch(e){$('jumpRoomError').textContent=e.message}};
+  body.innerHTML='<div class="room-create-grid jump-room-create-grid"><label class="room-field"><span>ROOM NAME</span><input class="pixel-input" id="jumpRoomName" maxlength="24" placeholder="JUMP NIGHT"></label><label class="room-field"><span>WORLD · 5 PLAYERS MAX</span><select class="pixel-input" id="jumpRoomBiome">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select></label><button class="modal-button primary room-create-submit" id="jumpCreateRoom">'+txt('create')+'</button></div>';
+  $('jumpCreateRoom').onclick=async()=>{
+   const button=$('jumpCreateRoom');button.disabled=true;
+   try{
+    const d=await api('/api/jump/rooms/create',{method:'POST',body:JSON.stringify({name:$('jumpRoomName').value,biome:$('jumpRoomBiome').value})});
+    await jumpRooms('list');if($('jumpRoomFeedback'))$('jumpRoomFeedback').textContent='ROOM CREATED · '+d.room.code;
+   }catch(e){$('jumpRoomFeedback').textContent=e.message}finally{button.disabled=false}
+  };
   return;
  }
- body.innerHTML='<div class="jump-join-code"><input class="pixel-input" id="jumpRoomCode" maxlength="6" placeholder="'+txt('code')+'"><button id="jumpRoomJoin" class="modal-button primary">'+txt('enter')+'</button></div><div id="jumpRoomList">LOADING...</div>';
- $('jumpRoomJoin').onclick=async()=>{try{await api('/api/jump/rooms/join',{method:'POST',body:JSON.stringify({code:$('jumpRoomCode').value})});jumpRooms('list')}catch(e){showError(e.message)}};
- try{const result=await api('/api/jump/rooms');if(!$('jumpRoomList'))return;
- $('jumpRoomList').innerHTML=result.rooms.length?result.rooms.map(r=>'<div class="jump-room-row"><div><strong>'+esc(r.name)+'</strong><small>'+r.biome.toUpperCase()+' · '+r.memberCount+'/5 · '+esc(r.code)+'</small></div><button data-room="'+r.id+'" data-biome="'+r.biome+'">'+txt('enter')+'</button></div>').join(''):'<p>NO ROOMS YET</p>';
- panel.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>{const item=result.rooms.find(x=>x.id===b.dataset.room);closePanel();newRun({biome:item.biome,mode:'private',roomId:item.id,roomLabel:item.name})});
+ body.innerHTML='<div class="jump-join-code"><label class="room-field"><span>ROOM CODE</span><input class="pixel-input" id="jumpRoomCode" maxlength="6" placeholder="'+txt('code')+'"></label><button id="jumpRoomJoin" class="modal-button primary">'+txt('enter')+'</button></div><div class="rooms-list" id="jumpRoomList">LOADING...</div>';
+ $('jumpRoomCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-F0-9]/g,'').slice(0,6)});
+ $('jumpRoomJoin').onclick=async()=>{
+  const button=$('jumpRoomJoin');button.disabled=true;
+  try{
+   const d=await api('/api/jump/rooms/join',{method:'POST',body:JSON.stringify({code:$('jumpRoomCode').value})});
+   await renderJumpRooms('list');
+   if($('jumpRoomFeedback'))$('jumpRoomFeedback').textContent='ROOM JOINED · '+d.room.code;
+  }catch(e){$('jumpRoomFeedback').textContent=e.message}finally{button.disabled=false}
+ };
+ try{
+  const result=await api('/api/jump/rooms');if(!$('jumpRoomList'))return;
+  $('jumpRoomList').innerHTML=result.rooms.length?result.rooms.map(r=>
+   '<article class="room-card"><div class="room-card-main"><div class="room-card-name">'+esc(r.name)+'</div><div class="room-card-meta">'+esc(r.ownerName)+' · '+r.biome.toUpperCase()+' · '+r.memberCount+'/5 PLAYERS</div></div><div class="room-card-code">'+esc(r.code)+'</div><div class="room-card-actions"><button class="board-more" data-copy-code="'+esc(r.code)+'" type="button">COPY CODE</button><button class="board-more enter-room-button" data-room="'+esc(r.id)+'" type="button">'+txt('enter')+'</button></div></article>'
+  ).join(''):'<div class="rooms-empty">NO JUMP ROOMS YET</div>';
+  panel.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>{
+   const item=result.rooms.find(x=>x.id===b.dataset.room);if(!item)return;
+   closePanel();newRun({biome:item.biome,mode:'private',roomId:item.id,roomLabel:item.name});
+  });
+  panel.querySelectorAll('[data-copy-code]').forEach(b=>b.onclick=async()=>{
+    try{await navigator.clipboard.writeText(b.dataset.copyCode);b.textContent='COPIED'}catch(_){b.textContent=b.dataset.copyCode}
+  });
  }catch(e){if($('jumpRoomList'))$('jumpRoomList').textContent=e.message}
 }
 function captureNative(selector,callback){
