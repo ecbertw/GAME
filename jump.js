@@ -335,7 +335,7 @@ async function customize(){
  const vip=Math.max(Number(out.vipLevel||0),Number(getPlayer()?.vipLevel||0)),labels={hair:'CABELO',top:'CASACO',accent:'DETALHES',pants:'CALÇAS',shoes:'SAPATILHAS',effect:'EFEITO'};
  const options=part=>(out.parts?.[part]||[]).map(item=>{
    const level=Number(item.minVip||0),locked=vip<level,vipOnly=level>0,suffix=vipOnly?' · VIP '+level:'';
-   const prefix=vipOnly?(lang()==='pt'?'COR VIP · ':'VIP COLOR · '):'';
+   const prefix=vipOnly?(part==='effect'?(lang()==='pt'?'EFEITO VIP · ':'VIP EFFECT · '):(lang()==='pt'?'COR VIP · ':'VIP COLOR · ')):'';
    return '<option value="'+esc(item.value)+'" data-eixo-color-label="keep"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+prefix+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
  }).join('');
  modal(txt('character'),'<div class="jump-custom-note">JUMP RUNNER · ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="180" height="130"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
