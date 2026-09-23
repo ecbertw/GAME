@@ -391,7 +391,7 @@ async function handleApi(req,res,url){
   /* JUMP uses its own tables and live instances; PULSE routes remain unchanged. */
   if(url.pathname==='/api/jump/player-rank'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.playerRank(global.db,p));}
   if(url.pathname==='/api/jump/rankings'&&req.method==='GET')return json(res,200,await jumpService.rankings(global.db,url.searchParams.get('country'),url.searchParams.get('page')));
-  if(url.pathname==='/api/jump/cosmetics'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,{ok:true,colors:await jumpService.getColors(global.db,p),palette:jumpService.PALETTE,parts:jumpService.PARTS});}
+  if(url.pathname==='/api/jump/cosmetics'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,{ok:true,outfit:await jumpService.getOutfit(global.db,p),...jumpService.wardrobeFor(p)});}
   if(url.pathname==='/api/jump/rooms'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.roomList(global.db,p));}
   if(url.pathname==='/api/jump/rooms/rankings'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.roomRankings(global.db,p,url.searchParams.get('roomId')));}
   if(url.pathname==='/api/jump/run/state'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,jumpService.state(p,url.searchParams.get('runId')));}
@@ -401,7 +401,7 @@ async function handleApi(req,res,url){
     if(url.pathname==='/api/jump/run/input'){if(!boundedRate(paypalRate,'jump-input:'+p.id,150,10*1000))throw Object.assign(new Error('Demasiadas atualizações JUMP.'),{status:429});return json(res,200,jumpService.input(p,d));}
     if(url.pathname==='/api/jump/run/finish')return json(res,200,await jumpService.finish(global.db,p,d.runId,d.platform));
     if(url.pathname==='/api/jump/run/leave')return json(res,200,jumpService.leave(p));
-    if(url.pathname==='/api/jump/cosmetics')return json(res,200,await jumpService.saveColors(global.db,p,d));
+    if(url.pathname==='/api/jump/cosmetics')return json(res,200,await jumpService.saveOutfit(global.db,p,d));
     if(url.pathname==='/api/jump/rooms/create')return json(res,201,await jumpService.roomCreate(global.db,p,d));
     if(url.pathname==='/api/jump/rooms/join')return json(res,200,await jumpService.roomJoin(global.db,p,d));
     if(url.pathname==='/api/jump/rooms/leave')return json(res,200,await jumpService.roomLeave(global.db,p,d));

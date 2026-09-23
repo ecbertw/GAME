@@ -26,6 +26,27 @@ test('moving platforms are deterministic and really move horizontally',()=>{
  assert.notEqual(Math.round(a*100),Math.round(b*100));
  assert.ok(a>=0&&a+p.w<=P.W&&b>=0&&b+p.w<=P.W);
 });
+test('moving platforms accelerate early but remain catchable',()=>{
+ const samples=[];
+ for(let seed=20;seed<40;seed++){
+  const ps=P.platforms(seed,40);
+  ps.forEach((p,i)=>{if(p.moving)samples.push({i,speed:p.moveSpeed,linear:p.moveSpeed*p.moveAmp})});
+ }
+ const early=samples.filter(x=>x.i>=4&&x.i<=8).map(x=>x.speed);
+ const later=samples.filter(x=>x.i>=15&&x.i<=24).map(x=>x.speed);
+ assert.ok(early.length&&later.length);
+ const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+ assert.ok(avg(later)>avg(early)+0.25,'speed should ramp noticeably within the first dozen jumps');
+ assert.ok(samples.every(x=>x.speed<=1.951&&x.linear<=92.01),'moving platforms must stay inside the catchable velocity cap');
+});
+test('missing the immediate platform below ends the run before old platforms can rescue it',()=>{
+ const s=P.create(313),rescueIndex=2,rescue=s.platforms[rescueIndex];
+ s.bestPlatform=3;s.jumpOrigin=3;s.ground=false;s.groundPlatform=-1;s.y=rescue.y+1;s.vy=-110;
+ s.x=rescue.x+rescue.w/2<P.W/2?P.W-8:8;
+ for(let i=0;i<6&&s.alive;i++)P.step(s,{left:false,right:false,jump:false},1/60);
+ assert.equal(s.alive,false,'falling past the immediate rescue platform must be game over');
+ assert.ok(s.y>=(s.platforms[1]?.y||0),'an older lower platform must never catch the player');
+});
 test('hard mode avoids vertical ladders and makes moving platforms dominant',()=>{
  const ps=P.platforms(8123,160);
  const late=ps.slice(25);
@@ -91,9 +112,26 @@ test('score migration changes old raw-height records to version 2 platform point
  await J.initDb({query:async q=>{sql.push(q);return{rows:[],rowCount:0}}});
  assert.ok(sql.some(q=>String(q).includes('FLOOR(best_score/40.0)')&&String(q).includes('score_version=2')));
 });
-test('cosmetic colors must come from the approved EIXO palette',()=>{
- assert.ok(J.PALETTE.includes(J.DEFAULTS.skin));
- assert.rejects(()=>J.saveColors(db,{id:'test'},{colors:{skin:'url(javascript:alert(1))'}}),/Cor inválida/);
+test('skin is fixed and VIP wardrobe unlocks are enforced server-side',async()=>{
+ assert.ok(J.FIXED_APPEARANCE.skin);
+ assert.ok(!J.PARTS.includes('skin'),'skin must never be a customisable part');
+ const free={id:'jump-free-outfit',vipLevel:0};
+ await assert.rejects(()=>J.saveOutfit(db,free,{outfit:{...J.DEFAULTS,effect:'cosmic'}}),/requer VIP 6/);
+ const saved=await J.saveOutfit(db,{id:'jump-vip-outfit',vipLevel:6},{outfit:{...J.DEFAULTS,top:'rainbow',effect:'cosmic',skin:'#000000'}});
+ assert.equal(saved.outfit.effect,'cosmic');
+ assert.equal(saved.outfit.top,'rainbow');
+ assert.equal('skin' in saved.outfit,false,'submitted skin values must be ignored');
+});
+test('multiplayer peers receive the equipped outfit and effect',async()=>{
+ const a={id:'jump-outfit-a',name:'A',country:'PT',vipLevel:1};
+ const b={id:'jump-outfit-b',name:'B',country:'PT',vipLevel:0};
+ const ar=await J.start(db,a,{biome:'snow',multiplayer:true});
+ const br=await J.start(db,b,{biome:'snow',multiplayer:true});
+ await J.saveOutfit(db,a,{outfit:{...J.DEFAULTS,effect:'glow'}});
+ const seen=J.input(b,{runId:br.runId,left:false,right:false,jump:false,platform:0});
+ const peer=seen.peers.find(p=>p.id===a.id);
+ assert.equal(peer.outfit.effect,'glow');
+ J.leave(a);J.leave(b);
 });
 test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  const js=fs.readFileSync(path.join(__dirname,'../jump.js'),'utf8');
@@ -106,4 +144,7 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/P\.platformX\(p,local\.time\)/);
  assert.doesNotMatch(js,/if\(p\.moving\)\s*\{\s*c\.fillStyle='#0a5571'/);
  assert.match(js,/Moving platforms deliberately keep the exact same biome palette/);
+ assert.match(js,/ROSTO E PELE FIXOS PARA TODOS/);
+ assert.match(js,/peer\.outfit/);
+ assert.doesNotMatch(js,/data-jump-color="skin"/);
 });

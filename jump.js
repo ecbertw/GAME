@@ -14,7 +14,7 @@ const themes={
   desert:{sky:'#83cae8',low:'#f9c688',hills:'#e9a16b',far:'#bd7657',near:'#8a513f',top:'#f4ce70',edge:'#b98845',under:'#ad7651'},
   snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
 };
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},confirmedScore=0,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],outfit=null,wardrobe=null,fixedAppearance=null,keys={left:false,right:false,jump:false},confirmedScore=0,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
@@ -68,7 +68,7 @@ async function newRun(options={}){
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
-   run=out;seed=out.seed;biome=out.biome;mode=out.mode;colors=out.colors||colors;
+   run=out;seed=out.seed;biome=out.biome;mode=out.mode;outfit=out.outfit||outfit;wardrobe=out.parts?{parts:out.parts}:wardrobe;fixedAppearance=out.fixedAppearance||fixedAppearance;
    local=P.create(seed);last=performance.now();updateHud();draw();refreshRoomBoard();clearInterval(networkTimer);
    networkTimer=setInterval(sync,60);sync();
  }catch(e){run=null;showError(e.message)}
@@ -120,16 +120,43 @@ function drawBackground(){
  // Small drifting square particles in four biomes.
  for(let i=0;i<18;i++){let x=(i*71+seed%47+cam*(i%3+1)*.08)%P.W,y=(i*37+cam*.18)%P.H;c.fillStyle=i%3?'#ffffff72':'#ffffffaa';c.fillRect(Math.round(x),Math.round(y),2,2)}
 }
-function drawCharacter(c,x,y,style,name,ghost=false){
- if(!style)style=colors||{};
- const S={...{skin:'#ffcc99',hair:'#172b3b',shirt:'#00e5ff',arms:'#ffcc99',pants:'#3b82f6',shoes:'#ffffff',eyes:'#172b3b'},...style};
- c.save();c.globalAlpha=ghost?0.75:1;
- const q=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h)};
- // 12x22 customisable sprite: separate hair, head, eyes, torso, arms, trousers and shoes.
- q(x-5,y-22,10,2,S.hair);q(x-6,y-20,12,4,S.hair);q(x-5,y-16,10,6,S.skin);q(x-3,y-14,2,2,S.eyes);q(x+2,y-14,2,2,S.eyes);
- q(x-5,y-10,10,7,S.shirt);q(x-8,y-10,3,6,S.arms);q(x+5,y-10,3,6,S.arms);
- q(x-5,y-3,4,6,S.pants);q(x+1,y-3,4,6,S.pants);q(x-6,y+2,5,2,S.shoes);q(x+1,y+2,5,2,S.shoes);
- if(name){c.fillStyle=ghost?'#e5f4ff':'#fff';c.textAlign='center';c.font='5px monospace';c.fillText(String(name).slice(0,12),x,y-28)}
+function outfitColor(value,time,offset=0){
+ if(value!=='rainbow')return value||'#fff';
+ return 'hsl('+Math.round(((time||0)*115+offset)%360)+' 92% 62%)';
+}
+function drawCharacter(c,x,y,style,name,ghost=false,time=0){
+ const O={top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none',...(style||outfit||{})};
+ const F={skin:'#f0c7a2',skinShade:'#dba982',hair:'#19222d',hairLight:'#2d3b4a',eyes:'#17202a',...(fixedAppearance||{})};
+ const top=outfitColor(O.top,time,0),accent=outfitColor(O.accent,time,85),pants=outfitColor(O.pants,time,175),shoes=outfitColor(O.shoes,time,265);
+ c.save();c.globalAlpha=ghost?0.72:1;
+ const q=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(xx),Math.round(yy),w,h)};
+ const effect=String(O.effect||'none');
+ const aura=outfitColor(O.accent,time,120);
+ if(effect!=='none'){
+   if(effect==='glow'||effect==='pulse'||effect==='plasma'||effect==='cosmic'){c.shadowColor=aura;c.shadowBlur=effect==='glow'?6:effect==='pulse'?5+3*Math.sin(time*6):8}
+   if(effect==='pulse'){c.globalAlpha=(ghost?0.72:1)*(0.82+0.18*(.5+.5*Math.sin(time*7)))}
+   if(effect==='plasma'||effect==='cosmic'){c.globalAlpha=(ghost?0.72:1)*0.18;q(x-9,y-22,18,24,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,210));c.globalAlpha=ghost?0.72:1}
+ }
+ // EIXO Runner: fixed face/skin, cropped hair, jacket with accent stripe,
+ // tapered trousers and trainers. Only clothing/effects are customisable.
+ q(x-5,y-23,10,2,F.hair);q(x-6,y-21,12,3,F.hair);q(x-6,y-18,2,4,F.hairLight);
+ q(x-5,y-18,10,7,F.skin);q(x-5,y-12,10,1,F.skinShade);
+ q(x-3,y-16,2,2,F.eyes);q(x+2,y-16,2,2,F.eyes);q(x-1,y-13,2,1,F.skinShade);
+ q(x-2,y-11,4,2,F.skin);
+ q(x-6,y-9,12,8,top);q(x-1,y-9,2,8,accent);q(x-4,y-8,2,2,accent);q(x+2,y-8,2,2,accent);
+ q(x-9,y-8,3,5,top);q(x+6,y-8,3,5,top);q(x-9,y-3,3,2,F.skin);q(x+6,y-3,3,2,F.skin);
+ q(x-6,y-1,12,2,accent);
+ q(x-5,y+1,4,6,pants);q(x+1,y+1,4,6,pants);q(x-1,y+1,2,3,outfitColor(O.accent,time,35));
+ q(x-6,y+6,5,2,shoes);q(x+1,y+6,5,2,shoes);q(x-6,y+7,5,1,'#111820');q(x+1,y+7,5,1,'#111820');
+ c.shadowBlur=0;
+ if(effect==='spark'||effect==='electric'||effect==='cosmic'){
+   const phase=Math.floor(time*12);
+   for(let i=0;i<4;i++){
+     const sx=x-10+((phase*7+i*11)%21),sy=y-23+((phase*5+i*13)%25);
+     q(sx,sy,effect==='electric'?3:2,2,outfitColor(effect==='cosmic'?'rainbow':O.accent,time,i*70));
+   }
+ }
+ if(name){c.fillStyle=ghost?'#e5f4ff':'#fff';c.textAlign='center';c.font='5px monospace';c.fillText(String(name).slice(0,12),x,y-29)}
  c.restore();
 }
 function draw(){
@@ -145,8 +172,8 @@ function draw(){
    if(biome==='desert'){c.fillStyle='#f7e0a6';c.fillRect(x+9,y-1,12,2)}
    if(biome==='snow'){c.fillStyle='#fff';c.fillRect(x+3,y-5,p.w-6,3)}
  }
- for(const peer of peers){let y=screen(peer.y);if(y>-10&&y<P.H+35)drawCharacter(c,peer.x,y,peer.colors,peer.name,true)}
- drawCharacter(c,local.x,screen(local.y),colors,'');
+ for(const peer of peers){let y=screen(peer.y);if(y>-10&&y<P.H+35)drawCharacter(c,peer.x,y,peer.outfit,peer.name,true,local.time)}
+ drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time);
  c.fillStyle='#ffffffaa';c.fillRect(0,0,P.W,1);
 }
 function loop(now){
@@ -272,12 +299,24 @@ function chooseWorld(){
 async function customize(){
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  let out;try{out=await api('/api/jump/cosmetics')}catch(e){showError(e.message);return}
- colors=out.colors;palette=out.palette||[];
- const labels={skin:'SKIN',hair:'HAIR',shirt:'SHIRT',arms:'ARMS',pants:'PANTS',shoes:'SHOES',eyes:'EYES'};
- modal(txt('character'),'<div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="120" height="85"></canvas></div><div class="jump-color-list">'+(out.parts||Object.keys(labels)).map(part=>'<label><span>'+labels[part]+'</span><select data-jump-color="'+part+'">'+palette.map(color=>'<option value="'+color+'"'+(colors[part]===color?' selected':'')+'>'+color.toUpperCase()+'</option>').join('')+'</select></label>').join('')+'</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
- const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,120,85);c.save();c.translate(35,12);c.scale(4,3);drawCharacter(c,0,22,colors,'');c.restore()};
- panel.querySelectorAll('[data-jump-color]').forEach(s=>{s.style.color=s.value;s.style.borderColor=s.value;s.onchange=()=>{colors[s.dataset.jumpColor]=s.value;s.style.color=s.value;s.style.borderColor=s.value;preview()}});preview();
- $('jumpSave').onclick=async()=>{try{await api('/api/jump/cosmetics',{method:'POST',body:JSON.stringify({colors})});$('jumpSaveStatus').textContent=txt('saved');setTimeout(closePanel,600)}catch(e){$('jumpSaveStatus').textContent=e.message}};
+ outfit={...out.outfit};wardrobe={parts:out.parts};fixedAppearance=out.fixedAppearance||fixedAppearance;
+ const vip=Number(out.vipLevel||0),labels={top:'CASACO',accent:'DETALHES',pants:'CALÇAS',shoes:'SAPATILHAS',effect:'EFEITO'};
+ const options=part=>(out.parts?.[part]||[]).map(item=>{
+   const locked=vip<Number(item.minVip||0),suffix=item.minVip?' · VIP '+item.minVip:'';
+   return '<option value="'+esc(item.value)+'"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
+ }).join('');
+ modal(txt('character'),'<div class="jump-custom-note">EIXO RUNNER · ROSTO E PELE FIXOS PARA TODOS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="140" height="100"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
+ const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,140,100);c.save();c.translate(70,54);c.scale(3.1,3.1);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000);c.restore()};
+ panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.onchange=()=>{outfit[sel.dataset.jumpOutfit]=sel.value;preview()}});
+ let previewTimer=setInterval(()=>{if(!panel||!$('jumpAvatarPreview')){clearInterval(previewTimer);return}preview()},70);preview();
+ $('jumpSave').onclick=async()=>{
+  try{
+   const saved=await api('/api/jump/cosmetics',{method:'POST',body:JSON.stringify({outfit})});
+   outfit={...saved.outfit};$('jumpSaveStatus').textContent=txt('saved');
+   if(run)run.outfit=outfit;
+   setTimeout(()=>{clearInterval(previewTimer);closePanel()},600);
+  }catch(e){$('jumpSaveStatus').textContent=e.message}
+ };
 }
 function renderJumpRoomMembers(players){
  return (players||[]).map(p=>{
