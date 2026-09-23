@@ -33,7 +33,8 @@
     s.vy=Math.max(-275,s.vy-380*dt);
     s.y+=s.vy*dt;
     if(s.vy<=0){
-      const start=Math.max(0,Math.floor((s.y-12)/31)-3),end=Math.min(s.platforms.length-1,Math.ceil((lastY+12)/31)+3);
+      const firstAtLeast=(value)=>{let lo=0,hi=s.platforms.length;while(lo<hi){const mid=(lo+hi)>>1;if(s.platforms[mid].y<value)lo=mid+1;else hi=mid;}return lo;};
+      const start=Math.max(0,firstAtLeast(s.y-2)-2),end=Math.min(s.platforms.length-1,firstAtLeast(lastY+2)+2);
       for(let i=start;i<=end;i++){
         const p=s.platforms[i];
         if(lastY>=p.y-.05&&s.y<=p.y&&s.x+7>p.x&&s.x-7<p.x+p.w){
