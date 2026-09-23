@@ -156,6 +156,7 @@ test('save failures block rematch until retry succeeds',async()=>{
 test('leaving keeps membership; abandoning transfers ownership and removes the old roster from TOP',async()=>{
  const physics={...P,step(s){s.bestPlatform=2;return s;}};
  const f=await fixture(physics),s=f.service,t=await f.fill();
+ s.input(users[0],{runId:t.runId,seq:0});s.input(users[1],{runId:t.runId,seq:0});f.advance(100);
  await s.finish(users[0],{runId:t.runId});
  assert.equal((await s.rankings('duo',1)).teams.length,1);
  await s.leave(users[0]);assert.equal((await s.list(users[0],'duo')).teams.length,1);
