@@ -50,7 +50,7 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
   assert.match(await a.locator('#jumpWorld').textContent(),/DUO/);assert.match(await b.locator('#jumpWorld').textContent(),/DUO/);
   await a.keyboard.down('KeyW');await b.keyboard.down('KeyW');await a.waitForTimeout(600);await a.keyboard.up('KeyW');await b.keyboard.up('KeyW');
   await a.screenshot({path:path.join(root,'tmp/jump-qa/duo-desktop.png')});
-  await a.locator('#jumpDuoButton').click();await a.locator('#jumpTeamLeave').click();await b.waitForTimeout(1300);assert.equal(await b.locator('#jumpEnd').isVisible(),true);
+  await a.locator('#jumpDuoButton').click();await a.locator('[data-enter-team]').first().click();await a.locator('#jumpTeamLeave').click();await b.waitForTimeout(1300);assert.equal(await b.locator('#jumpEnd').isVisible(),true);
   await b.locator('#jumpRestart').click();assert.equal(await b.locator('#jumpTeamLobby').isVisible(),true);
   await b.locator('#jumpTeamLeave').click();await a.locator('[data-game="pulse"]').click();await a.locator('#gameCanvas').waitFor({state:'visible'});
   const mobile=await pageFor(players[2],{width:390,height:844});await mobile.screenshot({path:path.join(root,'tmp/jump-qa/mobile.png')});
@@ -64,7 +64,7 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
   await a.locator('#jumpTeamReady').click();await a.waitForTimeout(3700);
   for(const page of [a,b,mobile])assert.match(await page.locator('#jumpWorld').textContent(),/TRIO.*3\/3/);
   await a.screenshot({path:path.join(root,'tmp/jump-qa/trio-desktop.png')});
-  for(const page of [a,b,mobile]){await page.locator('#jumpTrioButton').click();await page.locator('#jumpTeamLeave').click();}
+  for(const page of [a,b,mobile]){await page.locator('#jumpTrioButton').click();await page.locator('[data-enter-team]').first().click();await page.locator('#jumpTeamLeave').click();}
   // Verify real PostgreSQL team inserts and ranking isolation with controlled landings.
   const physics=require(root+'/jump-physics');let clock=0;
   const service=require(root+'/jump-team-server').createService({now:()=>clock,physics:{...physics,step(s){s.bestPlatform=3;return s;}}});await service.init(db);
