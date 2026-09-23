@@ -27,7 +27,8 @@ function createService({now=Date.now,physics=P}={}){
    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(team_id,player_id))`);
   await db.query('CREATE INDEX IF NOT EXISTS jump_team_members_player_idx ON jump_team_members(player_id,joined_at DESC)');
  }
- function blankMember(row){return{id:String(row.player_id),name:String(row.player_name||'PLAYER'),outfit:null,ready:false,present:false,seen:0,inputAt:0,keys:{},seq:-1,state:null,facing:1};}
+ function blankMember(row){return{id:String(row.player_id),name:String(row.player_name||'PLAYER'),order:Number(row._order||0),outfit:null,ready:false,present:false,seen:0,inputAt:0,keys:{},seq:-1,state:null,facing:1};}
+ function orderedMembers(t){return [...t.members.values()].sort((a,b)=>Number(a.order||0)-Number(b.order||0)||a.id.localeCompare(b.id));}
  function previewState(t,index){
   const s=physics.create(t.seed);
   s.x=physics.W/2+(index-(t.capacity-1)/2)*26;
@@ -36,7 +37,7 @@ function createService({now=Date.now,physics=P}={}){
  }
  function refreshPreview(t){
   let i=0;
-  for(const m of t.members.values()){
+  for(const m of orderedMembers(t)){
    if(m.present)m.state=previewState(t,i);
    else m.state=null;
    m.ready=false;m.keys={};m.seq=-1;m.inputAt=now();i++;
@@ -53,7 +54,7 @@ function createService({now=Date.now,physics=P}={}){
   const row=tr.rows[0];if(!row)throw fail('Equipa não encontrada.',404);
   const mr=await db.query('SELECT player_id,player_name FROM jump_team_members WHERE team_id=$1::uuid ORDER BY joined_at,player_id',[teamId]);
   const t={id:String(row.id),code:String(row.code),mode:String(row.mode),name:String(row.name),biome:String(row.biome),ownerId:String(row.owner_id),capacity:cap(row.mode),
-   members:new Map(mr.rows.map(x=>[String(x.player_id),blankMember(x)])),status:'lobby',updated:now(),seed:crypto.randomInt(1,2147483647),runId:null,score:0,startsAt:0,saved:true,saveError:false};
+   members:new Map(mr.rows.map((x,i)=>[String(x.player_id),blankMember({...x,_order:i})])),status:'lobby',updated:now(),seed:crypto.randomInt(1,2147483647),runId:null,score:0,startsAt:0,saved:true,saveError:false};
   teams.set(t.id,t);return t;
  }
  async function list(p,mode){
@@ -83,7 +84,7 @@ function createService({now=Date.now,physics=P}={}){
   if(t.status!=='playing')return;
   t.status='ended';t.reason=reason;t.updated=now();t.startsAt=0;t.restartAt=reason==='fall'?now()+2200:0;
   t.result={key:rosterKey(t),score:t.score,
-   members:[...t.members.values()].map(m=>({id:m.id,name:m.name}))};
+   members:orderedMembers(t).map(m=>({id:m.id,name:m.name}))};
   t.saved=false;
   for(const m of t.members.values()){if(m.state)m.state.alive=false;m.ready=false;m.keys={};}
   void save(t);
@@ -93,7 +94,7 @@ function createService({now=Date.now,physics=P}={}){
   t.runId=crypto.randomUUID();t.score=0;t.saved=false;t.saveError=false;t.reason=null;t.result=null;
   t.status='playing';t.last=now();t.updated=now();t.startsAt=0;t.restartAt=0;
   const shared=physics.platforms(t.seed,34);let i=0;
-  for(const m of t.members.values()){
+  for(const m of orderedMembers(t)){
    m.state=physics.create(t.seed,shared);m.state.x=physics.W/2+(i++-(t.capacity-1)/2)*26;
    m.keys={};m.seq=-1;m.seen=now();m.inputAt=now();m.ready=false;
   }
@@ -115,7 +116,7 @@ function createService({now=Date.now,physics=P}={}){
   let rest=Math.min(.25,Math.max(0,(time-t.last)/1000));t.last=time;
   while(rest>0&&t.status==='playing'){
    const dt=Math.min(1/60,rest);rest-=dt;
-   const ms=[...t.members.values()];
+   const ms=orderedMembers(t);
    for(const m of ms){if(time-m.inputAt>700)m.keys={};physics.step(m.state,m.keys,dt);}
    for(let i=1;i<ms.length;i++){
     const a=ms[i-1].state,b=ms[i].state,dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy);
@@ -156,7 +157,7 @@ function createService({now=Date.now,physics=P}={}){
   t.updated=now();
   const countdownMs=t.status==='countdown'?Math.max(0,t.startsAt-now()):0,restartMs=t.status==='ended'&&t.restartAt?Math.max(0,t.restartAt-now()):0;
   return{ok:true,teamId:t.id,mode:t.mode,name:t.name,code:t.code,ownerId:t.ownerId,capacity:t.capacity,biome:t.biome,seed:t.seed,runId:t.runId,status:t.status,score:t.score||0,reason:t.reason||null,saved:!!t.saved,saveError:!!t.saveError,countdownMs,restartMs,
-   chainLength:LIMIT,members:[...t.members.values()].map(x=>({id:x.id,name:x.name,ready:!!x.ready,present:!!x.present,outfit:x.outfit,
+   chainLength:LIMIT,members:orderedMembers(t).map(x=>({id:x.id,name:x.name,ready:!!x.ready,present:!!x.present,outfit:x.outfit,
     state:x.state?{...physics.publicState(x.state),cam:x.state.cam,time:x.state.time,ground:x.state.ground,facing:x.facing||1,moving:!!(x.keys.left||x.keys.right)}:null}))};
  }
  async function enter(p,d,outfit){
@@ -192,7 +193,7 @@ function createService({now=Date.now,physics=P}={}){
   if(!exists.rows[0]){
    const playerName=String(p.visualName||p.name||'PLAYER').slice(0,32);
    await db.query('INSERT INTO jump_team_members(team_id,player_id,player_name) VALUES($1::uuid,$2,$3)',[String(row.id),String(p.id),playerName]);
-   const active=teams.get(String(row.id));if(active&&!active.members.has(String(p.id)))active.members.set(String(p.id),blankMember({player_id:String(p.id),player_name:playerName}));
+   const active=teams.get(String(row.id));if(active&&!active.members.has(String(p.id)))active.members.set(String(p.id),blankMember({player_id:String(p.id),player_name:playerName,_order:active.members.size}));
   }
   return enter(p,{teamId:String(row.id)},outfit);
  }
@@ -254,16 +255,26 @@ function createService({now=Date.now,physics=P}={}){
   t.members.delete(String(p.id));
   if(!t.members.size){await db.query('DELETE FROM jump_teams WHERE id=$1::uuid',[teamId]);teams.delete(teamId);return{ok:true,deleted:true};}
   if(t.ownerId===String(p.id)){
-   t.ownerId=t.members.keys().next().value;await db.query('UPDATE jump_teams SET owner_id=$2,updated_at=NOW() WHERE id=$1::uuid',[teamId,t.ownerId]);
+   t.ownerId=orderedMembers(t)[0].id;await db.query('UPDATE jump_teams SET owner_id=$2,updated_at=NOW() WHERE id=$1::uuid',[teamId,t.ownerId]);
   }
   if(t.status==='playing')end(t,'leave');
   if(t.status==='countdown'||t.status==='ended'){resetLobby(t,true);}
   for(const x of t.members.values())x.ready=false;
   return{ok:true};
  }
+ async function pruneRankings(mode){
+  const q=await db.query('SELECT t.id::text AS team_id,m.player_id FROM jump_teams t JOIN jump_team_members m ON m.team_id=t.id WHERE t.mode=$1 ORDER BY t.id,m.player_id',[mode]);
+  const groups=new Map();
+  for(const row of q.rows||[]){const id=String(row.team_id);if(!groups.has(id))groups.set(id,[]);groups.get(id).push(String(row.player_id));}
+  const valid=[];
+  for(const ids of groups.values())if(ids.length===cap(mode))valid.push(crypto.createHash('sha256').update(mode+':'+ids.sort().join(':')).digest('hex'));
+  if(valid.length)await db.query('DELETE FROM jump_team_scores WHERE mode=$1 AND NOT (roster_key=ANY($2::varchar[]))',[mode,valid]);
+  else await db.query('DELETE FROM jump_team_scores WHERE mode=$1',[mode]);
+ }
  async function rankings(mode,page){
   if(!MODES.has(mode))throw fail('Modo inválido.');
   const pg=Math.max(1,Math.min(10000,Math.floor(Number(page)||1)));
+  await pruneRankings(mode);
   const count=await db.query('SELECT COUNT(*)::int AS count FROM jump_team_scores WHERE mode=$1 AND best_score>0',[mode]);
   const rows=await db.query('SELECT name,members,best_score AS score FROM jump_team_scores WHERE mode=$1 AND best_score>0 ORDER BY best_score DESC,updated_at,roster_key LIMIT 25 OFFSET $2',[mode,(pg-1)*25]);
   const ids=[...new Set(rows.rows.flatMap(r=>(Array.isArray(r.members)?r.members:[]).map(m=>String(m.id||'')).filter(Boolean)))];
