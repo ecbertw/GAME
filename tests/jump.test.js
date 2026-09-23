@@ -174,6 +174,14 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/c\.translate\(0,-14\)/);
  assert.match(js,/RECOMEÇA EM/);
  assert.match(js,/function teamRankPlayer\(p\)/);
+ assert.match(js,/function mergePeers\(rows=\[\]\)/);
+ assert.match(js,/function smoothPeers\(dt\)/);
+ assert.match(js,/function applyTeamTether\(dt\)/);
+ assert.match(js,/data-ready-team/);
+ assert.match(js,/quickReadyTeam/);
+ assert.doesNotMatch(js,/local\.time=out\.worldTime/,'ONLINE must not rewind the local moving-platform clock');
+ const teamPlayer=(js.match(/function teamRankPlayer\(p\)\{[\s\S]*?\n\}/)||[''])[0];
+ assert.doesNotMatch(teamPlayer,/rankTag|rankVip|jump-team-player-tags/,'DUO/TRIO TOP must show names only');
  assert.match(js,/function stepLocalWithAudio\(dt\)/);
  assert.match(js,/jumpBiome\?\.\(biome\)/);
  assert.match(js,/modal-button primary\" id=\"jumpTeamJoin/);
