@@ -1,0 +1,161 @@
+'use strict';
+/* Isolated JUMP storage and five-player instances. PULSE tables remain untouched. */
+const crypto=require('crypto');
+const physics=require('./jump-physics');
+const BIOMES=['city','forest','desert','snow'];
+const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#ffcc99','#c68642','#6f4228','#111827'];
+const PARTS=['skin','hair','shirt','arms','pants','shoes','eyes'];
+const DEFAULTS={skin:'#ffcc99',hair:'#172b3b',shirt:'#00e5ff',arms:'#ffcc99',pants:'#3b82f6',shoes:'#ffffff',eyes:'#172b3b'};
+const instances=new Map(),sessions=new Map(),activeByPlayer=new Map();
+const error=(message,status=400)=>Object.assign(new Error(message),{status});
+function validBiome(v){const b=String(v||'forest').toLowerCase();if(!BIOMES.includes(b))throw error('Ambiente inválido.');return b;}
+function validColors(data){const result={};for(const k of PARTS){const c=String(data&&data[k]||DEFAULTS[k]).toLowerCase();if(!PALETTE.includes(c))throw error('Cor inválida: '+k);result[k]=c;}return result;}
+async function initDb(db){
+  await db.query('CREATE TABLE IF NOT EXISTS jump_scores(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+  await db.query("CREATE TABLE IF NOT EXISTS jump_cosmetics(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,colors JSONB NOT NULL DEFAULT '{}'::jsonb)");
+  await db.query('CREATE TABLE IF NOT EXISTS jump_rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,biome VARCHAR(12) NOT NULL,max_players INTEGER NOT NULL DEFAULT 5,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+  await db.query('CREATE TABLE IF NOT EXISTS jump_room_members(room_id UUID NOT NULL REFERENCES jump_rooms(id) ON DELETE CASCADE,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(room_id,player_id))');
+  await db.query('CREATE INDEX IF NOT EXISTS jump_score_rank_idx ON jump_scores(best_score DESC,updated_at)');
+}
+function removeSession(run){
+  if(!run)return;
+  sessions.delete(run.id);
+  if(activeByPlayer.get(run.playerId)===run.id)activeByPlayer.delete(run.playerId);
+  const inst=instances.get(run.instanceId);
+  if(inst){inst.players.delete(run.playerId);if(!inst.players.size)instances.delete(inst.id);}
+}
+function purge(){
+  const now=Date.now();
+  for(const run of [...sessions.values()])if(now-run.lastSeen>30000)removeSession(run);
+  for(const inst of [...instances.values()])if(!inst.players.size)instances.delete(inst.id);
+}
+function newInstance(biome,kind,roomId){
+  const inst={id:crypto.randomUUID(),biome,kind,roomId:roomId||null,seed:crypto.randomInt(1,2147483647),players:new Map(),platforms:null};
+  inst.platforms=physics.platforms(inst.seed,1800);
+  instances.set(inst.id,inst);return inst;
+}
+function findInstance(biome,kind,roomId){
+  for(const inst of instances.values()){
+    if(inst.kind===kind&&inst.biome===biome&&inst.roomId===(roomId||null)&&inst.players.size<5)return inst;
+  }
+  return newInstance(biome,kind,roomId);
+}
+async function getColors(db,p){const r=await db.query('SELECT colors FROM jump_cosmetics WHERE player_id=$1',[p.id]);return validColors(r.rows[0]?.colors||DEFAULTS);}
+async function saveColors(db,p,d){
+  const colors=validColors(d.colors);
+  await db.query('INSERT INTO jump_cosmetics(player_id,colors) VALUES($1,$2::jsonb) ON CONFLICT(player_id) DO UPDATE SET colors=EXCLUDED.colors',[p.id,JSON.stringify(colors)]);
+  const run=sessions.get(activeByPlayer.get(p.id));if(run)run.colors=colors;
+  return{ok:true,colors};
+}
+async function start(db,p,d){
+  purge();
+  let roomId=null,biome=validBiome(d.biome),kind=d.multiplayer?'public':'solo';
+  if(d.roomId){
+    const r=await db.query('SELECT r.id,r.biome FROM jump_rooms r JOIN jump_room_members m ON m.room_id=r.id AND m.player_id=$2 WHERE r.id=$1',[d.roomId,p.id]);
+    if(!r.rowCount)throw error('Não pertences a esta sala JUMP.',403);
+    roomId=r.rows[0].id;biome=r.rows[0].biome;kind='private';
+  }
+  removeSession(sessions.get(activeByPlayer.get(p.id)));
+  let inst=kind==='solo'?newInstance(biome,kind,null):findInstance(biome,kind,roomId);
+  if(inst.players.size>=5)throw error('Instância cheia.',409);
+  const id=crypto.randomUUID(),colors=await getColors(db,p);
+  const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,colors,instanceId:inst.id,roomId,biome,kind,
+    state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
+  sessions.set(id,run);activeByPlayer.set(p.id,id);inst.players.set(p.id,run);
+  return{ok:true,runId:id,seed:inst.seed,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,colors};
+}
+function requireRun(p,id){purge();const run=sessions.get(String(id||''));if(!run||run.playerId!==p.id||activeByPlayer.get(p.id)!==run.id)throw error('Partida JUMP expirada. Começa novamente.',404);return run;}
+function advance(run){
+  const now=Date.now();
+  const elapsed=Math.min(.2,Math.max(0,(now-run.last)/1000));
+  let rest=elapsed;
+  while(rest>0&&run.state.alive){const dt=Math.min(1/60,rest);physics.step(run.state,run.keys,dt);rest-=dt;}
+  run.last=now;run.lastSeen=now;
+}
+function playersIn(run){
+  const inst=instances.get(run.instanceId);
+  if(!inst)return[];
+  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),alive:r.state.alive,colors:r.colors}));
+}
+function input(p,d){
+  const run=requireRun(p,d.runId);advance(run);
+  run.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};
+  const inst=instances.get(run.instanceId);
+  return{ok:true,state:physics.publicState(run.state),peers:run.kind==='solo'?[]:playersIn(run),players:inst?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
+}
+function state(p,runId){
+  const run=requireRun(p,runId);advance(run);
+  return{ok:true,state:physics.publicState(run.state),peers:run.kind==='solo'?[]:playersIn(run),players:instances.get(run.instanceId)?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
+}
+async function finish(db,p,runId){
+  const run=requireRun(p,runId);advance(run);
+  const score=Math.min(1000000,Math.max(0,Math.floor(run.state.best)));
+  removeSession(run);
+  if(score>0){
+    await db.query('INSERT INTO jump_scores(player_id,best_score) VALUES($1,$2) ON CONFLICT(player_id) DO UPDATE SET best_score=GREATEST(jump_scores.best_score,EXCLUDED.best_score),updated_at=CASE WHEN EXCLUDED.best_score>jump_scores.best_score THEN NOW() ELSE jump_scores.updated_at END',[p.id,score]);
+    if(run.roomId)await db.query('UPDATE jump_room_members SET best_score=GREATEST(best_score,$3) WHERE room_id=$1 AND player_id=$2',[run.roomId,p.id,score]);
+  }
+  return{ok:true,score,dead:!run.state.alive};
+}
+function leave(p){const run=sessions.get(activeByPlayer.get(p.id));if(run)removeSession(run);return{ok:true};}
+async function rankings(db,country,page){
+  const code=String(country||'').toUpperCase();
+  if(code&&!/^[A-Z]{2}$/.test(code))throw error('País inválido.');
+  const pg=Math.max(1,Math.min(10000,Math.floor(Number(page)||1))),offset=(pg-1)*25;
+  const cte="WITH ranked AS (SELECT p.id,p.name,p.visual_name AS \"visualName\",p.country,p.vip_level AS \"vipLevel\",p.letter_styles AS \"letterStyles\",p.name_color AS \"nameColor\",p.name_effect AS \"nameEffect\",p.tag_global_color AS \"tagGlobalColor\",p.tag_country_color AS \"tagCountryColor\",s.best_score AS score,ROW_NUMBER() OVER(ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS \"worldRank\",ROW_NUMBER() OVER(PARTITION BY p.country ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS \"countryRank\" FROM jump_scores s JOIN players p ON p.id=s.player_id WHERE s.best_score>0) ";
+  const filter=code?'WHERE country=$1':'';
+  const args=code?[code]:[];
+  const count=await db.query(cte+'SELECT COUNT(*)::int AS count FROM ranked '+filter,args);
+  const rows=await db.query(cte+'SELECT * FROM ranked '+filter+' ORDER BY score DESC,"worldRank" ASC LIMIT 25 OFFSET $'+(args.length+1),[...args,offset]);
+  return{players:rows.rows.map(x=>({...x,score:Number(x.score),worldRank:Number(x.worldRank),countryRank:Number(x.countryRank),letterStyles:Array.isArray(x.letterStyles)?x.letterStyles:(()=>{try{return JSON.parse(x.letterStyles||'[]')}catch(_){return[]}})()})),total:count.rows[0].count,page:pg,pages:Math.max(1,Math.ceil(count.rows[0].count/25))};
+}
+async function roomCreate(db,p,d){
+  const name=String(d.name||'').trim(),biome=validBiome(d.biome);
+  if(!/^[\p{L}\p{N} _-]{2,24}$/u.test(name))throw error('Nome inválido. Usa 2 a 24 caracteres.');
+  for(let i=0;i<8;i++){
+    const id=crypto.randomUUID(),code=crypto.randomBytes(3).toString('hex').toUpperCase(),client=await db.connect();
+    try{
+      await client.query('BEGIN');
+      await client.query('INSERT INTO jump_rooms(id,code,name,biome,max_players,owner_id) VALUES($1,$2,$3,$4,5,$5)',[id,code,name,biome,p.id]);
+      await client.query('INSERT INTO jump_room_members(room_id,player_id) VALUES($1,$2)',[id,p.id]);
+      await client.query('COMMIT');
+      return{ok:true,room:{id,code,name,biome,maxPlayers:5,memberCount:1,ownerName:p.name}};
+    }catch(e){await client.query('ROLLBACK').catch(()=>{});if(e.code!=='23505')throw e;}finally{client.release()}
+  }
+  throw error('Não foi possível criar a sala.',500);
+}
+async function roomJoin(db,p,d){
+  const code=String(d.code||'').trim().toUpperCase();
+  if(!/^[A-F0-9]{6}$/.test(code))throw error('Código inválido.');
+  const client=await db.connect();
+  try{
+    await client.query('BEGIN');
+    const found=await client.query('SELECT * FROM jump_rooms WHERE code=$1 FOR UPDATE',[code]);
+    if(!found.rowCount)throw error('Sala não encontrada.',404);
+    const room=found.rows[0];
+    const existing=await client.query('SELECT 1 FROM jump_room_members WHERE room_id=$1 AND player_id=$2',[room.id,p.id]);
+    const count=await client.query('SELECT COUNT(*)::int AS count FROM jump_room_members WHERE room_id=$1',[room.id]);
+    if(!existing.rowCount&&count.rows[0].count>=5)throw error('A sala já tem cinco membros.',409);
+    if(!existing.rowCount)await client.query('INSERT INTO jump_room_members(room_id,player_id) VALUES($1,$2)',[room.id,p.id]);
+    await client.query('COMMIT');
+    return{ok:true,room:{id:room.id,code:room.code,name:room.name,biome:room.biome,maxPlayers:5,memberCount:count.rows[0].count+(existing.rowCount?0:1)}};
+  }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}
+}
+async function roomList(db,p){
+  const q=await db.query('SELECT r.id,r.code,r.name,r.biome,r.max_players AS "maxPlayers",p.name AS "ownerName",COUNT(m.player_id)::int AS "memberCount" FROM jump_rooms r JOIN jump_room_members mine ON mine.room_id=r.id AND mine.player_id=$1 JOIN players p ON p.id=r.owner_id JOIN jump_room_members m ON m.room_id=r.id GROUP BY r.id,p.name ORDER BY r.created_at DESC',[p.id]);
+  return{ok:true,rooms:q.rows};
+}
+async function roomLeave(db,p,d){
+  const id=String(d.roomId||'');
+  const run=sessions.get(activeByPlayer.get(p.id));
+  if(run?.roomId===id)removeSession(run);
+  await db.query('DELETE FROM jump_room_members WHERE room_id=$1 AND player_id=$2',[id,p.id]);
+  return{ok:true};
+}
+async function roomRankings(db,p,id){
+  const mine=await db.query('SELECT 1 FROM jump_room_members WHERE room_id=$1 AND player_id=$2',[id,p.id]);
+  if(!mine.rowCount)throw error('Não pertences a esta sala.',403);
+  const q=await db.query('SELECT p.id,p.name,p.country,m.best_score AS score FROM jump_room_members m JOIN players p ON p.id=m.player_id WHERE m.room_id=$1 ORDER BY m.best_score DESC,m.joined_at ASC',[id]);
+  return{ok:true,players:q.rows.map((x,i)=>({...x,roomRank:i+1,score:Number(x.score)}))};
+}
+module.exports={initDb,BIOMES,PALETTE,PARTS,DEFAULTS,getColors,saveColors,start,input,state,finish,leave,rankings,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
