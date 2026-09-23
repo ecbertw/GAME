@@ -17,8 +17,8 @@
     }
     return out;
   }
-  function create(seed){
-    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,jumpBuffer:0,platforms:platforms(seed,1800)};
+  function create(seed,sharedPlatforms){
+    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,jumpBuffer:0,platforms:sharedPlatforms||platforms(seed,1800)};
   }
   function step(s,keys,dt){
     if(!s.alive)return s;
