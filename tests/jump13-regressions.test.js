@@ -35,7 +35,8 @@ test('ONLINE shows one matchmaking card and does not expose a biome picker',()=>
  assert.doesNotMatch(fn,/data-biome/);
  const server=fs.readFileSync(path.join(root,'jump-server.js'),'utf8');
  assert.match(server,/function findPublicInstance\(\)/);
- assert.match(server,/sort\(\(a,b\)=>b\.players\.size-a\.players\.size\|\|a\.epoch-b\.epoch\)/);
+ assert.match(server,/const PUBLIC_CAPACITY=20/);
+ assert.match(server,/publicLobbyId&&instances\.get\(publicLobbyId\)/);
 });
 
 test('white is removed from VIP tag choices and legacy white values normalize to defaults',()=>{
