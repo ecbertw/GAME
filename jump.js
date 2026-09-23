@@ -44,7 +44,7 @@ async function switchGame(next){
  current=next;window.eixoJumpActive=current==='jump';closePanel();showMode();
  if(current==='jump'){
    window.stopGame?.();await newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
-   refreshRankings();clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump')refreshRankings()},5500);
+   refreshRankings();if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump')refreshRankings()},5500);
  }else{
    clearInterval(rankTimer);clearInterval(networkTimer);if(animation)cancelAnimationFrame(animation);
    keys={left:false,right:false,jump:false};window.eixoRefreshRankings?.();window.resetGame?.();
@@ -119,7 +119,7 @@ function drawBackground(){
 function drawCharacter(c,x,y,style,name,ghost=false){
  if(!style)style=colors||{};
  const S={...{skin:'#ffcc99',hair:'#172b3b',shirt:'#00e5ff',arms:'#ffcc99',pants:'#3b82f6',shoes:'#ffffff',eyes:'#172b3b'},...style};
- c.save();c.globalAlpha=ghost?.75:1;
+ c.save();c.globalAlpha=ghost?0.75:1;
  const q=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h)};
  // 12x22 customisable sprite: separate hair, head, eyes, torso, arms, trousers and shoes.
  q(x-5,y-22,10,2,S.hair);q(x-6,y-20,12,4,S.hair);q(x-5,y-16,10,6,S.skin);q(x-3,y-14,2,2,S.eyes);q(x+2,y-14,2,2,S.eyes);
