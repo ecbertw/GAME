@@ -188,7 +188,13 @@ async function bootPlayer(){
     currentCountryCode=String(preferred&&countryNames[preferred]?preferred:player.country||'PT').toUpperCase();
     localStorage.setItem('eixo_country',currentCountryCode);
     applyLanguage();loadTopRankings();
-  }else{applyLanguage();if(window.eixoOpenAuth)window.eixoOpenAuth('login');else window.addEventListener('eixo-auth-ready',()=>window.eixoOpenAuth?.('login'),{once:true});}
+  }else{
+    // Guests must still be able to browse/click the site. A stale or missing
+    // session should never leave a full-screen auth overlay intercepting the UI.
+    applyLanguage();
+    const auth=document.getElementById('authModal');if(auth)auth.classList.add('hidden');
+    document.documentElement.classList.remove('eixo-modal-open');document.body.classList.remove('eixo-modal-open');
+  }
   window.dispatchEvent(new Event('eixo-player-updated'));
 }
 
