@@ -39,7 +39,10 @@
 .jump-world-option.forest{background:linear-gradient(135deg,#9fe8d7,#49a57a 60%,#225240)}
 .jump-world-option.desert{background:linear-gradient(135deg,#84c5ea,#e5b36a 60%,#a65e42)}
 .jump-world-option.snow{background:linear-gradient(135deg,#c5eaff,#91bad8 60%,#46688d)}
-.jump-custom-preview{display:grid;place-items:center;background:#16324a;border:2px solid #5d819d;margin-bottom:14px;height:115px}
+.jump-custom-note{margin:0 0 10px;padding:9px 10px;border:1px solid #51677a;background:#0b151f;color:#9fb2c0;font-size:6px;line-height:1.8;text-align:center}
+.jump-custom-preview{display:grid;place-items:center;background:linear-gradient(180deg,#17344d,#0d1d2a);border:2px solid #5d819d;margin-bottom:14px;height:130px}
+.jump-vip-wardrobe{margin:12px 0;color:#e9ca73;font-size:6px;line-height:1.8;text-align:center}
+.jump-color-list select option:disabled{color:#65717b}
 #jumpAvatarPreview{width:120px;height:85px;image-rendering:pixelated}
 .jump-color-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .jump-color-list label{display:flex;flex-direction:column;gap:7px;font-size:7px}
