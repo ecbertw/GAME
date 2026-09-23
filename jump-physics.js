@@ -8,17 +8,19 @@
   const W=450,H=195;
   function hash(seed,n){let x=(seed+Math.imul(n,0x9e3779b9))|0;x=Math.imul(x^(x>>>16),0x85ebca6b);x=Math.imul(x^(x>>>13),0xc2b2ae35);return((x^(x>>>16))>>>0)/4294967296;}
   function platforms(seed,count){
-    const out=[{x:0,y:0,w:W}];let x=W/2-45,y=0;
-    for(let i=1;i<=count;i++){
+    const out=[{x:0,y:0,w:W}];extend(out,seed,count);return out;
+  }
+  function extend(out,seed,count){
+    let prev=out[out.length-1],x=out.length===1?W/2-45:prev.x,y=prev.y;
+    for(let i=out.length;i<=count;i++){
       const a=hash(seed,i*3+1),b=hash(seed,i*3+2),c=hash(seed,i*3+3);
       y+=31+Math.floor(a*12);
       x=Math.max(15,Math.min(W-92,x+(b-.5)*130));
       out.push({x:Math.round(x),y,w:68+Math.floor(c*28)});
     }
-    return out;
   }
   function create(seed,sharedPlatforms){
-    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,jumpBuffer:0,platforms:sharedPlatforms||platforms(seed,1800)};
+    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,jumpBuffer:0,seed,platforms:sharedPlatforms||platforms(seed,30)};
   }
   function step(s,keys,dt){
     if(!s.alive)return s;
@@ -40,6 +42,7 @@
       }
     }else s.ground=false;
     s.best=Math.max(s.best,s.y);
+    if(s.platforms[s.platforms.length-1].y<s.best+350)extend(s.platforms,s.seed,s.platforms.length+25);
     s.cam=Math.max(0,s.best-78);
     if(s.y<s.cam-65||s.y<-60)s.alive=false;
     return s;
