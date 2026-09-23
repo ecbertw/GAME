@@ -49,7 +49,7 @@ test('JUMP VIP wardrobe adds gold pants and natural effect variants',()=>{
 test('README keeps exactly the two latest update reports',()=>{
  const readme=fs.readFileSync(path.join(root,'README.md'),'utf8');
  const reports=readme.match(/^# EIXO V\d+\.\d+\.\d+/gm)||[];
- assert.deepEqual(reports,['# EIXO V2.3.0','# EIXO V2.2.0']);
+ assert.deepEqual(reports,['# EIXO V2.3.1','# EIXO V2.3.0']);
  assert.match(readme,/apenas os dois relatórios de atualização mais recentes/);
 });
 
