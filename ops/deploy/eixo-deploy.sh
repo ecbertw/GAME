@@ -41,7 +41,7 @@ if ! curl -fsS -H "Host: eixo.at" http://127.0.0.1:3000/health >/tmp/eixo-health
 fi
 cat /tmp/eixo-health; echo
 
-for p in server.js auth-server.js server-start.js package.json .git/HEAD .env; do
+for p in server.js auth-server.js server-start.js paypal-server.js jump-server.js package.json .git/HEAD .env; do
   code="$(curl -sS -o /dev/null -w "%{http_code}" -H "Host: eixo.at" "http://127.0.0.1:3000/$p")"
   if [ "$code" != "404" ]; then
     echo "SECURITY CHECK FAILED: /$p returned $code" >&2
