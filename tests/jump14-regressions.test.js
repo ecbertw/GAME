@@ -52,3 +52,8 @@ test('README keeps exactly the two latest update reports',()=>{
  assert.deepEqual(reports,['# EIXO V2.3.0','# EIXO V2.2.0']);
  assert.match(readme,/apenas os dois relatórios de atualização mais recentes/);
 });
+
+test('deploy script does not reference retired JUMP team files',()=>{
+ const deploy=fs.readFileSync(path.join(root,'ops/deploy/eixo-deploy.sh'),'utf8');
+ assert.doesNotMatch(deploy,/jump-team-server\.js/);
+});
