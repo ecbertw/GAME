@@ -23,7 +23,8 @@ cd "$APP"
 sudo -u eixo npm install --omit=dev --ignore-scripts --package-lock=false
 
 echo "[3/5] Syntax"
-for f in server.js auth-server.js server-start.js paypal-server.js paypal-checkout.js ui.js vip-fix.js; do node --check "$APP/$f"; done
+for f in server.js auth-server.js server-start.js paypal-server.js paypal-checkout.js ui.js vip-fix.js jump-server.js jump-physics.js jump.js; do node --check "$APP/$f"; done
+node --test "$APP/tests/jump.test.js"
 
 echo "[4/5] Restart"
 systemctl restart eixo
