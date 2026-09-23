@@ -5,6 +5,7 @@
   "description": "EIXO — online reflex game with secure accounts and sessions",
   "main": "server.js",
   "scripts": {
+    "test": "node --test tests/*.test.js",
     "start": "node server-start.js"
   },
   "engines": {

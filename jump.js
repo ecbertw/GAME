@@ -32,6 +32,7 @@ function modal(title,body){
 function closePanel(){panel?.remove();panel=null;}
 function showError(message){$('jumpStatus').textContent=String(message||'');}
 function showMode(){
+ $('jumpTeamBoards')?.classList.toggle('hidden',current!=='jump');
  const switcher=$('eixoGameSwitcher');switcher.querySelectorAll('[data-game]').forEach(b=>b.classList.toggle('active',b.dataset.game===current));
  $('gameIntro').querySelector('[data-i18n="aboutText"]').textContent=current==='jump'?' — JUMP: '+txt('help'):current==='eat'?' — '+txt('soon'):window.eixoT?.('aboutText',' — a simple reflex game. Hit the center, score points and climb the ranking.')||' — a simple reflex game.';
  $('jumpRoot').classList.toggle('hidden',current!=='jump');frame.classList.toggle('jump-mode',current==='jump');
@@ -54,13 +55,14 @@ async function switchGame(next){
  }
 }
 async function stopRun(){
+ if(team){await api('/api/jump/teams/leave',{method:'POST'});team=null;clearInterval(teamTimer);run=null;local=null;peers=[];return;}
  if(!run)return;const old=run,platform=Number(local?.bestPlatform||0);run=null;clearInterval(networkTimer);
  try{await api('/api/jump/run/finish',{method:'POST',body:JSON.stringify({runId:old.runId,platform})})}catch(e){console.warn('JUMP finalization:',e.message)}
 }
 function updateHud(){
  $('jumpHeight').textContent=String(Math.max(0,Number(confirmedScore)||0)).padStart(3,'0');
- $('jumpWorld').textContent=biome.toUpperCase()+(mode==='solo'?' · SOLO':' · '+(lastState?.players||1)+'/5');
- $('jumpSoloButton').textContent=txt('solo');$('jumpJoinButton').textContent=txt('join');$('jumpCustomizeButton').textContent=txt('character');$('jumpHelp').textContent=txt('help');
+ $('jumpWorld').textContent=biome.toUpperCase()+(team?' · '+team.mode.toUpperCase()+' · '+team.members.length+'/'+team.capacity:mode==='solo'?' · SOLO':' · ONLINE '+(lastState?.players||1)+'/5');
+ $('jumpSoloButton').textContent=txt('solo');$('jumpJoinButton').textContent='ONLINE';$('jumpCustomizeButton').textContent=txt('character');$('jumpHelp').textContent=txt('help');
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
@@ -69,17 +71,18 @@ async function newRun(options={}){
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
    run=out;seed=out.seed;biome=out.biome;mode=out.mode;outfit=out.outfit||outfit;wardrobe=out.parts?{parts:out.parts}:wardrobe;fixedAppearance=out.fixedAppearance||fixedAppearance;
-   local=P.create(seed);last=performance.now();updateHud();draw();refreshRoomBoard();clearInterval(networkTimer);
+   local=P.create(seed);local.time=Number(out.worldTime)||0;last=performance.now();updateHud();draw();refreshRoomBoard();clearInterval(networkTimer);
    networkTimer=setInterval(sync,60);sync();
  }catch(e){run=null;showError(e.message)}
 }
 async function sync(){
+ if(team){await syncTeam();return;}
  if(!run||busy||current!=='jump')return;
  const identity=run.runId;busy=true;
  try{
-  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jump:keys.jump,platform:Number(local?.bestPlatform||0)})});
+  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jump:keys.jump,platform:Number(local?.bestPlatform||0),position:local?{x:local.x,y:local.y}:null})});
   if(run?.runId!==identity)return;
-  lastState=out;peers=out.peers||[];confirmedScore=Number(out.state?.score||0);
+  lastState=out;if(mode!=='solo'&&local&&Number.isFinite(out.worldTime))local.time=out.worldTime;peers=out.peers||[];confirmedScore=Number(out.state?.score||0);
   // The HUD shows only server-confirmed platform points, while the local
   // physics remains smooth and is never teleported to an older snapshot.
   updateHud();
@@ -95,31 +98,7 @@ async function die(){
  $('jumpEndTitle').textContent=txt('gameOver');$('jumpRestart').textContent=txt('restart');
  refreshRankings();refreshRoomBoard();finishing=false;
 }
-function drawBackground(){
- const t=themes[biome],c=ctx,cam=local?.cam||0;
- const g=c.createLinearGradient(0,0,0,P.H);g.addColorStop(0,t.sky);g.addColorStop(1,t.low);c.fillStyle=g;c.fillRect(0,0,P.W,P.H);
- // Distinct pixel-art scenery with parallax; no external textures or heavy animation.
- const shift=(cam*.11)%P.W;
- if(biome==='city'){
-   c.fillStyle='#ecf3e1';c.fillRect(350-shift*.16,20,18,18);
-   for(let i=-2;i<24;i++){let x=i*26-shift*.2;let h=23+Math.floor(P.hash?P.hash(seed,i):Math.abs(Math.sin(i*5+seed))*.99)*44;c.fillStyle=i%3?t.far:t.hills;c.fillRect(x,P.H-h,24,h);c.fillStyle='#f9df99';for(let j=5;j<22;j+=9)for(let y=P.H-h+8;y<P.H;y+=10)c.fillRect(x+j,y,3,4);}
-   for(let i=-2;i<17;i++){const x=i*35-shift*.5,h=22+(i*i*13%58);c.fillStyle=t.near;c.fillRect(x,P.H-h,32,h);c.fillStyle='#fbd891';for(let j=6;j<30;j+=10)for(let y=P.H-h+8;y<P.H;y+=12)c.fillRect(x+j,y,3,4);}
- }else if(biome==='forest'){
-   c.fillStyle='#f0fff0';for(let i=0;i<7;i++){let x=(i*93-shift*.16+P.W*2)%P.W;c.fillRect(x,25+i%3*12,24,5);c.fillRect(x+6,20+i%3*12,15,5)}
-   for(let i=-2;i<13;i++){const x=i*52-shift*.36;c.fillStyle=t.far;c.fillRect(x+9,60,7,135);c.fillStyle='#3c9873';c.fillRect(x-3,50,31,18);c.fillRect(x+3,32,21,25);c.fillStyle='#68c77c';c.fillRect(x+1,38,17,14)}
-   for(let i=-1;i<7;i++){const x=i*92-shift*.65;c.fillStyle='#764f38';c.fillRect(x+20,10,14,190);c.fillStyle=t.near;c.fillRect(x+4,3,50,27);c.fillStyle='#428653';c.fillRect(x-5,17,66,18);c.fillStyle='#69bb67';c.fillRect(x+7,7,33,19)}
- }else if(biome==='desert'){
-   c.fillStyle='#ffe9b1';c.fillRect(345-shift*.05,20,24,24);
-   for(let i=-2;i<10;i++){let x=i*76-shift*.26,h=30+i*i*7%60;c.fillStyle=t.hills;c.fillRect(x,P.H-h,65,h);c.fillStyle=t.far;c.fillRect(x+14,P.H-h-22,24,24)}
-   for(let i=-1;i<8;i++){let x=i*90-shift*.55;c.fillStyle=t.near;c.fillRect(x+10,P.H-63,13,63);c.fillRect(x-3,P.H-45,47,14);c.fillStyle='#427950';c.fillRect(x+59,P.H-32,5,27);c.fillRect(x+56,P.H-27,13,4)}
- }else{
-   c.fillStyle='#f4fcff';for(let i=0;i<20;i++)c.fillRect((i*53+13)%P.W,(i*37+18)%110,2,2);
-   for(let i=-1;i<9;i++){let x=i*70-shift*.25;c.fillStyle=t.hills;c.beginPath();c.moveTo(x,P.H);c.lineTo(x+35,66+i%3*9);c.lineTo(x+84,P.H);c.fill();c.fillStyle='#f7fcff';c.beginPath();c.moveTo(x+20,92);c.lineTo(x+35,66+i%3*9);c.lineTo(x+50,91);c.fill();}
-   for(let i=-2;i<12;i++){let x=i*45-shift*.5;c.fillStyle=t.near;c.fillRect(x+15,P.H-32,7,32);c.beginPath();c.moveTo(x+2,P.H-20);c.lineTo(x+18,P.H-65);c.lineTo(x+36,P.H-20);c.fill();c.fillStyle='#ebfaf9';c.fillRect(x+12,P.H-45,9,3)}
- }
- // Small drifting square particles in four biomes.
- for(let i=0;i<18;i++){let x=(i*71+seed%47+cam*(i%3+1)*.08)%P.W,y=(i*37+cam*.18)%P.H;c.fillStyle=i%3?'#ffffff72':'#ffffffaa';c.fillRect(Math.round(x),Math.round(y),2,2)}
-}
+function drawBackground(){window.EixoJumpWorlds.draw(ctx,biome,seed,local?.cam||0,local?.time||0);}
 function outfitColor(value,time,offset=0){
  if(value!=='rainbow')return value||'#fff';
  return 'hsl('+Math.round(((time||0)*115+offset)%360)+' 92% 62%)';
@@ -181,14 +160,19 @@ function draw(){
    const y=Math.round(screen(p.y)),x=Math.round(P.platformX(p,local.time));
    // Old lower platforms are retired completely; only active/future platforms
    // are rendered. Moving platforms keep the same biome palette.
-   c.fillStyle='#00000026';c.fillRect(x+2,y+4,p.w,7);
-   c.fillStyle=t.under;c.fillRect(x,y+2,p.w,6);c.fillStyle=t.edge;c.fillRect(x,y,p.w,3);c.fillStyle=t.top;c.fillRect(x+2,y-3,p.w-4,4);
-   if(biome==='forest'){c.fillStyle='#c8f18e';for(let j=11;j<p.w;j+=24)c.fillRect(x+j,y-5,2,2)}
-   if(biome==='desert'){c.fillStyle='#f7e0a6';c.fillRect(x+9,y-1,12,2)}
-   if(biome==='snow'){c.fillStyle='#fff';c.fillRect(x+3,y-5,p.w-6,3)}
+   window.EixoJumpWorlds.platform(c,biome,x,y,p.w,i);
+ }
+ if(team?.status==='playing'){
+  const members=team.members;
+  for(let i=1;i<members.length;i++){
+   const a=members[i-1].id===getPlayer()?.id?local:members[i-1].state,b=members[i].id===getPlayer()?.id?local:members[i].state;
+   if(!a||!b)continue;
+   const distance=Math.hypot(b.x-a.x,b.y-a.y),n=Math.max(2,Math.ceil(distance/5)),slack=Math.max(0,1-distance/team.chainLength)*12;
+   for(let j=0;j<=n;j++){const f=j/n,x=Math.round(a.x+(b.x-a.x)*f),y=Math.round(screen(a.y+(b.y-a.y)*f)-4+Math.sin(f*Math.PI)*slack);c.fillStyle='#172638';c.fillRect(x-2,y-1,5,4);c.fillStyle=distance>team.chainLength?'#ffc581':'#d0e3ef';c.fillRect(x-1,y,3,2);}
+  }
  }
  for(const peer of peers){
-   const y=screen(peer.y);if(y>-12&&y<P.H+34)drawCharacter(c,peer.x,y,peer.outfit,peer.name,true,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving});
+   const y=screen(peer.y);if(y>-12&&y<P.H+34)drawCharacter(c,peer.x,y,peer.outfit,peer.name,!team,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving});
  }
  drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time,{facing,ground:local.ground,vy:local.vy,moving:keys.left||keys.right});
  c.fillStyle='#ffffffaa';c.fillRect(0,0,P.W,1);
@@ -198,7 +182,8 @@ function loop(now){
  let dt=Math.min(.04,(now-last)/1000||0);last=now;
  if(local&&!gameOver&&run){
   if(keys.left&&!keys.right)facing=-1;else if(keys.right&&!keys.left)facing=1;
-  P.step(local,keys,dt);if(!local.alive)die();
+  if(team){const target=team.members.find(m=>m.id===getPlayer()?.id)?.state;if(target){const blend=Math.min(1,dt*24);local.x+=(target.x-local.x)*blend;local.y+=(target.y-local.y)*blend;local.cam=target.cam;local.time=target.time;local.vy=target.vy;local.ground=target.ground;}}
+  else{P.step(local,keys,dt);if(!local.alive)die();}
   updateHud();
  }
  draw();animation=requestAnimationFrame(loop);
@@ -264,6 +249,7 @@ function setJumpMyRank(id,value){
  el.title=el.textContent;el.hidden=!ok;
 }
 async function refreshRankings(){
+ if(current==='jump')void refreshTeamRanks();
  if(current!=='jump')return;
  try{
   const p=getPlayer(),code=String(p?.country||'PT').toUpperCase();
@@ -311,8 +297,8 @@ function openRank(modeName='world',number=1){
  modalEl.classList.remove('hidden');renderJumpFull();
 }
 function chooseWorld(){
- modal(txt('choose'),'<div class="jump-world-grid">'+BIOMES.map(b=>'<button class="jump-world-option '+b+'" data-biome="'+b+'"><strong>'+b.toUpperCase()+'</strong><small>JOIN SERVER</small></button>').join('')+'</div><p>5 PLAYERS MAX / INSTANCE · AUTO MATCHMAKING</p>');
- panel.querySelectorAll('[data-biome]').forEach(btn=>btn.onclick=()=>{const b=btn.dataset.biome;closePanel();newRun({biome:b,mode:'public'})});
+ modal(txt('choose'),'<div class="jump-world-grid">'+BIOMES.map(b=>'<button class="jump-world-option '+b+'" data-biome="'+b+'"><canvas width="450" height="195" aria-hidden="true"></canvas><strong>'+b.toUpperCase()+'</strong><small>ONLINE</small></button>').join('')+'</div><p>5 PLAYERS MAX / INSTANCE · AUTO MATCHMAKING</p>');
+ panel.querySelectorAll('[data-biome]').forEach(btn=>{window.EixoJumpWorlds.draw(btn.querySelector('canvas').getContext('2d'),btn.dataset.biome,73,0,0);btn.onclick=()=>{const b=btn.dataset.biome;closePanel();newRun({biome:b,mode:'public'})};});
 }
 async function customize(){
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
@@ -427,6 +413,84 @@ function captureNative(selector,callback){
  const el=document.querySelector(selector);
  el?.addEventListener('click',e=>{if(current!=='jump')return;e.preventDefault();e.stopImmediatePropagation();callback() },true);
 }
+
+let team=null,teamTimer=null,teamSeq=0,teamPoll=0,teamSignature='';
+const teamText=(pt,en)=>lang()==='pt'?pt:en;
+async function teamPost(action,data={}){return api('/api/jump/teams/'+action,{method:'POST',body:JSON.stringify(data)});}
+function acceptTeam(out){
+ const previous=team?.runId,previousStatus=team?.status;team=out;
+ if(out.status==='playing'||out.status==='ended'){
+  const me=out.members.find(m=>m.id===getPlayer()?.id);
+  if(me?.state){
+   if(previous!==out.runId||!local){local=P.create(out.seed);Object.assign(local,me.state);teamSeq=0;gameOver=false;$('jumpEnd').classList.add('hidden');}
+   const required=Math.max(...out.members.map(m=>m.state?.platform||0))+30;
+   if(local.platforms.length<required)local.platforms=P.platforms(out.seed,required);
+   local.activeMinPlatform=me.state.activeMinPlatform;local.bestPlatform=me.state.platform;
+   peers=out.members.filter(m=>m.id!==getPlayer()?.id).map(m=>({id:m.id,name:m.name,outfit:m.outfit,...m.state}));
+   outfit=me.outfit;biome=out.biome;seed=out.seed;mode=out.mode;confirmedScore=out.score;
+   run={runId:out.runId};
+   if(out.status==='playing'&&(previous!==out.runId||previousStatus!=='playing')&&$('jumpTeamLobby'))closePanel();
+   if(out.status==='ended'){
+    gameOver=true;local.alive=false;$('jumpFinal').textContent=out.score;$('jumpEndTitle').textContent=txt('gameOver')+' · '+out.mode.toUpperCase();
+    $('jumpRestart').textContent=teamText('VOLTAR À EQUIPA','BACK TO TEAM');$('jumpEnd').classList.remove('hidden');
+    if(out.saveError)showError(teamText('Pontuação por guardar — a tentar novamente.','Score pending — retrying.'));
+    else if(out.saved)showError('');
+   }
+  }
+ }
+ updateHud();renderTeamLobby();
+}
+async function syncTeam(){
+ if(!team||busy||current!=='jump')return;
+ const identity=team.teamId;
+ if(team.status!=='playing'&&Date.now()-teamPoll<1000)return;
+ busy=true;teamPoll=Date.now();
+ try{
+  const out=team.status==='playing'?await teamPost('input',{runId:team.runId,seq:teamSeq++,left:keys.left,right:keys.right,jump:keys.jump}):await api('/api/jump/teams/state');
+  if(team?.teamId===identity)acceptTeam(out);
+ }catch(e){showError(e.message);}finally{busy=false;}
+}
+function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,100);}
+async function openTeam(kind){
+ if(team){showTeamLobby();return;}
+ modal(kind.toUpperCase(),'<p class="jump-team-help">'+teamText('2 jogadores no DUO, 3 no TRIO. Todos confirmam que estão prontos; o líder inicia. A corrente puxa os membros quando fica esticada. Se um cair, sair ou perder a ligação, a equipa perde.','2 players in DUO, 3 in TRIO. Everyone readies up; the leader starts. A taut chain pulls both ends. A fall, departure or lost connection ends the team run.')+'</p><label class="room-field">'+teamText('NOME DA EQUIPA','TEAM NAME')+'<input id="jumpTeamName" class="pixel-input" maxlength="24" placeholder="PIXEL CREW"></label><label class="room-field">'+txt('choose')+'<select id="jumpTeamBiome" class="pixel-input">'+BIOMES.map(b=>'<option>'+b+'</option>').join('')+'</select></label><button class="modal-button primary" id="jumpTeamCreate">'+teamText('CRIAR EQUIPA','CREATE TEAM')+'</button><hr><label class="room-field">'+teamText('CONVITE DE UM AMIGO','FRIEND INVITE')+'<input id="jumpTeamCode" class="pixel-input" maxlength="12" autocomplete="off"></label><button class="modal-button" id="jumpTeamJoin">'+teamText('ACEITAR CONVITE','ACCEPT INVITE')+'</button><p id="jumpTeamError" role="status"></p>');
+ const action=async(create)=>{
+  const button=$(create?'jumpTeamCreate':'jumpTeamJoin');button.disabled=true;
+  try{
+   const data=create?{mode:kind,name:$('jumpTeamName').value,biome:$('jumpTeamBiome').value}:{code:$('jumpTeamCode').value};
+   await stopRun();local=null;peers=[];
+   const out=await teamPost(create?'create':'join',data);watchTeam(out);showTeamLobby();
+  }catch(e){if($('jumpTeamError'))$('jumpTeamError').textContent=e.message;}finally{if(button.isConnected)button.disabled=false;}
+ };
+ $('jumpTeamCreate').onclick=()=>action(true);$('jumpTeamJoin').onclick=()=>action(false);
+}
+function showTeamLobby(){
+ if(!team)return;
+ modal(team.mode.toUpperCase()+' · '+team.name,'<div id="jumpTeamLobby"></div>');teamSignature='';renderTeamLobby();
+}
+function renderTeamLobby(){
+ const target=$('jumpTeamLobby');if(!target||!team)return;
+ const signature=JSON.stringify([team.status,team.saved,team.members.map(m=>[m.id,m.ready]),team.ownerId]);if(signature===teamSignature)return;teamSignature=signature;
+ const me=team.members.find(m=>m.id===getPlayer()?.id),owner=team.ownerId===getPlayer()?.id;
+ target.innerHTML='<p class="jump-team-help">'+teamText('Partilha este convite (válido durante 30 minutos):','Share this invite (valid for 30 minutes):')+'</p><div class="room-code">'+esc(team.code)+'</div><button id="jumpCopyInvite" class="board-more">'+teamText('COPIAR CONVITE','COPY INVITE')+'</button><p class="jump-team-help">'+teamText('Pontuação conjunta: 12 pontos por plataforma alcançada por todos. A corrente tem folga para saltar, mas puxa quando a distância aumenta.','Shared score: 12 points per platform reached by everyone. The chain allows room to jump but pulls when you spread apart.')+'</p><ul class="jump-team-members">'+team.members.map(m=>'<li>'+esc(m.name)+' · '+(m.ready?'✓ '+teamText('PRONTO','READY'):teamText('A AGUARDAR','WAITING'))+'</li>').join('')+'</ul><p>'+team.members.length+'/'+team.capacity+'</p><button class="modal-button primary" id="jumpTeamReady">'+(me?.ready?teamText('AINDA NÃO','NOT READY'):teamText('ESTOU PRONTO','READY'))+'</button>'+(owner?'<button class="modal-button" id="jumpTeamStart">'+teamText('INICIAR JUNTOS','START TOGETHER')+'</button>':'')+'<button class="board-more" id="jumpTeamLeave">'+teamText('SAIR DA EQUIPA','LEAVE TEAM')+'</button><p id="jumpTeamError" role="status"></p>';
+ const perform=async(action,data)=>{try{acceptTeam(await teamPost(action,data));}catch(e){if($('jumpTeamError'))$('jumpTeamError').textContent=e.message;}};
+ $('jumpTeamReady').onclick=()=>perform('ready',{ready:!me?.ready});
+ if(owner){$('jumpTeamStart').disabled=team.members.length!==team.capacity||team.members.some(m=>!m.ready)||(team.status==='ended'&&!team.saved);$('jumpTeamStart').onclick=()=>perform('start');}
+ $('jumpCopyInvite').onclick=async()=>{try{await navigator.clipboard.writeText(team.code);$('jumpCopyInvite').textContent=teamText('COPIADO','COPIED');}catch(_){$('jumpCopyInvite').textContent=team.code;}};
+ $('jumpTeamLeave').onclick=async()=>{try{await stopRun();closePanel();await newRun({biome,mode:'solo'});}catch(e){$('jumpTeamError').textContent=e.message;}};
+}
+function initTeamBoards(boards){
+ const section=document.createElement('section');section.id='jumpTeamBoards';section.className='boards jump-team-boards hidden';
+ section.innerHTML=['duo','trio'].map(m=>'<article class="board"><div class="board-title">'+m.toUpperCase()+' · TOP</div><ol id="jumpRank'+m+'"><li class="empty-row">—</li></ol><button class="board-more" data-team-rank="'+m+'">'+teamText('VER RANKING','VIEW RANKING')+'</button></article>').join('');boards?.after(section);
+ section.querySelectorAll('[data-team-rank]').forEach(b=>b.onclick=()=>fullTeamRank(b.dataset.teamRank,1));
+}
+function teamRows(rows){return rows.map(r=>'<li><span class="rank-number">'+Number(r.rank)+'</span><span class="rank-name-wrap"><strong>'+esc(r.name)+'</strong><small>'+esc((r.members||[]).map(m=>m.name).join(' + '))+'</small></span><span class="rank-score">'+Number(r.score)+'</span></li>').join('')||'<li class="empty-row">'+txt('empty')+'</li>';}
+async function refreshTeamRanks(){
+ for(const mode of ['duo','trio'])try{const out=await api('/api/jump/teams/rankings?mode='+mode);if($('jumpRank'+mode))$('jumpRank'+mode).innerHTML=teamRows(out.teams.slice(0,5));}catch(e){if($('jumpRank'+mode))$('jumpRank'+mode).innerHTML='<li class="empty-row">'+esc(e.message)+'</li>';}
+}
+async function fullTeamRank(mode,page){
+ try{const out=await api('/api/jump/teams/rankings?mode='+mode+'&page='+page);modal('RANKING '+mode.toUpperCase(),'<ol class="jump-rank-list">'+teamRows(out.teams)+'</ol><div class="jump-pager"><button id="jumpTeamPrev">◀</button><span>'+out.page+' / '+out.pages+'</span><button id="jumpTeamNext">▶</button></div>');$('jumpTeamPrev').disabled=page<=1;$('jumpTeamNext').disabled=page>=out.pages;$('jumpTeamPrev').onclick=()=>fullTeamRank(mode,page-1);$('jumpTeamNext').onclick=()=>fullTeamRank(mode,page+1);}catch(e){showError(e.message);}
+}
 function init(){
  const main=document.querySelector('.site-shell main');frame=document.querySelector('.game-frame');if(!main||!frame)return;
  const switcher=document.createElement('nav');switcher.id='eixoGameSwitcher';switcher.className='eixo-game-switcher';switcher.setAttribute('aria-label','EIXO games');
@@ -436,7 +500,7 @@ function init(){
  const root=document.createElement('div');root.id='jumpRoot';root.className='jump-root hidden';
  root.innerHTML='<canvas id="jumpCanvas" width="450" height="195" aria-label="JUMP platformer"></canvas>'+
  '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">FOREST · SOLO</div></div>'+
- '<div class="jump-tools"><button id="jumpSoloButton">SOLO</button><button id="jumpJoinButton">JOIN SERVER</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
+ '<div class="jump-tools"><button id="jumpSoloButton">SOLO</button><button id="jumpJoinButton">ONLINE</button><button id="jumpDuoButton">DUO</button><button id="jumpTrioButton">TRIO</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
  '<div class="jump-help" id="jumpHelp"></div><div class="jump-status" id="jumpStatus" role="status"></div>'+
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
  '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>'+txt('height')+': <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
@@ -455,7 +519,9 @@ function init(){
  $('jumpRoomAbandon').onclick=confirmAbandonJumpRoom;
 
  $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
- $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode,roomId,roomLabel});
+ $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>team?showTeamLobby():newRun({biome,mode,roomId,roomLabel});
+ $('jumpDuoButton').onclick=()=>openTeam('duo');$('jumpTrioButton').onclick=()=>openTeam('trio');
+ initTeamBoards(boards);
  captureNative('.action.blue[href="#ranking"]',()=>openRank('world'));
  captureNative('.action.purple[href="#rooms"]',()=>jumpRooms());
  captureNative('#createRoomButton',toggleJumpCreateRoom);
