@@ -48,6 +48,15 @@ function memoryDb(){
   if(q.startsWith('SELECT name,members,best_score AS score FROM jump_team_scores WHERE mode=')){
    const rows=[...scores.values()].filter(x=>x.mode===args[0]&&x.best_score>0).sort((a,b)=>b.best_score-a.best_score).slice(Number(args[1]||0),Number(args[1]||0)+25).map(x=>({name:x.name,members:x.members,score:x.best_score}));return{rows};
   }
+  if(q.startsWith('SELECT t.id::text AS team_id,m.player_id FROM jump_teams t JOIN jump_team_members m ON m.team_id=t.id WHERE t.mode=')){
+   const mode=args[0],rows=[];for(const t of teams.values())if(t.mode===mode)for(const m of teamMembers(t.id))rows.push({team_id:t.id,player_id:m.player_id});rows.sort((a,b)=>a.team_id.localeCompare(b.team_id)||a.player_id.localeCompare(b.player_id));return{rows};
+  }
+  if(q.startsWith('DELETE FROM jump_team_scores WHERE mode=$1 AND NOT (roster_key=ANY(')){
+   const mode=args[0],valid=new Set((args[1]||[]).map(String));let count=0;for(const [k,v] of [...scores])if(v.mode===mode&&!valid.has(k)){scores.delete(k);count++;}return{rows:[],rowCount:count};
+  }
+  if(q==='DELETE FROM jump_team_scores WHERE mode=$1'){
+   const mode=args[0];let count=0;for(const [k,v] of [...scores])if(v.mode===mode){scores.delete(k);count++;}return{rows:[],rowCount:count};
+  }
   if(q.includes('FROM players p LEFT JOIN ranked r ON r.id=p.id::text')){
    const ids=args[0]||[];return{rows:ids.map((id,i)=>({id:String(id),name:'P'+i,visualName:'P'+i,country:'PT',vipLevel:i===0?2:0,letterStyles:[],nameColor:i===0?'#ff0000':'#ffffff',nameEffect:'none',tagGlobalColor:'#e53935',tagCountryColor:'#ff7a2f',worldRank:i+1,countryRank:i+1}))};
   }
@@ -164,6 +173,20 @@ test('leaving keeps membership; abandoning transfers ownership and removes the o
  assert.equal((await s.rankings('duo',1)).teams.length,0,'old roster score must disappear as soon as one member abandons');
  const listed=await s.list(users[1],'duo');assert.equal(listed.teams[0].ownerId,users[1].id);
  await s.abandon(users[1],{teamId:t.teamId});assert.equal(f.db.teams.has(t.teamId),false,'empty persistent teams are deleted');
+});
+
+test('rankings prune scores for rosters that no longer exist',async()=>{
+ const f=await fixture(),s=f.service,t=await f.fill();
+ // A stale score can exist from an older deployment even after both members left.
+ f.db.scores.set('legacy-orphan',{roster_key:'legacy-orphan',mode:'duo',name:'OLD TEAM',members:[{id:'old-a',name:'A'},{id:'old-b',name:'B'}],best_score:120,updated_at:1});
+ const before=[...f.db.scores.values()].filter(x=>x.mode==='duo').length;assert.ok(before>=1);
+ await s.abandon(users[0],{teamId:t.teamId});await s.abandon(users[1],{teamId:t.teamId});
+ const out=await s.rankings('duo',1);assert.equal(out.teams.length,0);assert.equal([...f.db.scores.values()].filter(x=>x.mode==='duo').length,0);
+});
+
+test('trio members remain ordered by join position for a chain A-B-C',async()=>{
+ const f=await fixture(),s=f.service,t=await f.fill('trio');
+ const out=s.state(users[0]);assert.deepEqual(out.members.map(x=>x.id),[users[0].id,users[1].id,users[2].id]);
 });
 
 test('invalid team data and full rosters are rejected',async()=>{
