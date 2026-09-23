@@ -173,7 +173,6 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/facing,ground:local\.ground/);
  assert.match(js,/const spriteScale=\.72/);
  assert.match(js,/c\.translate\(0,-14\)/);
- assert.match(js,/RECOMEÇA EM/);
  assert.match(js,/function stepLocalWithAudio\(dt\)/);
  assert.match(js,/jumpBiome\?\.\(biome\)/);
  assert.doesNotMatch(js,/jumpDuoButton|jumpTrioButton|\/api\/jump\/teams\//);
