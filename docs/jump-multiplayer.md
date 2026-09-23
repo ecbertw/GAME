@@ -1,37 +1,35 @@
-# JUMP — SOLO, ONLINE, DUO e TRIO (jump11)
+# JUMP — SOLO e ONLINE (jump14)
 
-## Como jogar
+## Modos atuais
 
-**SOLO:** jogas sozinho, com a tua câmara e pontuação individual.
+**SOLO:** o jogador entra sozinho num dos quatro ambientes JUMP. A câmara, progressão, derrota e pontuação são individuais.
 
-**ONLINE:** escolhes CITY, FOREST, DESERT ou SNOW. Até cinco pessoas partilham uma instância com a mesma seed, plataformas e relógio de movimento. A sexta pessoa entra noutra instância do mesmo ambiente. Cada jogador tem câmara, progresso e derrota próprios. Se subires mais depressa, os jogadores abaixo saem do teu ecrã; se esperares, podem alcançar-te e reaparecer. Não há colisão entre jogadores nem derrota coletiva. As plataformas antigas são retiradas individualmente conforme o progresso, como no SOLO. SOLO e ONLINE continuam no ranking individual JUMP existente.
+**ONLINE:** existe uma única ação **JOGAR ONLINE**. O jogador não escolhe o mapa. O servidor mantém uma instância pública ativa e coloca os novos jogadores nessa instância até atingir **20 jogadores**. Apenas quando a instância atual fica cheia é criada a seguinte, com um ambiente escolhido automaticamente entre CITY, FOREST, DESERT e SNOW.
 
-**DUO / TRIO:** são 2 / 3 jogadores no total. As formações ficam guardadas e aparecem em **AS MINHAS EQUIPAS · JUMP** abaixo dos TOPS. O código continua associado à equipa enquanto ela existir. Entrar numa equipa abre a sua sala e mostra o mapa/personagens ainda antes da partida. Quando a formação estiver completa e o último membro carregar em **ESTOU PRONTO**, inicia automaticamente uma contagem de 3 segundos; não existe um segundo botão START.
+Todos os jogadores da mesma instância usam a mesma seed de plataformas e o mesmo relógio do mapa. Não existe colisão entre jogadores: cada pessoa mantém a sua física, câmara, progressão e derrota. As posições remotas são interpoladas no cliente para reduzir movimentos aos saltos sem alterar a validação de pontuação.
 
-A corrente liga membros adjacentes e tem folga para permitir saltos. Acima de 110 unidades do mapa aplica tensão aos dois extremos, incluindo arrasto vertical. Cada membro mantém a sua câmara, mas a corrente obriga a coordenar a subida. Se um membro atingir o limite inferior do seu painel, toda a equipa perde. Sair termina a tentativa; perder contacto durante 10 segundos também. Comandos sem atualização param após 700 ms para evitar movimento preso. Abrir um painel não pausa os parceiros.
+SOLO e ONLINE usam o mesmo ranking individual JUMP.
 
-A equipa ganha **12 pontos por plataforma alcançada por todos**: o mínimo das melhores plataformas individuais. O servidor calcula a pontuação, a corrente e a derrota. Os clientes não podem enviar pontuações de equipa. DUO e TRIO têm quadros próprios abaixo do ranking individual e páginas de ranking completo. A mesma formação tem um único recorde por modo, independentemente da ordem dos jogadores ou do nome escolhido.
+## Remoção do antigo modo de equipas
 
-Depois de perder, VOLTAR À EQUIPA regressa à sala para nova tentativa. **SAIR DA SALA** termina apenas a sessão e mantém a equipa na lista; **ABANDONAR EQUIPA** remove o jogador da formação. Se o líder abandonar, a liderança passa ao primeiro membro restante. Uma nova formação tem um recorde separado.
+Os antigos modos DUO e TRIO foram retirados do produto. O frontend deixou de apresentar criação de equipas, convites, READY, correntes e rankings de equipa. Os endpoints `/api/jump/teams/*` e o módulo `jump-team-server.js` foram removidos.
 
-## Implementação e dados
+Durante a migração, as tabelas antigas `jump_team_members`, `jump_team_scores` e `jump_teams` são eliminadas para impedir que equipas ou rankings antigos reapareçam depois de um deploy/restart.
 
-- `jump-worlds.js`: quatro cenários pixel art distintos e mais detalhados em canvas, com parallax, partículas e materiais legíveis por ambiente. Não depende de imagens externas.
-- `jump-physics.js`: dificuldade acelera cedo, plataformas móveis dominam a progressão e plataformas frágeis acumulam dano enquanto o jogador permanece em cima até cederem.
-- `jump-server.js`: mantém as tabelas e endpoints individuais e privados existentes. Reserva lugares de instâncias sem operações assíncronas entre a escolha da instância e a entrada. As posições previstas do ONLINE são retransmitidas com limites de deslocação; a validação individual anterior mantém-se.
-- `jump-team-server.js`: serviço de equipas independente, simulado no servidor até 60 passos/segundo. HTTP autenticado para lobby, comandos sequenciados e snapshots. Comandos atrasados de outra tentativa são recusados.
-- `jump_teams` + `jump_team_members`: guardam as formações e respetivos membros para reentrada posterior. `jump_team_scores` mantém os recordes. As criações são idempotentes e não apagam dados anteriores.
-- `/api/jump/teams/{create,join,enter,ready,input,finish,leave,abandon}`: POST autenticado, com limites de frequência. `list` e `state`: GET autenticados. `rankings?mode=duo|trio&page=1`: GET público paginado. `start` existe apenas por compatibilidade e não ignora a contagem automática.
-- PULSE, contas, cosméticos e rankings anteriores não são substituídos. Nenhuma alteração às tabelas PULSE é introduzida.
+## Implementação
 
-As instâncias e lobbies vivem num único processo, como as instâncias ONLINE anteriores. Reiniciar o serviço termina tentativas em curso; recordes já gravados permanecem. Para vários processos/VPS será preciso distribuir a autoridade de cada sala e encaminhar pedidos para o processo correto. Esta versão não fornece esse encaminhamento. Um resultado ainda não gravado por indisponibilidade da base pode perder-se se o processo terminar antes da recuperação.
+- `jump-server.js`: SOLO, salas privadas e matchmaking público de 20 jogadores.
+- `jump.js`: renderização local, interpolação dos jogadores ONLINE, ranking individual e personalização do runner.
+- `jump-physics.js`: física, dificuldade, plataformas móveis e frágeis.
+- `jump-worlds.js`: CITY, FOREST, DESERT e SNOW.
+- `audio-fix.js`: volumes independentes para música do site, efeitos do jogo e música do mapa.
 
-## Estabilidade da interface
+A instância ONLINE vive no processo Node atual. Reiniciar o serviço termina partidas públicas em curso; os rankings já gravados permanecem em PostgreSQL.
 
-Os snapshots de DUO/TRIO atualizam o estado do jogo sem recriar os cartões/botões de equipas a cada pedido. Os cartões persistentes só são renderizados novamente quando os respetivos dados mudam, evitando alvos de clique destacados do DOM e bloqueios pelo backdrop do modal.
+## Publicação
 
-## Validação e publicação
+O deploy continua manual:
 
-`npm test` executa testes de física, guarda-roupa, isolamento, concorrência de lotação, convites, autorização de líder, corrente, derrota, idempotência e recuperação de gravação. A integração de navegador e PostgreSQL pode ser executada com `node tests/browser-jump.cjs` após instalar as dependências de teste indicadas no próprio ficheiro.
+`sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`
 
-Backup histórico: `backup/jump7-before-teams` aponta para `f36ab791847f6da48511fb33331c53e55bddf868`. Trabalho jump9: `feature/jump9-finish`. O deploy existente continua manual: `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`. A nova tabela é criada automaticamente no arranque. A migração anterior de score_version é preservada e foi testada com registos existentes v2.
+Os testes automáticos validam física, capacidade de 20 jogadores, agrupamento sequencial no ONLINE, cosméticos, rankings e segurança.
