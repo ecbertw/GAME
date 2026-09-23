@@ -149,3 +149,5 @@ body:not(.eixo-jump-view) #jumpTeamBoards{display:none!important}
  .jump-team-section-title{font-size:9px}
  .jump-team-help{font-size:6px}
 }
+
+body:not(.eixo-jump-view) #jumpMyTeamsBoard{display:none!important}
