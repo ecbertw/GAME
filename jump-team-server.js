@@ -193,7 +193,7 @@ function createService({now=Date.now,physics=P}={}){
   if(!exists.rows[0]){
    const playerName=String(p.visualName||p.name||'PLAYER').slice(0,32);
    await db.query('INSERT INTO jump_team_members(team_id,player_id,player_name) VALUES($1::uuid,$2,$3)',[String(row.id),String(p.id),playerName]);
-   const active=teams.get(String(row.id));if(active&&!active.members.has(String(p.id)))active.members.set(String(p.id),blankMember({player_id:String(p.id),player_name:playerName,_order:active.members.size}));
+   const active=teams.get(String(row.id));if(active&&!active.members.has(String(p.id))){const nextOrder=Math.max(-1,...[...active.members.values()].map(m=>Number(m.order||0)))+1;active.members.set(String(p.id),blankMember({player_id:String(p.id),player_name:playerName,_order:nextOrder}));}
   }
   return enter(p,{teamId:String(row.id)},outfit);
  }
