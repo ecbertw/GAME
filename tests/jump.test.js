@@ -45,3 +45,42 @@ test('cosmetic colors must come from the approved EIXO palette',()=>{
  assert.ok(J.PALETTE.includes(J.DEFAULTS.skin));
  assert.rejects(()=>J.saveColors(db,{id:'test'},{colors:{skin:'url(javascript:alert(1))'}}),/Cor inválida/);
 });
+
+test('holding Space does not trigger repeated jumps on every landing',()=>{
+  const p=P.create(17);p.x=8; // Upper platforms cannot land under the far-left edge.
+  for(let i=0;i<240;i++)P.step(p,{left:false,right:false,jump:true},1/60);
+  assert.equal(p.y,0,'holding the key must not automatically jump again after landing');
+  P.step(p,{left:false,right:false,jump:false},1/60);
+  P.step(p,{left:false,right:false,jump:true},1/60);
+  assert.ok(p.y>0,'a new key press must start a new jump');
+});
+test('server keeps short Space presses via jump sequence and rejects rollback of sequence',async()=>{
+ const player={id:'jump-test-input',name:'Input',country:'PT'};
+ const started=await J.start(db,player,{biome:'city',multiplayer:false});
+ const first=J.input(player,{runId:started.runId,left:false,right:false,jumpSeq:1});
+ assert.ok(first.state.alive);
+ await new Promise(resolve=>setTimeout(resolve,35));
+ const released=J.input(player,{runId:started.runId,left:false,right:false,jumpSeq:1});
+ assert.ok(released.state.y>0,'server must register a tap even if released before its next input');
+ assert.throws(()=>J.input(player,{runId:started.runId,jumpSeq:0}),/Controlo de salto inválido/);
+ J.leave(player);
+});
+test('rank API uses jump_scores only and returns separate global/national place',async()=>{
+ const mock={query:async(sql,args)=>{
+  assert.match(sql,/FROM jump_scores s JOIN players p/);
+  assert.deepEqual(args,['jump-test-player']);
+  return{rows:[{worldRank:'14',countryRank:'3'}]};
+ }};
+ assert.deepEqual(await J.playerRank(mock,{id:'jump-test-player'}),{worldRank:14,countryRank:3});
+});
+test('PULSE and JUMP share ranking presentation but not ranking API routes',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const ranking=fs.readFileSync(path.join(__dirname,'../ranking-fix.js'),'utf8');
+ const full=fs.readFileSync(path.join(__dirname,'../full-ranking-fix.js'),'utf8');
+ const jump=fs.readFileSync(path.join(__dirname,'../jump.js'),'utf8');
+ assert.match(ranking,/isJump\?'\/api\/jump\/rankings':'\/api\/rankings'/);
+ assert.match(full,/isJump\?'\/api\/jump\/rankings':'\/api\/rankings'/);
+ assert.match(jump,/if\(code==='Space'\)/);
+ assert.doesNotMatch(jump,/keys\.jump=on;[\s\S]*?KeyW/);
+ assert.doesNotMatch(jump,/local\.y=out\.state\.y/);
+});

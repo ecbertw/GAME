@@ -20,7 +20,7 @@
     }
   }
   function create(seed,sharedPlatforms){
-    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,jumpBuffer:0,seed,platforms:sharedPlatforms||platforms(seed,30)};
+    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,jumpBuffer:0,jumpHeld:false,seed,platforms:sharedPlatforms||platforms(seed,30)};
   }
   function step(s,keys,dt){
     if(!s.alive)return s;
@@ -28,7 +28,8 @@
     const dir=(keys.right?1:0)-(keys.left?1:0);
     const lastY=s.y;
     s.x=Math.max(8,Math.min(W-8,s.x+dir*133*dt));
-    if(keys.jump)s.jumpBuffer=.13;else s.jumpBuffer=Math.max(0,s.jumpBuffer-dt);
+    if(keys.jump&&!s.jumpHeld)s.jumpBuffer=.13;else s.jumpBuffer=Math.max(0,s.jumpBuffer-dt);
+    s.jumpHeld=!!keys.jump;
     if(s.ground&&s.jumpBuffer>0){s.vy=205;s.ground=false;s.jumpBuffer=0;}
     s.vy=Math.max(-275,s.vy-380*dt);
     s.y+=s.vy*dt;
