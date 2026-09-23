@@ -5,7 +5,7 @@ const P=window.EixoJumpPhysics;if(!P)return;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lang=()=>String(document.documentElement.lang||'en').startsWith('pt')?'pt':'en';
-const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'ALTURA',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'← → / A D PARA MOVER • ESPAÇO PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'HEIGHT',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'← → / A D TO MOVE • SPACE TO JUMP',soon:'COMING SOON'}};
+const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'ALTURA',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'A / D PARA MOVER • W OU ESPAÇO PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'HEIGHT',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'A / D TO MOVE • W OR SPACE TO JUMP',soon:'COMING SOON'}};
 const txt=k=>T[lang()][k]||k;
 const BIOMES=['city','forest','desert','snow'];
 const themes={
@@ -14,7 +14,7 @@ const themes={
   desert:{sky:'#83cae8',low:'#f9c688',hills:'#e9a16b',far:'#bd7657',near:'#8a513f',top:'#f4ce70',edge:'#b98845',under:'#ad7651'},
   snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
 };
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},jumpSeq=0,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
@@ -62,24 +62,24 @@ function updateHud(){
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
- await stopRun();local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
+ await stopRun();keys={left:false,right:false,jump:false};jumpSeq=0;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
    run=out;seed=out.seed;biome=out.biome;mode=out.mode;colors=out.colors||colors;
    local=P.create(seed);last=performance.now();updateHud();draw();refreshRoomBoard();clearInterval(networkTimer);
-   networkTimer=setInterval(sync,125);sync();
+   networkTimer=setInterval(sync,60);sync();
  }catch(e){run=null;showError(e.message)}
 }
 async function sync(){
  if(!run||busy||current!=='jump')return;
  const identity=run.runId;busy=true;
  try{
-  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,...keys})});
+  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jumpSeq})});
   if(run?.runId!==identity)return;
   lastState=out;peers=out.peers||[];
-  if(!out.state?.alive&&!gameOver)await die();
-  else if(local&&out.state&&Math.abs(local.y-out.state.y)>36){local.y=out.state.y;local.vy=out.state.vy;}
+  // Remote snapshots are for validation/other players only. Replacing the local
+  // Y position with an older HTTP response was the source of the visible rollback.
   updateHud();
  }catch(e){if(run?.runId===identity)showError(e.message)}
  finally{busy=false}
@@ -153,22 +153,28 @@ function loop(now){
  draw();animation=requestAnimationFrame(loop);
 }
 function setKey(code,on){
- if(['ArrowLeft','KeyA'].includes(code))keys.left=on;
- if(['ArrowRight','KeyD'].includes(code))keys.right=on;
- if(['Space','ArrowUp','KeyW'].includes(code))keys.jump=on;
+ if(code==='KeyA')keys.left=on;
+ if(code==='KeyD')keys.right=on;
+ if(code==='KeyW'||code==='Space'){
+   if(on&&!keys.jump)jumpSeq++;
+   keys.jump=on;
+ }
 }
 function onKeyboard(e){
  if(current!=='jump'||panel||e.target?.matches('input,select,textarea,[contenteditable]'))return;
- if(['ArrowLeft','ArrowRight','Space','ArrowUp','KeyA','KeyD','KeyW'].includes(e.code)){
-   e.preventDefault();e.stopImmediatePropagation();setKey(e.code,e.type==='keydown');
+ if(['KeyA','KeyD','KeyW','Space'].includes(e.code)){
+   e.preventDefault();e.stopImmediatePropagation();
+   if(e.type==='keydown'&&e.repeat)return;
+   setKey(e.code,e.type==='keydown');
+   void sync();
  }
 }
 function bindControls(){
  window.addEventListener('keydown',onKeyboard,true);window.addEventListener('keyup',onKeyboard,true);
  window.addEventListener('blur',()=>{keys={left:false,right:false,jump:false}});
  for(const button of document.querySelectorAll('[data-jump-key]')){
-  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);keys[k]=true});
-  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false});
+  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);if(k==='jump'&&!keys.jump)jumpSeq++;keys[k]=true;void sync()});
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false;void sync()});
  }
 }
 const flags=c=>[...String(c||'PT')].map(x=>String.fromCodePoint(127397+x.charCodeAt())).join('');
