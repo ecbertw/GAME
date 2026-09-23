@@ -32,6 +32,7 @@ function memoryDb(){
   if(q.startsWith('SELECT 1 FROM jump_team_members WHERE team_id=')){
    const m=members.get(String(args[0]))?.get(String(args[1]));return{rows:m?[{one:1}]:[]};
   }
+  if(q.startsWith('DELETE FROM jump_team_scores WHERE roster_key=')){const ok=scores.delete(String(args[0]));return{rows:[],rowCount:ok?1:0};}
   if(q.startsWith('DELETE FROM jump_team_members WHERE team_id=')){
    const ok=members.get(String(args[0]))?.delete(String(args[1]));return{rows:[],rowCount:ok?1:0};
   }
@@ -152,12 +153,16 @@ test('save failures block rematch until retry succeeds',async()=>{
  f.breakDb(false);out=await s.finish(users[0],{runId:t.runId});assert.equal(out.saved,true);
 });
 
-test('leaving a room keeps membership; abandoning removes it and transfers ownership',async()=>{
- const f=await fixture(),s=f.service,t=await f.create();
- await s.join(users[1],{code:t.code},J.DEFAULTS);await s.leave(users[0]);
- assert.equal((await s.list(users[0],'duo')).teams.length,1);
+test('leaving keeps membership; abandoning transfers ownership and removes the old roster from TOP',async()=>{
+ const physics={...P,step(s){s.bestPlatform=2;return s;}};
+ const f=await fixture(physics),s=f.service,t=await f.fill();
+ await s.finish(users[0],{runId:t.runId});
+ assert.equal((await s.rankings('duo',1)).teams.length,1);
+ await s.leave(users[0]);assert.equal((await s.list(users[0],'duo')).teams.length,1);
  await s.abandon(users[0],{teamId:t.teamId});assert.equal((await s.list(users[0],'duo')).teams.length,0);
+ assert.equal((await s.rankings('duo',1)).teams.length,0,'old roster score must disappear as soon as one member abandons');
  const listed=await s.list(users[1],'duo');assert.equal(listed.teams[0].ownerId,users[1].id);
+ await s.abandon(users[1],{teamId:t.teamId});assert.equal(f.db.teams.has(t.teamId),false,'empty persistent teams are deleted');
 });
 
 test('invalid team data and full rosters are rejected',async()=>{
