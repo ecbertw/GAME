@@ -60,7 +60,7 @@ async function start(db,p,d){
   if(inst.players.size>=5)throw error('Instância cheia.',409);
   const id=crypto.randomUUID(),colors=await getColors(db,p);
   const run={id,playerId:p.id,name:p.visualName||p.name,country:p.country,colors,instanceId:inst.id,roomId,biome,kind,
-    state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},lastJumpSeq:0,last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
+    state:physics.create(inst.seed,inst.platforms),keys:{left:false,right:false,jump:false},last:Date.now(),lastSeen:Date.now(),started:Date.now(),ended:false};
   sessions.set(id,run);activeByPlayer.set(p.id,id);inst.players.set(p.id,run);
   return{ok:true,runId:id,seed:inst.seed,instanceId:kind==='solo'?null:inst.id,biome,mode:kind,players:inst.players.size,maxPlayers:5,colors};
 }
@@ -78,14 +78,8 @@ function playersIn(run){
   return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round(r.state.x),y:Math.round(r.state.y),best:Math.floor(r.state.best),alive:r.state.alive,colors:r.colors}));
 }
 function input(p,d){
-  const run=requireRun(p,d.runId);
-  const seq=Number(d.jumpSeq??0);
-  if(!Number.isSafeInteger(seq)||seq<0||seq>1000000||seq<run.lastJumpSeq||seq-run.lastJumpSeq>5)throw error('Controlo de salto inválido.');
-  // Apply current controls before advancing the authoritative simulation.
-  // A monotonic jump sequence preserves quick Space taps between network polls.
-  if(seq>run.lastJumpSeq){run.state.jumpBuffer=.13;run.lastJumpSeq=seq;}
-  run.keys={left:d.left===true,right:d.right===true,jump:false};
-  advance(run);
+  const run=requireRun(p,d.runId);advance(run);
+  run.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};
   const inst=instances.get(run.instanceId);
   return{ok:true,state:physics.publicState(run.state),peers:run.kind==='solo'?[]:playersIn(run),players:inst?.players.size||1,maxPlayers:5,biome:run.biome,mode:run.kind};
 }
@@ -114,15 +108,6 @@ async function rankings(db,country,page){
   const count=await db.query(cte+'SELECT COUNT(*)::int AS count FROM ranked '+filter,args);
   const rows=await db.query(cte+'SELECT * FROM ranked '+filter+' ORDER BY score DESC,"worldRank" ASC LIMIT 25 OFFSET $'+(args.length+1),[...args,offset]);
   return{players:rows.rows.map(x=>({...x,score:Number(x.score),worldRank:Number(x.worldRank),countryRank:Number(x.countryRank),letterStyles:Array.isArray(x.letterStyles)?x.letterStyles:(()=>{try{return JSON.parse(x.letterStyles||'[]')}catch(_){return[]}})()})),total:count.rows[0].count,page:pg,pages:Math.max(1,Math.ceil(count.rows[0].count/25))};
-}
-async function playerRank(db,p){
-  const q=await db.query(`WITH ranked AS (
-    SELECT s.player_id,
-      ROW_NUMBER() OVER(ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS world_rank,
-      ROW_NUMBER() OVER(PARTITION BY p.country ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS country_rank
-    FROM jump_scores s JOIN players p ON p.id=s.player_id WHERE s.best_score>0
-  ) SELECT world_rank AS "worldRank",country_rank AS "countryRank" FROM ranked WHERE player_id=$1`,[p.id]);
-  return {worldRank:Number(q.rows[0]?.worldRank||0)||null,countryRank:Number(q.rows[0]?.countryRank||0)||null};
 }
 async function roomCreate(db,p,d){
   const name=String(d.name||'').trim(),biome=validBiome(d.biome);
@@ -170,22 +155,7 @@ async function roomLeave(db,p,d){
 async function roomRankings(db,p,id){
   const mine=await db.query('SELECT 1 FROM jump_room_members WHERE room_id=$1 AND player_id=$2',[id,p.id]);
   if(!mine.rowCount)throw error('Não pertences a esta sala.',403);
-  const q=await db.query(`WITH ranked AS (
-    SELECT s.player_id,
-      ROW_NUMBER() OVER(ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS "worldRank",
-      ROW_NUMBER() OVER(PARTITION BY p.country ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS "countryRank"
-    FROM jump_scores s JOIN players p ON p.id=s.player_id WHERE s.best_score>0
-  )
-  SELECT p.id,p.name,p.country,p.visual_name AS "visualName",
-    p.name_color AS "nameColor",p.name_effect AS "nameEffect",
-    p.vip_level AS "vipLevel",p.letter_styles AS "letterStyles",
-    p.tag_global_color AS "tagGlobalColor",p.tag_country_color AS "tagCountryColor",
-    m.best_score AS score,r."worldRank",r."countryRank"
-  FROM jump_room_members m JOIN players p ON p.id=m.player_id
-  LEFT JOIN ranked r ON r.player_id=p.id
-  WHERE m.room_id=$1 ORDER BY m.best_score DESC,m.joined_at ASC`,[id]);
-  return{ok:true,players:q.rows.map((x,i)=>({...x,roomRank:i+1,score:Number(x.score),
-    worldRank:Number(x.worldRank||9999),countryRank:Number(x.countryRank||9999),
-    letterStyles:Array.isArray(x.letterStyles)?x.letterStyles:(()=>{try{return JSON.parse(x.letterStyles||'[]')}catch(_){return[]}})()}))};
+  const q=await db.query('SELECT p.id,p.name,p.country,m.best_score AS score FROM jump_room_members m JOIN players p ON p.id=m.player_id WHERE m.room_id=$1 ORDER BY m.best_score DESC,m.joined_at ASC',[id]);
+  return{ok:true,players:q.rows.map((x,i)=>({...x,roomRank:i+1,score:Number(x.score)}))};
 }
-module.exports={initDb,BIOMES,PALETTE,PARTS,DEFAULTS,getColors,saveColors,start,input,state,finish,leave,rankings,playerRank,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
+module.exports={initDb,BIOMES,PALETTE,PARTS,DEFAULTS,getColors,saveColors,start,input,state,finish,leave,rankings,roomCreate,roomJoin,roomList,roomLeave,roomRankings};

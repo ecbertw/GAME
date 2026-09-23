@@ -14,7 +14,7 @@ const themes={
   desert:{sky:'#83cae8',low:'#f9c688',hills:'#e9a16b',far:'#bd7657',near:'#8a513f',top:'#f4ce70',edge:'#b98845',under:'#ad7651'},
   snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
 };
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},jumpSeq=0,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
@@ -45,7 +45,7 @@ async function switchGame(next){
  current=next;window.eixoJumpActive=current==='jump';closePanel();showMode();
  if(current==='jump'){
    window.stopGame?.();await newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
-   refreshRankings();if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump')refreshRoomBoard()},5500);
+   refreshRankings();if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}},5500);
  }else{
    clearInterval(rankTimer);clearInterval(networkTimer);if(animation)cancelAnimationFrame(animation);animation=null;
    keys={left:false,right:false,jump:false};window.eixoRefreshRankings?.();window.resetGame?.();
@@ -62,7 +62,7 @@ function updateHud(){
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
- await stopRun();keys={left:false,right:false,jump:false};jumpSeq=0;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
+ await stopRun();local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
@@ -75,12 +75,11 @@ async function sync(){
  if(!run||busy||current!=='jump')return;
  const identity=run.runId;busy=true;
  try{
-  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jumpSeq})});
+  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,...keys})});
   if(run?.runId!==identity)return;
   lastState=out;peers=out.peers||[];
   if(!out.state?.alive&&!gameOver)await die();
-  // Never teleport the local sprite to an older network snapshot. The server
-  // independently validates height/death; its snapshots drive remote players only.
+  else if(local&&out.state&&Math.abs(local.y-out.state.y)>36){local.y=out.state.y;local.vy=out.state.vy;}
   updateHud();
  }catch(e){if(run?.runId===identity)showError(e.message)}
  finally{busy=false}
@@ -156,35 +155,53 @@ function loop(now){
 function setKey(code,on){
  if(['ArrowLeft','KeyA'].includes(code))keys.left=on;
  if(['ArrowRight','KeyD'].includes(code))keys.right=on;
- if(code==='Space'){
-   if(on&&!keys.jump)jumpSeq++;
-   keys.jump=on;
- }
+ if(['Space','ArrowUp','KeyW'].includes(code))keys.jump=on;
 }
 function onKeyboard(e){
  if(current!=='jump'||panel||e.target?.matches('input,select,textarea,[contenteditable]'))return;
- if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','KeyA','KeyD'].includes(e.code)){
-   e.preventDefault();e.stopImmediatePropagation();
-   if(e.type==='keydown'&&e.repeat)return;
-   setKey(e.code,e.type==='keydown');
-   // Sync immediately on key transitions rather than waiting for the
-   // next polling tick, reducing movement and jump input latency.
-   void sync();
+ if(['ArrowLeft','ArrowRight','Space','ArrowUp','KeyA','KeyD','KeyW'].includes(e.code)){
+   e.preventDefault();e.stopImmediatePropagation();setKey(e.code,e.type==='keydown');
  }
 }
 function bindControls(){
  window.addEventListener('keydown',onKeyboard,true);window.addEventListener('keyup',onKeyboard,true);
  window.addEventListener('blur',()=>{keys={left:false,right:false,jump:false}});
  for(const button of document.querySelectorAll('[data-jump-key]')){
-  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);if(k==='jump'&&!keys.jump)jumpSeq++;keys[k]=true;void sync()});
-  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false;void sync()});
+  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);keys[k]=true});
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false});
  }
 }
 const flags=c=>[...String(c||'PT')].map(x=>String.fromCodePoint(127397+x.charCodeAt())).join('');
-// Share the PULSE leaderboard UI: the renderer itself selects JUMP data and
-// retains VIP names, colored letters, top tags, flags and personal ranking.
-function refreshRankings(){if(current==='jump')window.eixoRefreshRankings?.();}
-function openRank(){document.querySelector('.action.blue[href="#ranking"]')?.click();}
+function scoreRows(players,type,start=0){
+ return players?.length?players.map((p,i)=>'<li><span class="rank-number">'+(start+i+1)+'</span><span class="rank-name-wrap">'+esc(p.visualName||p.name)+(Number(p.vipLevel||0)>0?' <span class="vip-rank-tag">VIP</span>':'')+'</span><span class="rank-score-wrap">'+flags(p.country)+' <span class="rank-score">'+Number(p.score||0)+'</span></span></li>').join(''):'<li class="empty-row">'+txt('empty')+'</li>';
+}
+async function refreshRankings(){
+ if(current!=='jump')return;
+ try{
+  const p=getPlayer(),code=p?.country||'PT';
+  const [w,c]=await Promise.all([api('/api/jump/rankings?page=1'),api('/api/jump/rankings?page=1&country='+encodeURIComponent(code))]);
+  if(current!=='jump')return;
+  $('worldRanking').innerHTML=scoreRows(w.players,'world');$('nationalRanking').innerHTML=scoreRows(c.players,'country');
+  const my=w.players.find(x=>x.id===p?.id),myC=c.players.find(x=>x.id===p?.id);
+  if($('worldMyRank'))$('worldMyRank').textContent=my?txt('rank')+' #'+my.worldRank:'';
+  if($('nationalMyRank'))$('nationalMyRank').textContent=myC?txt('rank')+' #'+myC.countryRank:'';
+  $('nationalTitle').textContent='TOP '+String(code).toUpperCase();
+ }catch(e){console.warn('JUMP rankings:',e.message)}
+}
+async function openRank(modeName='world',number=1){
+ rankTab=modeName;page=number;
+ modal(txt('rank'),'<div class="jump-panel-tabs"><button id="jumpWorldTab">'+txt('world')+'</button><button id="jumpCountryTab">'+txt('country')+'</button></div><ol class="jump-rank-list" id="jumpFullRank"></ol><div class="jump-pager"><button id="jumpPrev">◀</button><span id="jumpPage"></span><button id="jumpNext">▶</button></div>');
+ $('jumpWorldTab').onclick=()=>openRank('world',1);$('jumpCountryTab').onclick=()=>openRank('country',1);
+ $('jumpPrev').onclick=()=>openRank(rankTab,page-1);$('jumpNext').onclick=()=>openRank(rankTab,page+1);
+ try{
+  const q='/api/jump/rankings?page='+page+(rankTab==='country'?'&country='+encodeURIComponent(getPlayer()?.country||'PT'):'');
+  rankingData=await api(q);if(!$('jumpFullRank'))return;
+  $('jumpFullRank').innerHTML=scoreRows(rankingData.players,rankTab,(page-1)*25);
+  $('jumpPage').textContent=page+' / '+rankingData.pages;
+  $('jumpPrev').disabled=page<=1;$('jumpNext').disabled=page>=rankingData.pages;
+  $('jumpWorldTab').classList.toggle('active',rankTab==='world');$('jumpCountryTab').classList.toggle('active',rankTab==='country');
+ }catch(e){showError(e.message)}
+}
 function chooseWorld(){
  modal(txt('choose'),'<div class="jump-world-grid">'+BIOMES.map(b=>'<button class="jump-world-option '+b+'" data-biome="'+b+'"><strong>'+b.toUpperCase()+'</strong><small>JOIN SERVER</small></button>').join('')+'</div><p>5 PLAYERS MAX / INSTANCE · AUTO MATCHMAKING</p>');
  panel.querySelectorAll('[data-biome]').forEach(btn=>btn.onclick=()=>{const b=btn.dataset.biome;closePanel();newRun({biome:b,mode:'public'})});
@@ -205,65 +222,30 @@ async function refreshRoomBoard(){
  board.classList.toggle('hidden',current!=='jump'||!roomId);
  if(current!=='jump'||!roomId)return;
  $('jumpRoomTitle').textContent=(roomLabel||'JUMP ROOM')+' · '+biome.toUpperCase();
- $('jumpRoomMeta').textContent=' · '+biome.toUpperCase()+' · 5 MAX';
  try{
   const d=await api('/api/jump/rooms/rankings?roomId='+encodeURIComponent(roomId));
   if(!$('jumpRoomRanking'))return;
-  const tag=(kind,n,country,color)=>n>=1&&n<=3?'<span class="rank-tag '+kind+'-'+n+'"'+(/^#[0-9a-f]{6}$/i.test(color||'')?' style="background:'+esc(color)+'!important;color:#fff!important"':'')+'>'+n+'# '+(kind==='country'?esc(country):'GLOBAL')+'</span>':'';
-  const vip=n=>n>0?'<span class="vip-rank-tag vip-rank-'+Math.min(n,6)+'">'+(n>=6?'VIP ∞':'VIP #'+n)+'</span>':'';
-  $('jumpRoomRanking').innerHTML=d.players.map((p,i)=>{
-    const styles=Array.isArray(p.letterStyles)?p.letterStyles:[],name=String(p.visualName||p.name||'');
-    const letters=[...name].map((ch,j)=>{
-      const st=styles[j]||{},color=String(st.color||'').toLowerCase(),effect=/^[a-z]+$/.test(String(st.effect||'none'))?String(st.effect||'none'):'none';
-      return '<span class="name-letter'+(color==='rainbow'?' name-rainbow':'')+' effect-'+effect+'"'+(/^#[0-9a-f]{6}$/i.test(color)?' style="color:'+color+'"':'')+'>'+esc(ch)+'</span>';
-    }).join('');
-    const rainbow=String(p.nameColor||'').toLowerCase()==='rainbow'&&!styles.length;
-    return '<li><span class="rank-number">'+(i+1)+'</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+(styles.length?' vip-letter-styled':'')+'">'+(letters||esc(name))+'</span>'+tag('world',Number(p.worldRank),p.country,p.tagGlobalColor)+tag('country',Number(p.countryRank),p.country,p.tagCountryColor)+vip(Number(p.vipLevel||0))+'</span></span><span class="rank-score-wrap"><span class="rank-flag" title="'+esc(p.country)+'">'+esc(flags(p.country))+'</span><span class="rank-score">'+Number(p.score||0)+'</span></span></li>';
-  }).join('');
+  $('jumpRoomRanking').innerHTML=d.players.map((p,i)=>'<li><span class="rank-number">'+(i+1)+'</span><span class="rank-name-wrap">'+esc(p.name)+'</span><span class="rank-score-wrap">'+flags(p.country)+' <b>'+Number(p.score||0)+'</b></span></li>').join('');
  }catch(e){if($('jumpRoomRanking'))$('jumpRoomRanking').textContent=e.message}
 }
 async function jumpRooms(tab='list'){
- modal(txt('rooms'),'<div class="rooms-modal-heading jump-room-modal-heading"><button id="jumpRoomsListTab" class="board-more" type="button">'+txt('rooms')+'</button><button id="jumpRoomsNewTab" class="rooms-add-button" type="button">'+txt('create')+'</button></div><div id="jumpRoomFeedback" class="form-error" role="status"></div><div id="jumpRoomsBody"></div>');
- $('jumpRoomsListTab').onclick=()=>renderJumpRooms('list');
- $('jumpRoomsNewTab').onclick=()=>renderJumpRooms('create');
+ const body='<div class="jump-panel-tabs"><button id="jumpRoomsListTab">'+txt('rooms')+'</button><button id="jumpRoomsNewTab">'+txt('create')+'</button></div><div id="jumpRoomsBody"></div>';
+ modal(txt('rooms'),body);
+ $('jumpRoomsListTab').onclick=()=>renderJumpRooms('list');$('jumpRoomsNewTab').onclick=()=>renderJumpRooms('create');
  await renderJumpRooms(tab);
 }
 async function renderJumpRooms(tab){
  const body=$('jumpRoomsBody');if(!body)return;
- $('jumpRoomFeedback').textContent='';
  if(tab==='create'){
-  body.innerHTML='<div class="room-create-grid jump-room-create-grid"><label class="room-field"><span>ROOM NAME</span><input class="pixel-input" id="jumpRoomName" maxlength="24" placeholder="JUMP NIGHT"></label><label class="room-field"><span>WORLD · 5 PLAYERS MAX</span><select class="pixel-input" id="jumpRoomBiome">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select></label><button class="modal-button primary room-create-submit" id="jumpCreateRoom">'+txt('create')+'</button></div>';
-  $('jumpCreateRoom').onclick=async()=>{
-   const button=$('jumpCreateRoom');button.disabled=true;
-   try{
-    const d=await api('/api/jump/rooms/create',{method:'POST',body:JSON.stringify({name:$('jumpRoomName').value,biome:$('jumpRoomBiome').value})});
-    await jumpRooms('list');if($('jumpRoomFeedback'))$('jumpRoomFeedback').textContent='ROOM CREATED · '+d.room.code;
-   }catch(e){$('jumpRoomFeedback').textContent=e.message}finally{button.disabled=false}
-  };
+  body.innerHTML='<input class="pixel-input" id="jumpRoomName" maxlength="24" placeholder="ROOM NAME"><select class="pixel-input" id="jumpRoomBiome">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select><button class="modal-button primary" id="jumpCreateRoom">'+txt('create')+'</button><p id="jumpRoomError"></p>';
+  $('jumpCreateRoom').onclick=async()=>{try{const d=await api('/api/jump/rooms/create',{method:'POST',body:JSON.stringify({name:$('jumpRoomName').value,biome:$('jumpRoomBiome').value})});await jumpRooms('list');showError('ROOM CODE: '+d.room.code)}catch(e){$('jumpRoomError').textContent=e.message}};
   return;
  }
- body.innerHTML='<div class="jump-join-code"><label class="room-field"><span>ROOM CODE</span><input class="pixel-input" id="jumpRoomCode" maxlength="6" placeholder="'+txt('code')+'"></label><button id="jumpRoomJoin" class="modal-button primary">'+txt('enter')+'</button></div><div class="rooms-list" id="jumpRoomList">LOADING...</div>';
- $('jumpRoomCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-F0-9]/g,'').slice(0,6)});
- $('jumpRoomJoin').onclick=async()=>{
-  const button=$('jumpRoomJoin');button.disabled=true;
-  try{
-   const d=await api('/api/jump/rooms/join',{method:'POST',body:JSON.stringify({code:$('jumpRoomCode').value})});
-   await renderJumpRooms('list');
-   if($('jumpRoomFeedback'))$('jumpRoomFeedback').textContent='ROOM JOINED · '+d.room.code;
-  }catch(e){$('jumpRoomFeedback').textContent=e.message}finally{button.disabled=false}
- };
- try{
-  const result=await api('/api/jump/rooms');if(!$('jumpRoomList'))return;
-  $('jumpRoomList').innerHTML=result.rooms.length?result.rooms.map(r=>
-   '<article class="room-card"><div class="room-card-main"><div class="room-card-name">'+esc(r.name)+'</div><div class="room-card-meta">'+esc(r.ownerName)+' · '+r.biome.toUpperCase()+' · '+r.memberCount+'/5 PLAYERS</div></div><div class="room-card-code">'+esc(r.code)+'</div><div class="room-card-actions"><button class="board-more" data-copy-code="'+esc(r.code)+'" type="button">COPY CODE</button><button class="board-more enter-room-button" data-room="'+esc(r.id)+'" type="button">'+txt('enter')+'</button></div></article>'
-  ).join(''):'<div class="rooms-empty">NO JUMP ROOMS YET</div>';
-  panel.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>{
-   const item=result.rooms.find(x=>x.id===b.dataset.room);if(!item)return;
-   closePanel();newRun({biome:item.biome,mode:'private',roomId:item.id,roomLabel:item.name});
-  });
-  panel.querySelectorAll('[data-copy-code]').forEach(b=>b.onclick=async()=>{
-    try{await navigator.clipboard.writeText(b.dataset.copyCode);b.textContent='COPIED'}catch(_){b.textContent=b.dataset.copyCode}
-  });
+ body.innerHTML='<div class="jump-join-code"><input class="pixel-input" id="jumpRoomCode" maxlength="6" placeholder="'+txt('code')+'"><button id="jumpRoomJoin" class="modal-button primary">'+txt('enter')+'</button></div><div id="jumpRoomList">LOADING...</div>';
+ $('jumpRoomJoin').onclick=async()=>{try{await api('/api/jump/rooms/join',{method:'POST',body:JSON.stringify({code:$('jumpRoomCode').value})});jumpRooms('list')}catch(e){showError(e.message)}};
+ try{const result=await api('/api/jump/rooms');if(!$('jumpRoomList'))return;
+ $('jumpRoomList').innerHTML=result.rooms.length?result.rooms.map(r=>'<div class="jump-room-row"><div><strong>'+esc(r.name)+'</strong><small>'+r.biome.toUpperCase()+' · '+r.memberCount+'/5 · '+esc(r.code)+'</small></div><button data-room="'+r.id+'" data-biome="'+r.biome+'">'+txt('enter')+'</button></div>').join(''):'<p>NO ROOMS YET</p>';
+ panel.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>{const item=result.rooms.find(x=>x.id===b.dataset.room);closePanel();newRun({biome:item.biome,mode:'private',roomId:item.id,roomLabel:item.name})});
  }catch(e){if($('jumpRoomList'))$('jumpRoomList').textContent=e.message}
 }
 function captureNative(selector,callback){
@@ -284,31 +266,17 @@ function init(){
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
  '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>HEIGHT: <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
  frame.appendChild(root);canvas=$('jumpCanvas');ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
- const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='room-board jump-room-board hidden';
- roomBoard.innerHTML='<div class="room-board-heading"><div><span class="room-panel-mark">◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><small id="jumpRoomMeta"></small></div><div class="room-board-actions"><button class="board-more" id="jumpRoomLeave" type="button">LEAVE ROOM</button><button class="board-more danger" id="jumpRoomAbandon" type="button">ABANDON ROOM</button></div></div><ol id="jumpRoomRanking"></ol>';
+ const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='board jump-room-board hidden';roomBoard.innerHTML='<div class="board-title"><span>◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><button id="jumpRoomLeave" type="button">LEAVE</button></div><ol id="jumpRoomRanking"></ol>';
  document.querySelector('.boards')?.before(roomBoard);
- $('jumpRoomLeave').onclick=async()=>{
-   if(!roomId)return;
-   await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]});
- };
- $('jumpRoomAbandon').onclick=()=>{
-   if(!roomId)return;
-   modal('ABANDON JUMP ROOM','<p>Leave this room permanently? You will need the code to rejoin.</p><div class="abandon-room-actions"><button class="modal-button" id="jumpAbandonNo" type="button">NO</button><button class="modal-button primary" id="jumpAbandonYes" type="button">YES</button></div>');
-   $('jumpAbandonNo').onclick=closePanel;
-   $('jumpAbandonYes').onclick=async()=>{
-     const id=roomId,button=$('jumpAbandonYes');button.disabled=true;
-     try{
-       await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})});
-       closePanel();
-       await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]});
-     }catch(e){if($('jumpPanelBody'))$('jumpPanelBody').append(document.createTextNode(e.message));button.disabled=false}
-   };
- };
+ $('jumpRoomLeave').onclick=async()=>{const id=roomId;if(!id)return;await stopRun();await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})}).catch(e=>showError(e.message));roomId=null;roomLabel='';await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]})};
 
  $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
  $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode,roomId,roomLabel});
+ captureNative('.action.blue[href="#ranking"]',()=>openRank('world'));
  captureNative('.action.purple[href="#rooms"]',()=>jumpRooms('list'));
  captureNative('#createRoomButton',()=>jumpRooms('create'));
+ captureNative('#worldFullButton',()=>openRank('world'));
+ captureNative('#nationalFullButton',()=>openRank('country'));
  bindControls();updateHud();document.addEventListener('visibilitychange',()=>{last=performance.now();if(!document.hidden&&current==='jump')refreshRankings()});
  window.eixoJump={switchGame,isActive:()=>current==='jump',refreshRankings};
 }

@@ -22,34 +22,23 @@
    if(wt&&!document.getElementById('worldMyRank')){const s=document.createElement('span');s.id='worldMyRank';s.className='board-my-rank';s.hidden=true;wt.appendChild(s);}
    if(ct&&!document.getElementById('nationalMyRank')){const s=document.createElement('span');s.id='nationalMyRank';s.className='board-my-rank';s.hidden=true;ct.appendChild(s);}
  }
- let refreshSerial=0;
- async function load(){
+ async function load(){if(window.eixoJumpActive)return;
    ensureRankLabels();
-   const generation=++refreshSerial,isJump=!!window.eixoJumpActive;
-   const base=isJump?'/api/jump/rankings':'/api/rankings';
-   const personal=isJump?'/api/jump/player-rank':'/api/player-rank';
    const code=registeredCountry();
    const p=(()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}})();
-   const sameView=()=>generation===refreshSerial&&isJump===!!window.eixoJumpActive;
    try{
-     const requests=[fetch(base+'?page=1',{cache:'no-store'}),fetch(base+'?country='+encodeURIComponent(code)+'&page=1',{cache:'no-store'})];
-     if(p?.id)requests.push(fetch(personal+'?id='+encodeURIComponent(p.id),{cache:'no-store',credentials:'same-origin'}));
+     const requests=[fetch('/api/rankings?page=1',{cache:'no-store'}),fetch('/api/rankings?country='+encodeURIComponent(code)+'&page=1',{cache:'no-store'})];
+     if(p?.id)requests.push(fetch('/api/player-rank?id='+encodeURIComponent(p.id),{cache:'no-store',credentials:'same-origin'}));
      const results=await Promise.all(requests);
-     if(!results[0].ok||!results[1].ok)throw Error('Ranking unavailable');
+     if(!results[0].ok||!results[1].ok)throw Error();
      const [w,c]=await Promise.all([results[0].json(),results[1].json()]);
-     if(!sameView())return;
+     if(window.eixoJumpActive)return;
      render(w.players,worldEl,true);render(c.players,countryEl,false);
-     let mine=null;
-     if(results[2]?.ok)mine=await results[2].json().catch(()=>null);
-     if(!sameView())return;
-     const worldRank=mine?.worldRank??w.players.find(x=>x.id===p?.id)?.worldRank;
-     const countryRank=mine?.countryRank??c.players.find(x=>x.id===p?.id)?.countryRank;
-     setMyRank('worldMyRank',worldRank);setMyRank('nationalMyRank',countryRank);
-   }catch(e){
-     if(!sameView())return;
-     console.warn('EIXO ranking:',e.message);
-     setMyRank('worldMyRank',null);setMyRank('nationalMyRank',null);
-   }
+     if(results[2]){
+       if(results[2].ok){const me=await results[2].json();setMyRank('worldMyRank',me.worldRank);setMyRank('nationalMyRank',me.countryRank);}
+       else{setMyRank('worldMyRank',w.players.find(x=>x.id===p?.id)?.worldRank);setMyRank('nationalMyRank',c.players.find(x=>x.id===p?.id)?.countryRank);}
+     }else{setMyRank('worldMyRank',w.players.find(x=>x.id===p?.id)?.worldRank);setMyRank('nationalMyRank',c.players.find(x=>x.id===p?.id)?.countryRank);}
+   }catch(_){setMyRank('worldMyRank',null);setMyRank('nationalMyRank',null);}
  }
  window.addEventListener('eixo-player-updated',load);window.eixoRefreshRankings=load;window.loadTopRankings=load;load();setInterval(load,5000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
 })();

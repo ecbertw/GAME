@@ -389,7 +389,6 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/chat'){const d=await body(req);return json(res,201,await sendChatMessage(d.id,d.token,d.channel,d.message));}
   if(req.method==='GET'&&url.pathname==='/api/player-rank'){return json(res,200,await playerRanks(url.searchParams.get('id'),url.searchParams.get('token')));}
   /* JUMP uses its own tables and live instances; PULSE routes remain unchanged. */
-  if(url.pathname==='/api/jump/player-rank'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.playerRank(global.db,p));}
   if(url.pathname==='/api/jump/rankings'&&req.method==='GET')return json(res,200,await jumpService.rankings(global.db,url.searchParams.get('country'),url.searchParams.get('page')));
   if(url.pathname==='/api/jump/cosmetics'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,{ok:true,colors:await jumpService.getColors(global.db,p),palette:jumpService.PALETTE,parts:jumpService.PARTS});}
   if(url.pathname==='/api/jump/rooms'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.roomList(global.db,p));}
