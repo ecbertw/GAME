@@ -93,7 +93,6 @@ function smoothPeerViews(dt){
  }
 }
 async function sync(){
- if(team){await syncTeam();return;}
  if(!run||busy||current!=='jump')return;
  const identity=run.runId;busy=true;
  try{
@@ -194,7 +193,7 @@ function draw(){
    window.EixoJumpWorlds.platform(c,biome,x,y,p.w,i,{moving:p.moving,fragile:p.fragile,progress:fragileProgress});
  }
  for(const peer of peers){
-   const px=Number(peer.renderX??peer.x),py=Number(peer.renderY??peer.y),y=screen(py);if(y>-12&&y<P.H+34)drawCharacter(c,px,y,peer.outfit,peer.name,!team,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving});
+   const px=Number(peer.renderX??peer.x),py=Number(peer.renderY??peer.y),y=screen(py);if(y>-12&&y<P.H+34)drawCharacter(c,px,y,peer.outfit,peer.name,true,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving});
  }
  drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time,{facing,ground:local.ground,vy:local.vy,moving:keys.left||keys.right});
  c.fillStyle='#ffffffaa';c.fillRect(0,0,P.W,1);
