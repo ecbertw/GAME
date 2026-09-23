@@ -22,7 +22,7 @@
    if(wt&&!document.getElementById('worldMyRank')){const s=document.createElement('span');s.id='worldMyRank';s.className='board-my-rank';s.hidden=true;wt.appendChild(s);}
    if(ct&&!document.getElementById('nationalMyRank')){const s=document.createElement('span');s.id='nationalMyRank';s.className='board-my-rank';s.hidden=true;ct.appendChild(s);}
  }
- async function load(){
+ async function load(){if(window.eixoJumpActive)return;
    ensureRankLabels();
    const code=registeredCountry();
    const p=(()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}})();
