@@ -13,13 +13,13 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
  console.log('migrating');await J.initDb(db);await db.query('INSERT INTO jump_scores(player_id,best_score,score_version) VALUES($1,120,2)',[players[0].id]);
  await J.initDb(db);assert.equal((await db.query('SELECT best_score FROM jump_scores')).rows[0].best_score,120);
  assert.equal((await db.query('SELECT best_score FROM players')).rows[0].best_score,777);
- const server=http.createServer((req,res)=>{if(req.url.includes('jump.js'))console.log('SERVER REQUEST',req.url);let file=path.join(root,req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0]);try{res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html');let body=fs.readFileSync(file);if(file.endsWith('.js')){const label=path.basename(file);body=Buffer.from('console.log("__START '+label+'");\n'+body.toString()+'\nconsole.log("__END '+label+'");');}res.end(body);if(req.url.includes('jump.js'))console.log('SERVER SERVED',req.url,body.length);}catch(e){console.log('SERVER ERROR',req.url,e.message);res.statusCode=404;res.end();}});
+ const server=http.createServer((req,res)=>{let file=path.join(root,req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0]);try{res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(fs.readFileSync(file));}catch{res.statusCode=404;res.end();}});
  await new Promise(r=>server.listen(3201,'127.0.0.1',r));
  console.log('launching browser');const browser=await chromium.launch({headless:true});const errors=[];
  try{
   async function pageFor(p,viewport={width:1200,height:1000}){
    const ctx=await browser.newContext({viewport});await ctx.addInitScript(p=>{localStorage.setItem('eixo_player',JSON.stringify(p));localStorage.setItem('eixo_country','PT');},p);
-   const page=await ctx.newPage();page.on('request',r=>{if(r.url().includes('jump.js'))console.log('BROWSER REQUEST',r.url())});page.on('requestfinished',r=>{if(r.url().includes('jump.js'))console.log('BROWSER FINISHED',r.url())});page.on('requestfailed',r=>{if(r.url().includes('jump.js'))console.log('BROWSER FAILED',r.url(),r.failure()?.errorText)});page.on('pageerror',e=>{errors.push(e.message);console.log('PAGEERROR',e.message)});page.on('console',m=>{const t=m.text();if(t.startsWith('__'))console.log('PAGE',t)});
+   const page=await ctx.newPage();page.on('pageerror',e=>errors.push(e.message));
    await page.route('**/api/**',async route=>{
     const req=route.request(),u=new URL(req.url()),d=req.method()==='POST'?req.postDataJSON()||{}:{};let out={ok:true,players:[],rooms:[],messages:[],total:0,pages:1,page:1,player:p};
     try{
@@ -36,7 +36,7 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
      await route.fulfill({json:out});
     }catch(e){await route.fulfill({status:e.status||500,json:{error:e.message}});}
    });
-   console.log('opening',p.name);await page.goto('http://127.0.0.1:3201/',{waitUntil:'commit',timeout:10000});await page.locator('#eixoGameSwitcher').waitFor({state:'visible',timeout:10000});await page.locator('[data-game="jump"]').click();await page.waitForTimeout(300);return page;
+   console.log('opening',p.name);await page.goto('http://127.0.0.1:3201/',{waitUntil:'domcontentloaded'});await page.locator('[data-game="jump"]').click();await page.waitForTimeout(300);return page;
   }
   const a=await pageFor(players[0]),b=await pageFor(players[1]);
   // Real renderer contact sheet, with platforms, at native pixel scale x2.
