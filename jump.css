@@ -68,9 +68,6 @@
 @media(hover:none) and (pointer:coarse){.jump-touch-controls{display:flex}}
 
 body.eixo-jump-view #roomBoard,body.eixo-jump-view #roomCreatePanel{display:none!important}
-.jump-room-board{max-width:920px;margin:18px auto 0}
-.jump-room-board .board-title{justify-content:space-between}
-.jump-room-board .board-title button{margin-left:auto;padding:8px 10px;border:1px solid #f56a73;background:#401b29;color:#fff;cursor:pointer;font-size:7px}
-.jump-room-board ol{list-style:none;padding:0;margin:0}
-.jump-room-board li{display:flex;align-items:center;gap:10px}
-.jump-room-board .rank-name-wrap{flex:1}
+body:not(.eixo-jump-view) #jumpRoomBoard,body:not(.eixo-jump-view) #jumpRoomCreatePanel{display:none!important}
+.jump-room-board .rank-name-wrap{min-width:0}
+.jump-room-board .rank-score-wrap{justify-self:end}

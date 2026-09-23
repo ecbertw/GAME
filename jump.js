@@ -5,7 +5,7 @@ const P=window.EixoJumpPhysics;if(!P)return;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lang=()=>String(document.documentElement.lang||'en').startsWith('pt')?'pt':'en';
-const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'ALTURA',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'← → / A D PARA MOVER • ESPAÇO PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'HEIGHT',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'← → / A D TO MOVE • SPACE TO JUMP',soon:'COMING SOON'}};
+const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'ALTURA',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'A / D PARA MOVER • W OU ESPAÇO PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'HEIGHT',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'A / D TO MOVE • W OR SPACE TO JUMP',soon:'COMING SOON'}};
 const txt=k=>T[lang()][k]||k;
 const BIOMES=['city','forest','desert','snow'];
 const themes={
@@ -14,7 +14,7 @@ const themes={
   desert:{sky:'#83cae8',low:'#f9c688',hills:'#e9a16b',far:'#bd7657',near:'#8a513f',top:'#f4ce70',edge:'#b98845',under:'#ad7651'},
   snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
 };
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},jumpSeq=0,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
@@ -35,7 +35,9 @@ function showMode(){
  const switcher=$('eixoGameSwitcher');switcher.querySelectorAll('[data-game]').forEach(b=>b.classList.toggle('active',b.dataset.game===current));
  $('gameIntro').querySelector('[data-i18n="aboutText"]').textContent=current==='jump'?' — JUMP: '+txt('help'):current==='eat'?' — '+txt('soon'):window.eixoT?.('aboutText',' — a simple reflex game. Hit the center, score points and climb the ranking.')||' — a simple reflex game.';
  $('jumpRoot').classList.toggle('hidden',current!=='jump');frame.classList.toggle('jump-mode',current==='jump');
- document.body.classList.toggle('eixo-jump-view',current==='jump');if($('jumpRoomBoard'))$('jumpRoomBoard').classList.toggle('hidden',current!=='jump'||!roomId);
+ document.body.classList.toggle('eixo-jump-view',current==='jump');
+ if($('jumpRoomBoard'))$('jumpRoomBoard').classList.toggle('hidden',current!=='jump'||!roomId);
+ if(current!=='jump')$('jumpRoomCreatePanel')?.classList.add('hidden');
 }
 async function switchGame(next){
  if(next==='eat'){modal('EAT','<p>'+txt('soon')+'</p>');return}
@@ -48,7 +50,7 @@ async function switchGame(next){
    refreshRankings();if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}},5500);
  }else{
    clearInterval(rankTimer);clearInterval(networkTimer);if(animation)cancelAnimationFrame(animation);animation=null;
-   keys={left:false,right:false,jump:false};window.eixoRefreshRankings?.();window.resetGame?.();
+   keys={left:false,right:false,jump:false};$('rankingModal')?.classList.add('hidden');if($('rankingModalTitle'))$('rankingModalTitle').textContent='RANKING';window.eixoRefreshRankings?.();window.resetGame?.();
  }
 }
 async function stopRun(){
@@ -62,24 +64,24 @@ function updateHud(){
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
- await stopRun();local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
+ await stopRun();keys={left:false,right:false,jump:false};jumpSeq=0;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
    run=out;seed=out.seed;biome=out.biome;mode=out.mode;colors=out.colors||colors;
    local=P.create(seed);last=performance.now();updateHud();draw();refreshRoomBoard();clearInterval(networkTimer);
-   networkTimer=setInterval(sync,125);sync();
+   networkTimer=setInterval(sync,60);sync();
  }catch(e){run=null;showError(e.message)}
 }
 async function sync(){
  if(!run||busy||current!=='jump')return;
  const identity=run.runId;busy=true;
  try{
-  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,...keys})});
+  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jumpSeq})});
   if(run?.runId!==identity)return;
   lastState=out;peers=out.peers||[];
-  if(!out.state?.alive&&!gameOver)await die();
-  else if(local&&out.state&&Math.abs(local.y-out.state.y)>36){local.y=out.state.y;local.vy=out.state.vy;}
+  // Remote snapshots are for validation/other players only. Replacing the local
+  // Y position with an older HTTP response was the source of the visible rollback.
   updateHud();
  }catch(e){if(run?.runId===identity)showError(e.message)}
  finally{busy=false}
@@ -153,54 +155,114 @@ function loop(now){
  draw();animation=requestAnimationFrame(loop);
 }
 function setKey(code,on){
- if(['ArrowLeft','KeyA'].includes(code))keys.left=on;
- if(['ArrowRight','KeyD'].includes(code))keys.right=on;
- if(['Space','ArrowUp','KeyW'].includes(code))keys.jump=on;
+ if(code==='KeyA')keys.left=on;
+ if(code==='KeyD')keys.right=on;
+ if(code==='KeyW'||code==='Space'){
+   if(on&&!keys.jump)jumpSeq++;
+   keys.jump=on;
+ }
 }
 function onKeyboard(e){
  if(current!=='jump'||panel||e.target?.matches('input,select,textarea,[contenteditable]'))return;
- if(['ArrowLeft','ArrowRight','Space','ArrowUp','KeyA','KeyD','KeyW'].includes(e.code)){
-   e.preventDefault();e.stopImmediatePropagation();setKey(e.code,e.type==='keydown');
+ if(['KeyA','KeyD','KeyW','Space'].includes(e.code)){
+   e.preventDefault();e.stopImmediatePropagation();
+   if(e.type==='keydown'&&e.repeat)return;
+   setKey(e.code,e.type==='keydown');
+   void sync();
  }
 }
 function bindControls(){
  window.addEventListener('keydown',onKeyboard,true);window.addEventListener('keyup',onKeyboard,true);
  window.addEventListener('blur',()=>{keys={left:false,right:false,jump:false}});
  for(const button of document.querySelectorAll('[data-jump-key]')){
-  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);keys[k]=true});
-  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false});
+  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);if(k==='jump'&&!keys.jump)jumpSeq++;keys[k]=true;void sync()});
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false;void sync()});
  }
 }
 const flags=c=>[...String(c||'PT')].map(x=>String.fromCodePoint(127397+x.charCodeAt())).join('');
-function scoreRows(players,type,start=0){
- return players?.length?players.map((p,i)=>'<li><span class="rank-number">'+(start+i+1)+'</span><span class="rank-name-wrap">'+esc(p.visualName||p.name)+(Number(p.vipLevel||0)>0?' <span class="vip-rank-tag">VIP</span>':'')+'</span><span class="rank-score-wrap">'+flags(p.country)+' <span class="rank-score">'+Number(p.score||0)+'</span></span></li>').join(''):'<li class="empty-row">'+txt('empty')+'</li>';
+const rankLabels={pt:'O TEU RANK É:',en:'YOUR RANK IS:'};
+const rankLabel=()=>rankLabels[lang()]||rankLabels.en;
+const rankTag=(type,n,country,p)=>{
+ const me=getPlayer();
+ const raw=type==='country'?(p?.tagCountryColor||(me&&me.id===p?.id?me.tagCountryColor:'#ff7a2f')):(p?.tagGlobalColor||(me&&me.id===p?.id?me.tagGlobalColor:'#e53935'));
+ const c=String(raw||'').toLowerCase(),rainbow=c==='rainbow';
+ return '<span class="rank-tag '+type+'-'+n+(rainbow?' tag-rainbow':'')+'"'+(!rainbow&&/^#[0-9a-f]{6}$/.test(c)?' style="background:'+c+'!important;color:#fff!important"':'')+'>'+n+'# '+(type==='country'?esc(country):'GLOBAL')+'</span>';
+};
+const rankVip=n=>n>0?'<span class="vip-rank-tag vip-rank-'+Math.min(n,6)+'">'+(n>=6?'VIP ∞':'VIP #'+n)+'</span>':'';
+const rankLetters=(text,styles)=>{
+ const arr=Array.isArray(styles)?styles:[];
+ return [...String(text||'')].map((ch,i)=>{
+  const st=arr[i]||{},color=String(st.color||'').toLowerCase(),effect=String(st.effect||'none'),rainbow=color==='rainbow';
+  const safeColor=/^#[0-9a-f]{6}$/i.test(color)?color:'',safeEffect=/^[a-z]+$/.test(effect)?effect:'none';
+  return '<span class="name-letter'+(rainbow?' name-rainbow':'')+' effect-'+safeEffect+'"'+(safeColor?' style="color:'+safeColor+';"':'')+'>'+esc(ch)+'</span>';
+ }).join('');
+};
+function renderTopRank(players,target,isWorld){
+ if(!players?.length){target.innerHTML='<li class="empty-row">'+(window.eixoT?window.eixoT('emptyRanking','NO PLAYERS YET'):'NO PLAYERS YET')+'</li>';return}
+ target.innerHTML=players.slice(0,10).map((p,i)=>{
+  let tags='';
+  if(isWorld){
+   if(Number(p.worldRank)<=3)tags+=rankTag('world',Number(p.worldRank),'',p);
+   if(Number(p.worldRank)>3&&Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
+  }else if(Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
+  const color=String(p.nameColor||'#fff').toLowerCase(),effect=p.nameEffect&&p.nameEffect!=='none'?' effect-'+esc(p.nameEffect):'',vip=Number(p.vipLevel||0);
+  const hasLetters=vip>0&&Array.isArray(p.letterStyles)&&p.letterStyles.length,rainbow=color==='rainbow'&&!hasLetters,colorStyle=rainbow?'':' style="color:'+esc(color)+';"';
+  const name=hasLetters?rankLetters(p.visualName||p.name,p.letterStyles):[...String(p.visualName||p.name)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
+  return '<li><span class="rank-number">'+(i+1)+'</span><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(hasLetters?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span>'+tags+rankVip(vip)+'</span><span class="rank-score-wrap"><span class="rank-flag" title="'+esc(p.country)+'">'+flags(p.country)+'</span><span class="rank-score">'+Number(p.score||0)+'</span></span></li>';
+ }).join('');
+}
+function setJumpMyRank(id,value){
+ const el=$(id);if(!el)return;
+ const n=Number(value),ok=Number.isInteger(n)&&n>0;
+ el.textContent=ok?rankLabel()+' '+n:'';
+ el.title=el.textContent;el.hidden=!ok;
 }
 async function refreshRankings(){
  if(current!=='jump')return;
  try{
-  const p=getPlayer(),code=p?.country||'PT';
-  const [w,c]=await Promise.all([api('/api/jump/rankings?page=1'),api('/api/jump/rankings?page=1&country='+encodeURIComponent(code))]);
+  const p=getPlayer(),code=String(p?.country||'PT').toUpperCase();
+  const requests=[api('/api/jump/rankings?page=1'),api('/api/jump/rankings?page=1&country='+encodeURIComponent(code))];
+  if(p?.id)requests.push(api('/api/jump/player-rank'));
+  const [w,c,mine]=await Promise.all(requests);
   if(current!=='jump')return;
-  $('worldRanking').innerHTML=scoreRows(w.players,'world');$('nationalRanking').innerHTML=scoreRows(c.players,'country');
-  const my=w.players.find(x=>x.id===p?.id),myC=c.players.find(x=>x.id===p?.id);
-  if($('worldMyRank'))$('worldMyRank').textContent=my?txt('rank')+' #'+my.worldRank:'';
-  if($('nationalMyRank'))$('nationalMyRank').textContent=myC?txt('rank')+' #'+myC.countryRank:'';
-  $('nationalTitle').textContent='TOP '+String(code).toUpperCase();
+  renderTopRank(w.players,$('worldRanking'),true);
+  renderTopRank(c.players,$('nationalRanking'),false);
+  setJumpMyRank('worldMyRank',mine?.worldRank??w.players.find(x=>x.id===p?.id)?.worldRank);
+  setJumpMyRank('nationalMyRank',mine?.countryRank??c.players.find(x=>x.id===p?.id)?.countryRank);
+  $('nationalTitle').textContent='TOP '+code;
  }catch(e){console.warn('JUMP rankings:',e.message)}
 }
-async function openRank(modeName='world',number=1){
- rankTab=modeName;page=number;
- modal(txt('rank'),'<div class="jump-panel-tabs"><button id="jumpWorldTab">'+txt('world')+'</button><button id="jumpCountryTab">'+txt('country')+'</button></div><ol class="jump-rank-list" id="jumpFullRank"></ol><div class="jump-pager"><button id="jumpPrev">◀</button><span id="jumpPage"></span><button id="jumpNext">▶</button></div>');
- $('jumpWorldTab').onclick=()=>openRank('world',1);$('jumpCountryTab').onclick=()=>openRank('country',1);
- $('jumpPrev').onclick=()=>openRank(rankTab,page-1);$('jumpNext').onclick=()=>openRank(rankTab,page+1);
+function renderFullRows(players,start){
+ return players?.length?players.map((x,i)=>{
+  let tags='';
+  if(Number(x.worldRank)<=3)tags+=rankTag('world',Number(x.worldRank),'',x);
+  if(Number(x.countryRank)<=3)tags+=rankTag('country',Number(x.countryRank),String(x.country||'').toUpperCase(),x);
+  const color=String(x.nameColor||'#fff').toLowerCase(),effect=x.nameEffect&&x.nameEffect!=='none'?' effect-'+esc(x.nameEffect):'',vip=Number(x.vipLevel||0);
+  const hasLetters=vip>0&&Array.isArray(x.letterStyles)&&x.letterStyles.length,rainbow=color==='rainbow'&&!hasLetters,colorStyle=rainbow?'':' style="color:'+esc(color)+';"';
+  const name=hasLetters?rankLetters(x.visualName||x.name,x.letterStyles):[...String(x.visualName||x.name)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
+  return '<li><span class="full-rank-number">'+(start+i+1)+'</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(hasLetters?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span>'+tags+rankVip(vip)+'</span></span><span class="full-score rank-score-wrap"><span class="rank-flag" title="'+esc(x.country)+'">'+flags(x.country)+'</span><span class="rank-score">'+Number(x.score||0)+'</span></span></li>';
+ }).join(''):'<li class="empty-full">'+(window.eixoT?window.eixoT('emptyFull','THERE ARE NO PLAYERS YET'):'THERE ARE NO PLAYERS YET')+'</li>';
+}
+async function renderJumpFull(){
+ if(current!=='jump')return;
+ const modalEl=$('rankingModal'),list=$('fullRankingList');if(!modalEl||modalEl.classList.contains('hidden')||!list)return;
+ const country=String(getPlayer()?.country||'PT').toUpperCase();
+ const q='/api/jump/rankings?page='+page+(rankTab==='country'?'&country='+encodeURIComponent(country):'');
  try{
-  const q='/api/jump/rankings?page='+page+(rankTab==='country'?'&country='+encodeURIComponent(getPlayer()?.country||'PT'):'');
-  rankingData=await api(q);if(!$('jumpFullRank'))return;
-  $('jumpFullRank').innerHTML=scoreRows(rankingData.players,rankTab,(page-1)*25);
-  $('jumpPage').textContent=page+' / '+rankingData.pages;
-  $('jumpPrev').disabled=page<=1;$('jumpNext').disabled=page>=rankingData.pages;
-  $('jumpWorldTab').classList.toggle('active',rankTab==='world');$('jumpCountryTab').classList.toggle('active',rankTab==='country');
+  rankingData=await api(q);
+  if(current!=='jump'||modalEl.classList.contains('hidden'))return;
+  list.innerHTML=renderFullRows(rankingData.players,(page-1)*25);
+  $('rankingModalTitle').textContent='RANKING · JUMP';
+  $('pageInfo').textContent=page+' / '+rankingData.pages;
+  $('prevPage').disabled=page<=1;$('nextPage').disabled=page>=rankingData.pages;
+  $('modalWorldTab').classList.toggle('active',rankTab==='world');
+  $('modalCountryTab').classList.toggle('active',rankTab==='country');
  }catch(e){showError(e.message)}
+}
+function openRank(modeName='world',number=1){
+ rankTab=modeName;page=Math.max(1,number);
+ const modalEl=$('rankingModal');if(!modalEl)return;
+ modalEl.classList.remove('hidden');renderJumpFull();
 }
 function chooseWorld(){
  modal(txt('choose'),'<div class="jump-world-grid">'+BIOMES.map(b=>'<button class="jump-world-option '+b+'" data-biome="'+b+'"><strong>'+b.toUpperCase()+'</strong><small>JOIN SERVER</small></button>').join('')+'</div><p>5 PLAYERS MAX / INSTANCE · AUTO MATCHMAKING</p>');
@@ -216,37 +278,91 @@ async function customize(){
  panel.querySelectorAll('[data-jump-color]').forEach(s=>{s.style.color=s.value;s.style.borderColor=s.value;s.onchange=()=>{colors[s.dataset.jumpColor]=s.value;s.style.color=s.value;s.style.borderColor=s.value;preview()}});preview();
  $('jumpSave').onclick=async()=>{try{await api('/api/jump/cosmetics',{method:'POST',body:JSON.stringify({colors})});$('jumpSaveStatus').textContent=txt('saved');setTimeout(closePanel,600)}catch(e){$('jumpSaveStatus').textContent=e.message}};
 }
+function renderJumpRoomMembers(players){
+ return (players||[]).map(p=>{
+  const styles=Array.isArray(p.letterStyles)?p.letterStyles:[],visual=String(p.visualName||p.name||'');
+  const letters=styles.length?rankLetters(visual,styles):[...visual].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
+  const color=String(p.nameColor||'#fff').toLowerCase(),wholeRainbow=color==='rainbow'&&!styles.length;
+  let tags='';
+  if(Number(p.worldRank)>=1&&Number(p.worldRank)<=3)tags+=rankTag('world',Number(p.worldRank),'',p);
+  if(Number(p.countryRank)>=1&&Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
+  return '<li><span class="rank-number">'+Number(p.roomRank||0)+'</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name'+(wholeRainbow?' name-rainbow':'')+(styles.length?' vip-letter-styled':'')+'">'+letters+'</span>'+tags+rankVip(Number(p.vipLevel||0))+'</span></span><span class="rank-score-wrap"><span class="rank-flag" title="'+esc(p.country)+'">'+flags(p.country)+'</span><span class="rank-score">'+Number(p.score||0)+'</span></span></li>';
+ }).join('')||'<li class="empty-row">AINDA SEM JOGADORES</li>';
+}
 async function refreshRoomBoard(){
- const board=$('jumpRoomBoard');
- if(!board)return;
+ const board=$('jumpRoomBoard');if(!board)return;
  board.classList.toggle('hidden',current!=='jump'||!roomId);
  if(current!=='jump'||!roomId)return;
- $('jumpRoomTitle').textContent=(roomLabel||'JUMP ROOM')+' · '+biome.toUpperCase();
+ $('jumpRoomTitle').textContent=roomLabel||'JUMP ROOM';
+ $('jumpRoomMeta').textContent=' · '+biome.toUpperCase();
  try{
   const d=await api('/api/jump/rooms/rankings?roomId='+encodeURIComponent(roomId));
-  if(!$('jumpRoomRanking'))return;
-  $('jumpRoomRanking').innerHTML=d.players.map((p,i)=>'<li><span class="rank-number">'+(i+1)+'</span><span class="rank-name-wrap">'+esc(p.name)+'</span><span class="rank-score-wrap">'+flags(p.country)+' <b>'+Number(p.score||0)+'</b></span></li>').join('');
- }catch(e){if($('jumpRoomRanking'))$('jumpRoomRanking').textContent=e.message}
+  $('jumpRoomMeta').textContent=' · '+biome.toUpperCase()+' · '+d.players.length+' JOGADORES';
+  if($('jumpRoomRanking'))$('jumpRoomRanking').innerHTML=renderJumpRoomMembers(d.players);
+ }catch(e){if($('jumpRoomRanking'))$('jumpRoomRanking').innerHTML='<li class="empty-row">'+esc(e.message)+'</li>'}
 }
-async function jumpRooms(tab='list'){
- const body='<div class="jump-panel-tabs"><button id="jumpRoomsListTab">'+txt('rooms')+'</button><button id="jumpRoomsNewTab">'+txt('create')+'</button></div><div id="jumpRoomsBody"></div>';
- modal(txt('rooms'),body);
- $('jumpRoomsListTab').onclick=()=>renderJumpRooms('list');$('jumpRoomsNewTab').onclick=()=>renderJumpRooms('create');
- await renderJumpRooms(tab);
+function toggleJumpCreateRoom(){
+ const box=$('jumpRoomCreatePanel');if(!box)return;
+ box.classList.toggle('hidden');
+ if(!box.classList.contains('hidden')){box.scrollIntoView({behavior:'smooth',block:'nearest'});$('jumpRoomNameInput')?.focus()}
 }
-async function renderJumpRooms(tab){
- const body=$('jumpRoomsBody');if(!body)return;
- if(tab==='create'){
-  body.innerHTML='<input class="pixel-input" id="jumpRoomName" maxlength="24" placeholder="ROOM NAME"><select class="pixel-input" id="jumpRoomBiome">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select><button class="modal-button primary" id="jumpCreateRoom">'+txt('create')+'</button><p id="jumpRoomError"></p>';
-  $('jumpCreateRoom').onclick=async()=>{try{const d=await api('/api/jump/rooms/create',{method:'POST',body:JSON.stringify({name:$('jumpRoomName').value,biome:$('jumpRoomBiome').value})});await jumpRooms('list');showError('ROOM CODE: '+d.room.code)}catch(e){$('jumpRoomError').textContent=e.message}};
-  return;
+async function submitJumpRoom(){
+ const button=$('jumpRoomCreateSubmit'),error=$('jumpRoomCreateError');if(!button)return;
+ error.textContent='';button.disabled=true;
+ try{
+  const d=await api('/api/jump/rooms/create',{method:'POST',body:JSON.stringify({name:$('jumpRoomNameInput').value,biome:$('jumpRoomBiomeInput').value})});
+  $('jumpCreatedRoomCode').textContent=d.room.code;$('jumpRoomCreated').classList.remove('hidden');$('jumpRoomNameInput').value='';
+ }catch(e){error.textContent=e.message}finally{button.disabled=false}
+}
+async function loadJumpRooms(){
+ const list=$('jumpRoomsList');if(!list)return;
+ try{
+  const d=await api('/api/jump/rooms');
+  list.innerHTML=(d.rooms||[]).length?d.rooms.map(r=>{
+   const full=Number(r.memberCount)>=5;
+   return '<article class="room-card"><div class="room-card-main"><div class="room-card-name">'+esc(r.name)+'</div><div class="room-card-meta">'+esc(r.ownerName)+' · '+r.biome.toUpperCase()+' · '+r.memberCount+'/5 PLAYERS</div></div><div class="room-card-code">'+esc(r.code)+'</div><div class="room-card-actions"><span class="room-status">'+(full?'FULL':r.memberCount+'/5')+'</span><button type="button" class="board-more enter-room-button" data-jump-room-id="'+esc(r.id)+'">'+txt('enter')+'</button></div></article>';
+  }).join(''):'<div class="rooms-empty">NO JUMP ROOMS YET</div>';
+  list.querySelectorAll('[data-jump-room-id]').forEach(btn=>btn.onclick=()=>{
+   const item=d.rooms.find(x=>x.id===btn.dataset.jumpRoomId);if(!item)return;
+   $('jumpRoomsModal').classList.add('hidden');
+   newRun({biome:item.biome,mode:'private',roomId:item.id,roomLabel:item.name});
+  });
+ }catch(e){list.innerHTML='<div class="rooms-empty">'+esc(e.message)+'</div>'}
+}
+async function jumpRooms(){
+ let m=$('jumpRoomsModal');
+ if(!m){
+  m=document.createElement('div');m.id='jumpRoomsModal';m.className='modal-backdrop hidden';
+  m.innerHTML='<div class="modal-card rooms-modal" role="dialog" aria-modal="true" aria-labelledby="jumpRoomsModalTitle"><button class="modal-close" id="jumpRoomsClose" type="button">✕</button><div class="rooms-modal-heading"><h2 id="jumpRoomsModalTitle">AS MINHAS SALAS · JUMP</h2><button class="rooms-add-button" id="jumpAddRoomButton" type="button">ADICIONAR SALA</button></div><div class="rooms-add-panel hidden" id="jumpRoomsAddPanel"><label class="room-field"><span>CÓDIGO DA SALA</span><input id="jumpJoinRoomCode" class="pixel-input room-code-input" type="text" maxlength="6" autocomplete="off" spellcheck="false" placeholder="ABC123"></label><button class="modal-button primary" id="jumpJoinRoomSubmit" type="button">ENTRAR</button><div class="form-error" id="jumpJoinRoomError"></div></div><div class="rooms-list" id="jumpRoomsList"><div class="rooms-empty">LOADING...</div></div></div>';
+  document.body.appendChild(m);
+  $('jumpRoomsClose').onclick=()=>m.classList.add('hidden');
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.add('hidden')});
+  $('jumpAddRoomButton').onclick=()=>{$('jumpRoomsAddPanel').classList.toggle('hidden');$('jumpJoinRoomError').textContent='';if(!$('jumpRoomsAddPanel').classList.contains('hidden'))$('jumpJoinRoomCode').focus()};
+  $('jumpJoinRoomCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-F0-9]/g,'').slice(0,6)});
+  $('jumpJoinRoomCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('jumpJoinRoomSubmit').click()});
+  $('jumpJoinRoomSubmit').onclick=async()=>{
+   const button=$('jumpJoinRoomSubmit');button.disabled=true;$('jumpJoinRoomError').textContent='';
+   try{await api('/api/jump/rooms/join',{method:'POST',body:JSON.stringify({code:$('jumpJoinRoomCode').value})});$('jumpJoinRoomCode').value='';$('jumpRoomsAddPanel').classList.add('hidden');await loadJumpRooms()}
+   catch(e){$('jumpJoinRoomError').textContent=e.message}finally{button.disabled=false}
+  };
  }
- body.innerHTML='<div class="jump-join-code"><input class="pixel-input" id="jumpRoomCode" maxlength="6" placeholder="'+txt('code')+'"><button id="jumpRoomJoin" class="modal-button primary">'+txt('enter')+'</button></div><div id="jumpRoomList">LOADING...</div>';
- $('jumpRoomJoin').onclick=async()=>{try{await api('/api/jump/rooms/join',{method:'POST',body:JSON.stringify({code:$('jumpRoomCode').value})});jumpRooms('list')}catch(e){showError(e.message)}};
- try{const result=await api('/api/jump/rooms');if(!$('jumpRoomList'))return;
- $('jumpRoomList').innerHTML=result.rooms.length?result.rooms.map(r=>'<div class="jump-room-row"><div><strong>'+esc(r.name)+'</strong><small>'+r.biome.toUpperCase()+' · '+r.memberCount+'/5 · '+esc(r.code)+'</small></div><button data-room="'+r.id+'" data-biome="'+r.biome+'">'+txt('enter')+'</button></div>').join(''):'<p>NO ROOMS YET</p>';
- panel.querySelectorAll('[data-room]').forEach(b=>b.onclick=()=>{const item=result.rooms.find(x=>x.id===b.dataset.room);closePanel();newRun({biome:item.biome,mode:'private',roomId:item.id,roomLabel:item.name})});
- }catch(e){if($('jumpRoomList'))$('jumpRoomList').textContent=e.message}
+ m.classList.remove('hidden');await loadJumpRooms();
+}
+function confirmAbandonJumpRoom(){
+ if(!roomId)return;
+ let m=$('jumpAbandonRoomModal');
+ if(!m){
+  m=document.createElement('div');m.id='jumpAbandonRoomModal';m.className='modal-backdrop hidden';
+  m.innerHTML='<div class="modal-card form-modal abandon-room-modal" role="dialog" aria-modal="true"><button class="modal-close" id="jumpAbandonClose" type="button">CLOSE</button><h2>ABANDON ROOM</h2><p>Are you sure you want to leave this JUMP room?</p><p class="abandon-room-warning">If you choose YES, it will disappear from AS MINHAS SALAS. You will need the code to join again.</p><div class="abandon-room-actions"><button class="modal-button" id="jumpAbandonCancel" type="button">NO</button><button class="modal-button primary" id="jumpAbandonConfirm" type="button">YES</button></div></div>';
+  document.body.appendChild(m);
+  const close=()=>m.classList.add('hidden');$('jumpAbandonClose').onclick=close;$('jumpAbandonCancel').onclick=close;m.addEventListener('click',e=>{if(e.target===m)close()});
+  $('jumpAbandonConfirm').onclick=async()=>{
+   const id=roomId,button=$('jumpAbandonConfirm');button.disabled=true;
+   try{await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})});m.classList.add('hidden');roomId=null;roomLabel='';await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]})}
+   catch(e){showError(e.message)}finally{button.disabled=false}
+  };
+ }
+ m.classList.remove('hidden');
 }
 function captureNative(selector,callback){
  const el=document.querySelector(selector);
@@ -266,18 +382,39 @@ function init(){
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
  '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>HEIGHT: <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
  frame.appendChild(root);canvas=$('jumpCanvas');ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
- const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='board jump-room-board hidden';roomBoard.innerHTML='<div class="board-title"><span>◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><button id="jumpRoomLeave" type="button">LEAVE</button></div><ol id="jumpRoomRanking"></ol>';
- document.querySelector('.boards')?.before(roomBoard);
- $('jumpRoomLeave').onclick=async()=>{const id=roomId;if(!id)return;await stopRun();await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})}).catch(e=>showError(e.message));roomId=null;roomLabel='';await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]})};
+ const boards=document.querySelector('.boards');
+ const createPanel=document.createElement('section');createPanel.id='jumpRoomCreatePanel';createPanel.className='room-create-panel hidden';
+ createPanel.innerHTML='<div class="room-panel-heading"><span class="room-panel-mark">◆</span><span>CRIAR UMA SALA · JUMP</span></div><div class="room-create-grid"><label class="room-field"><span>NOME DA SALA</span><input id="jumpRoomNameInput" class="pixel-input" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="EX: JUMP NIGHT"></label><label class="room-field"><span>AMBIENTE</span><select id="jumpRoomBiomeInput" class="pixel-input">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select></label><button class="modal-button primary room-create-submit" id="jumpRoomCreateSubmit" type="button">CRIAR SALA</button></div><div class="form-error" id="jumpRoomCreateError"></div><div class="room-created hidden" id="jumpRoomCreated"><div class="room-created-label">SALA CRIADA</div><div class="room-code" id="jumpCreatedRoomCode">ABC123</div><div class="room-created-hint">Dá este código aos teus amigos para entrarem.</div><button class="board-more" id="jumpCopyRoomCode" type="button">COPIAR CÓDIGO</button></div>';
+ boards?.after(createPanel);
+ $('jumpRoomCreateSubmit').onclick=submitJumpRoom;
+ $('jumpCopyRoomCode').onclick=async()=>{const code=$('jumpCreatedRoomCode').textContent;try{await navigator.clipboard.writeText(code);$('jumpCopyRoomCode').textContent='COPIADO';setTimeout(()=>{$('jumpCopyRoomCode').textContent='COPIAR CÓDIGO'},1400)}catch(_){$('jumpCopyRoomCode').textContent=code}};
+
+ const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='room-board jump-room-board hidden';
+ roomBoard.innerHTML='<div class="room-board-heading"><div><span class="room-panel-mark">◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><small id="jumpRoomMeta"></small></div><div class="room-board-actions"><button class="board-more" id="jumpRoomLeave" type="button">SAIR DA SALA</button><button class="board-more danger" id="jumpRoomAbandon" type="button">ABANDONAR SALA</button></div></div><ol id="jumpRoomRanking"></ol>';
+ createPanel.after(roomBoard);
+ $('jumpRoomLeave').onclick=async()=>{roomId=null;roomLabel='';await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*4)]})};
+ $('jumpRoomAbandon').onclick=confirmAbandonJumpRoom;
 
  $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
  $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode,roomId,roomLabel});
  captureNative('.action.blue[href="#ranking"]',()=>openRank('world'));
- captureNative('.action.purple[href="#rooms"]',()=>jumpRooms('list'));
- captureNative('#createRoomButton',()=>jumpRooms('create'));
+ captureNative('.action.purple[href="#rooms"]',()=>jumpRooms());
+ captureNative('#createRoomButton',toggleJumpCreateRoom);
  captureNative('#worldFullButton',()=>openRank('world'));
  captureNative('#nationalFullButton',()=>openRank('country'));
- bindControls();updateHud();document.addEventListener('visibilitychange',()=>{last=performance.now();if(!document.hidden&&current==='jump')refreshRankings()});
+
+ for(const id of ['modalWorldTab','modalCountryTab','prevPage','nextPage']){
+  $(id)?.addEventListener('click',e=>{
+   if(current!=='jump')return;
+   e.preventDefault();e.stopImmediatePropagation();
+   if(id==='modalWorldTab'){rankTab='world';page=1}
+   else if(id==='modalCountryTab'){rankTab='country';page=1}
+   else if(id==='prevPage')page=Math.max(1,page-1);
+   else page=Math.min(Number(rankingData?.pages||page+1),page+1);
+   renderJumpFull();
+  },true);
+ }
+ bindControls();updateHud();document.addEventListener('visibilitychange',()=>{last=performance.now();if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}});
  window.eixoJump={switchGame,isActive:()=>current==='jump',refreshRankings};
 }
 init();
