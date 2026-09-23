@@ -165,6 +165,7 @@ test('save failures block rematch until retry succeeds',async()=>{
 test('abandoning removes the old roster from TOP, transfers ownership, and deletes an empty team',async()=>{
  const physics={...P,step(s){s.bestPlatform=3;return s;}};
  const f=await fixture(physics),s=f.service,t=await f.fill();
+ s.input(users[0],{runId:t.runId,seq:1});s.input(users[1],{runId:t.runId,seq:1});f.advance(100);
  await s.finish(users[0],{runId:t.runId});assert.equal((await s.rankings('duo',1)).teams.length,1);
  await s.abandon(users[0],{teamId:t.teamId});
  assert.equal((await s.list(users[0],'duo')).teams.length,0);
