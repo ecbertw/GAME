@@ -63,7 +63,7 @@ function createService({now=Date.now,physics=P}={}){
    JOIN jump_teams t ON t.id=mine.team_id
    JOIN jump_team_members allm ON allm.team_id=t.id
    WHERE mine.player_id=$1 AND t.mode=$2
-   GROUP BY t.id,t.code,t.mode,t.name,t.biome,t.owner_id,t.updated_at
+   GROUP BY t.id,t.code,t.mode,t.name,t.biome,t.owner_id,t.updated_at,t.created_at
    ORDER BY t.updated_at DESC,t.created_at DESC`,[String(p.id),mode]);
   return{ok:true,mode,teams:r.rows.map(x=>({id:String(x.id),code:x.code,mode:x.mode,name:x.name,biome:x.biome,ownerId:String(x.owner_id),memberCount:Number(x.member_count||0),capacity:cap(x.mode),active:membership.get(String(p.id))===String(x.id)}))};
  }
@@ -201,12 +201,8 @@ function createService({now=Date.now,physics=P}={}){
   maybeCountdown(t);return view(t,p);
  }
  function start(p){
-  // Compatibility endpoint only. The browser no longer needs a START button:
-  // the final READY begins a three-second countdown automatically.
-  const t=mine(p);tick();
-  if(t.ownerId!==String(p.id))throw fail('Só o líder pode iniciar.',403);
-  if(!allPresentReady(t))throw fail('Todos os membros têm de estar presentes e prontos.',409);
-  beginRun(t);return view(t,p);
+  // Compatibility endpoint only: it cannot bypass the automatic countdown.
+  const t=mine(p);tick();maybeCountdown(t);return view(t,p);
  }
  function input(p,d){
   const t=mine(p);tick();
