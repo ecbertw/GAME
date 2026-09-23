@@ -1,126 +1,120 @@
-/* EIXO JUMP worlds — original procedural pixel art, drawn entirely on the canvas. */
+/* EIXO JUMP worlds — bright procedural pixel art, no external assets. */
 (function(root){
 'use strict';
 const palettes={
- city:{sky:['#0a1024','#172141','#34345a','#70475f','#d17a72','#f2b082'],top:'#83f0e7',edge:'#337f91',under:'#22334f',fragile:'#ffb35c'},
- forest:{sky:['#071f29','#123642','#1f5960','#3c7b72','#87ad86','#bfd39c'],top:'#9bdc76',edge:'#3d8b58',under:'#3d4b3d',fragile:'#f4bd67'},
- desert:{sky:['#201b3a','#4a3150','#86485a','#c96c63','#ec9d77','#ffd19c'],top:'#f2cf79',edge:'#b8784e',under:'#75464c',fragile:'#ffb557'},
- snow:{sky:['#08162d','#14304b','#245875','#477f91','#86aeb6','#c9dfe0'],top:'#e9fbff',edge:'#80bdd2',under:'#3d6381',fragile:'#ffc97b'}
+ city:{sky:['#82d8ff','#6fc8f5','#59afe4','#478fc8','#376fa9'],top:'#e7fbff',edge:'#78c9df',under:'#3e6485',fragile:'#ffc163'},
+ forest:{sky:['#a7e4d2','#8bd5b8','#70c39c','#51aa7d','#3e8c68'],top:'#d6f29c',edge:'#78bd68',under:'#526c45',fragile:'#f7bc62'},
+ desert:{sky:['#8fd8ef','#8ed0e8','#f5bf83','#e99b68','#d57958'],top:'#ffe0a0',edge:'#d99958',under:'#9d6650',fragile:'#ffc05e'},
+ snow:{sky:['#bfe9ff','#a9d9f3','#8fc7e8','#76afd6','#638fbb'],top:'#ffffff',edge:'#b4e4f3',under:'#5f87a8',fragile:'#ffc86c'}
 };
 function draw(c,biome,seed,cam=0,time=0){
  const t=palettes[biome]||palettes.forest,W=450,H=195;
  const q=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),Math.max(1,Math.ceil(w)),Math.max(1,Math.ceil(h)));};
  const rand=n=>{let x=Math.imul((seed+n*7919)|0,1597334677);return((x^(x>>>16))>>>0)/4294967296;};
- const wrap=(v,m)=>((v%m)+m)%m,offset=cam*.04;
+ const wrap=(v,m)=>((v%m)+m)%m,offset=cam*.045;
  for(let y=0;y<H;y+=2)q(0,y,W,2,t.sky[Math.min(t.sky.length-1,Math.floor(y/H*t.sky.length))]);
- const star=(x,y,b=1)=>{q(x,y,b,b,'#f5f0dc');if(b>1){q(x-2,y+1,1,1,'#dce8ee');q(x+b+1,y+1,1,1,'#dce8ee')}};
- for(let i=0;i<28;i++)if(rand(i+700)>.18)star(Math.floor(rand(i+710)*W),8+Math.floor(rand(i+720)*66),rand(i+730)>.86?2:1);
- const cloud=(x,y,col)=>{q(x+7,y,29,3,col);q(x,y+3,52,5,col);q(x+5,y+8,41,2,col);q(x+18,y-2,17,3,col);};
- const mountain=(x,y,w,col,cap)=>{
-  for(let h=0;h<H-y;h+=3){const half=Math.min(w/2,4+h*.72);q(x+w/2-half,y+h,half*2,3,col);if(cap&&h<21)q(x+w/2-half,y+h,half*1.25,3,cap);}
+ const cloud=(x,y,s=1,col='#ffffffaa')=>{q(x+8*s,y,26*s,4*s,col);q(x,y+4*s,48*s,5*s,col);q(x+6*s,y+9*s,34*s,3*s,col);q(x+18*s,y-3*s,16*s,4*s,col);};
+ const mountain=(x,base,w,h,col,cap)=>{
+  const top=base-h;
+  for(let yy=0;yy<h;yy+=3){const f=yy/h,half=Math.max(2,Math.min(w/2,(w/2)*f));q(x+w/2-half,top+yy,half*2,3,col);}
+  if(cap){for(let yy=0;yy<Math.min(24,h);yy+=3){const f=yy/Math.max(1,Math.min(24,h)),half=Math.max(1,(w*.12)+(w*.13*f));q(x+w/2-half,top+yy,half*2,3,cap);}}
  };
- const pine=(x,y,s,col,cap)=>{
-  q(x-2*s,y+24*s,4*s,19*s,'#30485a');
-  for(let j=0;j<4;j++){const ww=(8+j*6)*s;q(x-ww/2,y+j*7*s,ww,9*s,col);if(cap)q(x-ww/2+1,y+j*7*s,ww-2,2*s,cap);}
+ const pine=(x,base,s,col,snow)=>{
+  q(x-2*s,base-23*s,4*s,23*s,'#55707b');
+  for(let j=0;j<4;j++){const w=(15+j*7)*s,y=base-(43-j*9)*s;q(x-w/2,y,w,12*s,col);if(snow)q(x-w/2+2*s,y,w-4*s,3*s,snow);}
  };
 
  if(biome==='city'){
-  // Neon dusk skyline: moon, antennae, signs, windows and a lower transit line.
-  q(345,22,26,26,'#ffd7ad');q(341,27,34,16,'#ffd7ad');q(349,17,18,5,'#ffe4c2');
-  cloud(39,35,'#4d4868');cloud(188,48,'#66516c');
-  for(let layer=0;layer<3;layer++){
-   const spacing=layer===2?42:34,speed=(layer+1)*offset;
+  // Clear rooftop city: bright sky, layered skyline and small urban details.
+  cloud(35-wrap(offset*.18,520),27,.9,'#eefaffd9');cloud(248-wrap(offset*.12,610),48,.65,'#e9f7ffd1');
+  q(348,23,24,24,'#fff1bf');q(344,28,32,14,'#fff1bf');
+  const layers=[
+   {base:'#6b8cac',side:'#567896',spacing:46,speed:.55,min:31,max:62},
+   {base:'#486f91',side:'#385a79',spacing:42,speed:1.0,min:45,max:82},
+   {base:'#2f5577',side:'#244663',spacing:38,speed:1.65,min:52,max:98}
+  ];
+  layers.forEach((L,layer)=>{
    for(let i=-2;i<15;i++){
-    const x=i*spacing-wrap(speed,spacing),w=spacing-5,h=32+rand(i+layer*57+20)*66+layer*9,y=H-h;
-    const base=['#494661','#313c5a','#172b48'][layer],side=['#383b56','#25344f','#11243d'][layer];
-    q(x,y,w,h,base);q(x+4,y-4,w-8,4,base);q(x+w-5,y+3,5,h-3,side);
-    if(i%3===0){q(x+w*.48,y-15,2,15,side);q(x+w*.48-2,y-17,6,2,i%2?'#ff7f8f':'#7ef1e3');}
-    if(layer===2&&i%4===1){q(x+6,y+13,12,18,'#6d2e58');q(x+7,y+14,10,4,'#f06eab');q(x+9,y+20,6,2,'#ffd4e8');q(x+9,y+25,6,2,'#ffd4e8');}
-    for(let wy=y+8;wy<H-5;wy+=9)for(let wx=x+5;wx<x+w-7;wx+=7){
-      if(rand(i*151+wy+wx+layer)>.36)q(wx,wy,3,4,rand(i+wx+wy)>.2?'#f0b67f':'#7bd5d3');
+    const x=i*L.spacing-wrap(offset*L.speed,L.spacing),w=L.spacing-5,h=L.min+rand(i+layer*73+20)*(L.max-L.min),y=H-h;
+    q(x,y,w,h,L.base);q(x+3,y-3,w-6,3,L.base);q(x+w-5,y+3,5,h-3,L.side);
+    if((i+layer)%4===0){q(x+8,y-11,2,11,L.side);q(x+6,y-13,6,2,'#f3788f');}
+    for(let wy=y+9;wy<H-6;wy+=10)for(let wx=x+6;wx<x+w-6;wx+=8){
+     if(rand(i*131+wx+wy+layer)>.35)q(wx,wy,3,4,rand(i+wx+wy)>.25?'#ffd58a':'#9ce8e2');
     }
+    if(layer===2&&i%5===1){q(x+6,y+12,12,20,'#75518b');q(x+8,y+15,8,3,'#f7a0d0');q(x+9,y+21,6,2,'#fff2c0');}
    }
-  }
-  q(0,178,W,17,'#0d1a2d');q(0,179,W,2,'#274f64');
-  for(let x=-20;x<W+20;x+=30){q(x,184,19,2,'#437f88');q(x+3,190,14,1,'#1e5364');}
-  // Pixel elevated rail and tiny moving light.
-  q(0,165,W,3,'#23364c');for(let x=10;x<W;x+=52)q(x,168,3,15,'#182b40');
-  q(wrap(time*18,W)-28,160,28,5,'#466d80');q(wrap(time*18,W)-24,161,5,2,'#baf8ee');
+  });
+  // Rooftops, water tower, vents and a metro line.
+  q(0,176,W,19,'#203f5a');q(0,176,W,3,'#80b8c5');
+  for(let x=8;x<W;x+=48){q(x,165,18,11,'#355b75');q(x+4,160,10,5,'#426d87');q(x+7,156,4,4,'#9acbd2');}
+  q(92,150,22,18,'#7f625c');q(96,145,14,6,'#a87f72');q(101,140,4,6,'#665651');
+  q(88,168,4,12,'#5a4f4d');q(112,168,4,12,'#5a4f4d');
+  q(0,185,W,3,'#132d43');for(let x=0;x<W;x+=31)q(x,190,19,1,'#5b95a9');
  }else if(biome==='forest'){
-  // Deep enchanted forest with layered canopy, vines, water and fireflies.
-  q(333,20,24,24,'#d7e4aa');q(329,25,32,14,'#d7e4aa');
+  // Lush green forest with distant hills, trunks, ferns and a waterfall.
+  cloud(52-wrap(offset*.12,560),25,.8,'#efffe0a8');cloud(270-wrap(offset*.08,620),40,.55,'#efffe09c');
+  for(let i=-1;i<7;i++){
+   const x=i*82-wrap(offset*.32,82),base=160+rand(i+5)*10;
+   mountain(x,base,118,68,'#77b98a','#a8d9a0');
+  }
   for(let layer=0;layer<3;layer++){
-   const spacing=55,speed=offset*(.65+layer*.7);
+   const spacing=58,speed=offset*(.55+layer*.72);
    for(let i=-2;i<11;i++){
-    const x=i*spacing-wrap(speed,spacing),y=42+rand(i+layer*45+10)*51;
-    const trunk=['#315d5c','#244e4f','#15383e'][layer],leaf=['#477d69','#326651','#214d40'][layer];
-    q(x+22,y,8+layer*2,H-y,trunk);q(x+25,y+13,3,H-y-13,'#446f64');
-    q(x+1,y-10,47,17,leaf);q(x+8,y-23,34,18,leaf);q(x+17,y-32,18,12,leaf);
-    if(layer===2){q(x+29,y+16,18,3,leaf);q(x+43,y+19,3,25,leaf);q(x+6,y+22,2,37,'#55866b');}
+    const x=i*spacing-wrap(speed,spacing),base=H-9,y=44+rand(i+layer*49+12)*55;
+    const trunk=['#557b61','#416a52','#2b5443'][layer],leaf=['#6cad65','#4f9658','#367747'][layer];
+    q(x+22,y,8+layer*2,base-y,trunk);q(x+25,y+16,2,base-y-16,'#7aa078');
+    q(x+1,y-8,47,17,leaf);q(x+9,y-22,33,17,leaf);q(x+18,y-31,17,11,leaf);
+    if(layer===2){q(x+6,y+22,2,42,'#6aa06a');q(x+30,y+18,18,3,leaf);q(x+45,y+20,3,24,leaf);}
    }
   }
-  // Distant waterfall / stream catches the eye without fighting platforms.
-  q(372,91,24,81,'#6ea3a0');q(376,91,16,81,'#8fc0b6');q(380,91,5,81,'#c0ded0');
-  q(0,171,W,24,'#123b35');q(0,181,W,14,'#17302f');
-  for(let i=0;i<22;i++){const x=i*23+Math.floor(rand(i+90)*9),y=176+Math.floor(rand(i+120)*10);q(x,y,17,4,'#285a44');q(x+4,y-2,8,2,'#477b56');}
-  for(let i=0;i<30;i++){const x=rand(i+61)*W,y=wrap(rand(i+76)*165+time*(3+i%4),180);q(x,y,1+(i%5===0?1:0),1+(i%7===0?1:0),i%3?'#b4e27f':'#ffe69b');}
-  // Mushrooms and a tiny shrine silhouette.
-  for(const x of [31,77,332]){q(x,163,3,12,'#b4a079');q(x-5,160,13,5,'#d97c72');q(x-2,159,7,2,'#efb89a');}
-  q(203,151,25,20,'#27483f');q(207,145,17,6,'#365f50');q(214,156,4,15,'#9bc077');
+  q(367,91,27,80,'#6bbfc6');q(372,91,17,80,'#9be0df');q(377,91,7,80,'#d4f6ef');
+  q(0,170,W,25,'#235b42');q(0,181,W,14,'#1b4938');
+  for(let i=0;i<20;i++){const x=i*25+Math.floor(rand(i+90)*8),y=176+Math.floor(rand(i+120)*9);q(x,y,19,5,'#34734b');q(x+5,y-3,9,3,'#68a95d');}
+  for(const x of [31,81,328]){q(x,162,3,12,'#bc9d74');q(x-5,158,13,5,'#d8736f');q(x-1,157,6,2,'#f2b79c');}
+  for(let i=0;i<28;i++){const x=rand(i+61)*W,y=wrap(rand(i+76)*165+time*(2+i%4),178);q(x,y,1+(i%8===0),1+(i%11===0),i%3?'#c8f28d':'#ffe994');}
  }else if(biome==='desert'){
-  // Monument valley silhouettes, arch, ruins and layered dunes.
-  q(330,25,30,30,'#ffe0aa');q(325,31,40,18,'#ffe0aa');cloud(52,42,'#9b6170');cloud(185,58,'#c77b78');
+  // Warm canyon scene: blue upper sky, golden light, mesas, arch and dunes.
+  cloud(43-wrap(offset*.1,560),31,.8,'#fff3dcaa');cloud(214-wrap(offset*.07,620),51,.55,'#fff3dc8f');
+  q(338,27,29,29,'#ffe6a8');q(333,33,39,17,'#ffe6a8');
+  const mesa=(x,base,w,h,col,hi)=>{q(x,base-h+12,w,h-12,col);q(x+8,base-h,w-16,13,col);q(x+14,base-h-6,w-28,7,col);q(x+5,base-h+20,w-10,3,hi);q(x+w-10,base-h+14,6,h-17,'#8e5148');};
   for(let layer=0;layer<3;layer++){
-   const spacing=91,speed=offset*(.7+layer*.75);
+   const spacing=98,speed=offset*(.45+layer*.62);
    for(let i=-2;i<8;i++){
-    const x=i*spacing-wrap(speed,spacing),y=78+layer*18+rand(i+layer*35+5)*22,col=['#b26f70','#92575f','#6d4152'][layer];
-    q(x+10,y,61,H-y,col);q(x+1,y+15,79,H-y-15,col);q(x+25,y-15,30,17,col);
-    q(x+13,y+9,54,3,layer===0?'#dc917c':'#a86668');q(x+4,y+34,62,2,'#84505b');
-    q(x+57,y+3,6,54,layer===2?'#503348':'#754557');
+    const x=i*spacing-wrap(speed,spacing),base=178+layer*4,h=47+layer*16+rand(i+layer*31+8)*20;
+    mesa(x,base,74,h,['#d98b68','#bd6d58','#965344'][layer],['#efa27a','#d68165','#b86655'][layer]);
    }
   }
-  // Rock arch on the far right.
-  q(353,112,65,58,'#704353');q(365,120,41,51,t.sky[4]);q(353,112,65,11,'#8f5860');q(347,160,12,20,'#5b3b4b');q(412,158,12,22,'#5b3b4b');
-  for(let x=0;x<W;x+=4){const yy=174+Math.sin((x+offset)/47)*6+Math.sin(x/19)*2;q(x,yy,4,H-yy,'#3a3042');q(x,yy,4,2,'#c18a71');}
-  for(const x of [29,110,421]){q(x,143,5,37,'#294c4a');q(x-8,153,8,5,'#294c4a');q(x-8,146,4,12,'#294c4a');q(x+4,159,10,4,'#294c4a');q(x+10,150,4,13,'#294c4a');q(x+1,144,1,30,'#648070');}
-  // Ruined gate.
-  q(245,148,5,31,'#b88470');q(278,148,5,31,'#b88470');q(245,146,38,5,'#d1a083');q(253,153,22,3,'#8c5f5d');
+  // Large rock arch in the distance.
+  q(344,113,72,58,'#9a5547');q(357,122,46,49,t.sky[3]);q(344,113,72,10,'#bc7057');q(339,160,13,20,'#75483f');q(410,157,13,23,'#75483f');
+  // Dunes and cacti.
+  for(let x=0;x<W;x+=4){const y=174+Math.sin((x+offset)/52)*5+Math.sin(x/23)*2;q(x,y,4,H-y,'#805043');q(x,y,4,2,'#e0a473');}
+  for(const x of [28,112,421]){q(x,143,5,37,'#2f6559');q(x-8,153,8,5,'#2f6559');q(x-8,146,4,12,'#2f6559');q(x+4,159,10,4,'#2f6559');q(x+10,150,4,13,'#2f6559');q(x+1,144,1,30,'#6d9982');}
+  q(244,149,5,30,'#c99472');q(279,149,5,30,'#c99472');q(244,146,40,5,'#e2b189');q(254,154,20,3,'#9c6a59');
  }else{
-  // Cold blue night with aurora, deep mountains, village lights and snow.
-  q(350,20,22,22,'#dbe8eb');q(346,25,30,12,'#dbe8eb');
-  for(let x=0;x<W;x+=4){
-   const y=20+Math.sin((x+time*4)/56)*10;
-   q(x,y,4,5,'#3f7c84');q(x,y+5,4,3,'#5c9a91');if(x%12===0)q(x,y+8,4,2,'#77aaa0');
-  }
-  for(let i=-2;i<6;i++)mountain(i*103-wrap(offset*.55,103),64+rand(i+5)*25,138,'#5d7f98','#d3e5e9');
-  for(let i=-2;i<6;i++)mountain(i*116-wrap(offset,116),101+rand(i+9)*16,132,'#355b78','#96b7c7');
-  for(let i=-2;i<15;i++)pine(i*36-wrap(offset*2.1,36),139+rand(i+44)*13,.82,'#1d4056','#a9cad3');
-  q(0,182,W,13,'#b8d2dc');q(0,187,W,8,'#668da7');
-  // Small warm cabin creates a focal point.
-  q(38,154,31,25,'#5c4d4b');q(34,151,39,6,'#8a6258');q(41,160,8,7,'#ffc77b');q(56,160,8,7,'#ffc77b');q(51,168,7,11,'#342f35');q(63,143,4,11,'#51454a');q(64,141,5,3,'#d2dfe2');
-  for(let i=0;i<38;i++){const x=wrap(rand(i+100)*W+time*(5+i%5),W),y=wrap(rand(i+130)*H+time*(8+i%4),H);q(x,y,i%3===0?2:1,i%4===0?2:1,'#dbeaf0');}
+  // Crisp alpine world: pale sky, layered snowy peaks, pines and a small cabin.
+  cloud(26-wrap(offset*.12,540),26,.85,'#f8fdffd9');cloud(256-wrap(offset*.08,610),43,.6,'#f8fdffc7');
+  q(351,24,21,21,'#fff6d6');q(348,28,27,13,'#fff6d6');
+  for(let i=-2;i<6;i++)mountain(i*100-wrap(offset*.35,100),171,132,82,'#9fc9df','#eefaff');
+  for(let i=-2;i<6;i++)mountain(i*112-wrap(offset*.72,112),179,128,66,'#77a8c6','#d9edf5');
+  for(let i=-2;i<15;i++)pine(i*36-wrap(offset*1.65,36),180+rand(i+44)*5,.78,'#315e72','#d8eff6');
+  q(0,182,W,13,'#d9f1f8');q(0,188,W,7,'#86b5ce');
+  // Warm cabin is a focal point, but remains below active platform space.
+  q(42,155,32,25,'#8a6657');q(37,151,42,7,'#aa7964');q(45,161,8,7,'#ffd27d');q(61,161,8,7,'#ffd27d');q(55,169,7,11,'#513e3a');q(68,143,4,11,'#70584f');q(69,140,6,4,'#e8f3f5');
+  for(let i=0;i<32;i++){const x=wrap(rand(i+100)*W+time*(4+i%4),W),y=wrap(rand(i+130)*H+time*(6+i%3),H);q(x,y,i%6===0?2:1,i%9===0?2:1,'#f6fdff');}
  }
- // Subtle dark pixel vignette at the floor improves avatar/platform contrast.
- q(0,H-1,W,1,'#09121f55');
 }
 function platform(c,biome,x,y,w,index,state={}){
  const t=palettes[biome]||palettes.forest,q=(a,b,d,e,col)=>{c.fillStyle=col;c.fillRect(Math.round(a),Math.round(b),Math.max(1,Math.round(d)),Math.max(1,e));};
  const fragile=!!state.fragile,progress=Math.max(0,Math.min(1,Number(state.progress)||0));
- q(x+2,y+7,w,5,'#08111f55');q(x,y,w,9,t.under);q(x,y,w,3,t.edge);q(x,y-3,w,3,t.top);
+ q(x+2,y+7,w,5,'#10203355');q(x,y,w,9,t.under);q(x,y,w,3,t.edge);q(x,y-3,w,3,t.top);
  for(let j=6;j<w-4;j+=12){q(x+j,y+4,5,2,t.edge);if((j+index)%3===0)q(x+j,y+7,3,2,t.under);}
- if(biome==='forest'){for(let j=5;j<w-3;j+=15){q(x+j,y-5,2,3,'#b4e589');q(x+j+2,y-4,3,1,'#69b576');}q(x+8,y+8,2,7,'#4c9864');}
- if(biome==='snow'){q(x+2,y-4,w-4,2,'#ffffff');for(let j=8;j<w-6;j+=21){q(x+j,y+7,3,5,'#8ac8dc');q(x+j+1,y+12,1,3,'#cdeef5');}}
- if(biome==='city'){q(x,y+8,w,2,'#13263e');for(let j=7;j<w-4;j+=19)q(x+j,y+3,6,1,'#89d7d2');q(x+3,y-2,3,1,'#fff1ba');}
- if(biome==='desert'){q(x+4,y-2,w-8,1,'#ffedc2');for(let j=13;j<w-4;j+=24)q(x+j,y+2,1,5,'#6f4650');}
+ if(biome==='forest'){for(let j=5;j<w-3;j+=15){q(x+j,y-5,2,3,'#d4f19c');q(x+j+2,y-4,3,1,'#7fc879');}q(x+8,y+8,2,7,'#507d4d');}
+ if(biome==='snow'){q(x+2,y-4,w-4,2,'#ffffff');for(let j=8;j<w-6;j+=21){q(x+j,y+7,3,5,'#89c8de');q(x+j+1,y+12,1,3,'#d9f5fb');}}
+ if(biome==='city'){q(x,y+8,w,2,'#294b69');for(let j=7;j<w-4;j+=19)q(x+j,y+3,6,1,'#a7eef4');q(x+3,y-2,3,1,'#fff3b7');}
+ if(biome==='desert'){q(x+4,y-2,w-8,1,'#fff0c5');for(let j=13;j<w-4;j+=24)q(x+j,y+2,1,5,'#7f554d');}
  if(fragile){
-  // Fragile platforms keep the biome material; amber appears only as a warning.
-  const warn=progress>.02?t.fragile:'#d99b55';
-  q(x+2,y-1,Math.max(2,w-4),1,warn);
-  const cracks=2+Math.floor(progress*5);
-  for(let j=0;j<cracks;j++){
-   const cx=x+8+((index*17+j*23)%Math.max(12,w-16)),cy=y+2+(j%2);
-   q(cx,cy,2,1,warn);q(cx+1,cy+1,1,2,warn);
-  }
+  const warn=progress>.02?t.fragile:'#dca053';q(x+2,y-1,Math.max(2,w-4),1,warn);
+  const cracks=2+Math.floor(progress*5);for(let j=0;j<cracks;j++){const cx=x+8+((index*17+j*23)%Math.max(12,w-16)),cy=y+2+(j%2);q(cx,cy,2,1,warn);q(cx+1,cy+1,1,2,warn);}
   if(progress>.62){for(let j=3;j<w-3;j+=7)q(x+j,y+7,3,1,warn);}
  }
 }
