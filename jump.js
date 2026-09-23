@@ -163,7 +163,7 @@ function setKey(code,on){
 }
 function onKeyboard(e){
  if(current!=='jump'||panel||e.target?.matches('input,select,textarea,[contenteditable]'))return;
- if(['ArrowLeft','ArrowRight','Space','KeyA','KeyD'].includes(e.code)){
+ if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','KeyA','KeyD'].includes(e.code)){
    e.preventDefault();e.stopImmediatePropagation();
    if(e.type==='keydown'&&e.repeat)return;
    setKey(e.code,e.type==='keydown');
