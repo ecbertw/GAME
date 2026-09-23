@@ -170,7 +170,22 @@ async function roomLeave(db,p,d){
 async function roomRankings(db,p,id){
   const mine=await db.query('SELECT 1 FROM jump_room_members WHERE room_id=$1 AND player_id=$2',[id,p.id]);
   if(!mine.rowCount)throw error('Não pertences a esta sala.',403);
-  const q=await db.query('SELECT p.id,p.name,p.country,m.best_score AS score FROM jump_room_members m JOIN players p ON p.id=m.player_id WHERE m.room_id=$1 ORDER BY m.best_score DESC,m.joined_at ASC',[id]);
-  return{ok:true,players:q.rows.map((x,i)=>({...x,roomRank:i+1,score:Number(x.score)}))};
+  const q=await db.query(`WITH ranked AS (
+    SELECT s.player_id,
+      ROW_NUMBER() OVER(ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS "worldRank",
+      ROW_NUMBER() OVER(PARTITION BY p.country ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS "countryRank"
+    FROM jump_scores s JOIN players p ON p.id=s.player_id WHERE s.best_score>0
+  )
+  SELECT p.id,p.name,p.country,p.visual_name AS "visualName",
+    p.name_color AS "nameColor",p.name_effect AS "nameEffect",
+    p.vip_level AS "vipLevel",p.letter_styles AS "letterStyles",
+    p.tag_global_color AS "tagGlobalColor",p.tag_country_color AS "tagCountryColor",
+    m.best_score AS score,r."worldRank",r."countryRank"
+  FROM jump_room_members m JOIN players p ON p.id=m.player_id
+  LEFT JOIN ranked r ON r.player_id=p.id
+  WHERE m.room_id=$1 ORDER BY m.best_score DESC,m.joined_at ASC`,[id]);
+  return{ok:true,players:q.rows.map((x,i)=>({...x,roomRank:i+1,score:Number(x.score),
+    worldRank:Number(x.worldRank||9999),countryRank:Number(x.countryRank||9999),
+    letterStyles:Array.isArray(x.letterStyles)?x.letterStyles:(()=>{try{return JSON.parse(x.letterStyles||'[]')}catch(_){return[]}})()}))};
 }
 module.exports={initDb,BIOMES,PALETTE,PARTS,DEFAULTS,getColors,saveColors,start,input,state,finish,leave,rankings,playerRank,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
