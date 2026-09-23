@@ -183,8 +183,12 @@ function createService({now=Date.now,physics=P}={}){
   const count=await db.query('SELECT COUNT(*)::int AS count FROM jump_team_members WHERE team_id=$1::uuid',[String(row.id)]);
   const exists=await db.query('SELECT 1 FROM jump_team_members WHERE team_id=$1::uuid AND player_id=$2',[String(row.id),String(p.id)]);
   if(!exists.rows[0]&&Number(count.rows[0]?.count||0)>=cap(row.mode))throw fail('Equipa cheia.',409);
-  if(!exists.rows[0])await db.query('INSERT INTO jump_team_members(team_id,player_id,player_name) VALUES($1::uuid,$2,$3)',[String(row.id),String(p.id),String(p.visualName||p.name||'PLAYER').slice(0,32)]);
-  teams.delete(String(row.id));return enter(p,{teamId:String(row.id)},outfit);
+  if(!exists.rows[0]){
+   const playerName=String(p.visualName||p.name||'PLAYER').slice(0,32);
+   await db.query('INSERT INTO jump_team_members(team_id,player_id,player_name) VALUES($1::uuid,$2,$3)',[String(row.id),String(p.id),playerName]);
+   const active=teams.get(String(row.id));if(active&&!active.members.has(String(p.id)))active.members.set(String(p.id),blankMember({player_id:String(p.id),player_name:playerName}));
+  }
+  return enter(p,{teamId:String(row.id)},outfit);
  }
  function state(p){tick();return view(mine(p),p);}
  function ready(p,d){
