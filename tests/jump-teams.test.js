@@ -89,11 +89,10 @@ test('team progression ignores submitted scores and rejects stale runs',async()=
  f.advance(100);assert.ok(s.state(users[0]).members.find(x=>x.id===users[0].id).state.x>199);
 });
 
-test('one disconnected member ends everyone and never writes individual rankings',async()=>{
+test('one disconnected member ends the shared session and never writes individual rankings',async()=>{
  const f=await fixture(),s=f.service;await f.fill();f.advance(10001);
- const out=s.state(users[0]);assert.equal(out.status,'ended');assert.equal(out.reason,'disconnect');
- assert.ok(out.members.every(m=>!m.state||!m.state.alive));
- await s.finish(users[0],{runId:out.runId});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.throws(()=>s.state(users[0]),/Entra primeiro/);
  const scoreWrites=f.db.writes.filter(w=>w.sql.startsWith('INSERT INTO jump_team_scores'));
  assert.equal(scoreWrites.length,1);assert.ok(f.db.writes.every(w=>!w.sql.includes('INSERT INTO jump_scores')&&!w.sql.includes('UPDATE players')));
 });
