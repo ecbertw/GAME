@@ -67,7 +67,7 @@ test('persistent roster, room re-entry and automatic READY countdown',async()=>{
  f.advance(3100);out=s.state(users[0]);assert.equal(out.status,'playing');assert.ok(out.runId);
  await s.leave(users[0]);assert.throws(()=>s.state(users[0]),/Entra primeiro/);
  const listed=await s.list(users[0],'trio');assert.equal(listed.teams.length,1);assert.equal(listed.teams[0].name,'Pixel Crew');
- out=await s.enter(users[0],{teamId:t.teamId},J.DEFAULTS);assert.equal(out.status,'ended','leaving a live run ends the shared attempt but preserves the roster');
+ out=await s.enter(users[0],{teamId:t.teamId},J.DEFAULTS);assert.equal(out.status,'lobby','re-entering a saved roster returns to a fresh waiting room');
 });
 
 test('team cannot start until the complete roster is present and ready',async()=>{
@@ -108,10 +108,10 @@ test('joint score uses slowest member; one fall ends all and saves once',async()
 
 test('taut chain pulls both endpoints, slack does not move a stationary team',async()=>{
  const stationary={...P,step:s=>s};const f=await fixture(stationary),s=f.service;await f.fill();f.advance(100);const a=s.state(users[0]).members.map(x=>x.state.x);
- assert.ok(Math.abs(a[0]-199)<=1);
+ assert.ok(Math.abs(a[0]-212)<=1);
  const stretched={...P,step(s,k){if(k.right&&!s.stretched){s.x=400;s.stretched=true;}return s;}};
  const g=await fixture(stretched),v=g.service,r=await g.fill();v.input(users[1],{runId:r.runId,seq:0,right:true});g.advance(100);
- const ms=v.state(users[0]).members;assert.ok(ms[0].state.x>199);assert.ok(ms[1].state.x<400);
+ const ms=v.state(users[0]).members;assert.ok(ms[0].state.x>212);assert.ok(ms[1].state.x<400);
 });
 
 test('save failures block rematch until retry succeeds',async()=>{
