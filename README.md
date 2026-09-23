@@ -2,6 +2,29 @@
 
 > Este documento mantém **apenas os dois relatórios de atualização mais recentes**. Em cada nova atualização, o relatório mais antigo deve ser removido e o novo relatório colocado no topo.
 
+# EIXO V2.3.1 — Correção do deploy após remoção de DUO/TRIO
+
+**Data:** 24/09/2026  
+**Tipo:** Deploy / manutenção / regressão
+
+## 1. ALTERADO
+
+- O script de deploy deixou de tentar validar o ficheiro retirado `jump-team-server.js`.
+- O teste de exposição do deploy deixou de procurar o módulo antigo como ficheiro privado existente.
+
+## 2. BUGS FIXED
+
+- **FIXED:** o deploy parava na fase **[3/5] Syntax** com `MODULE_NOT_FOUND` porque o script ainda referenciava `/opt/eixo/jump-team-server.js` depois da remoção definitiva de DUO/TRIO.
+- **FIXED:** o fluxo de deploy volta a conseguir avançar para os testes, restart e health checks da versão atual.
+
+## 3. VALIDAÇÃO
+
+- O módulo antigo continua removido do repositório.
+- O script de deploy passa a validar apenas os ficheiros que existem na versão atual.
+- O deploy continua manual através de `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.
+
+---
+
 # EIXO V2.3.0 — JUMP simplificado, ONLINE 20 e novos cosméticos VIP
 
 **Data:** 23/09/2026  
@@ -43,31 +66,3 @@
 - O deploy continua manual através de `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.
 
 ---
-
-# EIXO V2.2.0 — JUMP matchmaking, áudio separado e interface
-
-**Data:** 23/09/2026  
-**Tipo:** JUMP / áudio / interface / multiplayer
-
-## 1. ALTERADO
-
-- O botão ONLINE passou a abrir uma única opção **JOGAR ONLINE**, sem seleção manual de CITY, FOREST, DESERT ou SNOW.
-- O matchmaking passou a procurar uma instância pública já existente antes de abrir uma nova.
-- A indicação superior do jogo passou a usar **PULSE — ...** no PULSE e **JUMP — ...** no JUMP.
-- Os símbolos dos controlos direcionais do JUMP foram aumentados para melhorar a leitura.
-
-## 2. REMOVIDO
-
-- Removida a repetição das instruções de movimento dentro da zona inferior do mapa JUMP.
-- Removida a cor branca das opções de personalização das TAGs de ranking.
-
-## 3. ADICIONADO
-
-- Terceiro controlo de volume **MAPA**, separado de **MÚSICA** e **JOGO**.
-- Música dos ambientes JUMP passou a usar um canal de volume próprio.
-- Valores antigos de TAG branca passam automaticamente para as cores padrão válidas.
-
-## 4. BUGS FIXED
-
-- **FIXED:** música do mapa e efeitos de salto/aterragem podem agora ser regulados de forma independente.
-- **FIXED:** o fluxo ONLINE deixou de depender da escolha manual de um ambiente, reduzindo a fragmentação dos jogadores.
