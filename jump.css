@@ -27,7 +27,7 @@
 .jump-end{position:absolute;z-index:13;left:50%;top:50%;transform:translate(-50%,-50%);width:min(310px,90%);padding:22px;text-align:center;background:#0e1821ef;border:3px solid #e5efff;box-shadow:5px 5px #081018}
 .jump-end strong{font-size:12px;color:#fff}.jump-end p{font-size:10px;line-height:2.2}.jump-end button{border:2px solid #5effa0;padding:13px 18px;background:#185b39;color:#fff;cursor:pointer;font-size:8px}
 .jump-modal-backdrop{z-index:150}
-.jump-panel{width:min(640px,100%)!important;max-height:calc(100dvh - 28px);overflow:auto;padding:28px!important}
+.jump-panel{width:min(760px,calc(100vw - 28px))!important;max-width:760px;max-height:calc(100dvh - 28px);overflow-y:auto;overflow-x:hidden;padding:28px!important}
 .jump-panel h2{text-align:left;margin-bottom:20px;font-size:11px}
 .jump-panel-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}
 .jump-panel-tabs button{background:#162433;border:2px solid #536c83;color:#fff;min-height:38px;font-size:7px;cursor:pointer}
@@ -40,13 +40,13 @@
 .jump-world-option.desert{background:linear-gradient(135deg,#84c5ea,#e5b36a 60%,#a65e42)}
 .jump-world-option.snow{background:linear-gradient(135deg,#c5eaff,#91bad8 60%,#46688d)}
 .jump-custom-note{margin:0 0 10px;padding:9px 10px;border:1px solid #51677a;background:#0b151f;color:#9fb2c0;font-size:6px;line-height:1.8;text-align:center}
-.jump-custom-preview{display:grid;place-items:center;background:linear-gradient(180deg,#17344d,#0d1d2a);border:2px solid #5d819d;margin-bottom:14px;height:130px}
+.jump-custom-preview{display:grid;place-items:center;background:linear-gradient(180deg,#17344d,#0d1d2a);border:2px solid #5d819d;margin-bottom:14px;height:165px;overflow:hidden}
 .jump-vip-wardrobe{margin:12px 0;color:#e9ca73;font-size:6px;line-height:1.8;text-align:center}
 .jump-color-list select option:disabled{color:#65717b}
-#jumpAvatarPreview{width:120px;height:85px;image-rendering:pixelated}
-.jump-color-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.jump-color-list label{display:flex;flex-direction:column;gap:7px;font-size:7px}
-.jump-color-list select{min-width:0;height:36px;border:2px solid;background:#09141c;font-size:7px;color:#fff;padding:5px}
+#jumpAvatarPreview{width:180px;height:130px;max-width:100%;image-rendering:pixelated}
+.jump-color-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}
+.jump-color-list label{display:flex;flex-direction:column;gap:7px;font-size:7px;min-width:0}
+.jump-color-list select{width:100%;min-width:0;max-width:100%;height:36px;border:2px solid;background:#09141c;font-size:7px;color:#fff;padding:5px}
 .jump-rank-list{list-style:none;margin:10px 0;padding:0;min-height:120px;max-height:55dvh;overflow:auto}
 .jump-rank-list li{display:flex;align-items:center;gap:10px;padding:13px 6px;border-bottom:1px solid #263846;font-size:7px}
 .jump-rank-list .rank-name-wrap{flex:1}
@@ -154,17 +154,25 @@ body:not(.eixo-jump-view) #jumpMyTeamsBoard{display:none!important}
 
 
 /* jump10 — readable team rosters and automatic rematch feedback. */
-.jump-team-rank-name{gap:8px!important}
-.jump-team-rank-name>strong{font-size:9px!important;line-height:1.4}
-.jump-team-roster{display:flex;flex-direction:column;gap:7px;min-width:0}
-.jump-team-player{display:flex;align-items:center;flex-wrap:wrap;gap:5px 7px;min-height:18px;font-size:9px;line-height:1.35}
-.jump-team-player .rank-player-name{font-size:9px;line-height:1.35;white-space:nowrap}
-.jump-team-player-tags{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px}
-.jump-team-player-tags .rank-tag,.jump-team-player-tags .vip-rank-tag{transform:none;max-width:none}
+.jump-team-rank-name{gap:5px!important}
+.jump-team-rank-name>strong{font-size:8px!important;line-height:1.35}
+.jump-team-roster{display:flex;flex-direction:row;align-items:center;flex-wrap:nowrap;gap:3px;min-width:0;white-space:nowrap;overflow:hidden}
+.jump-team-player{display:inline-flex;align-items:center;flex:0 1 auto;min-width:0;gap:3px;min-height:13px;font-size:6px;line-height:1.2}
+.jump-team-player .rank-player-name{font-size:6px;line-height:1.2;white-space:nowrap}
+.jump-team-player-tags{display:inline-flex;align-items:center;flex-wrap:nowrap;gap:2px}
+.jump-team-player-tags .rank-tag,.jump-team-player-tags .vip-rank-tag{transform:none;max-width:none;font-size:4px;padding:2px 3px}
+.jump-team-plus{font-size:5px;color:#708697;flex:0 0 auto}
 .jump-team-boards ol>li,.jump-rank-list>li{align-items:flex-start}
 .jump-team-boards .rank-number,.jump-team-boards .rank-score{padding-top:2px}
 .jump-end button:disabled{opacity:.72;cursor:default;border-color:#e8bf63;background:#4c351b;color:#ffe8a7}
 @media(max-width:650px){
- .jump-team-player,.jump-team-player .rank-player-name{font-size:8px}
- .jump-team-player-tags{gap:3px}
+ .jump-team-player,.jump-team-player .rank-player-name{font-size:5px}
+ .jump-team-player-tags .rank-tag,.jump-team-player-tags .vip-rank-tag{font-size:3.5px;padding:2px}
+ .jump-team-player-tags{gap:2px}
+}
+
+@media(max-width:700px){
+ .jump-panel{width:calc(100vw - 18px)!important;padding:20px 12px!important}
+ .jump-color-list{grid-template-columns:1fr}
+ .jump-custom-preview{height:150px}
 }

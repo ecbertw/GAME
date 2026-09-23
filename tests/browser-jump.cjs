@@ -63,7 +63,7 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
   await a.locator('#jumpTeamReady').click();await a.waitForTimeout(3700);
   for(const page of [a,b,mobile])assert.match(await page.locator('#jumpWorld').textContent(),/TRIO.*3\/3/);
   await a.screenshot({path:path.join(root,'tmp/jump-qa/trio-desktop.png')});
-  await a.locator('#jumpTrioButton').click();await a.locator('#jumpPanel [data-enter-team]').first().click();await a.locator('#jumpTeamLeave').click();await b.waitForTimeout(1200);await mobile.waitForTimeout(1200);
+  await a.locator('#jumpTrioButton').click();await a.locator('[data-enter-team]').first().click();await a.locator('#jumpTeamLeave').click();await b.waitForTimeout(1200);await mobile.waitForTimeout(1200);
   assert.match(await b.locator('#jumpWorld').textContent(),/SOLO/);assert.match(await mobile.locator('#jumpWorld').textContent(),/SOLO/);
   // Verify real PostgreSQL team inserts and ranking isolation with controlled landings.
   const physics=require(root+'/jump-physics');let clock=0;

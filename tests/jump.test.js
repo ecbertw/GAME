@@ -171,10 +171,12 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/data-eixo-color-label/);
  assert.match(js,/facing,ground:local\.ground/);
  assert.match(js,/const spriteScale=\.72/);
- assert.match(js,/c\.translate\(0,-17\)/);
- assert.match(js,/if\(team\.status==='playing'\)P\.step\(local,keys,dt\)/);
+ assert.match(js,/c\.translate\(0,-14\)/);
  assert.match(js,/RECOMEÇA EM/);
  assert.match(js,/function teamRankPlayer\(p\)/);
+ assert.match(js,/function stepLocalWithAudio\(dt\)/);
+ assert.match(js,/jumpBiome\?\.\(biome\)/);
+ assert.match(js,/modal-button primary\" id=\"jumpTeamJoin/);
  assert.match(js,/myTeamsRenderSignature/);
  const accept=(js.match(/function acceptTeam\(out\)\{[\s\S]*?\n\}/)||[''])[0];
  assert.doesNotMatch(accept,/renderMyTeamsBoardFromCache\(\)/,'network snapshots must not recreate clickable team cards');

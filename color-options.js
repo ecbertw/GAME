@@ -79,9 +79,11 @@
       }
       const selected=String(select.value||'').toLowerCase();
       const color=hex.test(selected)?selected:selected==='rainbow'||selected==='rgb'?'#f5c542':'#00e5ff';
-      // Override legacy VIP code that painted the whole select background.
+      const jumpOutfit=select.matches?.('[data-jump-outfit]');
+      // Keep dark wardrobe colours readable: the border previews the selected
+      // colour while JUMP's label itself stays bright enough to use.
       select.style.setProperty('background','#080d12','important');
-      select.style.setProperty('color',color,'important');
+      select.style.setProperty('color',jumpOutfit?'#f4f5f6':color,'important');
       select.style.setProperty('border-color',color,'important');
     }
   }
