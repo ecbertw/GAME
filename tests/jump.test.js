@@ -26,6 +26,20 @@ test('moving platforms are deterministic and really move horizontally',()=>{
  assert.notEqual(Math.round(a*100),Math.round(b*100));
  assert.ok(a>=0&&a+p.w<=P.W&&b>=0&&b+p.w<=P.W);
 });
+test('hard mode avoids vertical ladders and makes moving platforms dominant',()=>{
+ const ps=P.platforms(8123,160);
+ const late=ps.slice(25);
+ const movingRatio=late.filter(p=>p.moving).length/late.length;
+ assert.ok(movingRatio>=0.64,'late game should be mostly moving platforms');
+ for(let i=6;i<ps.length;i++){
+   const prev=ps[i-1],p=ps[i];
+   const a=prev.x+prev.w/2,b=p.x+p.w/2;
+   assert.ok(Math.abs(a-b)>=40,'late platforms must not form easy vertical ladders');
+   assert.ok(Math.abs(a-b)<=112,'generated jumps must stay inside horizontal movement envelope');
+ }
+ assert.ok(ps[10].w>ps[40].w,'platforms should become clearly narrower');
+});
+
 test('holding jump continuously causes repeated bounces',()=>{
  const s=P.create(9);let bounces=0,prev=0;
  for(let i=0;i<360;i++){
@@ -90,4 +104,6 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/platform:Number\(local\?\.bestPlatform\|\|0\)/);
  assert.match(js,/confirmedScore=Number\(out\.state\?\.score\|\|0\)/);
  assert.match(js,/P\.platformX\(p,local\.time\)/);
+ assert.doesNotMatch(js,/if\(p\.moving\)\s*\{\s*c\.fillStyle='#0a5571'/);
+ assert.match(js,/Moving platforms deliberately keep the exact same biome palette/);
 });
