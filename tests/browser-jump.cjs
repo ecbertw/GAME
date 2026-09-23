@@ -50,9 +50,8 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
   assert.match(await a.locator('#jumpWorld').textContent(),/DUO/);assert.match(await b.locator('#jumpWorld').textContent(),/DUO/);
   await a.keyboard.down('KeyW');await b.keyboard.down('KeyW');await a.waitForTimeout(600);await a.keyboard.up('KeyW');await b.keyboard.up('KeyW');
   await a.screenshot({path:path.join(root,'tmp/jump-qa/duo-desktop.png')});
-  await a.locator('#jumpDuoButton').click();await a.locator('[data-enter-team]').first().click();await a.locator('#jumpTeamLeave').click();await b.waitForTimeout(1300);assert.equal(await b.locator('#jumpEnd').isVisible(),true);
-  await b.locator('#jumpRestart').click();assert.equal(await b.locator('#jumpTeamLobby').isVisible(),true);
-  await b.locator('#jumpTeamLeave').click();await a.locator('[data-game="pulse"]').click();await a.locator('#gameCanvas').waitFor({state:'visible'});
+  await a.locator('#jumpDuoButton').click();await a.locator('[data-enter-team]').first().click();await a.locator('#jumpTeamLeave').click();await b.waitForTimeout(1200);
+  assert.match(await b.locator('#jumpWorld').textContent(),/SOLO/);await a.locator('[data-game="pulse"]').click();await a.locator('#gameCanvas').waitFor({state:'visible'});
   const mobile=await pageFor(players[2],{width:390,height:844});await mobile.screenshot({path:path.join(root,'tmp/jump-qa/mobile.png')});
   assert.equal(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   // Exercise a full TRIO lobby in three independent sessions.
@@ -64,7 +63,8 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
   await a.locator('#jumpTeamReady').click();await a.waitForTimeout(3700);
   for(const page of [a,b,mobile])assert.match(await page.locator('#jumpWorld').textContent(),/TRIO.*3\/3/);
   await a.screenshot({path:path.join(root,'tmp/jump-qa/trio-desktop.png')});
-  for(const page of [a,b,mobile]){await page.locator('#jumpTrioButton').click();await page.locator('[data-enter-team]').first().click();await page.locator('#jumpTeamLeave').click();}
+  await a.locator('#jumpTrioButton').click();await a.locator('[data-enter-team]').first().click();await a.locator('#jumpTeamLeave').click();await b.waitForTimeout(1200);await mobile.waitForTimeout(1200);
+  assert.match(await b.locator('#jumpWorld').textContent(),/SOLO/);assert.match(await mobile.locator('#jumpWorld').textContent(),/SOLO/);
   // Verify real PostgreSQL team inserts and ranking isolation with controlled landings.
   const physics=require(root+'/jump-physics');let clock=0;
   const service=require(root+'/jump-team-server').createService({now:()=>clock,physics:{...physics,step(s){s.bestPlatform=3;return s;}}});await service.init(db);
@@ -72,7 +72,7 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
   service.ready(players[0],{ready:true});service.ready(players[1],{ready:true});clock=3100;service.tick();const r=service.state(players[0]);await service.finish(players[0],{runId:r.runId});
   assert.equal((await service.rankings('duo',1)).teams[0].score,36);assert.equal((await service.rankings('trio',1)).teams.length,0);
   assert.equal((await db.query('SELECT best_score FROM jump_scores WHERE player_id=$1',[players[0].id])).rows[0].best_score,120);
-  assert.deepEqual(errors,[]);console.log('PASS: PostgreSQL migration preserves SOLO/PULSE; two browser contexts create/join/ready/auto-start/move/leave/end; PULSE switch; mobile; no page errors');
+  assert.deepEqual(errors,[]);console.log('PASS: PostgreSQL migration preserves SOLO/PULSE; two browser contexts create/join/ready/auto-start/move/shared-leave/solo-fallback; PULSE switch; mobile; no page errors');
   console.log(JSON.stringify(await J.teams.rankings('duo',1)));
  }finally{await browser.close();server.close();await pg.close();clearTimeout(deadline);}
 })().catch(e=>{console.error(e);process.exitCode=1;});
