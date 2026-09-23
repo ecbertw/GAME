@@ -125,3 +125,20 @@ jobs:
         run: |
           if [ -f /tmp/eixo-ci.pid ]; then kill "$(cat /tmp/eixo-ci.pid)" 2>/dev/null || true; fi
           cat /tmp/eixo-ci.log 2>/dev/null || true
+
+
+  jump-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --omit=dev --ignore-scripts
+      - name: Install browser test dependencies
+        run: npm install --no-save @electric-sql/pglite playwright
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: JUMP browser integration
+        run: node tests/browser-jump.cjs
