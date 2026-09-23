@@ -31,7 +31,7 @@ function purge(){
 }
 function newInstance(biome,kind,roomId){
   const inst={id:crypto.randomUUID(),biome,kind,roomId:roomId||null,seed:crypto.randomInt(1,2147483647),players:new Map(),platforms:null};
-  inst.platforms=physics.platforms(inst.seed,1800);
+  inst.platforms=physics.platforms(inst.seed,30);
   instances.set(inst.id,inst);return inst;
 }
 function findInstance(biome,kind,roomId){
@@ -89,7 +89,7 @@ function state(p,runId){
 }
 async function finish(db,p,runId){
   const run=requireRun(p,runId);advance(run);
-  const score=Math.min(1000000,Math.max(0,Math.floor(run.state.best)));
+  const score=Math.min(2000000000,Math.max(0,Math.floor(run.state.best)));
   removeSession(run);
   if(score>0){
     await db.query('INSERT INTO jump_scores(player_id,best_score) VALUES($1,$2) ON CONFLICT(player_id) DO UPDATE SET best_score=GREATEST(jump_scores.best_score,EXCLUDED.best_score),updated_at=CASE WHEN EXCLUDED.best_score>jump_scores.best_score THEN NOW() ELSE jump_scores.updated_at END',[p.id,score]);
