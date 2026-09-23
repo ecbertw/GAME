@@ -1,12 +1,14 @@
 'use strict';
-// One authoritative simulation per chained team. No client-submitted scores.
+// Persistent DUO/TRIO rosters with one authoritative live simulation per entered team.
 const crypto=require('node:crypto');
 const P=require('./jump-physics');
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
-const LIMIT=110,DISCONNECT=10000,TTL=30*60*1000;
+const LIMIT=110,DISCONNECT=10000;
+const MODES=new Set(['duo','trio']),BIOMES=new Set(['city','forest','desert','snow']);
 function createService({now=Date.now,physics=P}={}){
  const teams=new Map(),membership=new Map();
  let db;
+ const cap=mode=>mode==='duo'?2:3;
  async function init(storage){
   db=storage;
   await db.query(`CREATE TABLE IF NOT EXISTS jump_team_scores(
@@ -14,11 +16,60 @@ function createService({now=Date.now,physics=P}={}){
    name VARCHAR(24) NOT NULL,members JSONB NOT NULL,best_score INTEGER NOT NULL DEFAULT 0,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await db.query('CREATE INDEX IF NOT EXISTS jump_team_rank_idx ON jump_team_scores(mode,best_score DESC,updated_at)');
+  await db.query(`CREATE TABLE IF NOT EXISTS jump_teams(
+   id UUID PRIMARY KEY,code VARCHAR(12) UNIQUE NOT NULL,mode VARCHAR(4) NOT NULL CHECK(mode IN ('duo','trio')),
+   name VARCHAR(24) NOT NULL,biome VARCHAR(8) NOT NULL,owner_id TEXT NOT NULL,
+   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await db.query(`CREATE TABLE IF NOT EXISTS jump_team_members(
+   team_id UUID NOT NULL REFERENCES jump_teams(id) ON DELETE CASCADE,
+   player_id TEXT NOT NULL,player_name VARCHAR(32) NOT NULL,
+   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(team_id,player_id))`);
+  await db.query('CREATE INDEX IF NOT EXISTS jump_team_members_player_idx ON jump_team_members(player_id,joined_at DESC)');
  }
- function mine(p){const t=teams.get(membership.get(p.id));if(!t)throw fail('Equipa expirada. Cria ou aceita um convite.',404);return t;}
- function save(t){
+ function blankMember(row){return{id:String(row.player_id),name:String(row.player_name||'PLAYER'),outfit:null,ready:false,present:false,seen:0,inputAt:0,keys:{},seq:-1,state:null,facing:1};}
+ function previewState(t,index){
+  const s=physics.create(t.seed);
+  s.x=physics.W/2+(index-(t.capacity-1)/2)*26;
+  s.ground=true;s.groundPlatform=0;s.jumpOrigin=0;
+  return s;
+ }
+ function refreshPreview(t){
+  let i=0;
+  for(const m of t.members.values()){
+   if(m.present)m.state=previewState(t,i);
+   else m.state=null;
+   m.ready=false;m.keys={};m.seq=-1;m.inputAt=now();i++;
+  }
+ }
+ function resetLobby(t,newSeed=true){
+  t.status='lobby';t.reason=null;t.runId=null;t.score=0;t.startsAt=0;t.result=null;
+  if(newSeed||!t.seed)t.seed=crypto.randomInt(1,2147483647);
+  refreshPreview(t);t.updated=now();
+ }
+ async function hydrate(teamId){
+  if(teams.has(teamId))return teams.get(teamId);
+  const tr=await db.query('SELECT id::text AS id,code,mode,name,biome,owner_id FROM jump_teams WHERE id=$1::uuid',[teamId]);
+  const row=tr.rows[0];if(!row)throw fail('Equipa não encontrada.',404);
+  const mr=await db.query('SELECT player_id,player_name FROM jump_team_members WHERE team_id=$1::uuid ORDER BY joined_at,player_id',[teamId]);
+  const t={id:String(row.id),code:String(row.code),mode:String(row.mode),name:String(row.name),biome:String(row.biome),ownerId:String(row.owner_id),capacity:cap(row.mode),
+   members:new Map(mr.rows.map(x=>[String(x.player_id),blankMember(x)])),status:'lobby',updated:now(),seed:crypto.randomInt(1,2147483647),runId:null,score:0,startsAt:0,saved:true,saveError:false};
+  teams.set(t.id,t);return t;
+ }
+ async function list(p,mode){
+  if(!MODES.has(mode))throw fail('Modo inválido.');
+  const r=await db.query(`SELECT t.id::text AS id,t.code,t.mode,t.name,t.biome,t.owner_id,
+   COUNT(allm.player_id)::int AS member_count
+   FROM jump_team_members mine
+   JOIN jump_teams t ON t.id=mine.team_id
+   JOIN jump_team_members allm ON allm.team_id=t.id
+   WHERE mine.player_id=$1 AND t.mode=$2
+   GROUP BY t.id,t.code,t.mode,t.name,t.biome,t.owner_id,t.updated_at
+   ORDER BY t.updated_at DESC,t.created_at DESC`,[String(p.id),mode]);
+  return{ok:true,mode,teams:r.rows.map(x=>({id:String(x.id),code:x.code,mode:x.mode,name:x.name,biome:x.biome,ownerId:String(x.owner_id),memberCount:Number(x.member_count||0),capacity:cap(x.mode),active:membership.get(String(p.id))===String(x.id)}))};
+ }
+ async function save(t){
   if(t.status!=='ended'||t.saved||t.saving)return t.saving||Promise.resolve();
-  const result=t.result;
+  const result=t.result;if(!result)return;
   t.saving=db.query(`INSERT INTO jump_team_scores(roster_key,mode,name,members,best_score) VALUES($1,$2,$3,$4::jsonb,$5)
    ON CONFLICT(roster_key) DO UPDATE SET name=CASE WHEN EXCLUDED.best_score>jump_team_scores.best_score THEN EXCLUDED.name ELSE jump_team_scores.name END,
    members=CASE WHEN EXCLUDED.best_score>jump_team_scores.best_score THEN EXCLUDED.members ELSE jump_team_scores.members END,
@@ -29,26 +80,47 @@ function createService({now=Date.now,physics=P}={}){
  }
  function end(t,reason){
   if(t.status!=='playing')return;
-  t.status='ended';t.reason=reason;t.updated=now();
+  t.status='ended';t.reason=reason;t.updated=now();t.startsAt=0;
   t.result={key:crypto.createHash('sha256').update(t.mode+':'+[...t.members.keys()].sort().join(':')).digest('hex'),score:t.score,
    members:[...t.members.values()].map(m=>({id:m.id,name:m.name}))};
-  for(const m of t.members.values()){m.state.alive=false;m.ready=false;}
+  t.saved=false;
+  for(const m of t.members.values()){if(m.state)m.state.alive=false;m.ready=false;m.keys={};}
   void save(t);
+ }
+ function beginRun(t){
+  t.seed=t.seed||crypto.randomInt(1,2147483647);t.runId=crypto.randomUUID();t.score=0;t.saved=false;t.saveError=false;t.reason=null;t.result=null;
+  t.status='playing';t.last=now();t.updated=now();t.startsAt=0;
+  const shared=physics.platforms(t.seed,34);let i=0;
+  for(const m of t.members.values()){
+   m.state=physics.create(t.seed,shared);m.state.x=physics.W/2+(i++-(t.capacity-1)/2)*26;
+   m.keys={};m.seq=-1;m.seen=now();m.inputAt=now();m.ready=false;
+  }
+ }
+ function allPresentReady(t){
+  return t.members.size===t.capacity&&[...t.members.values()].every(m=>m.present&&m.ready&&now()-m.seen<=DISCONNECT);
+ }
+ function maybeCountdown(t){
+  if(t.status==='ended'&&!t.saved)return;
+  if(t.status==='ended'&&t.saved)resetLobby(t,true);
+  if(allPresentReady(t)){
+   if(t.status==='lobby'){t.status='countdown';t.startsAt=now()+3000;t.updated=now();}
+  }else if(t.status==='countdown'){
+   t.status='lobby';t.startsAt=0;t.updated=now();
+  }
  }
  function advance(t){
   if(t.status!=='playing')return;
   const time=now();
-  if([...t.members.values()].some(m=>time-m.seen>DISCONNECT)){end(t,'disconnect');return;}
+  if([...t.members.values()].some(m=>!m.present||time-m.seen>DISCONNECT)){end(t,'disconnect');return;}
   let rest=Math.min(.25,Math.max(0,(time-t.last)/1000));t.last=time;
   while(rest>0&&t.status==='playing'){
    const dt=Math.min(1/60,rest);rest-=dt;
    const ms=[...t.members.values()];
    for(const m of ms){if(time-m.inputAt>700)m.keys={};physics.step(m.state,m.keys,dt);}
-   // Adjacent members form a chain. Slack permits jumping; tension pulls both ends.
    for(let i=1;i<ms.length;i++){
     const a=ms[i-1].state,b=ms[i].state,dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy);
     if(dist<=LIMIT)continue;
-    const pull=Math.min(160,(dist-LIMIT)*9),nx=dx/dist,ny=dy/dist;
+    const pull=Math.min(170,(dist-LIMIT)*9.5),nx=dx/dist,ny=dy/dist;
     for(const [s,sign] of [[a,1],[b,-1]]){
      s.x=Math.max(8,Math.min(physics.W-8,s.x+sign*nx*pull*dt));
      s.vy+=sign*ny*pull*dt*7;
@@ -60,84 +132,122 @@ function createService({now=Date.now,physics=P}={}){
   }
  }
  function tick(){
+  const time=now();
   for(const t of teams.values()){
-   advance(t);
-   if(t.status==='ended'&&!t.saved&&!t.saving&&now()-(t.retryAt||0)>5000){t.retryAt=now();void save(t);}
-   if(now()-t.updated>TTL&&t.status!=='playing'&&(t.status!=='ended'||t.saved)){
-    for(const id of t.members.keys())if(membership.get(id)===t.id)membership.delete(id);
-    teams.delete(t.id);
+   if(t.status==='lobby'||t.status==='countdown'){
+    for(const m of t.members.values())if(m.present&&time-m.seen>DISCONNECT){m.present=false;m.ready=false;m.state=null;if(membership.get(m.id)===t.id)membership.delete(m.id);}
+    maybeCountdown(t);
+    if(t.status==='countdown'&&time>=t.startsAt&&allPresentReady(t))beginRun(t);
    }
+   advance(t);
+   if(t.status==='ended'&&!t.saved&&!t.saving&&time-(t.retryAt||0)>5000){t.retryAt=time;void save(t);}
   }
  }
- function member(p,outfit){return{id:p.id,name:p.visualName||p.name,outfit,ready:false,seen:now(),inputAt:now(),keys:{},seq:-1};}
+ function mine(p){const id=membership.get(String(p.id)),t=id&&teams.get(id);if(!t)throw fail('Entra primeiro numa das tuas equipas.',404);return t;}
  function view(t,p){
-  const m=t.members.get(p.id);m.seen=now();t.updated=now();
-  return {ok:true,teamId:t.id,mode:t.mode,name:t.name,code:t.code,ownerId:t.ownerId,capacity:t.capacity,
-   biome:t.biome,seed:t.seed,runId:t.runId,status:t.status,score:t.score||0,reason:t.reason||null,saved:!!t.saved,saveError:!!t.saveError,
-   chainLength:LIMIT,members:[...t.members.values()].map(x=>({id:x.id,name:x.name,ready:x.ready,outfit:x.outfit,
+  const m=t.members.get(String(p.id));if(!m)throw fail('Já não pertences a esta equipa.',403);
+  if(membership.get(String(p.id))===t.id){m.present=true;m.seen=now();}
+  t.updated=now();
+  const countdownMs=t.status==='countdown'?Math.max(0,t.startsAt-now()):0;
+  return{ok:true,teamId:t.id,mode:t.mode,name:t.name,code:t.code,ownerId:t.ownerId,capacity:t.capacity,biome:t.biome,seed:t.seed,runId:t.runId,status:t.status,score:t.score||0,reason:t.reason||null,saved:!!t.saved,saveError:!!t.saveError,countdownMs,
+   chainLength:LIMIT,members:[...t.members.values()].map(x=>({id:x.id,name:x.name,ready:!!x.ready,present:!!x.present,outfit:x.outfit,
     state:x.state?{...physics.publicState(x.state),cam:x.state.cam,time:x.state.time,ground:x.state.ground,facing:x.facing||1,moving:!!(x.keys.left||x.keys.right)}:null}))};
  }
- async function leave(p){
-  const t=teams.get(membership.get(p.id));if(!t)return{ok:true};
-  advance(t);end(t,'leave');await save(t);
-  if(t.status==='ended'&&!t.saved)throw fail('Não foi possível guardar. Tenta sair novamente.',503);
-  t.members.delete(p.id);membership.delete(p.id);
-  if(t.ownerId===p.id)t.ownerId=t.members.keys().next().value;
-  if(!t.members.size)teams.delete(t.id);
-  return{ok:true};
+ async function enter(p,d,outfit){
+  const teamId=String(d.teamId||'');if(!/^[0-9a-f-]{36}$/i.test(teamId))throw fail('Equipa inválida.');
+  const check=await db.query('SELECT player_name FROM jump_team_members WHERE team_id=$1::uuid AND player_id=$2',[teamId,String(p.id)]);
+  if(!check.rows[0])throw fail('Não pertences a esta equipa.',403);
+  const old=membership.get(String(p.id));
+  if(old&&old!==teamId)await leave(p);
+  const t=await hydrate(teamId),m=t.members.get(String(p.id));
+  if(!m)throw fail('Não pertences a esta equipa.',403);
+  if(t.status==='ended'&&t.saved)resetLobby(t,true);
+  m.name=String(p.visualName||p.name||m.name).slice(0,32);m.outfit=outfit||m.outfit;m.present=true;m.ready=false;m.seen=now();m.inputAt=now();m.keys={};m.seq=-1;
+  await db.query('UPDATE jump_team_members SET player_name=$3 WHERE team_id=$1::uuid AND player_id=$2',[teamId,String(p.id),m.name]);
+  membership.set(String(p.id),teamId);
+  if(!m.state)m.state=previewState(t,[...t.members.keys()].indexOf(m.id));
+  maybeCountdown(t);return view(t,p);
  }
- function create(p,d,outfit){
-  tick();if(membership.has(p.id))throw fail('Sai da equipa atual primeiro.',409);
-  if(!['duo','trio'].includes(d.mode))throw fail('Modo inválido.');
-  const name=String(d.name||'').trim();
-  if(!/^[\p{L}\p{N} _-]{2,24}$/u.test(name))throw fail('Nome: 2 a 24 letras, números, espaços, _ ou -.');
-  if(!['city','forest','desert','snow'].includes(d.biome))throw fail('Ambiente inválido.');
-  const t={id:crypto.randomUUID(),mode:d.mode,name,biome:d.biome,capacity:d.mode==='duo'?2:3,ownerId:p.id,
-   code:crypto.randomBytes(6).toString('hex').toUpperCase(),members:new Map([[p.id,member(p,outfit)]]),status:'lobby',updated:now(),inviteExpires:now()+TTL};
-  teams.set(t.id,t);membership.set(p.id,t.id);return view(t,p);
+ async function create(p,d,outfit){
+  if(!MODES.has(d.mode))throw fail('Modo inválido.');
+  const name=String(d.name||'').trim();if(!/^[\p{L}\p{N} _-]{2,24}$/u.test(name))throw fail('Nome: 2 a 24 letras, números, espaços, _ ou -.');
+  if(!BIOMES.has(d.biome))throw fail('Ambiente inválido.');
+  const id=crypto.randomUUID(),code=crypto.randomBytes(6).toString('hex').toUpperCase(),playerName=String(p.visualName||p.name||'PLAYER').slice(0,32);
+  await db.query('INSERT INTO jump_teams(id,code,mode,name,biome,owner_id) VALUES($1::uuid,$2,$3,$4,$5,$6)',[id,code,d.mode,name,d.biome,String(p.id)]);
+  await db.query('INSERT INTO jump_team_members(team_id,player_id,player_name) VALUES($1::uuid,$2,$3)',[id,String(p.id),playerName]);
+  return enter(p,{teamId:id},outfit);
  }
- function join(p,d,outfit){
-  tick();const code=String(d.code||'').trim().toUpperCase();
-  if(!/^[A-F0-9]{12}$/.test(code))throw fail('Convite inválido.');
-  const t=[...teams.values()].find(t=>t.code===code&&t.inviteExpires>now());
-  if(!t)throw fail('Convite inválido ou expirado.',404);
-  if(membership.get(p.id)===t.id)return view(t,p);
-  if(membership.has(p.id))throw fail('Sai da equipa atual primeiro.',409);
-  if(t.status==='playing'||t.members.size>=t.capacity)throw fail('Equipa cheia ou em jogo.',409);
-  if(t.status==='ended'&&!t.saved)throw fail('A aguardar gravação da partida.',409);
-  t.members.set(p.id,member(p,outfit));membership.set(p.id,t.id);
-  for(const m of t.members.values())m.ready=false;
-  return view(t,p);
+ async function join(p,d,outfit){
+  const code=String(d.code||'').trim().toUpperCase();if(!/^[A-F0-9]{12}$/.test(code))throw fail('Convite inválido.');
+  const tr=await db.query('SELECT id::text AS id,mode FROM jump_teams WHERE code=$1',[code]);const row=tr.rows[0];if(!row)throw fail('Convite inválido.',404);
+  const count=await db.query('SELECT COUNT(*)::int AS count FROM jump_team_members WHERE team_id=$1::uuid',[String(row.id)]);
+  const exists=await db.query('SELECT 1 FROM jump_team_members WHERE team_id=$1::uuid AND player_id=$2',[String(row.id),String(p.id)]);
+  if(!exists.rows[0]&&Number(count.rows[0]?.count||0)>=cap(row.mode))throw fail('Equipa cheia.',409);
+  if(!exists.rows[0])await db.query('INSERT INTO jump_team_members(team_id,player_id,player_name) VALUES($1::uuid,$2,$3)',[String(row.id),String(p.id),String(p.visualName||p.name||'PLAYER').slice(0,32)]);
+  teams.delete(String(row.id));return enter(p,{teamId:String(row.id)},outfit);
  }
  function state(p){tick();return view(mine(p),p);}
- function ready(p,d){const t=mine(p);if(t.status==='playing')throw fail('Partida já iniciada.',409);t.members.get(p.id).ready=d.ready===true;return view(t,p);}
+ function ready(p,d){
+  const t=mine(p);tick();const m=t.members.get(String(p.id));if(!m.present)throw fail('Entra na sala da equipa primeiro.',409);
+  if(t.status==='playing')throw fail('Partida já iniciada.',409);
+  if(t.status==='ended'&&!t.saved)throw fail('A aguardar gravação da partida.',409);
+  if(t.status==='ended'&&t.saved)resetLobby(t,true);
+  m.ready=d.ready===true;m.seen=now();
+  if(!m.ready&&t.status==='countdown'){t.status='lobby';t.startsAt=0;}
+  maybeCountdown(t);return view(t,p);
+ }
  function start(p){
+  // Compatibility endpoint only. The browser no longer needs a START button:
+  // the final READY begins a three-second countdown automatically.
   const t=mine(p);tick();
-  if(t.ownerId!==p.id)throw fail('Só o líder pode iniciar.',403);
-  if(t.status==='playing'||(t.status==='ended'&&!t.saved))throw fail('Partida em curso ou por guardar.',409);
-  if(t.members.size!==t.capacity||[...t.members.values()].some(m=>!m.ready||now()-m.seen>DISCONNECT))throw fail('Todos os membros têm de estar presentes e prontos.',409);
-  t.seed=crypto.randomInt(1,2147483647);t.runId=crypto.randomUUID();t.score=0;t.saved=false;t.saveError=false;t.reason=null;t.result=null;
-  t.status='playing';t.last=now();t.updated=now();
-  const platforms=physics.platforms(t.seed,30);
-  let i=0;for(const m of t.members.values()){m.state=physics.create(t.seed,platforms);m.state.x=physics.W/2+(i++-(t.capacity-1)/2)*26;m.keys={};m.seq=-1;m.seen=now();m.inputAt=now();}
-  return view(t,p);
+  if(t.ownerId!==String(p.id))throw fail('Só o líder pode iniciar.',403);
+  if(!allPresentReady(t))throw fail('Todos os membros têm de estar presentes e prontos.',409);
+  beginRun(t);return view(t,p);
  }
  function input(p,d){
-  const t=mine(p);advance(t);
-  if(d.runId!==t.runId)throw fail('Partida antiga.',409);
-  const m=t.members.get(p.id);
+  const t=mine(p);tick();
+  if(t.status!=='playing'||d.runId!==t.runId)throw fail('Partida antiga.',409);
+  const m=t.members.get(String(p.id));if(!m.present)throw fail('Sessão expirada.',409);
   if(!Number.isSafeInteger(d.seq)||d.seq<0)throw fail('Sequência inválida.');
-  if(d.seq>m.seq&&t.status==='playing'){m.seq=d.seq;m.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};m.inputAt=now();if(m.keys.left!==m.keys.right)m.facing=m.keys.left?-1:1;}
-  return view(t,p);
+  if(d.seq>m.seq){m.seq=d.seq;m.keys={left:d.left===true,right:d.right===true,jump:d.jump===true};m.inputAt=now();m.seen=now();if(m.keys.left!==m.keys.right)m.facing=m.keys.left?-1:1;}
+  advance(t);return view(t,p);
  }
- async function finish(p,d){const t=mine(p);if(d.runId!==t.runId)throw fail('Partida antiga.',409);advance(t);end(t,'leave');await save(t);return view(t,p);}
+ async function finish(p,d){
+  const t=mine(p);if(d.runId!==t.runId)throw fail('Partida antiga.',409);advance(t);end(t,'leave');await save(t);return view(t,p);
+ }
+ async function leave(p){
+  const id=membership.get(String(p.id));if(!id)return{ok:true};
+  const t=teams.get(id);membership.delete(String(p.id));if(!t)return{ok:true};
+  const m=t.members.get(String(p.id));if(!m)return{ok:true};
+  advance(t);
+  if(t.status==='playing'){end(t,'leave');await save(t);}
+  if(t.status==='countdown'){t.status='lobby';t.startsAt=0;for(const x of t.members.values())x.ready=false;}
+  m.present=false;m.ready=false;m.keys={};m.state=null;t.updated=now();
+  return{ok:true,teamId:t.id};
+ }
+ async function abandon(p,d={}){
+  const teamId=String(d.teamId||membership.get(String(p.id))||'');if(!teamId)throw fail('Equipa inválida.');
+  if(membership.get(String(p.id))===teamId)await leave(p);
+  const t=teams.get(teamId)||await hydrate(teamId);
+  if(!t.members.has(String(p.id)))throw fail('Não pertences a esta equipa.',403);
+  await db.query('DELETE FROM jump_team_members WHERE team_id=$1::uuid AND player_id=$2',[teamId,String(p.id)]);
+  t.members.delete(String(p.id));
+  if(!t.members.size){await db.query('DELETE FROM jump_teams WHERE id=$1::uuid',[teamId]);teams.delete(teamId);return{ok:true,deleted:true};}
+  if(t.ownerId===String(p.id)){
+   t.ownerId=t.members.keys().next().value;await db.query('UPDATE jump_teams SET owner_id=$2,updated_at=NOW() WHERE id=$1::uuid',[teamId,t.ownerId]);
+  }
+  if(t.status==='playing')end(t,'leave');
+  if(t.status==='countdown'||t.status==='ended'){resetLobby(t,true);}
+  for(const x of t.members.values())x.ready=false;
+  return{ok:true};
+ }
  async function rankings(mode,page){
-  if(!['duo','trio'].includes(mode))throw fail('Modo inválido.');
+  if(!MODES.has(mode))throw fail('Modo inválido.');
   const pg=Math.max(1,Math.min(10000,Math.floor(Number(page)||1)));
   const count=await db.query('SELECT COUNT(*)::int AS count FROM jump_team_scores WHERE mode=$1 AND best_score>0',[mode]);
   const rows=await db.query('SELECT name,members,best_score AS score FROM jump_team_scores WHERE mode=$1 AND best_score>0 ORDER BY best_score DESC,updated_at,roster_key LIMIT 25 OFFSET $2',[mode,(pg-1)*25]);
   return{ok:true,mode,teams:rows.rows.map((r,i)=>({...r,rank:(pg-1)*25+i+1})),page:pg,pages:Math.max(1,Math.ceil(Number(count.rows[0]?.count||0)/25))};
  }
- return{init,create,join,leave,state,ready,start,input,finish,rankings,tick,has:p=>membership.has(p.id)};
+ return{init,list,create,join,enter,leave,abandon,state,ready,start,input,finish,rankings,tick,has:p=>membership.has(String(p.id))};
 }
 module.exports={createService};
