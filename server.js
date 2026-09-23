@@ -4,13 +4,14 @@ const path=require('path');
 const crypto=require('crypto');
 const authService=require('./auth-server');
 const paypalService=require('./paypal-server');
+const jumpService=require('./jump-server');
 const PORT=Number(process.env.PORT)||3000;
 const HOST=String(process.env.HOST||'127.0.0.1');
 const ALLOWED_HOSTS=new Set(String(process.env.PUBLIC_HOSTS||'eixo.at,www.eixo.at,127.0.0.1,localhost').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean));
 function requestHost(req){return String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().toLowerCase().replace(/:\d+$/,'')}
 function allowedRequestHost(req){return ALLOWED_HOSTS.has(requestHost(req))}
 const ROOT=__dirname;
-const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
+const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','jump-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
 const PUBLIC_STATIC_EXTS=new Set(['.html','.css','.js','.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.woff','.woff2']);
 function isPublicStaticRequestPath(pathname){
   const clean=String(pathname||'').replace(/^\/+/,''),parts=clean.split('/');
@@ -116,6 +117,7 @@ async function initDb(){
   await pool.query(`ALTER TABLE room_members ADD COLUMN IF NOT EXISTS best_score INTEGER NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS score_updated_at TIMESTAMPTZ`);
   await pool.query(`CREATE TABLE IF NOT EXISTS messages(id UUID PRIMARY KEY,type VARCHAR(20) NOT NULL,name VARCHAR(80),email VARCHAR(200),subject VARCHAR(160),message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await paypalService.initDb(pool);
+  await jumpService.initDb(pool);
   await pool.query(`CREATE TABLE IF NOT EXISTS background_claims(x INTEGER NOT NULL,y INTEGER NOT NULL,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,color VARCHAR(7) NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(x,y))`);
   await pool.query(`ALTER TABLE background_claims ALTER COLUMN color TYPE VARCHAR(16)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS background_claims_owner_idx ON background_claims(owner_id)`);
@@ -386,6 +388,23 @@ async function handleApi(req,res,url){
   if(req.method==='GET'&&url.pathname==='/api/chat'){return json(res,200,{channel:url.searchParams.get('channel')||'global',messages:await getChatMessages(url.searchParams.get('id'),url.searchParams.get('token'),url.searchParams.get('channel')||'global')});}
   if(req.method==='POST'&&url.pathname==='/api/chat'){const d=await body(req);return json(res,201,await sendChatMessage(d.id,d.token,d.channel,d.message));}
   if(req.method==='GET'&&url.pathname==='/api/player-rank'){return json(res,200,await playerRanks(url.searchParams.get('id'),url.searchParams.get('token')));}
+  /* JUMP uses its own tables and live instances; PULSE routes remain unchanged. */
+  if(url.pathname==='/api/jump/rankings'&&req.method==='GET')return json(res,200,await jumpService.rankings(global.db,url.searchParams.get('country'),url.searchParams.get('page')));
+  if(url.pathname==='/api/jump/cosmetics'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,{ok:true,colors:await jumpService.getColors(global.db,p),palette:jumpService.PALETTE,parts:jumpService.PARTS});}
+  if(url.pathname==='/api/jump/rooms'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.roomList(global.db,p));}
+  if(url.pathname==='/api/jump/rooms/rankings'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.roomRankings(global.db,p,url.searchParams.get('roomId')));}
+  if(url.pathname==='/api/jump/run/state'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,jumpService.state(p,url.searchParams.get('runId')));}
+  if(url.pathname.startsWith('/api/jump/')&&req.method==='POST'){
+    const d=await body(req),p=await roomAuth(d.id,d.token);
+    if(url.pathname==='/api/jump/run/start'){if(!boundedRate(paypalRate,'jump-start:'+p.id,15,60*1000))throw Object.assign(new Error('Aguarda um momento antes de recomeçar.'),{status:429});return json(res,201,await jumpService.start(global.db,p,d));}
+    if(url.pathname==='/api/jump/run/input'){if(!boundedRate(paypalRate,'jump-input:'+p.id,150,10*1000))throw Object.assign(new Error('Demasiadas atualizações JUMP.'),{status:429});return json(res,200,jumpService.input(p,d));}
+    if(url.pathname==='/api/jump/run/finish')return json(res,200,await jumpService.finish(global.db,p,d.runId));
+    if(url.pathname==='/api/jump/run/leave')return json(res,200,jumpService.leave(p));
+    if(url.pathname==='/api/jump/cosmetics')return json(res,200,await jumpService.saveColors(global.db,p,d));
+    if(url.pathname==='/api/jump/rooms/create')return json(res,201,await jumpService.roomCreate(global.db,p,d));
+    if(url.pathname==='/api/jump/rooms/join')return json(res,200,await jumpService.roomJoin(global.db,p,d));
+    if(url.pathname==='/api/jump/rooms/leave')return json(res,200,await jumpService.roomLeave(global.db,p,d));
+  }
   if(req.method==='GET'&&url.pathname==='/api/rankings'){const c=url.searchParams.get('country')||'';if(c&&!validCountry(c))return json(res,400,{error:'País inválido.'});return json(res,200,{country:c||null,...await rankings(c||null,url.searchParams.get('page')||1)});}
   if(req.method==='POST'&&url.pathname==='/api/auth/register'){const d=await body(req);d.ip=clientIp(req);try{const out=await authService.createAccount({db:global.db,normalizeName,validName,validCountry,publicPlayer,authenticate},d);await auditSecurity(out.player?.id||null,'auth.register',out.player?.id||null,{ipHash:crypto.createHash('sha256').update(String(d.ip||'')).digest('hex')});setSessionCookie(res,out.session,false);return json(res,201,{player:out.player});}catch(e){await auditSecurity(null,'auth.register_failure',null,{ipHash:crypto.createHash('sha256').update(String(d.ip||'')).digest('hex')});throw e;}}
   if(req.method==='POST'&&url.pathname==='/api/auth/login'){const d=await body(req);d.ip=clientIp(req);const ipHash=crypto.createHash('sha256').update(String(d.ip||'')).digest('hex');const emailHash=crypto.createHash('sha256').update(String(d.email||'').trim().toLowerCase()).digest('hex');try{const out=await authService.loginAccount({db:global.db,authenticate,publicPlayer},d);await auditSecurity(out.player?.id||null,'auth.login_success',out.player?.id||null,{ipHash,emailHash});setSessionCookie(res,out.session,!!d.rememberMe&&out.player?.role!=='admin');return json(res,200,{player:out.player});}catch(e){await auditSecurity(null,'auth.login_failure',null,{ipHash,emailHash});throw e;}}

@@ -23,7 +23,8 @@ cd "$APP"
 sudo -u eixo npm install --omit=dev --ignore-scripts --package-lock=false
 
 echo "[3/5] Syntax"
-for f in server.js auth-server.js server-start.js paypal-server.js paypal-checkout.js ui.js vip-fix.js; do node --check "$APP/$f"; done
+for f in server.js auth-server.js server-start.js paypal-server.js paypal-checkout.js ui.js vip-fix.js jump-server.js jump-physics.js jump.js; do node --check "$APP/$f"; done
+node --test "$APP/tests/jump.test.js"
 
 echo "[4/5] Restart"
 systemctl restart eixo
@@ -40,7 +41,7 @@ if ! curl -fsS -H "Host: eixo.at" http://127.0.0.1:3000/health >/tmp/eixo-health
 fi
 cat /tmp/eixo-health; echo
 
-for p in server.js auth-server.js server-start.js package.json .git/HEAD .env; do
+for p in server.js auth-server.js server-start.js paypal-server.js jump-server.js package.json .git/HEAD .env; do
   code="$(curl -sS -o /dev/null -w "%{http_code}" -H "Host: eixo.at" "http://127.0.0.1:3000/$p")"
   if [ "$code" != "404" ]; then
     echo "SECURITY CHECK FAILED: /$p returned $code" >&2

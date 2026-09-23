@@ -22,7 +22,7 @@
    if(wt&&!document.getElementById('worldMyRank')){const s=document.createElement('span');s.id='worldMyRank';s.className='board-my-rank';s.hidden=true;wt.appendChild(s);}
    if(ct&&!document.getElementById('nationalMyRank')){const s=document.createElement('span');s.id='nationalMyRank';s.className='board-my-rank';s.hidden=true;ct.appendChild(s);}
  }
- async function load(){
+ async function load(){if(window.eixoJumpActive)return;
    ensureRankLabels();
    const code=registeredCountry();
    const p=(()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}})();
@@ -32,6 +32,7 @@
      const results=await Promise.all(requests);
      if(!results[0].ok||!results[1].ok)throw Error();
      const [w,c]=await Promise.all([results[0].json(),results[1].json()]);
+     if(window.eixoJumpActive)return;
      render(w.players,worldEl,true);render(c.players,countryEl,false);
      if(results[2]){
        if(results[2].ok){const me=await results[2].json();setMyRank('worldMyRank',me.worldRank);setMyRank('nationalMyRank',me.countryRank);}
