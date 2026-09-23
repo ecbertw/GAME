@@ -476,7 +476,7 @@ async function syncTeam(){
   else showError(e.message);
  }finally{busy=false;}
 }
-function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,90);}
+function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,60);}
 async function enterTeamById(teamId){
  if(team?.teamId===teamId){showTeamLobby();return;}
  await stopRun();local=null;peers=[];run=null;
