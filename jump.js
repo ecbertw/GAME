@@ -25,7 +25,7 @@ async function api(path,options={}){
  if(!r.ok)throw Error(d.error||'JUMP unavailable');return d;
 }
 function modal(title,body){
- closePanel();panel=document.createElement('div');panel.className='modal-backdrop jump-modal-backdrop';panel.id='jumpPanel';
+ keys={left:false,right:false,jump:false};closePanel();panel=document.createElement('div');panel.className='modal-backdrop jump-modal-backdrop';panel.id='jumpPanel';
  panel.innerHTML='<div class="modal-card jump-panel" role="dialog" aria-modal="true"><button class="modal-close" type="button" id="jumpPanelClose">×</button><h2>'+esc(title)+'</h2><div id="jumpPanelBody">'+body+'</div></div>';
  document.body.appendChild(panel);$('jumpPanelClose').onclick=closePanel;panel.addEventListener('click',e=>{if(e.target===panel)closePanel()});return panel;
 }
@@ -46,7 +46,7 @@ async function switchGame(next){
    window.stopGame?.();await newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
    refreshRankings();if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump')refreshRankings()},5500);
  }else{
-   clearInterval(rankTimer);clearInterval(networkTimer);if(animation)cancelAnimationFrame(animation);
+   clearInterval(rankTimer);clearInterval(networkTimer);if(animation)cancelAnimationFrame(animation);animation=null;
    keys={left:false,right:false,jump:false};window.eixoRefreshRankings?.();window.resetGame?.();
  }
 }
@@ -61,7 +61,7 @@ function updateHud(){
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
- await stopRun();gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
+ await stopRun();local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
