@@ -466,7 +466,7 @@ function captureNative(selector,callback){
  el?.addEventListener('click',e=>{if(current!=='jump')return;e.preventDefault();e.stopImmediatePropagation();callback() },true);
 }
 
-let team=null,teamTimer=null,teamSeq=0,teamPoll=0,teamSignature='',lastTeamMode='duo';
+let team=null,teamTimer=null,teamSeq=0,teamPoll=0,teamLastInput='',teamSignature='',lastTeamMode='duo';
 const teamText=(pt,en)=>lang()==='pt'?pt:en;
 async function teamPost(action,data={}){return api('/api/jump/teams/'+action,{method:'POST',body:JSON.stringify(data)});}
 function acceptTeam(out){
@@ -475,7 +475,7 @@ function acceptTeam(out){
  const me=out.members.find(m=>m.id===getPlayer()?.id);
  if(me?.state){
   const fresh=previousRun!==out.runId||!local||local.seed!==out.seed,st=me.state;
-  if(fresh){local=P.create(out.seed);Object.assign(local,st);teamSeq=0;}
+  if(fresh){local=P.create(out.seed);Object.assign(local,st);teamSeq=0;teamLastInput='';}
   else if(out.status==='playing'){
    // Local movement is predicted entirely on this client. Server snapshots are
    // confirmation/score data only; never rewind x/y/vy/camera/ground on a live
@@ -487,7 +487,7 @@ function acceptTeam(out){
   if(out.status!=='playing'){local.fragilePlatform=Number(st.fragilePlatform??-1);local.fragileRatio=Number(st.fragileRatio||0);}
   const required=Math.max(34,...out.members.map(m=>Number(m.state?.platform||0)+34));
   if(local.platforms.length<required)local.platforms=P.platforms(out.seed,required);
-  local.activeMinPlatform=Number(st.activeMinPlatform||0);
+  local.activeMinPlatform=Math.max(Number(local.activeMinPlatform||0),Number(st.activeMinPlatform||0));
   mergePeers(out.members.filter(m=>m.id!==getPlayer()?.id&&m.present&&m.state).map(m=>({id:m.id,name:m.name,outfit:m.outfit,...m.state})));
   outfit=me.outfit||outfit;biome=out.biome;seed=out.seed;mode=out.mode;confirmedScore=Number(out.score||0);
   run={runId:out.runId||('team-lobby:'+out.teamId)};
@@ -527,9 +527,10 @@ async function leaveTeamSessionToSolo(message='',autoStart=true){
 }
 async function syncTeam(){
  if(!team||busy||current!=='jump')return;
- const identity=team.teamId,wait=team.status==='playing'?110:team.status==='countdown'?150:team.status==='ended'?180:500;
- if(Date.now()-teamPoll<wait)return;
- busy=true;teamPoll=Date.now();
+ const identity=team.teamId,signature=(keys.left?'1':'0')+(keys.right?'1':'0')+(keys.jump?'1':'0'),changed=team.status==='playing'&&signature!==teamLastInput;
+ const wait=team.status==='playing'?65:team.status==='countdown'?150:team.status==='ended'?180:500;
+ if(!changed&&Date.now()-teamPoll<wait)return;
+ busy=true;teamPoll=Date.now();if(team.status==='playing')teamLastInput=signature;
  try{
   const out=team.status==='playing'?await teamPost('input',{runId:team.runId,seq:teamSeq++,left:keys.left,right:keys.right,jump:keys.jump,position:local?{x:local.x,y:local.y,vy:local.vy,ground:!!local.ground}:null}):await api('/api/jump/teams/state');
   if(team?.teamId===identity)acceptTeam(out);
@@ -540,7 +541,7 @@ async function syncTeam(){
   else showError(msg);
  }finally{busy=false;}
 }
-function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,60);}
+function watchTeam(out){acceptTeam(out);clearInterval(teamTimer);teamTimer=setInterval(syncTeam,50);}
 async function enterTeamById(teamId){
  if(team?.teamId===teamId){showTeamLobby();return;}
  await stopRun();local=null;peers=[];peerVisuals.clear();run=null;
