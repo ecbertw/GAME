@@ -109,6 +109,15 @@ async function rankings(db,country,page){
   const rows=await db.query(cte+'SELECT * FROM ranked '+filter+' ORDER BY score DESC,"worldRank" ASC LIMIT 25 OFFSET $'+(args.length+1),[...args,offset]);
   return{players:rows.rows.map(x=>({...x,score:Number(x.score),worldRank:Number(x.worldRank),countryRank:Number(x.countryRank),letterStyles:Array.isArray(x.letterStyles)?x.letterStyles:(()=>{try{return JSON.parse(x.letterStyles||'[]')}catch(_){return[]}})()})),total:count.rows[0].count,page:pg,pages:Math.max(1,Math.ceil(count.rows[0].count/25))};
 }
+async function playerRank(db,p){
+  const q=await db.query(`WITH ranked AS (
+    SELECT s.player_id,
+      ROW_NUMBER() OVER(ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS world_rank,
+      ROW_NUMBER() OVER(PARTITION BY p.country ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS country_rank
+    FROM jump_scores s JOIN players p ON p.id=s.player_id WHERE s.best_score>0
+  ) SELECT world_rank AS "worldRank",country_rank AS "countryRank" FROM ranked WHERE player_id=$1`,[p.id]);
+  return {worldRank:Number(q.rows[0]?.worldRank||0)||null,countryRank:Number(q.rows[0]?.countryRank||0)||null};
+}
 async function roomCreate(db,p,d){
   const name=String(d.name||'').trim(),biome=validBiome(d.biome);
   if(!/^[\p{L}\p{N} _-]{2,24}$/u.test(name))throw error('Nome inválido. Usa 2 a 24 caracteres.');
@@ -158,4 +167,4 @@ async function roomRankings(db,p,id){
   const q=await db.query('SELECT p.id,p.name,p.country,m.best_score AS score FROM jump_room_members m JOIN players p ON p.id=m.player_id WHERE m.room_id=$1 ORDER BY m.best_score DESC,m.joined_at ASC',[id]);
   return{ok:true,players:q.rows.map((x,i)=>({...x,roomRank:i+1,score:Number(x.score)}))};
 }
-module.exports={initDb,BIOMES,PALETTE,PARTS,DEFAULTS,getColors,saveColors,start,input,state,finish,leave,rankings,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
+module.exports={initDb,BIOMES,PALETTE,PARTS,DEFAULTS,getColors,saveColors,start,input,state,finish,leave,rankings,playerRank,roomCreate,roomJoin,roomList,roomLeave,roomRankings};
