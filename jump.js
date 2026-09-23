@@ -76,6 +76,22 @@ async function newRun(options={}){
    networkTimer=setInterval(sync,60);sync();
  }catch(e){run=null;showError(e.message)}
 }
+function mergePeerSnapshots(incoming=[]){
+ const old=new Map((peers||[]).map(p=>[String(p.id),p]));
+ peers=(incoming||[]).map(p=>{
+  const prev=old.get(String(p.id));
+  if(!prev)return {...p,renderX:Number(p.x)||0,renderY:Number(p.y)||0,targetX:Number(p.x)||0,targetY:Number(p.y)||0};
+  return {...prev,...p,renderX:Number(prev.renderX??prev.x??p.x)||0,renderY:Number(prev.renderY??prev.y??p.y)||0,targetX:Number(p.x)||0,targetY:Number(p.y)||0};
+ });
+}
+function smoothPeerViews(dt){
+ const k=1-Math.pow(.001,Math.max(0,dt));
+ for(const p of peers||[]){
+  const tx=Number(p.targetX??p.x)||0,ty=Number(p.targetY??p.y)||0;
+  p.renderX=Number(p.renderX??p.x??tx)||0;p.renderY=Number(p.renderY??p.y??ty)||0;
+  p.renderX+=(tx-p.renderX)*k;p.renderY+=(ty-p.renderY)*k;
+ }
+}
 async function sync(){
  if(team){await syncTeam();return;}
  if(!run||busy||current!=='jump')return;
@@ -83,7 +99,7 @@ async function sync(){
  try{
   const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jump:keys.jump,platform:Number(local?.bestPlatform||0),position:local?{x:local.x,y:local.y}:null})});
   if(run?.runId!==identity)return;
-  lastState=out;if(mode!=='solo'&&local&&Number.isFinite(out.worldTime))local.time=out.worldTime;peers=out.peers||[];confirmedScore=Number(out.state?.score||0);
+  lastState=out;if(mode!=='solo'&&local&&Number.isFinite(out.worldTime))local.time=out.worldTime;mergePeerSnapshots(out.peers||[]);confirmedScore=Number(out.state?.score||0);
   // The HUD shows only server-confirmed platform points, while the local
   // physics remains smooth and is never teleported to an older snapshot.
   updateHud();
@@ -169,7 +185,7 @@ function draw(){
   }
  }
  for(const peer of peers){
-   const y=screen(peer.y);if(y>-12&&y<P.H+34)drawCharacter(c,peer.x,y,peer.outfit,peer.name,!team,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving});
+   const px=Number(peer.renderX??peer.x),py=Number(peer.renderY??peer.y),y=screen(py);if(y>-12&&y<P.H+34)drawCharacter(c,px,y,peer.outfit,peer.name,!team,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving});
  }
  drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time,{facing,ground:local.ground,vy:local.vy,moving:keys.left||keys.right});
  c.fillStyle='#ffffffaa';c.fillRect(0,0,P.W,1);
@@ -182,7 +198,7 @@ function stepLocalWithAudio(dt){
 }
 function loop(now){
  if(current!=='jump'){animation=null;return}
- let dt=Math.min(.04,(now-last)/1000||0);last=now;
+ let dt=Math.min(.04,(now-last)/1000||0);last=now;smoothPeerViews(dt);
  if(local&&!gameOver&&run){
   if(keys.left&&!keys.right)facing=-1;else if(keys.right&&!keys.left)facing=1;
   if(team){
@@ -432,11 +448,13 @@ function acceptTeam(out){
    // Client prediction keeps DUO/TRIO as fluid as SOLO. The server remains
    // authoritative and only nudges small drift; large chain corrections snap.
    const dx=Number(st.x)-Number(local.x),dy=Number(st.y)-Number(local.y);
-   if(Math.abs(dx)>38||Math.abs(dy)>44){local.x=Number(st.x);local.y=Number(st.y);local.vy=Number(st.vy||0);}
-   else{local.x+=dx*.18;local.y+=dy*.14;local.vy+=(Number(st.vy||0)-Number(local.vy||0))*.16;}
-   local.cam+=((Number(st.cam)||0)-Number(local.cam||0))*.18;
-   local.time=Number(st.time)||local.time;
-   local.ground=!!st.ground;
+   // Never hard-snap a live player to an older network snapshot. Small
+   // authoritative drift (mostly chain tension) converges gradually.
+   local.x+=Math.max(-5,Math.min(5,dx))*.08;
+   local.y+=Math.max(-6,Math.min(6,dy))*.06;
+   local.vy+=(Number(st.vy||0)-Number(local.vy||0))*.045;
+   local.cam+=((Number(st.cam)||0)-Number(local.cam||0))*.05;
+   local.time+=(Number(st.time||local.time)-Number(local.time||0))*.08;
   }else Object.assign(local,st);
   local.bestPlatform=Number(st.platform||0);local.score=Number(st.score||0);local.seed=out.seed;
   local.brokenPlatforms=Object.fromEntries((st.broken||[]).map(i=>[i,true]));
@@ -444,7 +462,7 @@ function acceptTeam(out){
   const required=Math.max(34,...out.members.map(m=>Number(m.state?.platform||0)+34));
   if(local.platforms.length<required)local.platforms=P.platforms(out.seed,required);
   local.activeMinPlatform=Number(st.activeMinPlatform||0);
-  peers=out.members.filter(m=>m.id!==getPlayer()?.id&&m.present&&m.state).map(m=>({id:m.id,name:m.name,outfit:m.outfit,...m.state}));
+  mergePeerSnapshots(out.members.filter(m=>m.id!==getPlayer()?.id&&m.present&&m.state).map(m=>({id:m.id,name:m.name,outfit:m.outfit,...m.state})));
   outfit=me.outfit||outfit;biome=out.biome;seed=out.seed;mode=out.mode;confirmedScore=Number(out.score||0);
   run={runId:out.runId||('team-lobby:'+out.teamId)};
   if(out.status==='lobby'||out.status==='countdown'){
@@ -504,14 +522,31 @@ async function enterTeamById(teamId){
 }
 function savedTeamCard(r){
  const active=team?.teamId===r.id;
- return '<article class="jump-team-room-card '+(active?'active':'')+'"><div class="jump-team-room-mode '+esc(r.mode)+'">'+esc(r.mode.toUpperCase())+'</div><div class="jump-team-room-main"><strong>'+esc(r.name)+'</strong><small>'+esc(r.biome.toUpperCase())+' · '+Number(r.memberCount)+'/'+Number(r.capacity)+'</small></div><button type="button" class="board-more" data-enter-team="'+esc(r.id)+'">'+(active?teamText('ABRIR','OPEN'):txt('enter'))+'</button></article>';
+ return '<article class="jump-team-room-card '+(active?'active':'')+'"><div class="jump-team-room-mode '+esc(r.mode)+'">'+esc(r.mode.toUpperCase())+'</div><div class="jump-team-room-main"><strong>'+esc(r.name)+'</strong><small>'+esc(r.biome.toUpperCase())+' · '+Number(r.memberCount)+'/'+Number(r.capacity)+'</small></div><div class="jump-team-card-actions"><button type="button" class="board-more" data-enter-team="'+esc(r.id)+'">'+(active?teamText('ABRIR','OPEN'):txt('enter'))+'</button><button type="button" class="board-more ready" data-ready-team="'+esc(r.id)+'">'+teamText('PRONTO','READY')+'</button></div></article>';
+}
+async function quickReadyTeam(teamId){
+ const card=document.querySelector('[data-ready-team="'+CSS.escape(String(teamId))+'"]'),was=card?.textContent;
+ if(card){card.disabled=true;card.textContent=teamText('A ENTRAR…','JOINING…');}
+ try{
+  if(team?.teamId!==teamId){await stopRun();local=null;peers=[];run=null;const out=await teamPost('enter',{teamId});watchTeam(out);}
+  const me=team?.members.find(m=>m.id===getPlayer()?.id);
+  if(team?.status==='lobby'||team?.status==='countdown'){
+   const out=await teamPost('ready',{ready:!me?.ready});acceptTeam(out);
+  }
+  closePanel();void refreshMyTeamsBoard();showError(teamText('Ficaste PRONTO. O jogo começa quando a equipa estiver completa e pronta.','You are READY. The game starts when the full team is ready.'));
+ }catch(e){showError(e.message);}
+ finally{if(card?.isConnected){card.disabled=false;card.textContent=was||teamText('PRONTO','READY');}}
+}
+function bindSavedTeamCards(target){
+ target?.querySelectorAll('[data-enter-team]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await enterTeamById(b.dataset.enterTeam);}catch(e){showError(e.message);}finally{if(b.isConnected)b.disabled=false;}});
+ target?.querySelectorAll('[data-ready-team]').forEach(b=>b.onclick=()=>quickReadyTeam(b.dataset.readyTeam));
 }
 async function loadTeamChooserList(kind){
  const target=$('jumpTeamSavedList');if(!target)return;
  try{
   const out=await api('/api/jump/teams/list?mode='+kind),rows=out.teams||[];
   target.innerHTML=rows.length?rows.map(savedTeamCard).join(''):'<div class="jump-team-empty">'+teamText('Ainda não estás ligado a nenhuma equipa '+kind.toUpperCase()+'.','You are not linked to any '+kind.toUpperCase()+' team yet.')+'</div>';
-  target.querySelectorAll('[data-enter-team]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await enterTeamById(b.dataset.enterTeam);}catch(e){if($('jumpTeamError'))$('jumpTeamError').textContent=e.message;}finally{if(b.isConnected)b.disabled=false;}});
+  bindSavedTeamCards(target);
  }catch(e){target.innerHTML='<div class="jump-team-empty">'+esc(e.message)+'</div>';}
 }
 async function openTeam(kind){
@@ -553,7 +588,7 @@ function renderMyTeamsBoardFromCache(){
  const signature=JSON.stringify(myTeamsCache.map(r=>[r.id,r.mode,r.name,r.biome,r.memberCount,r.capacity,team?.teamId===r.id]));
  if(signature===myTeamsRenderSignature)return;myTeamsRenderSignature=signature;
  list.innerHTML=myTeamsCache.map(savedTeamCard).join('');
- list.querySelectorAll('[data-enter-team]').forEach(b=>b.onclick=()=>enterTeamById(b.dataset.enterTeam).catch(e=>showError(e.message)));
+ bindSavedTeamCards(list);
 }
 async function refreshMyTeamsBoard(){
  if(current!=='jump'||!getPlayer()?.id){myTeamsCache=[];renderMyTeamsBoardFromCache();return;}
@@ -571,13 +606,11 @@ function initTeamBoards(boards){
  mine.after(section);section.querySelectorAll('[data-team-rank]').forEach(b=>b.onclick=()=>fullTeamRank(b.dataset.teamRank,1));
 }
 function teamRankPlayer(p){
- const visual=String(p.visualName||p.name||'PLAYER'),vip=Number(p.vipLevel||0),styles=Array.isArray(p.letterStyles)?p.letterStyles:[];
+ const visual=String(p.visualName||p.name||'PLAYER'),styles=Array.isArray(p.letterStyles)?p.letterStyles:[];
  const color=String(p.nameColor||'#fff').toLowerCase(),rainbow=color==='rainbow'&&!styles.length,effect=p.nameEffect&&p.nameEffect!=='none'?' effect-'+esc(p.nameEffect):'';
  const colorStyle=rainbow?'':(/^#[0-9a-f]{6}$/i.test(color)?' style="color:'+esc(color)+';"':'');
  const name=styles.length?rankLetters(visual,styles):[...visual].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
- let tags='';if(Number(p.worldRank)>=1&&Number(p.worldRank)<=3)tags+=rankTag('world',Number(p.worldRank),'',p);
- if(Number(p.countryRank)>=1&&Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
- return '<span class="jump-team-player"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(styles.length?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span><span class="jump-team-player-tags">'+tags+rankVip(vip)+'</span></span>';
+ return '<span class="jump-team-player"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(styles.length?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span></span>';
 }
 function teamRows(rows){return rows.map(r=>'<li><span class="rank-number">'+Number(r.rank)+'</span><span class="rank-name-wrap jump-team-rank-name"><strong>'+esc(r.name)+'</strong><span class="jump-team-roster">'+(r.members||[]).map(teamRankPlayer).join('<span class="jump-team-plus">+</span>')+'</span></span><span class="rank-score">'+Number(r.score)+'</span></li>').join('')||'<li class="empty-row">'+txt('empty')+'</li>';}
 async function refreshTeamRanks(){
