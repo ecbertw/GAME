@@ -199,7 +199,8 @@ function draw(){
  if(team?.status==='playing'){
   const members=team.members;
   for(let i=1;i<members.length;i++){
-   const a=members[i-1].id===getPlayer()?.id?local:members[i-1].state,b=members[i].id===getPlayer()?.id?local:members[i].state;
+   const pose=m=>m.id===getPlayer()?.id?local:(peerVisuals.get(String(m.id))||m.state);
+   const a=pose(members[i-1]),b=pose(members[i]);
    if(!a||!b)continue;
    const distance=Math.hypot(b.x-a.x,b.y-a.y),n=Math.max(2,Math.ceil(distance/5)),slack=Math.max(0,1-distance/team.chainLength)*12;
    for(let j=0;j<=n;j++){const f=j/n,x=Math.round(a.x+(b.x-a.x)*f),y=Math.round(screen(a.y+(b.y-a.y)*f)-4+Math.sin(f*Math.PI)*slack);c.fillStyle='#172638';c.fillRect(x-2,y-1,5,4);c.fillStyle=distance>team.chainLength?'#ffc581':'#d0e3ef';c.fillRect(x-1,y,3,2);}
@@ -549,7 +550,7 @@ async function enterTeamById(teamId){
 }
 function savedTeamCard(r){
  const active=team?.teamId===r.id,me=active?team.members?.find(m=>m.id===getPlayer()?.id):null,ready=!!(me?.ready||r.ready);
- return '<article class="jump-team-room-card '+(active?'active':'')+'"><div class="jump-team-room-mode '+esc(r.mode)+'">'+esc(r.mode.toUpperCase())+'</div><div class="jump-team-room-main"><strong>'+esc(r.name)+'</strong><small>'+esc(r.biome.toUpperCase())+' · '+Number(r.memberCount)+'/'+Number(r.capacity)+'</small></div><div class="jump-team-card-actions"><button type="button" class="board-more" data-enter-team="'+esc(r.id)+'">'+(active?teamText('ABRIR','OPEN'):txt('enter'))+'</button><button type="button" class="board-more jump-team-quick-ready '+(ready?'is-ready':'')+'" data-ready-team="'+esc(r.id)+'">'+(ready?teamText('PRONTO ✓','READY ✓'):teamText('PRONTO','READY'))+'</button></div></article>';
+ return '<article class="jump-team-room-card '+(active?'active':'')+'"><div class="jump-team-room-mode '+esc(r.mode)+'">'+esc(r.mode.toUpperCase())+'</div><div class="jump-team-room-main"><strong>'+esc(r.name)+'</strong><small>'+esc(r.biome.toUpperCase())+' · '+Number(r.memberCount)+'/'+Number(r.capacity)+'</small></div><div class="jump-team-card-actions"><button type="button" class="board-more" data-enter-team="'+esc(r.id)+'">'+teamText('ABRIR','OPEN')+'</button><button type="button" class="board-more jump-team-quick-ready '+(ready?'is-ready':'')+'" data-ready-team="'+esc(r.id)+'">'+(ready?teamText('PRONTO ✓','READY ✓'):teamText('PRONTO','READY'))+'</button></div></article>';
 }
 async function quickReadyTeam(teamId,button){
  if(button)button.disabled=true;
