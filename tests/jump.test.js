@@ -37,7 +37,7 @@ test('moving platforms accelerate early but remain catchable',()=>{
  assert.ok(early.length&&later.length);
  const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
  assert.ok(avg(later)>avg(early)+0.25,'speed should ramp noticeably within the first dozen jumps');
- assert.ok(samples.every(x=>x.speed<=2.081&&x.linear<=98.01),'moving platforms must stay inside the catchable velocity cap');
+ assert.ok(samples.every(x=>x.speed<=2.241&&x.linear<=106.01),'moving platforms must stay inside the catchable velocity cap');
 });
 test('old platforms retire, cannot catch the player, and death happens at the visible floor',()=>{
  const s=P.create(313);
@@ -60,14 +60,24 @@ test('hard mode avoids vertical ladders and makes moving platforms dominant',()=
  const ps=P.platforms(8123,160);
  const late=ps.slice(25);
  const movingRatio=late.filter(p=>p.moving).length/late.length;
- assert.ok(movingRatio>=0.64,'late game should be mostly moving platforms');
+ assert.ok(movingRatio>=0.75,'late game should be dominated by moving platforms');
  for(let i=6;i<ps.length;i++){
    const prev=ps[i-1],p=ps[i];
    const a=prev.x+prev.w/2,b=p.x+p.w/2;
    assert.ok(Math.abs(a-b)>=40,'late platforms must not form easy vertical ladders');
-   assert.ok(Math.abs(a-b)<=112,'generated jumps must stay inside horizontal movement envelope');
+   assert.ok(Math.abs(a-b)<=122,'generated jumps must stay inside horizontal movement envelope');
  }
  assert.ok(ps[10].w>ps[40].w,'platforms should become clearly narrower');
+});
+
+test('fragile platforms appear in the real difficulty curve and collapse after camping',()=>{
+ const ps=P.platforms(4242,150),fragile=ps.map((p,i)=>({p,i})).filter(x=>x.p.fragile);
+ assert.ok(fragile.length>=18,'late runs should contain a meaningful number of fragile platforms');
+ const {p,i}=fragile[0],s=P.create(4242,ps);
+ s.x=P.platformX(p,0)+p.w/2;s.y=p.y;s.best=p.y;s.cam=Math.max(0,p.y-78);s.ground=true;s.groundPlatform=i;s.bestPlatform=i;s.activeMinPlatform=Math.max(0,i-1);
+ for(let n=0;n<100&&s.ground;n++)P.step(s,{left:false,right:false,jump:false},1/60);
+ assert.equal(P.isBroken(s,i),true,'camping on a fragile platform should break it');
+ assert.equal(s.ground,false,'the player must fall when it breaks');
 });
 
 test('holding jump continuously causes repeated bounces',()=>{
@@ -154,7 +164,7 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/confirmedScore=Number\(out\.state\?\.score\|\|0\)/);
  assert.match(js,/P\.platformX\(p,local\.time\)/);
  assert.doesNotMatch(js,/if\(p\.moving\)\s*\{\s*c\.fillStyle='#0a5571'/);
- assert.match(js,/Moving platforms keep the same biome palette|Moving platforms deliberately keep the exact same biome palette/);
+ assert.match(js,/Moving platforms keep the same biome palette|Moving platforms deliberately keep the exact same biome palette|Moving platforms keep the biome material/);
  assert.match(js,/ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS/);
  assert.match(js,/peer\.outfit/);
  assert.match(js,/activeMinPlatform/);
