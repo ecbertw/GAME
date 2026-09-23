@@ -14,7 +14,7 @@ const themes={
   desert:{sky:'#83cae8',low:'#f9c688',hills:'#e9a16b',far:'#bd7657',near:'#8a513f',top:'#f4ce70',edge:'#b98845',under:'#ad7651'},
   snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
 };
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],colors=null,palette=[],keys={left:false,right:false,jump:false},jumpSeq=0,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
@@ -45,7 +45,7 @@ async function switchGame(next){
  current=next;window.eixoJumpActive=current==='jump';closePanel();showMode();
  if(current==='jump'){
    window.stopGame?.();await newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
-   refreshRankings();if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}},5500);
+   refreshRankings();if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump')refreshRoomBoard()},5500);
  }else{
    clearInterval(rankTimer);clearInterval(networkTimer);if(animation)cancelAnimationFrame(animation);animation=null;
    keys={left:false,right:false,jump:false};window.eixoRefreshRankings?.();window.resetGame?.();
@@ -62,7 +62,7 @@ function updateHud(){
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
- await stopRun();local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
+ await stopRun();keys={left:false,right:false,jump:false};jumpSeq=0;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
@@ -75,11 +75,12 @@ async function sync(){
  if(!run||busy||current!=='jump')return;
  const identity=run.runId;busy=true;
  try{
-  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,...keys})});
+  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jumpSeq})});
   if(run?.runId!==identity)return;
   lastState=out;peers=out.peers||[];
   if(!out.state?.alive&&!gameOver)await die();
-  else if(local&&out.state&&Math.abs(local.y-out.state.y)>36){local.y=out.state.y;local.vy=out.state.vy;}
+  // Never teleport the local sprite to an older network snapshot. The server
+  // independently validates height/death; its snapshots drive remote players only.
   updateHud();
  }catch(e){if(run?.runId===identity)showError(e.message)}
  finally{busy=false}
@@ -155,53 +156,35 @@ function loop(now){
 function setKey(code,on){
  if(['ArrowLeft','KeyA'].includes(code))keys.left=on;
  if(['ArrowRight','KeyD'].includes(code))keys.right=on;
- if(['Space','ArrowUp','KeyW'].includes(code))keys.jump=on;
+ if(code==='Space'){
+   if(on&&!keys.jump)jumpSeq++;
+   keys.jump=on;
+ }
 }
 function onKeyboard(e){
  if(current!=='jump'||panel||e.target?.matches('input,select,textarea,[contenteditable]'))return;
- if(['ArrowLeft','ArrowRight','Space','ArrowUp','KeyA','KeyD','KeyW'].includes(e.code)){
-   e.preventDefault();e.stopImmediatePropagation();setKey(e.code,e.type==='keydown');
+ if(['ArrowLeft','ArrowRight','Space','KeyA','KeyD'].includes(e.code)){
+   e.preventDefault();e.stopImmediatePropagation();
+   if(e.type==='keydown'&&e.repeat)return;
+   setKey(e.code,e.type==='keydown');
+   // Sync immediately on key transitions rather than waiting for the
+   // next polling tick, reducing movement and jump input latency.
+   void sync();
  }
 }
 function bindControls(){
  window.addEventListener('keydown',onKeyboard,true);window.addEventListener('keyup',onKeyboard,true);
  window.addEventListener('blur',()=>{keys={left:false,right:false,jump:false}});
  for(const button of document.querySelectorAll('[data-jump-key]')){
-  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);keys[k]=true});
-  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false});
+  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);if(k==='jump'&&!keys.jump)jumpSeq++;keys[k]=true;void sync()});
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false;void sync()});
  }
 }
 const flags=c=>[...String(c||'PT')].map(x=>String.fromCodePoint(127397+x.charCodeAt())).join('');
-function scoreRows(players,type,start=0){
- return players?.length?players.map((p,i)=>'<li><span class="rank-number">'+(start+i+1)+'</span><span class="rank-name-wrap">'+esc(p.visualName||p.name)+(Number(p.vipLevel||0)>0?' <span class="vip-rank-tag">VIP</span>':'')+'</span><span class="rank-score-wrap">'+flags(p.country)+' <span class="rank-score">'+Number(p.score||0)+'</span></span></li>').join(''):'<li class="empty-row">'+txt('empty')+'</li>';
-}
-async function refreshRankings(){
- if(current!=='jump')return;
- try{
-  const p=getPlayer(),code=p?.country||'PT';
-  const [w,c]=await Promise.all([api('/api/jump/rankings?page=1'),api('/api/jump/rankings?page=1&country='+encodeURIComponent(code))]);
-  if(current!=='jump')return;
-  $('worldRanking').innerHTML=scoreRows(w.players,'world');$('nationalRanking').innerHTML=scoreRows(c.players,'country');
-  const my=w.players.find(x=>x.id===p?.id),myC=c.players.find(x=>x.id===p?.id);
-  if($('worldMyRank'))$('worldMyRank').textContent=my?txt('rank')+' #'+my.worldRank:'';
-  if($('nationalMyRank'))$('nationalMyRank').textContent=myC?txt('rank')+' #'+myC.countryRank:'';
-  $('nationalTitle').textContent='TOP '+String(code).toUpperCase();
- }catch(e){console.warn('JUMP rankings:',e.message)}
-}
-async function openRank(modeName='world',number=1){
- rankTab=modeName;page=number;
- modal(txt('rank'),'<div class="jump-panel-tabs"><button id="jumpWorldTab">'+txt('world')+'</button><button id="jumpCountryTab">'+txt('country')+'</button></div><ol class="jump-rank-list" id="jumpFullRank"></ol><div class="jump-pager"><button id="jumpPrev">◀</button><span id="jumpPage"></span><button id="jumpNext">▶</button></div>');
- $('jumpWorldTab').onclick=()=>openRank('world',1);$('jumpCountryTab').onclick=()=>openRank('country',1);
- $('jumpPrev').onclick=()=>openRank(rankTab,page-1);$('jumpNext').onclick=()=>openRank(rankTab,page+1);
- try{
-  const q='/api/jump/rankings?page='+page+(rankTab==='country'?'&country='+encodeURIComponent(getPlayer()?.country||'PT'):'');
-  rankingData=await api(q);if(!$('jumpFullRank'))return;
-  $('jumpFullRank').innerHTML=scoreRows(rankingData.players,rankTab,(page-1)*25);
-  $('jumpPage').textContent=page+' / '+rankingData.pages;
-  $('jumpPrev').disabled=page<=1;$('jumpNext').disabled=page>=rankingData.pages;
-  $('jumpWorldTab').classList.toggle('active',rankTab==='world');$('jumpCountryTab').classList.toggle('active',rankTab==='country');
- }catch(e){showError(e.message)}
-}
+// Share the PULSE leaderboard UI: the renderer itself selects JUMP data and
+// retains VIP names, colored letters, top tags, flags and personal ranking.
+function refreshRankings(){if(current==='jump')window.eixoRefreshRankings?.();}
+function openRank(){document.querySelector('.action.blue[href="#ranking"]')?.click();}
 function chooseWorld(){
  modal(txt('choose'),'<div class="jump-world-grid">'+BIOMES.map(b=>'<button class="jump-world-option '+b+'" data-biome="'+b+'"><strong>'+b.toUpperCase()+'</strong><small>JOIN SERVER</small></button>').join('')+'</div><p>5 PLAYERS MAX / INSTANCE · AUTO MATCHMAKING</p>');
  panel.querySelectorAll('[data-biome]').forEach(btn=>btn.onclick=()=>{const b=btn.dataset.biome;closePanel();newRun({biome:b,mode:'public'})});
@@ -272,11 +255,8 @@ function init(){
 
  $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*4)],mode:'solo'});
  $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode,roomId,roomLabel});
- captureNative('.action.blue[href="#ranking"]',()=>openRank('world'));
  captureNative('.action.purple[href="#rooms"]',()=>jumpRooms('list'));
  captureNative('#createRoomButton',()=>jumpRooms('create'));
- captureNative('#worldFullButton',()=>openRank('world'));
- captureNative('#nationalFullButton',()=>openRank('country'));
  bindControls();updateHud();document.addEventListener('visibilitychange',()=>{last=performance.now();if(!document.hidden&&current==='jump')refreshRankings()});
  window.eixoJump={switchGame,isActive:()=>current==='jump',refreshRankings};
 }
