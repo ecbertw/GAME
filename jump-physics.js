@@ -14,13 +14,19 @@
     let prev=out[out.length-1],x=out.length===1?W/2-45:prev.x,y=prev.y;
     for(let i=out.length;i<=count;i++){
       const a=hash(seed,i*3+1),b=hash(seed,i*3+2),c=hash(seed,i*3+3);
-      y+=31+Math.floor(a*12);
-      x=Math.max(15,Math.min(W-92,x+(b-.5)*130));
-      out.push({x:Math.round(x),y,w:68+Math.floor(c*28)});
+      // First jumps teach the controls; afterwards platforms become gradually
+      // narrower, slightly farther apart and require more horizontal movement.
+      const difficulty=Math.min(1,Math.max(0,(i-5)/32));
+      const gap=31+Math.floor(a*(11+5*difficulty))+Math.floor(3*difficulty);
+      const width=Math.round(86-(30*difficulty)+c*(12-4*difficulty));
+      const lateral=130+Math.round(52*difficulty);
+      y+=gap;
+      x=Math.max(12,Math.min(W-width-12,x+(b-.5)*lateral));
+      out.push({x:Math.round(x),y,w});
     }
   }
   function create(seed,sharedPlatforms){
-    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,jumpBuffer:0,seed,platforms:sharedPlatforms||platforms(seed,30)};
+    return{x:W/2,y:0,vy:0,best:0,cam:0,alive:true,ground:true,jumpBuffer:0,jumpHeld:false,seed,platforms:sharedPlatforms||platforms(seed,30)};
   }
   function step(s,keys,dt){
     if(!s.alive)return s;
@@ -28,7 +34,8 @@
     const dir=(keys.right?1:0)-(keys.left?1:0);
     const lastY=s.y;
     s.x=Math.max(8,Math.min(W-8,s.x+dir*133*dt));
-    if(keys.jump)s.jumpBuffer=.13;else s.jumpBuffer=Math.max(0,s.jumpBuffer-dt);
+    if(keys.jump&&!s.jumpHeld)s.jumpBuffer=.13;else s.jumpBuffer=Math.max(0,s.jumpBuffer-dt);
+    s.jumpHeld=!!keys.jump;
     if(s.ground&&s.jumpBuffer>0){s.vy=205;s.ground=false;s.jumpBuffer=0;}
     s.vy=Math.max(-275,s.vy-380*dt);
     s.y+=s.vy*dt;
