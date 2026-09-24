@@ -73,20 +73,22 @@ function platform(c,name,x,y,w,index,state={}){
  const long=w>115,variation=Math.abs(index)%4;
  const sx=long?0:variation*181,sy=long?(index%2?272:170):36;
  const sw=long?724:181,sh=long?99:125;
- const isGround=index===0&&(name==='desert'||name==='forest');
- const height=long?27:clamp(13+w*.17,17,29),top=y-5;
+ const isDesertGround=index===0&&name==='desert';
+ const isForestGround=index===0&&name==='forest';
+ const height=long?27:clamp(13+w*.17,17,29);
+ // Preserve the original forest atlas and its original dimensions; only lift
+ // its visible surface four logical pixels to meet the runner's shoe soles.
+ const top=y-(isForestGround?9:5);
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
- // Use the actual approved transparent biome atlas for ALL four worlds.
- // The previous geometric city/snow substitute discarded the supplied artwork.
- if(isGround){
-  // The middle atlas row contains the continuous ground, not the floating islands.
-  // Gameplay coordinates use a 450x195 logical viewport (the canvas backing is 2x).
-  // Place the visible walking surface at the collision y, and draw its full
-  // masonry below it. Do not stretch a thin floating platform into a floor.
-  const floorTop=y-1;
-  const floorHeight=Math.max(28,195-floorTop+4);
-  c.drawImage(img,15,401,680,248,x-2,floorTop,w+4,floorHeight);
+ if(isDesertGround){
+  // Desert atlas: the two wide masonry strips are in the middle row.
+  // Crop away the transparent margin above the walkable stone surface.
+  // Draw the complete ground strip down to the bottom of the viewport,
+  // instead of drawing the floating-platform row or stretching an empty band.
+  const floorTop=y-5;
+  const floorHeight=Math.max(30,195-floorTop+8);
+  c.drawImage(img,15,490,680,160,x-2,floorTop,w+4,floorHeight);
  }else{
   c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
  }
