@@ -36,11 +36,12 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
      await route.fulfill({json:out});
     }catch(e){await route.fulfill({status:e.status||500,json:{error:e.message}});}
    });
-   await page.goto('http://127.0.0.1:3201/',{waitUntil:'domcontentloaded'});await page.locator('[data-game="jump"]').click();await page.waitForTimeout(250);return page;
+   await page.goto('http://127.0.0.1:3201/',{waitUntil:'domcontentloaded'});await page.evaluate(()=>window.EixoJumpArt?.ready);await page.locator('[data-game="jump"]').click();await page.waitForTimeout(250);return page;
   }
 
   const a=await pageFor(players[0]),b=await pageFor(players[1]);
-  // World renderer contact sheet.
+  assert.equal(await a.evaluate(()=>!!EixoJumpArt?.background('city')&&!!EixoJumpArt?.background('forest')&&!!EixoJumpArt?.runner),true);
+  // World renderer contact sheet using the approved packed art.
   await a.evaluate(()=>{const c=document.createElement('canvas');c.id='worldSheet';c.width=900;c.height=1560;c.style='position:fixed;inset:0;z-index:99999;width:900px;height:1560px';document.body.append(c);const ctx=c.getContext('2d');ctx.scale(2,2);for(const [i,b] of ['city','forest','desert','snow'].entries()){ctx.save();ctx.translate(0,i*195);EixoJumpWorlds.draw(ctx,b,73,0,0);for(const [n,p] of EixoJumpPhysics.platforms(73,4).entries())EixoJumpWorlds.platform(ctx,b,p.x,165-p.y,p.w,n);ctx.fillStyle='#fff';ctx.font='8px monospace';ctx.fillText(b.toUpperCase(),12,16);ctx.restore();}});
   await a.locator('#worldSheet').screenshot({path:path.join(root,'tmp/jump-qa/worlds.png')});await a.locator('#worldSheet').evaluate(e=>e.remove());
 
