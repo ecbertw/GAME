@@ -89,7 +89,13 @@ function platform(c,name,x,y,w,index,state={}){
   c.shadowBlur=0;c.shadowOffsetY=0;
   c.save();
   c.beginPath();c.rect(left,groundTop,w+4,groundDepth);c.clip();
-  c.drawImage(img,0,272,724,99,left,groundTop,w+4,groundDepth);
+  // Render ONE illustrated ground slab, not the two slabs in the atlas.
+   // Preserve its decorated ends; only the central masonry is extended.
+   const sourceX=10,sourceY=276,sourceW=336,sourceH=91;
+   const destW=w+4,destH=groundDepth,cap=74,edge=Math.min(destW*.22,74);
+   c.drawImage(img,sourceX,sourceY,cap,sourceH,left,groundTop,edge,destH);
+   c.drawImage(img,sourceX+cap,sourceY,sourceW-2*cap,sourceH,left+edge,groundTop,destW-2*edge,destH);
+   c.drawImage(img,sourceX+sourceW-cap,sourceY,cap,sourceH,left+destW-edge,groundTop,edge,destH);
   c.restore();
  }else{
   c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
