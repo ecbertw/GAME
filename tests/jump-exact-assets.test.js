@@ -8,7 +8,7 @@ test('approved JUMP artwork is loaded before the renderer, physics and game',()=
  const order=[...assets.map(n=>'assets/jump-exact/jump-exact-'+n+'.js'),'jump-exact-renderer.js','jump-worlds.js','jump.js'].map(n=>html.indexOf('src="'+n+'?'));
  assert.ok(order.every(x=>x>=0),'missing image asset or script');
  for(let i=1;i<order.length;i++)assert.ok(order[i]>order[i-1],'scripts are out of order');
- assert.match(html,/20260924-exact3/);
+ assert.match(html,/20260924-exact4/);
 });
 test('all four approved scenes, four transparent platform atlases, runner and VFX are real WebP artwork',()=>{
  for(const name of assets){
@@ -36,7 +36,7 @@ test('visual polish preserves the approved hero and doubles the gameplay backing
  const game=read('jump.js'),renderer=read('jump-exact-renderer.js'),worlds=read('jump-worlds.js');
  assert.match(game,/id="jumpCanvas" width="900" height="390"/);
  assert.match(game,/ctx\.setTransform\(2,0,0,2,0,0\)/);
- assert.match(renderer,/function hairMotion\(/);
+ assert.doesNotMatch(renderer,/function hairMotion\(/);
  assert.match(renderer,/function particlesFor\(/);
  assert.match(renderer,/frame=1\+\(Math\.floor\(time\*13\)%2\)/);
  assert.doesNotMatch(renderer,/fillRect\(x\+5,y-3,Math\.max\(0,w-10\),1\)/);
@@ -46,8 +46,8 @@ test('visual polish preserves the approved hero and doubles the gameplay backing
 
 test('city and snow use distinct new materials and effects remain visible at rest',()=>{
  const renderer=read('jump-exact-renderer.js');
- assert.match(renderer,/name==='city'\|\|name==='snow'/);
- assert.match(renderer,/moving\?65:19/);
+ assert.match(renderer,/c\.drawImage\(img,sx,sy,sw,sh,x-2,top,w\+4,height\)/);
+ assert.match(renderer,/moving\?95:42/);
  assert.match(renderer,/fxKinds=/);
- assert.match(renderer,/row\*144\+16/);
+ assert.match(renderer,/row\*144,112,144/);
 });
