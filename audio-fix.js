@@ -60,7 +60,7 @@
   resume();const biome=String(name||'forest').toLowerCase(),theme=jumpThemes[biome]||jumpThemes.forest;
   if(jumpBiomeName===biome&&jumpTimer)return;
   if(jumpTimer)clearInterval(jumpTimer);jumpBiomeName=biome;jumpStep=0;
-  if(siteGain&&ctx)siteGain.gain.setTargetAtTime(state.site,ctx.currentTime,.08);
+  if(siteGain&&ctx)siteGain.gain.setTargetAtTime(0,ctx.currentTime,.035);
   const tick=()=>{if(!ready())return;const i=jumpStep++,n=theme.notes[i%theme.notes.length],b=theme.bass[Math.floor(i/2)%theme.bass.length];note(n,.18,theme.wave,.011,mapGain,0);if(i%2===0)note(b,.35,'sine',.0075,mapGain,.015);if(biome==='city'&&i%4===3)note(n*2,.05,'square',.0055,mapGain,.08);if(biome==='forest'&&i%5===4)note(n*1.5,.28,'sine',.006,mapGain,.11);if(biome==='desert'&&i%4===2)note(n*.75,.24,'triangle',.006,mapGain,.1);if(biome==='snow'&&i%3===2)note(n*2,.4,'sine',.0045,mapGain,.14);};
   tick();jumpTimer=setInterval(tick,theme.interval);
  }
@@ -72,14 +72,14 @@
   if(state.game<=0||!ready())return;
   const now=ctx.currentTime;
   if(now<nextPixelAt)return;
-  nextPixelAt=now+(direct?.10:.18);
-  const strength=clamp(intensity),dur=direct?.032:.022;
+  nextPixelAt=now+(direct?.075:.12);
+  const strength=clamp(intensity),dur=direct?.045:.035;
   const o=ctx.createOscillator(),g=ctx.createGain();
   o.type='sine';
   o.frequency.setValueAtTime(direct?620:470,now);
   o.frequency.exponentialRampToValueAtTime(direct?260:230,now+dur);
   g.gain.setValueAtTime(.0001,now);
-  g.gain.linearRampToValueAtTime(direct?.022:.006+strength*.003,now+.002);
+  g.gain.linearRampToValueAtTime(direct?.105:.025+strength*.016,now+.002);
   g.gain.exponentialRampToValueAtTime(.0001,now+dur);
   o.connect(g);g.connect(gameGain);
   o.onended=()=>{o.disconnect();g.disconnect()};
