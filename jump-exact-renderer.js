@@ -82,17 +82,11 @@ function platform(c,name,x,y,w,index,state={}){
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  if(isDesertGround){
-  // Assemble the actual long sandstone platform from its illustrated atlas:
-  // stone face and vegetation crown are sampled separately so transparency
-  // never exposes a flat brown rectangle across the entire game.
-  const floorTop=y-8, floorH=27;
+  // One continuous long sandstone platform across the full playable floor.
+  // Stretch a SINGLE atlas sprite, never tile or splice its pieces.
+  // Keep the upper lip at the player's collision plane.
   c.shadowBlur=0;c.shadowOffsetY=0;
-  c.save();c.beginPath();c.rect(x-2,floorTop,w+4,floorH);c.clip();
-  // The middle-row long platform has its stone face below the foliage.
-  c.drawImage(img,28,510,640,104,x-2,floorTop+5,w+4,floorH-5);
-  // Its illustrated upper edge, grass and warm highlights sit at shoe level.
-  c.drawImage(img,28,440,640,82,x-2,floorTop,w+4,9);
-  c.restore();
+  c.drawImage(img,0,272,724,99,x-2,y-9,w+4,39);
  }else{
   c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
  }
