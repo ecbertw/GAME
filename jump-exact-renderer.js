@@ -73,14 +73,15 @@ function platform(c,name,x,y,w,index,state={}){
  const long=w>115,variation=Math.abs(index)%4;
  const sx=long?15:variation*181,sy=long?401:36;
  const sw=long?680:181,sh=long?250:125;
- const top=y-5,height=long?Math.max(28,name==='desert'&&index===0?c.canvas.height-top+2:28):clamp(13+w*.17,17,29);
+ const top=y-5,isGround=index===0;
+ // Canvas backing is 2x (900x390), but gameplay coordinates are 450x195.
+ // Every biome needs a continuous starting floor extending to the viewport bottom.
+ const height=isGround?Math.max(28,195-top+3):long?28:clamp(13+w*.17,17,29);
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
- if(name==='desert'&&index===0){
-  // The approved atlas has its WALKABLE GROUND in the middle row, not
-  // the decorative islands above it. Keep the top surface at the collision
-  // coordinate and extend only the masonry underneath to the canvas edge.
-  // Slice the original stone strip into a narrow top and a scalable body.
+ if(isGround){
+  // All four atlases place the continuous ground in the middle row.
+  // Align its walkable surface to physics y and extend the masonry below.
   c.drawImage(img,15,401,680,43,x-2,top,w+4,10);
   c.drawImage(img,15,444,680,205,x-2,top+10,w+4,Math.max(1,height-10));
  }else if(long){
@@ -187,5 +188,5 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
  return true;
 }
-root.EixoJumpExactArt={version:'approved-assets-vfx7-20260924',ready,background,platform,runner,images};
+root.EixoJumpExactArt={version:'approved-assets-vfx8-20260924',ready,background,platform,runner,images};
 })(window);
