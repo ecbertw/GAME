@@ -31,3 +31,15 @@ test('approved sprites are active while the old renderer remains as a safe fallb
  for(const fx of ['glow','pulse','shimmer','spark','halo','frost','electric','ember','mist','plasma','comet','cosmic','prismatic'])assert.match(renderer,new RegExp(fx+':\\['));
  assert.match(game,/const P=window\.EixoJumpPhysics/);
 });
+
+test('visual polish preserves the approved hero and doubles the gameplay backing resolution',()=>{
+ const game=read('jump.js'),renderer=read('jump-exact-renderer.js'),worlds=read('jump-worlds.js');
+ assert.match(game,/id="jumpCanvas" width="900" height="390"/);
+ assert.match(game,/ctx\.setTransform\(2,0,0,2,0,0\)/);
+ assert.match(renderer,/function hairMotion\(/);
+ assert.match(renderer,/function particlesFor\(/);
+ assert.match(renderer,/frame=1\+\(Math\.floor\(time\*13\)%2\)/);
+ assert.doesNotMatch(renderer,/fillRect\(x\+5,y-3,Math\.max\(0,w-10\),1\)/);
+ for(const biome of ['city','forest','desert'])assert.match(worlds,new RegExp("biome==='"+biome+"'"));
+ assert.match(worlds,/Multiple snow speeds/);
+});

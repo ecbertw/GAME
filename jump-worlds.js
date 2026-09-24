@@ -11,17 +11,43 @@ function fallback(c,biome){
  const p=palettes[biome]||palettes.forest,W=450,H=195,g=c.createLinearGradient(0,0,0,H);
  g.addColorStop(0,p.mid);g.addColorStop(1,p.under);c.fillStyle=g;c.fillRect(0,0,W,H);
 }
+// Atmospheric layers use deterministic, time-based motion, independent of physics.
 function ambience(c,biome,time){
  const W=450,H=195,t=Number(time||0);
- c.save();
+ const wrap=(v,m)=>((v%m)+m)%m;
+ c.save();c.globalCompositeOperation='screen';
  if(biome==='city'){
-  for(let i=0;i<9;i++){const x=(i*71+t*7)%W,y=35+(i*31)%120;c.fillStyle=i%2?'#77f8ff55':'#ff5bd055';c.fillRect(x,y,1,2)}
+  // Distant airborne traffic and slow neon reflections.
+  for(let i=0;i<13;i++){
+   const x=wrap(i*67+t*(i%3===0?-5:3+i%4),W+35)-15,y=19+(i*37)%132;
+   c.globalAlpha=.18+(i%4)*.065;c.fillStyle=i%2?'#74dcff':'#ff77d8';
+   c.fillRect(x,y,i%3===0?5:2,.55);c.fillRect(x-3,y,1,.55);
+  }
+  for(let i=0;i<5;i++){const x=wrap(i*107+t*1.7,W);c.globalAlpha=.11;c.fillStyle='#ff8fdd';c.fillRect(x,149+i*6,11,1)}
  }else if(biome==='forest'){
-  for(let i=0;i<12;i++){const x=(i*43+t*(2+i%3))%W,y=40+(i*29)%125;c.fillStyle=i%3?'#cfff835e':'#8fffd35a';c.fillRect(x,y,1,1)}
+  // Fireflies follow independent elliptical paths rather than scrolling in lockstep.
+  for(let i=0;i<23;i++){
+   const phase=i*2.399,tick=t*(.43+(i%5)*.12)+phase;
+   const x=wrap(i*43+Math.sin(tick)*12,W),y=30+(i*29)%145+Math.cos(tick*.77)*7;
+   c.globalAlpha=.2+.48*(.5+.5*Math.sin(tick*1.6));c.fillStyle=i%3?'#e2ff94':'#7efee5';
+   c.fillRect(x,y,i%7===0?1.5:1,1);
+  }
  }else if(biome==='desert'){
-  c.fillStyle='#ffc87814';for(let i=0;i<5;i++)c.fillRect((i*111-t*2)%W,55+i*18,70,1);
+  // Heat shimmer and airborne sand. The starting slab remains a foreground object.
+  for(let i=0;i<22;i++){
+   const x=wrap(i*41+t*(3+i%4),W),y=34+(i*31)%152;
+   c.globalAlpha=.08+(i%4)*.035;c.fillStyle=i%3?'#ffdb9c':'#fff0c1';
+   c.fillRect(x,y,i%6===0?3:1,.6);
+  }
+  for(let i=0;i<5;i++){const y=60+i*26;const x=wrap(i*117+t*1.5,W);c.globalAlpha=.055;c.fillStyle='#ffd49d';c.fillRect(x,y,44,1)}
  }else{
-  for(let i=0;i<16;i++){const x=(i*37+t*(3+i%2))%W,y=(i*23+t*5)%H;c.fillStyle='#f4fdff88';c.fillRect(x,y,i%6===0?2:1,1)}
+  // Multiple snow speeds, including slow foreground flakes.
+  for(let i=0;i<35;i++){
+   const speed=2+i%5*1.8,x=wrap(i*41+Math.sin(t*.8+i)*4+t*(i%2?-.9:.5),W);
+   const y=wrap(i*31+t*speed,H);
+   c.globalAlpha=.26+(i%4)*.12;c.fillStyle=i%6===0?'#a9f6ff':'#f3fcff';
+   c.fillRect(x,y,i%9===0?1.6:1,i%9===0?1.6:1);
+  }
  }
  c.restore();
 }
