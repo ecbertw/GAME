@@ -15,11 +15,12 @@ for(const [name,url] of Object.entries(packed.backgrounds||{}))load(url,img=>ima
 for(const [name,url] of Object.entries(packed.platforms||{}))load(url,img=>images.platforms[name]=img);
 load(packed.runner,img=>images.runner=img);
 load(packed.effects,img=>images.effects=img);
-// Optional separately exported artwork from the approved Desert asset sheet.
-// Keep the previous packed atlas as a fallback until the new files load.
-const desertSheet={background:null,platforms:null};
-load('/assets/jump-exact/desert-20260925-background.webp',img=>desertSheet.background=img);
-load('/assets/jump-exact/desert-20260925-platforms.webp',img=>desertSheet.platforms=img);
+// Exported directly from the approved 25 September desert art sheet.
+const desertSheet={background:null,ground:null,platforms:[null,null,null]};
+const desertBase='/assets/jump-exact/desert-20260925-';
+load(desertBase+'background.webp',img=>desertSheet.background=img);
+load(desertBase+'ground.webp',img=>desertSheet.ground=img);
+for(let i=0;i<3;i++)load(desertBase+'platform-'+(i+1)+'.webp',img=>desertSheet.platforms[i]=img);
 const ready=Promise.all(loads);
 const has=img=>!!(img&&img.complete&&img.naturalWidth>0);
 const clamp=(n,a=0,b=255)=>Math.max(a,Math.min(b,n));
@@ -74,7 +75,21 @@ function background(c,name,W,H,cam=0){
  c.restore();return true;
 }
 function platform(c,name,x,y,w,index,state={}){
- const img=name==='desert'&&has(desertSheet.platforms)?desertSheet.platforms:images.platforms[name];if(!has(img))return false;
+ const img=images.platforms[name];if(!has(img))return false;
+ if(name==='desert'){
+  const ground=index===0,art=ground?desertSheet.ground:desertSheet.platforms[Math.abs(index)%3];
+  if(has(art)){
+   c.save();c.imageSmoothingEnabled=true;
+   const top=y-(ground?5:5),depth=ground?43:Math.max(18,Math.min(31,13+w*.17));
+   if(ground){
+    // Single uninterrupted illustrated ground; never repeat its hanging vines.
+    c.drawImage(art,x-2,top,w+4,depth);
+   }else{
+    c.drawImage(art,x-2,top,w+4,depth);
+   }
+   c.restore();return true;
+  }
+ }
  const long=w>115,variation=Math.abs(index)%4;
  const sx=long?0:variation*181,sy=long?(index%2?272:170):36;
  const sw=long?724:181,sh=long?99:125;
