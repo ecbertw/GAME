@@ -74,18 +74,14 @@ function platform(c,name,x,y,w,index,state={}){
  const sx=long?15:variation*181,sy=long?401:36;
  const sw=long?680:181,sh=long?250:125;
  const top=y-5,isGround=index===0;
- // Canvas backing is 2x (900x390), but gameplay coordinates are 450x195.
- // Every biome needs a continuous starting floor extending to the viewport bottom.
+ // The middle atlas row is the complete approved ground strip for each biome.
+ // Render it as a single image: slicing and stretching its lower masonry
+ // destroyed the original proportions and made all four floors look wrong.
  const height=isGround?Math.max(28,195-top+3):long?28:clamp(13+w*.17,17,29);
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  if(isGround){
-  // All four atlases place the continuous ground in the middle row.
-  // Align its walkable surface to physics y and extend the masonry below.
-  c.drawImage(img,15,401,680,43,x-2,top,w+4,10);
-  c.drawImage(img,15,444,680,205,x-2,top+10,w+4,Math.max(1,height-10));
- }else if(long){
-  c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
+  c.drawImage(img,15,401,680,250,x-2,top,w+4,height);
  }else{
   c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
  }
