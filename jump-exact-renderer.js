@@ -82,15 +82,14 @@ function platform(c,name,x,y,w,index,state={}){
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  if(isDesertGround){
-  // Continuous desert floor using the SAME illustrated masonry and foliage
-  // as the approved floating-platform atlas. Never stretch a narrow slice.
-  // Crop the original long floor's upper masonry, keeping its native aspect.
-  const left=x-2,right=x+w+2,groundTop=y-3,depth=21;
+  // Use the complete long desert masonry illustration as ONE continuous floor.
+  // Its upper lip meets the physics surface; preserve the stonework, foliage,
+  // dangling roots and original proportions rather than flattening a thin strip.
+  const left=x-2, groundTop=y-5, groundDepth=43;
   c.shadowBlur=0;c.shadowOffsetY=0;
-  c.save();c.beginPath();c.rect(left,groundTop,right-left,depth);c.clip();
-  const sourceY=272,sourceHeight=43,sourceWidth=724;
-  // A single continuous image across the whole playfield; no tiled seams.
-  c.drawImage(img,0,sourceY,sourceWidth,sourceHeight,left,groundTop,right-left,depth);
+  c.save();
+  c.beginPath();c.rect(left,groundTop,w+4,groundDepth);c.clip();
+  c.drawImage(img,0,272,724,99,left,groundTop,w+4,groundDepth);
   c.restore();
  }else{
   c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
