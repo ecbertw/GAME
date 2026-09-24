@@ -73,7 +73,7 @@ function platform(c,name,x,y,w,index,state={}){
  const long=w>115,variation=Math.abs(index)%4;
  const sx=long?0:variation*181,sy=long?(index%2?272:170):36;
  const sw=long?724:181,sh=long?99:125;
- const isGround=index===0;
+ const isGround=index===0&&(name==='desert'||name==='forest');
  const height=long?27:clamp(13+w*.17,17,29),top=y-5;
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
