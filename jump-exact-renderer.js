@@ -82,27 +82,15 @@ function platform(c,name,x,y,w,index,state={}){
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  if(isDesertGround){
-  // Use the actual approved desert atlas artwork, not generated masonry.
-  // Tile a central sandstone section at native horizontal proportions.
-  // The top of the sprite is aligned with the collision plane; only 17px
-  // of its underside is visible, leaving the background unobstructed.
-  const left=x-2,right=x+w+2,top=y-3,depth=19;
+  // Continuous desert floor using the SAME illustrated masonry and foliage
+  // as the approved floating-platform atlas. Never stretch a narrow slice.
+  // Crop the original long floor's upper masonry, keeping its native aspect.
+  const left=x-2,right=x+w+2,groundTop=y-3,depth=21;
   c.shadowBlur=0;c.shadowOffsetY=0;
-  c.save();c.beginPath();c.rect(left,top,right-left,depth);c.clip();
-  // Source: central uninterrupted masonry of the left long desert floor.
-  // No end caps, pillars, or stretching across the entire game width.
-  const sourceX=84,sourceY=282,sourceW=156,sourceH=64;
-  const tileW=156;
-  for(let dx=left;dx<right;dx+=tileW){
-   const dw=Math.min(tileW,right-dx);
-   c.drawImage(img,sourceX,sourceY,sourceW*dw/tileW,sourceH,dx,top,dw,depth);
-  }
-  // Overlay occasional foliage from the SAME atlas, rather than drawn lines.
-  for(let i=0;i<Math.ceil(w/220);i++){
-   const px=left+70+i*220;
-   if(px>=right)break;
-   c.drawImage(img,76,286,44,65,px,top,Math.min(44,right-px),depth);
-  }
+  c.save();c.beginPath();c.rect(left,groundTop,right-left,depth);c.clip();
+  const sourceY=272,sourceHeight=43,sourceWidth=724;
+  // A single continuous image across the whole playfield; no tiled seams.
+  c.drawImage(img,0,sourceY,sourceWidth,sourceHeight,left,groundTop,right-left,depth);
   c.restore();
  }else{
   c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
