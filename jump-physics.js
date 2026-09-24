@@ -41,17 +41,17 @@
 
       // Moving platforms dominate the late game (normally 80%+) and accelerate
       // sooner than jump8 while remaining within a catchable linear velocity.
-      const moveChance=i<3?0:(0.38+0.48*difficulty);
+      const moveChance=1;
       const forcedMover=i>=9&&(i%4===0||i%7===0);
-      const moving=i>=3&&(forcedMover||hash(seed,i*11+6)<moveChance);
+      const moving=i>=1;
       let moveCenter=x,moveAmp=0,moveSpeed=0,movePhase=0;
       if(moving){
-        const desired=19+hash(seed,i*11+7)*(22+13*difficulty);
+        const desired=(i<=2?8:19)+hash(seed,i*11+7)*(i<=2?6:22+13*difficulty);
         const min=Math.max(12,x-desired),max=Math.min(W-width-12,x+desired);
         moveCenter=(min+max)/2;
         moveAmp=Math.max(8,(max-min)/2);
         const speedProgress=Math.min(1,Math.max(0,(i-2)/10));
-        const desiredSpeed=1.02+1.05*speedProgress+hash(seed,i*11+8)*0.22;
+        const desiredSpeed=(i<=2?.55:1.02+1.05*speedProgress)+hash(seed,i*11+8)*0.22;
         moveSpeed=Math.min(2.24,desiredSpeed,106/Math.max(1,moveAmp));
         movePhase=hash(seed,i*11+9)*Math.PI*2;
       }
