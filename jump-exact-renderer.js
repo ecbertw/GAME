@@ -117,16 +117,16 @@ function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
  const colors=fxColors[fx]||fxColors.glow,kind=fxKinds[fx]||'dust';
  // A subtle, continuously animated signature makes the equipped effect
  // identifiable even while standing still; movement releases a larger trail.
- p.carry+=dt*(moving?65:19);
+ p.carry+=dt*(moving?95:42);
  let serial=p.serial||0;
  while(p.carry>=1&&p.items.length<130){
   p.carry--;serial++;
   const rand=z=>{const v=Math.sin(serial*93.17+z*31.7)*43758.5453;return v-Math.floor(v)};
-  const spread=moving?15:11;
+  const spread=moving?21:17;
   p.items.push({x:x+(rand(1)-.5)*spread-dir*(moving?5:0),
-   y:y-4-rand(2)*35,vx:(rand(3)-.5)*17-dir*(moving?18:0),
+   y:y-3-rand(2)*25,vx:(rand(3)-.5)*19-dir*(moving?44:0),
    vy:kind==='snow'?-(4+rand(4)*11):-(12+rand(4)*22),
-   life:.55+rand(5)*.65,max:1.2,size:1.2+rand(6)*2.1,
+   life:.65+rand(5)*.8,max:1.45,size:1.8+rand(6)*3.4,
    color:colors[Math.floor(rand(7)*colors.length)],seed:rand(8)*6.28});
  }
  p.serial=serial;
@@ -138,22 +138,40 @@ function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
   if(q.life<=0){p.items.splice(i,1);continue}
   const alpha=(ghost?.4:.92)*Math.min(1,q.life/.22)*Math.min(1,(q.max-q.life)/.12);
   c.globalAlpha=alpha;c.fillStyle=q.color;c.strokeStyle=q.color;
-  c.shadowColor=q.color;c.shadowBlur=kind==='fire'||kind==='lightning'?8:5;
-  const size=q.size*(kind==='cloud'?1.8:1);
+  c.shadowColor=q.color;c.shadowBlur=kind==='fire'||kind==='lightning'?11:7;
+  const size=q.size*(kind==='cloud'?2.3:1);
   if(kind==='fire'){
    c.beginPath();c.moveTo(q.x,q.y-size*1.8);c.quadraticCurveTo(q.x+size,q.y,q.x,q.y+size);
    c.quadraticCurveTo(q.x-size,q.y,q.x,q.y-size*1.8);c.fill();
   }else if(kind==='snow'){
-   c.fillRect(q.x-size*.5,q.y,size,1);c.fillRect(q.x,q.y-size*.5,1,size);
+   c.fillRect(q.x-size*.7,q.y,size*1.4,1);c.fillRect(q.x,q.y-size*.7,1,size*1.4);
   }else if(kind==='lightning'){
    c.lineWidth=.85;c.beginPath();c.moveTo(q.x-2,q.y-3);c.lineTo(q.x+1,q.y);
    c.lineTo(q.x-1,q.y+2);c.lineTo(q.x+2,q.y+4);c.stroke();
   }else if(kind==='star'){
-   c.fillRect(q.x-size,q.y,2*size,.8);c.fillRect(q.x,q.y-size,.8,2*size);
+   c.fillRect(q.x-size,q.y,2*size,1.2);c.fillRect(q.x,q.y-size,1.2,2*size);
   }else if(kind==='streak'){
    c.fillRect(q.x,q.y,size,1.5);c.globalAlpha=alpha*.4;c.fillRect(q.x-q.vx*.07,q.y-q.vy*.07,size*1.6,1);
   }else{
-   c.beginPath();c.arc(q.x,q.y,size*.55,0,Math.PI*2);c.fill();
+   c.beginPath();c.arc(q.x,q.y,size*.7,0,Math.PI*2);c.fill();
+  }
+ }
+ // Distinct animated ribbons are constructed from moving particle positions,
+ // never a fixed image hovering over the head. They rise at rest and stream
+ // behind the runner, with each biome-independent VIP palette.
+ if(p.items.length>3){
+  c.shadowBlur=10;c.lineCap='round';c.lineWidth=fx==='mist'?3:fx==='ember'?2.3:1.5;
+  for(let strand=0;strand<3;strand++){
+   const trail=p.items.filter((q,i)=>i%3===strand&&q.life>0).slice(-7);
+   if(trail.length<2)continue;
+   c.beginPath();c.moveTo(trail[0].x,trail[0].y);
+   for(let j=1;j<trail.length;j++){
+    const prev=trail[j-1],q=trail[j];
+    c.quadraticCurveTo(prev.x,prev.y,(prev.x+q.x)/2,(prev.y+q.y)/2);
+   }
+   c.strokeStyle=colors[strand%colors.length];
+   c.globalAlpha=(ghost?.13:.24)*(fx==='frost'?.8:1);
+   c.stroke();
   }
  }
  c.restore();
