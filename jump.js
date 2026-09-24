@@ -119,65 +119,86 @@ function outfitColor(value,time,offset=0){
  if(value!=='rainbow')return value||'#fff';
  return 'hsl('+Math.round(((time||0)*115+offset)%360)+' 92% 62%)';
 }
+function hslRgb(h,s=92,l=62){
+ h=((h%360)+360)%360/360;s/=100;l/=100;const hue=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p};
+ if(!s){const v=Math.round(l*255);return[v,v,v]}const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q;return[hue(p,q,h+1/3),hue(p,q,h),hue(p,q,h-1/3)].map(v=>Math.round(v*255));
+}
+function colorRgb(value,time=0,offset=0){
+ if(value==='rainbow')return hslRgb((time*115+offset)%360);
+ const m=/^#([0-9a-f]{6})$/i.exec(String(value||''));if(!m)return[255,255,255];
+ const n=parseInt(m[1],16);return[(n>>16)&255,(n>>8)&255,n&255];
+}
+function rgbaCss(rgb,a){return 'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+','+a+')'}
+function runnerPose(time,motion){
+ const moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0);
+ if(!ground||Math.abs(vy)>8)return vy>5?3:4;
+ if(moving)return Math.floor(time*9)%2?1:2;
+ return 0;
+}
+function tintedRunner(pose,O,time){
+ const A=window.EixoJumpArt?.runner;if(!A)return null;
+ const values=[O.hair,O.top,O.pants,O.shoes,O.accent],animated=values.includes('rainbow'),bucket=animated?Math.floor(time*8):0;
+ const key=pose+'|'+values.join('|')+'|'+bucket;if(A.cache.has(key))return A.cache.get(key);
+ if(A.cache.size>180)A.cache.clear();
+ const cw=Math.round(A.cellW),ch=Math.round(A.cellH),sx=(pose%3)*cw,sy=Math.floor(pose/3)*ch,cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+ const cc=cv.getContext('2d'),img=cc.createImageData(cw,ch),map={1:O.hair,2:O.top,3:O.pants,4:O.shoes,5:O.accent};
+ for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){
+  const si=((sy+y)*A.w+sx+x),sp=si*4,dp=(y*cw+x)*4,a=A.rgba[sp+3];if(!a)continue;
+  const label=A.mask[si]||0,r=A.rgba[sp],g=A.rgba[sp+1],b=A.rgba[sp+2];let rr=r,gg=g,bb=b;
+  if(label&&map[label]){
+   const target=colorRgb(map[label],time,(label*67+x*2+y)%360),lum=(r*.2126+g*.7152+b*.0722)/255,f=.42+lum*.84,hi=lum>.73?18:0;
+   rr=Math.min(255,Math.round(target[0]*f*.86+r*.16+hi));gg=Math.min(255,Math.round(target[1]*f*.86+g*.16+hi));bb=Math.min(255,Math.round(target[2]*f*.86+b*.16+hi));
+  }
+  img.data[dp]=rr;img.data[dp+1]=gg;img.data[dp+2]=bb;img.data[dp+3]=a;
+ }
+ cc.putImageData(img,0,0);A.cache.set(key,cv);return cv;
+}
+function runnerEffect(c,x,y,effect,color,time,motion,dir,ghost,front){
+ if(effect==='none')return;const alpha=ghost?.48:1,rgb=colorRgb(color,time,120),pulse=.5+.5*Math.sin(time*3.4),spark=.5+.5*Math.sin(time*8.2);
+ c.save();c.translate(x,y);c.globalCompositeOperation='screen';
+ const radial=(cx,cy,r,a,col=rgb)=>{const g=c.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,rgbaCss(col,a));g.addColorStop(.45,rgbaCss(col,a*.42));g.addColorStop(1,rgbaCss(col,0));c.fillStyle=g;c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.fill()};
+ const dot=(xx,yy,r,col=rgb,a=.75)=>{c.fillStyle=rgbaCss(col,a*alpha);c.beginPath();c.arc(xx,yy,r,0,Math.PI*2);c.fill()};
+ if(!front){
+  if(effect==='glow')radial(0,-17,22,.22*alpha);
+  if(effect==='pulse')radial(0,-17,18+pulse*6,(.13+.11*pulse)*alpha);
+  if(effect==='halo')radial(0,-18,19,.12*alpha);
+  if(effect==='mist'){c.filter='blur(2px)';c.fillStyle=rgbaCss(rgb,.12*alpha);c.beginPath();c.ellipse(-5,-3,16,5,0,0,Math.PI*2);c.ellipse(7,-7,13,4,0,0,Math.PI*2);c.fill();c.filter='none'}
+  if(effect==='plasma'){radial(0,-17,24,.17*alpha,[89,103,255]);radial(3,-15,17,.13*alpha,[255,67,212])}
+  if(effect==='cosmic')radial(0,-17,25,.18*alpha,[93,64,190]);
+  if(effect==='prismatic'){for(let i=0;i<3;i++)radial((i-1)*4,-17,21-i*2,.075*alpha,hslRgb(time*90+i*110,90,62))}
+  if(effect==='comet'&&motion.moving){const len=22+8*pulse,g=c.createLinearGradient(dir>0?-len:len,-10,0,-10);g.addColorStop(0,rgbaCss(rgb,0));g.addColorStop(1,rgbaCss(rgb,.25*alpha));c.strokeStyle=g;c.lineWidth=5;c.lineCap='round';c.beginPath();c.moveTo(dir>0?-len:len,-9);c.lineTo(-dir*7,-11);c.stroke()}
+ }else{
+  if(effect==='halo'){c.strokeStyle=rgbaCss(rgb,.72*alpha);c.lineWidth=1.3;c.beginPath();c.ellipse(0,-34,9+pulse*1.5,3.2,0,0,Math.PI*2);c.stroke()}
+  if(effect==='shimmer'){dot(-12,-24+spark*4,1.2,[255,255,255],.85);dot(11,-13-spark*5,.9,rgb,.75);dot(8,1+spark*2,.7,[255,255,255],.55)}
+  if(effect==='spark'){dot(-12,-12+pulse*4,1.1,rgb,.75);dot(12,-5-pulse*5,.9,[255,255,255],.78);dot(-7,3-pulse*3,.65,rgb,.58)}
+  if(effect==='electric'){
+   c.strokeStyle=rgbaCss(rgb,.8*alpha);c.lineWidth=1.15;for(const side of [-1,1]){const xx=side*12;c.beginPath();c.moveTo(xx,-27);c.lineTo(xx-side*3,-21);c.lineTo(xx+side*1,-15);c.lineTo(xx-side*2,-8);c.stroke()}
+  }
+  if(effect==='frost'){for(const [xx,yy,rr] of [[-12,-21,1.2],[12,-13,1],[7,1,.8],[-9,3,.7]]){dot(xx,yy+Math.sin(time*4+xx)*2,rr,[190,246,255],.78);c.strokeStyle=rgbaCss([220,252,255],.55*alpha);c.lineWidth=.7;c.beginPath();c.moveTo(xx-2,yy);c.lineTo(xx+2,yy);c.moveTo(xx,yy-2);c.lineTo(xx,yy+2);c.stroke()}}
+  if(effect==='ember'){for(let i=0;i<4;i++){const yy=5-((time*(7+i)+i*11)%27),xx=(i%2?-1:1)*(5+i*2)+Math.sin(time*3+i)*2;dot(xx,yy,1-i*.11,i%2?[255,201,92]:[255,91,50],.72)}}
+  if(effect==='plasma'){c.strokeStyle=rgbaCss([112,240,255],.58*alpha);c.lineWidth=1;c.beginPath();c.ellipse(0,-17,13+pulse*2,20+pulse*2,0,0,Math.PI*2);c.stroke()}
+  if(effect==='cosmic'){for(let i=0;i<5;i++){const a=i*1.31+time*.32,rr=15+(i%2)*5;dot(Math.cos(a)*rr,-17+Math.sin(a)*rr*.65,.65+i%2*.25,hslRgb(220+i*28,72,72),.67)}}
+  if(effect==='prismatic'){c.strokeStyle='hsla('+Math.round((time*90)%360)+' 95% 70% / '+(.7*alpha)+')';c.lineWidth=1.2;c.beginPath();c.ellipse(0,-17,14+pulse,21+pulse,0,0,Math.PI*2);c.stroke();for(let i=0;i<3;i++)dot((i-1)*12,-25+i*10,.75,hslRgb(time*100+i*120,95,68),.8)}
+ }
+ c.restore();
+}
+function fallbackRunner(c,x,y,O,dir,ghost){
+ c.save();c.translate(Math.round(x),Math.round(y));c.scale(dir,1);c.globalAlpha=ghost?.65:1;c.shadowColor='#000';c.shadowBlur=3;
+ c.fillStyle='#14202c';c.fillRect(-8,-31,16,30);c.fillStyle='#f2c69c';c.fillRect(-6,-29,12,11);c.fillStyle=outfitColor(O.hair,0);c.fillRect(-7,-31,14,5);
+ c.fillStyle='#101820';c.fillRect(-3,-25,2,2);c.fillRect(2,-25,2,2);c.fillStyle='#fff';c.fillRect(-2,-25,1,1);c.fillRect(3,-25,1,1);
+ c.fillStyle=outfitColor(O.top,0);c.fillRect(-8,-17,16,10);c.fillStyle=outfitColor(O.accent,0);c.fillRect(-1,-17,2,10);c.fillStyle=outfitColor(O.pants,0);c.fillRect(-6,-7,12,5);c.fillStyle=outfitColor(O.shoes,0);c.fillRect(-8,-3,7,3);c.fillRect(1,-3,7,3);c.restore();
+}
 function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
- const O={hair:'#19222d',top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none',...(style||outfit||{})};
- const F={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a',...(fixedAppearance||{})};
- const top=outfitColor(O.top,time,0),accent=outfitColor(O.accent,time,85),pants=outfitColor(O.pants,time,175),shoes=outfitColor(O.shoes,time,265),hair=outfitColor(O.hair,time,315);
- const dir=motion.facing===-1?-1:1,moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0);
- const airborne=!ground||Math.abs(vy)>5,walk=moving&&ground?Math.sin(time*14):0,rising=airborne&&vy>15,falling=airborne&&vy<-15;
- const bob=moving&&ground?Math.round(Math.abs(Math.sin(time*14))):0,bodyY=(rising?-2:falling?1:0)-bob;
- const arm=Math.round(walk*3),leg=Math.round(walk*3),outline='#101923',deep='#0a1119';
- const spriteScale=.72;
- c.save();c.globalAlpha=ghost?0.72:1;c.translate(Math.round(x),Math.round(y));c.scale(dir*spriteScale,spriteScale);c.translate(0,-14);
- const q=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(xx),Math.round(yy),w,h)};
- const effect=String(O.effect||'none'),aura=outfitColor(O.accent,time,120),baseAlpha=ghost?.72:1;
- const breathe=.5+.5*Math.sin(time*3.2),twinkle=.5+.5*Math.sin(time*5.1);
- if(['glow','pulse','halo','plasma','cosmic','prismatic'].includes(effect)){
-  c.shadowColor=effect==='cosmic'||effect==='prismatic'?outfitColor('rainbow',time,150):aura;
-  c.shadowBlur=effect==='glow'?4:effect==='pulse'?4+breathe*3:effect==='halo'?6:effect==='plasma'?7:8;
- }
- if(effect==='halo'){
-  c.globalAlpha=baseAlpha*(.07+.04*breathe);q(-10,-27,20,35,aura);q(-12,-17,24,15,aura);c.globalAlpha=baseAlpha;
- }
- if(effect==='mist'){
-  c.globalAlpha=baseAlpha*.16;q(-13,9,26,3,aura);q(-9,12,18,2,'#d7f5ff');c.globalAlpha=baseAlpha;
- }
- if(effect==='comet'&&moving){
-  c.globalAlpha=baseAlpha*.13;q(dir>0?-18:8,-7,10,9,aura);q(dir>0?-22:12,-3,8,4,aura);c.globalAlpha=baseAlpha;
- }
- // A readable 18x31 runner silhouette with a real head, hair, jacket and limbs.
- q(-7,-25+bodyY,14,15,outline);q(-6,-24+bodyY,12,13,F.skin);
- q(-6,-25+bodyY,12,4,hair);q(-7,-22+bodyY,4,5,hair);q(3,-23+bodyY,4,3,hair);
- q(-7,-18+bodyY,2,4,F.skinShade);q(5,-18+bodyY,2,4,F.skinShade);
- q(-3,-19+bodyY,2,2,F.eyes);q(2,-19+bodyY,2,2,F.eyes);q(4,-18+bodyY,1,1,'#ffffff');
- q(-1,-16+bodyY,2,1,F.skinShade);q(-3,-13+bodyY,6,1,F.skinShade);
- // Neck + jacket outline and coloured panels.
- q(-3,-11+bodyY,6,3,F.skin);q(-8,-9+bodyY,16,11,outline);q(-7,-8+bodyY,14,9,top);
- q(-1,-8+bodyY,2,9,accent);q(-5,-6+bodyY,3,2,accent);q(2,-6+bodyY,3,2,accent);
- q(-6,0+bodyY,12,2,deep);q(-5,-1+bodyY,10,1,accent);
- // Arms have shoulders, sleeves and hands instead of single bars.
- q(-11,-8+bodyY+arm,4,8,outline);q(-10,-7+bodyY+arm,3,6,top);q(-10,-1+bodyY+arm,3,3,F.skin);
- q(7,-8+bodyY-arm,4,8,outline);q(7,-7+bodyY-arm,3,6,top);q(7,-1+bodyY-arm,3,3,F.skin);
- // Belt, two articulated legs and shoes. Jump pose is visibly different.
- q(-6,2+bodyY,12,3,outline);q(-5,2+bodyY,10,2,pants);
- const lY=rising?-2:falling?1:leg,rY=rising?1:falling?-1:-leg;
- q(-6,4+lY,5,8,outline);q(-5,4+lY,4,7,pants);q(1,4+rY,5,8,outline);q(1,4+rY,4,7,pants);
- q(-7,11+lY,7,3,outline);q(-6,10+lY,6,2,shoes);q(0,11+rY,7,3,outline);q(1,10+rY,6,2,shoes);
- c.shadowBlur=0;
- // Cosmetic particles stay close to the runner instead of orbiting like props.
- const px=(xx,yy,col,alpha=1,w=1,h=1)=>{const old=c.globalAlpha;c.globalAlpha=baseAlpha*alpha;q(xx,yy,w,h,col);c.globalAlpha=old;};
- if(effect==='shimmer'){const y1=-22+Math.round(twinkle*5);px(-10,y1,'#fff',.72);px(9,-5-Math.round(twinkle*4),aura,.65);}
- if(effect==='spark'){px(-10,-10+Math.round(breathe*3),aura,.8,1,2);px(9,4-Math.round(breathe*4),'#fff',.7,1,1);}
- if(effect==='electric'){
-  const side=Math.sin(time*8)>0?1:-1,x=side*9;px(x,-17,aura,.78,2,1);px(x+side*2,-15,'#eaffff',.85,1,2);px(x,-12,aura,.72,2,1);
- }
- if(effect==='frost'){px(-9,7+Math.round(twinkle*3),'#bff6ff',.7,2,1);px(8,-7+Math.round(breathe*4),'#e9fdff',.72,1,2);px(4,11,'#8ee8ff',.55,1,1);}
- if(effect==='ember'){px(-6,10-Math.round(breathe*5),'#ff9a62',.75,1,2);px(6,8-Math.round(twinkle*7),'#ffd27a',.72,1,1);px(1,12-Math.round(breathe*4),'#ff6238',.55,1,1);}
- if(effect==='plasma'){px(-8,-7,aura,.55,1,6);px(7,-2,outfitColor(O.accent,time,210),.5,1,5);}
- if(effect==='cosmic'){px(-10,-20,outfitColor('rainbow',time,20),.7,1,1);px(9,-5,outfitColor('rainbow',time,140),.68,1,1);px(-7,9,outfitColor('rainbow',time,260),.6,1,1);}
- if(effect==='prismatic'){px(-8,-20,outfitColor('rainbow',time,20),.72,2,1);px(7,-8,outfitColor('rainbow',time,120),.68,1,2);px(-6,5,outfitColor('rainbow',time,240),.65,2,1);}
- c.globalAlpha=baseAlpha;c.restore();
- if(name){c.save();c.globalAlpha=ghost?.82:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-34);c.restore()}
+ const O={hair:'#23d8e6',top:'#e8bf4a',accent:'#35e9ff',pants:'#6f4fcf',shoes:'#f5f7ff',effect:'none',...(style||outfit||{})};
+ const dir=motion.facing===-1?-1:1,pose=runnerPose(time,motion),sprite=tintedRunner(pose,O,time);
+ runnerEffect(c,x,y,String(O.effect||'none'),O.accent,time,motion,dir,ghost,false);
+ if(sprite){
+  const target=38,ratio=target/sprite.height,w=sprite.width*ratio;c.save();c.translate(Math.round(x),Math.round(y));c.scale(dir,1);c.globalAlpha=ghost?.72:1;
+  c.imageSmoothingEnabled=false;c.shadowColor=ghost?'rgba(100,220,255,.25)':'rgba(0,0,0,.62)';c.shadowBlur=ghost?4:5;c.shadowOffsetY=2;
+  c.drawImage(sprite,-w/2,-target,w,target);c.restore();
+ }else fallbackRunner(c,x,y,O,dir,ghost);
+ runnerEffect(c,x,y,String(O.effect||'none'),O.accent,time,motion,dir,ghost,true);
+ if(name){c.save();c.globalAlpha=ghost?.82:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.shadowColor='#07111d';c.shadowBlur=3;c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-43);c.restore()}
 }
 function draw(){
  if(!ctx||current!=='jump')return;const c=ctx;drawBackground();
@@ -448,13 +469,13 @@ function init(){
  main.insertBefore(switcher,$('gameIntro'));
  switcher.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>switchGame(b.dataset.game));
  const root=document.createElement('div');root.id='jumpRoot';root.className='jump-root hidden';
- root.innerHTML='<canvas id="jumpCanvas" width="450" height="195" aria-label="JUMP platformer"></canvas>'+
+ root.innerHTML='<canvas id="jumpCanvas" width="900" height="390" aria-label="JUMP platformer"></canvas>'+
  '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">FOREST · SOLO</div></div>'+
  '<div class="jump-tools"><button id="jumpSoloButton">SOLO</button><button id="jumpJoinButton">ONLINE</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
  '<div class="jump-status" id="jumpStatus" role="status"></div>'+
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
  '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>'+txt('height')+': <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
- frame.appendChild(root);canvas=$('jumpCanvas');ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
+ frame.appendChild(root);canvas=$('jumpCanvas');ctx=canvas.getContext('2d');ctx.setTransform(2,0,0,2,0,0);ctx.imageSmoothingEnabled=false;
  const boards=document.querySelector('.boards');
  const createPanel=document.createElement('section');createPanel.id='jumpRoomCreatePanel';createPanel.className='room-create-panel hidden';
  createPanel.innerHTML='<div class="room-panel-heading"><span class="room-panel-mark">◆</span><span>CRIAR UMA SALA · JUMP</span></div><div class="room-create-grid"><label class="room-field"><span>NOME DA SALA</span><input id="jumpRoomNameInput" class="pixel-input" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="EX: JUMP NIGHT"></label><label class="room-field"><span>AMBIENTE</span><select id="jumpRoomBiomeInput" class="pixel-input">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select></label><button class="modal-button primary room-create-submit" id="jumpRoomCreateSubmit" type="button">CRIAR SALA</button></div><div class="form-error" id="jumpRoomCreateError"></div><div class="room-created hidden" id="jumpRoomCreated"><div class="room-created-label">SALA CRIADA</div><div class="room-code" id="jumpCreatedRoomCode">ABC123</div><div class="room-created-hint">Dá este código aos teus amigos para entrarem.</div><button class="board-more" id="jumpCopyRoomCode" type="button">COPIAR CÓDIGO</button></div>';
