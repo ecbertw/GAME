@@ -120,64 +120,70 @@ function outfitColor(value,time,offset=0){
  return 'hsl('+Math.round(((time||0)*115+offset)%360)+' 92% 62%)';
 }
 function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
- const O={hair:'#19222d',top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',effect:'none',...(style||outfit||{})};
- const F={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a',...(fixedAppearance||{})};
- const top=outfitColor(O.top,time,0),accent=outfitColor(O.accent,time,85),pants=outfitColor(O.pants,time,175),shoes=outfitColor(O.shoes,time,265),hair=outfitColor(O.hair,time,315);
- const dir=motion.facing===-1?-1:1,moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0);
- const airborne=!ground||Math.abs(vy)>5,walk=moving&&ground?Math.sin(time*14):0,rising=airborne&&vy>15,falling=airborne&&vy<-15;
- const bob=moving&&ground?Math.round(Math.abs(Math.sin(time*14))):0,bodyY=(rising?-2:falling?1:0)-bob;
- const arm=Math.round(walk*3),leg=Math.round(walk*3),outline='#101923',deep='#0a1119';
- const spriteScale=.72;
- c.save();c.globalAlpha=ghost?0.72:1;c.translate(Math.round(x),Math.round(y));c.scale(dir*spriteScale,spriteScale);c.translate(0,-14);
- const q=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(xx),Math.round(yy),w,h)};
- const effect=String(O.effect||'none'),aura=outfitColor(O.accent,time,120),baseAlpha=ghost?.72:1;
- const breathe=.5+.5*Math.sin(time*3.2),twinkle=.5+.5*Math.sin(time*5.1);
- if(['glow','pulse','halo','plasma','cosmic','prismatic'].includes(effect)){
-  c.shadowColor=effect==='cosmic'||effect==='prismatic'?outfitColor('rainbow',time,150):aura;
-  c.shadowBlur=effect==='glow'?4:effect==='pulse'?4+breathe*3:effect==='halo'?6:effect==='plasma'?7:8;
+ const O={hair:'#00e5ff',top:'#ffd84d',accent:'#00e5ff',pants:'#6f5cff',shoes:'#ffffff',effect:'none',...(style||outfit||{})};
+ const F={skin:'#f0c7a2',skinShade:'#cc8f69',eyes:'#07131f',...(fixedAppearance||{})};
+ const dir=motion.facing===-1?-1:1,moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0),air=!ground||Math.abs(vy)>5;
+ const phase=time*12,walk=moving&&ground?Math.sin(phase):0,bob=moving&&ground?Math.abs(Math.sin(phase))*1.1:0;
+ const rising=air&&vy>15,falling=air&&vy<-15,bodyY=(rising?-1.5:falling?.8:0)-bob;
+ const top=outfitColor(O.top,time,0),accent=outfitColor(O.accent,time,80),pants=outfitColor(O.pants,time,170),shoes=outfitColor(O.shoes,time,250),hair=outfitColor(O.hair,time,310);
+ const effect=String(O.effect||'none'),aura=outfitColor(O.accent,time,120),alpha=ghost?.68:1;
+ const q=(xx,yy,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(xx),Math.round(yy),Math.max(1,Math.round(w)),Math.max(1,Math.round(h)))};
+ const hi=col=>col==='rainbow'?'#fff':col;
+ c.save();c.globalAlpha=alpha;c.translate(Math.round(x),Math.round(y));c.scale(dir*.78,.78);c.translate(0,-15);
+ // Premium aura first: soft, local and readable instead of orbiting blocks.
+ const pulse=.5+.5*Math.sin(time*3.1),twinkle=.5+.5*Math.sin(time*5.6);
+ if(effect!=='none'){
+  c.save();c.globalCompositeOperation='screen';
+  const glow=effect==='frost'?'#8eefff':effect==='ember'?'#ff8d52':effect==='cosmic'||effect==='prismatic'?outfitColor('rainbow',time,120):aura;
+  c.shadowColor=glow;c.shadowBlur=effect==='glow'?7:effect==='pulse'?7+pulse*5:effect==='halo'?10:effect==='plasma'?11:8;
+  c.globalAlpha=alpha*(effect==='mist'?.15:.22);
+  q(-9,-25,18,36,glow);c.restore();
  }
- if(effect==='halo'){
-  c.globalAlpha=baseAlpha*(.07+.04*breathe);q(-10,-27,20,35,aura);q(-12,-17,24,15,aura);c.globalAlpha=baseAlpha;
- }
- if(effect==='mist'){
-  c.globalAlpha=baseAlpha*.16;q(-13,9,26,3,aura);q(-9,12,18,2,'#d7f5ff');c.globalAlpha=baseAlpha;
- }
- if(effect==='comet'&&moving){
-  c.globalAlpha=baseAlpha*.13;q(dir>0?-18:8,-7,10,9,aura);q(dir>0?-22:12,-3,8,4,aura);c.globalAlpha=baseAlpha;
- }
- // A readable 18x31 runner silhouette with a real head, hair, jacket and limbs.
- q(-7,-25+bodyY,14,15,outline);q(-6,-24+bodyY,12,13,F.skin);
- q(-6,-25+bodyY,12,4,hair);q(-7,-22+bodyY,4,5,hair);q(3,-23+bodyY,4,3,hair);
- q(-7,-18+bodyY,2,4,F.skinShade);q(5,-18+bodyY,2,4,F.skinShade);
- q(-3,-19+bodyY,2,2,F.eyes);q(2,-19+bodyY,2,2,F.eyes);q(4,-18+bodyY,1,1,'#ffffff');
- q(-1,-16+bodyY,2,1,F.skinShade);q(-3,-13+bodyY,6,1,F.skinShade);
- // Neck + jacket outline and coloured panels.
- q(-3,-11+bodyY,6,3,F.skin);q(-8,-9+bodyY,16,11,outline);q(-7,-8+bodyY,14,9,top);
- q(-1,-8+bodyY,2,9,accent);q(-5,-6+bodyY,3,2,accent);q(2,-6+bodyY,3,2,accent);
- q(-6,0+bodyY,12,2,deep);q(-5,-1+bodyY,10,1,accent);
- // Arms have shoulders, sleeves and hands instead of single bars.
- q(-11,-8+bodyY+arm,4,8,outline);q(-10,-7+bodyY+arm,3,6,top);q(-10,-1+bodyY+arm,3,3,F.skin);
- q(7,-8+bodyY-arm,4,8,outline);q(7,-7+bodyY-arm,3,6,top);q(7,-1+bodyY-arm,3,3,F.skin);
- // Belt, two articulated legs and shoes. Jump pose is visibly different.
- q(-6,2+bodyY,12,3,outline);q(-5,2+bodyY,10,2,pants);
+ // Contact shadow grounds the runner and adds depth.
+ if(ground){c.save();c.globalAlpha=alpha*.25;c.fillStyle='#020710';c.beginPath();c.ellipse(0,14,9,2.2,0,0,Math.PI*2);c.fill();c.restore()}
+ const arm=Math.round(walk*2.4),leg=Math.round(walk*2.2),outline='#08121d',deep='#030912';
+ // Back rim-light / 2.5D body shadow.
+ q(-8,-10+bodyY,16,12,outline);q(-6,1+bodyY,12,4,outline);
+ // Head: bigger, clearer and with actual face depth.
+ q(-7,-27+bodyY,14,15,outline);q(-6,-26+bodyY,12,13,F.skinShade);q(-5,-26+bodyY,10,11,F.skin);
+ q(-6,-27+bodyY,12,4,hair);q(-7,-24+bodyY,3,6,hair);q(4,-24+bodyY,3,4,hair);
+ q(-4,-25+bodyY,7,1,'#ffffff55');
+ // Eyes + brow highlights are intentionally large enough to read at game scale.
+ q(-4,-20+bodyY,3,2,'#ffffff');q(2,-20+bodyY,3,2,'#ffffff');
+ q(-3,-20+bodyY,2,2,F.eyes);q(2,-20+bodyY,2,2,F.eyes);
+ q(-3,-21+bodyY,2,1,'#5b3c33');q(2,-21+bodyY,2,1,'#5b3c33');
+ q(-1,-16+bodyY,3,1,F.skinShade);q(-3,-14+bodyY,6,1,'#9d5f52');
+ // Neck and jacket with a bright front plane + darker side plane.
+ q(-3,-12+bodyY,6,3,F.skin);q(-8,-10+bodyY,16,12,outline);
+ q(-7,-9+bodyY,12,10,top);q(5,-8+bodyY,2,8,'#00000033');
+ q(-6,-8+bodyY,2,7,accent);q(-2,-8+bodyY,1,8,'#ffffff88');q(2,-7+bodyY,3,2,accent);
+ q(-6,0+bodyY,12,2,deep);q(-4,-1+bodyY,8,1,hi(accent));
+ // Articulated arms with shaded sleeves and hands.
+ q(-11,-8+bodyY+arm,4,9,outline);q(-10,-7+bodyY+arm,3,6,top);q(-9,-6+bodyY+arm,1,5,'#ffffff44');q(-10,-1+bodyY+arm,3,3,F.skin);
+ q(7,-8+bodyY-arm,4,9,outline);q(7,-7+bodyY-arm,3,6,top);q(7,-1+bodyY-arm,3,3,F.skin);
+ // Belt / hips.
+ q(-6,2+bodyY,12,4,outline);q(-5,2+bodyY,10,3,pants);q(-4,2+bodyY,8,1,'#ffffff55');
  const lY=rising?-2:falling?1:leg,rY=rising?1:falling?-1:-leg;
- q(-6,4+lY,5,8,outline);q(-5,4+lY,4,7,pants);q(1,4+rY,5,8,outline);q(1,4+rY,4,7,pants);
- q(-7,11+lY,7,3,outline);q(-6,10+lY,6,2,shoes);q(0,11+rY,7,3,outline);q(1,10+rY,6,2,shoes);
- c.shadowBlur=0;
- // Cosmetic particles stay close to the runner instead of orbiting like props.
- const px=(xx,yy,col,alpha=1,w=1,h=1)=>{const old=c.globalAlpha;c.globalAlpha=baseAlpha*alpha;q(xx,yy,w,h,col);c.globalAlpha=old;};
- if(effect==='shimmer'){const y1=-22+Math.round(twinkle*5);px(-10,y1,'#fff',.72);px(9,-5-Math.round(twinkle*4),aura,.65);}
- if(effect==='spark'){px(-10,-10+Math.round(breathe*3),aura,.8,1,2);px(9,4-Math.round(breathe*4),'#fff',.7,1,1);}
- if(effect==='electric'){
-  const side=Math.sin(time*8)>0?1:-1,x=side*9;px(x,-17,aura,.78,2,1);px(x+side*2,-15,'#eaffff',.85,1,2);px(x,-12,aura,.72,2,1);
- }
- if(effect==='frost'){px(-9,7+Math.round(twinkle*3),'#bff6ff',.7,2,1);px(8,-7+Math.round(breathe*4),'#e9fdff',.72,1,2);px(4,11,'#8ee8ff',.55,1,1);}
- if(effect==='ember'){px(-6,10-Math.round(breathe*5),'#ff9a62',.75,1,2);px(6,8-Math.round(twinkle*7),'#ffd27a',.72,1,1);px(1,12-Math.round(breathe*4),'#ff6238',.55,1,1);}
- if(effect==='plasma'){px(-8,-7,aura,.55,1,6);px(7,-2,outfitColor(O.accent,time,210),.5,1,5);}
- if(effect==='cosmic'){px(-10,-20,outfitColor('rainbow',time,20),.7,1,1);px(9,-5,outfitColor('rainbow',time,140),.68,1,1);px(-7,9,outfitColor('rainbow',time,260),.6,1,1);}
- if(effect==='prismatic'){px(-8,-20,outfitColor('rainbow',time,20),.72,2,1);px(7,-8,outfitColor('rainbow',time,120),.68,1,2);px(-6,5,outfitColor('rainbow',time,240),.65,2,1);}
- c.globalAlpha=baseAlpha;c.restore();
- if(name){c.save();c.globalAlpha=ghost?.82:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-34);c.restore()}
+ q(-6,5+lY,5,8,outline);q(-5,5+lY,4,7,pants);q(-4,5+lY,1,6,'#ffffff35');
+ q(1,5+rY,5,8,outline);q(1,5+rY,4,7,pants);
+ // Chunkier shoes read like the approved concept instead of tiny blurred feet.
+ q(-7,12+lY,7,4,outline);q(-6,11+lY,6,3,shoes);q(-5,11+lY,4,1,'#ffffffaa');q(-7,15+lY,7,1,accent);
+ q(0,12+rY,7,4,outline);q(1,11+rY,6,3,shoes);q(1,15+rY,7,1,accent);
+ // Natural VIP particles: asymmetric, short-lived visual rhythm close to the silhouette.
+ const px=(xx,yy,col,a=.7,w=1,h=1)=>{const old=c.globalAlpha;c.globalAlpha=alpha*a;q(xx,yy,w,h,col);c.globalAlpha=old};
+ if(effect==='shimmer'){px(-10,-20+twinkle*4,'#fff',.85,1,2);px(9,-4-twinkle*3,aura,.7,1,1);px(5,8-pulse*3,'#fff',.55)}
+ if(effect==='spark'){px(-10,-8+pulse*3,aura,.75,1,2);px(9,3-twinkle*5,'#fff',.72);px(-5,10-pulse*4,aura,.5)}
+ if(effect==='electric'){const side=Math.sin(time*8)>0?1:-1,xx=side*9;px(xx,-18,aura,.8,2,1);px(xx+side*2,-16,'#eaffff',.9,1,2);px(xx,-13,aura,.7,2,1)}
+ if(effect==='frost'){px(-9,7-twinkle*4,'#c9fbff',.8,2,1);px(8,-8+pulse*3,'#eaffff',.8,1,2);px(5,11,'#77e4ff',.65)}
+ if(effect==='ember'){px(-6,10-pulse*7,'#ff7648',.75,1,2);px(6,8-twinkle*8,'#ffd27a',.8);px(1,12-pulse*5,'#ff4b31',.6)}
+ if(effect==='mist'){c.save();c.globalAlpha=alpha*.14;c.fillStyle='#dff7ff';c.beginPath();c.ellipse(-4,8,10,2,0,0,Math.PI*2);c.ellipse(6,11,8,1.5,0,0,Math.PI*2);c.fill();c.restore()}
+ if(effect==='comet'&&moving){c.save();c.globalAlpha=alpha*.22;const gr=c.createLinearGradient(-dir*24,0,-dir*6,0);gr.addColorStop(0,'transparent');gr.addColorStop(1,aura);c.fillStyle=gr;c.fillRect(dir>0?-24:7,-5,17,8);c.restore()}
+ if(effect==='halo'){c.save();c.globalAlpha=alpha*(.45+.15*pulse);c.strokeStyle=aura;c.lineWidth=1.3;c.beginPath();c.ellipse(0,-29,7,2.2,0,0,Math.PI*2);c.stroke();c.restore()}
+ if(effect==='plasma'){px(-8,-8,aura,.6,1,7);px(7,-2,outfitColor(O.accent,time,210),.55,1,6)}
+ if(effect==='cosmic'){px(-10,-20,outfitColor('rainbow',time,20),.8);px(9,-5,outfitColor('rainbow',time,140),.75);px(-7,9,outfitColor('rainbow',time,260),.65)}
+ if(effect==='prismatic'){px(-9,-21,outfitColor('rainbow',time,20),.8,2,1);px(8,-8,outfitColor('rainbow',time,120),.75,1,2);px(-6,5,outfitColor('rainbow',time,240),.7,2,1)}
+ c.restore();
+ if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-36);c.restore()}
 }
 function draw(){
  if(!ctx||current!=='jump')return;const c=ctx;drawBackground();

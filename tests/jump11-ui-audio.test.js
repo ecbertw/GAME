@@ -9,15 +9,12 @@ test('JUMP exposes distinct biome music and jump landing loss effects',()=>{
  assert.match(audio,/window\.EixoAudio=\{[^}]*jumpJump[^}]*jumpLand[^}]*jumpLose[^}]*jumpBiome[^}]*jumpStop/s);
 });
 
-test('JUMP worlds contain the four requested detailed scene identities',()=>{
+test('JUMP worlds use the four generated premium scene identities',()=>{
  const worlds=fs.readFileSync(path.join(root,'jump-worlds.js'),'utf8');
- assert.match(worlds,/landmark towers and bridges/);
- assert.match(worlds,/ruin arch/);
- assert.match(worlds,/giant natural arch/);
- assert.match(worlds,/aurora ribbons/);
- assert.match(worlds,/version:'jump11'/);
+ assert.match(worlds,/EixoJumpPremiumArt\?\.drawBackground/);
+ assert.match(worlds,/city:\{top:/);assert.match(worlds,/forest:\{top:/);assert.match(worlds,/desert:\{top:/);assert.match(worlds,/snow:\{top:/);
+ assert.match(worlds,/version:'jump15'/);
 });
-
 test('JUMP customizer is wide, clips no horizontal content and retired team CSS is gone',()=>{
  const css=fs.readFileSync(path.join(root,'jump.css'),'utf8');
  assert.match(css,/width:min\(760px,calc\(100vw - 28px\)\)/);
