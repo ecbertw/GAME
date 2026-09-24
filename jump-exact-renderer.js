@@ -82,19 +82,16 @@ function platform(c,name,x,y,w,index,state={}){
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  if(isDesertGround){
-  // A shallow, opaque desert ledge: leave the valley visible below the masonry.
-  // Its top follows the collision plane; its bottom follows the marked cut line.
-  const floorTop=y-5, floorBottom=y+14, floorH=floorBottom-floorTop;
+  // The desert floor is the SAME illustrated sandstone ledge as the atlas.
+  // Crop the long ground platforms (middle row), not the decorative bottom row.
+  // Keep its real foliage, stone joints and warm highlights; no flat masonry overlay.
+  const floorTop=y-8, floorH=29;
   c.shadowBlur=0;c.shadowOffsetY=0;
-  c.save();c.beginPath();c.rect(x-2,floorTop,w+4,floorH);c.clip();
+  c.save();
+  c.beginPath();c.rect(x-2,floorTop,w+4,floorH);c.clip();
+  // Backing only fills genuinely transparent pixels in the artwork.
   c.fillStyle='#56352f';c.fillRect(x-2,floorTop,w+4,floorH);
-  // Reuse the actual desert masonry artwork, rather than a flat brick pattern.
-  // The solid backing prevents the atlas transparency from opening holes.
-  c.drawImage(img,15,490,680,160,x-2,floorTop,w+4,42);
-  c.fillStyle='rgba(55,27,29,.18)';c.fillRect(x-2,floorTop+9,w+4,floorH-9);
-  c.fillStyle='#f6b45e';c.fillRect(x-2,floorTop,w+4,1.5);
-  c.fillStyle='#d98545';c.fillRect(x-2,floorTop+2,w+4,1);
-  c.fillStyle='#4e302d';c.fillRect(x-2,floorBottom-1,w+4,1);
+  c.drawImage(img,18,396,680,186,x-2,floorTop,w+4,48);
   c.restore();
  }else{
   c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
