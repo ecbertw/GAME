@@ -80,7 +80,7 @@ function platform(c,name,x,y,w,index,state={}){
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
  c.shadowBlur=0;c.shadowOffsetY=0;
- if(state.moving){c.fillStyle='rgba(120,236,255,.30)';c.fillRect(x+5,y-3,Math.max(0,w-10),1)}
+ // Movement is communicated by the slab's motion, not a universal cyan overlay.
  if(state.fragile){
   const p=clamp(Number(state.progress)||0,0,1),cracks=2+Math.floor(p*6);
   c.strokeStyle=p>.55?'rgba(255,211,112,.96)':'rgba(255,189,101,.7)';
@@ -93,30 +93,40 @@ function platform(c,name,x,y,w,index,state={}){
  }
  c.restore();return true;
 }
-const fxFrames={
- glow:[0,0],pulse:[0,0],shimmer:[1,0],spark:[1,0],halo:[1,0],
- frost:[0,1],electric:[0,0],ember:[1,1],mist:[0,2],
- plasma:[1,2],comet:[1,2],cosmic:[1,3],prismatic:[0,3]
+// Particle trails are simulated in world-space and emitted only by actual movement.
+const particles=new Map();
+const fxColors={
+ glow:['#73eaff','#c4fbff'],pulse:['#ffdb70','#fff4b2'],shimmer:['#ffe08b','#ffffff'],
+ spark:['#fff6aa','#ffd260'],halo:['#ffe9a1','#fff9dd'],frost:['#8beeff','#e5fcff'],
+ electric:['#38aaff','#e0faff'],ember:['#ff681f','#ffd26b'],mist:['#cbd7ff','#ffffff'],
+ plasma:['#49d7ff','#ff7dff'],comet:['#53c9ff','#ffd66c'],cosmic:['#8c5cff','#f3a6ff'],
+ prismatic:['#ff5f9d','#72f7ff','#ffe86c','#a5ffb6']
 };
-function effect(c,effect,time,moving){
- if(effect==='none'||!has(images.effects))return;
- const cell=fxFrames[effect]||[0,0],pulse=.5+.5*Math.sin(time*5.3);
- const w=effect==='comet'||effect==='prismatic'?63:49,
-       h=effect==='cosmic'?37:effect==='mist'?28:31;
- const dx=-w+11-(moving?Math.sin(time*16)*2:0),dy=-26-h*.20;
- c.save();c.globalCompositeOperation='screen';
- c.globalAlpha=effect==='glow'?.34:effect==='pulse'?.3+pulse*.30:effect==='mist'?.42:.53+pulse*.20;
- c.imageSmoothingEnabled=true;
- c.drawImage(images.effects,cell[0]*362,cell[1]*135.75,362,135.75,dx,dy,w+(pulse*2),h);
- if(effect==='spark'||effect==='electric'||effect==='prismatic'){
-  // Small moving glints make a real sprite visibly animated rather than a static decal.
-  c.fillStyle=effect==='prismatic'?'#ffd6ff':'#c5faff';
-  for(let i=0;i<3;i++){
-   const xx=-19+((time*(effect==='electric'?21:11)+i*13)%32),yy=-32+((i*17+Math.floor(time*8))%34);
-   c.globalAlpha=.25+.65*Math.abs(Math.sin(time*4+i*2));c.fillRect(xx,yy,i===1?2:1,2);
+let lastTick=0;
+function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost){
+ const key=ghost?'ghost:'+String(x.toFixed(1))+':'+String(y.toFixed(1)):'local';
+ let p=particles.get(key);if(!p){p={items:[],last:time,carry:0};particles.set(key,p)}
+ const dt=Math.max(0,Math.min(.05,time-p.last));p.last=time;
+ if(time-lastTick>15){for(const [k,v] of particles)if(time-v.last>5)particles.delete(k);lastTick=time}
+ const colors=fxColors[fx]||fxColors.glow;
+ if(moving&&ground&&dt>0){
+  p.carry+=dt*(fx==='mist'?48:fx==='ember'?35:42);
+  while(p.carry>=1){p.carry--;const n=p.items.length,rand=z=>{let v=Math.sin((n+1)*93.17+time*17.23+z*31.7)*43758.5453;return v-Math.floor(v)};
+   p.items.push({x:x-dir*(7+rand(1)*6),y:y-2-rand(2)*3,vx:-dir*(10+rand(3)*24)+(rand(4)-.5)*10,vy:-6-rand(5)*19,life:.32+rand(6)*.45,max:.77,size:rand(7)>.83?2:1,color:colors[Math.floor(rand(8)*colors.length)]});
   }
  }
+ c.save();c.globalCompositeOperation='screen';
+ for(let i=p.items.length-1;i>=0;i--){
+  const q=p.items[i];q.life-=dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=(fx==='frost'?3:fx==='mist'?-2:13)*dt;q.vx*=1-dt*.7;
+  if(q.life<=0){p.items.splice(i,1);continue}
+  c.globalAlpha=(ghost?.35:.85)*Math.min(1,q.life/.18)*Math.min(1,(q.max-q.life)/.08);
+  c.fillStyle=q.color;c.shadowColor=q.color;c.shadowBlur=fx==='mist'?2:4;
+  c.fillRect(q.x,q.y,q.size,q.size);
+ }
  c.restore();
+}
+function effect(c,fx,time,moving){
+ // No static effect decal: movement generates particles in particlesFor().
 }
 function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  const img=images.runner;if(!has(img))return false;
@@ -124,16 +134,17 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
        ground=motion.ground!==false,vy=Number(motion.vy)||0;
  let frame=0;
  if(!ground||Math.abs(vy)>5)frame=vy>18?3:vy< -65?5:4;
- else if(moving)frame=1+(Math.floor(time*10)%2);
- const col=frame%3,row=Math.floor(frame/3),bob=moving&&ground?Math.abs(Math.sin(time*18))*.65:0;
+ else if(moving)frame=1+(Math.floor(time*13)%3);
+ const col=frame%3,row=Math.floor(frame/3),bob=moving&&ground?Math.abs(Math.sin(time*26))*.8:0;
  c.save();c.translate(Math.round(x),Math.round(y-bob));c.scale(dir,1);
  if(ghost)c.globalAlpha=.62;
  if(ground){c.save();c.globalAlpha*=.3;c.fillStyle='#020712';c.beginPath();c.ellipse(0,1,12,2,0,0,Math.PI*2);c.fill();c.restore()}
- effect(c,String(O.effect||'none'),time,moving);
+ // Trail is rendered in world-space below, so particles persist after each step.
  c.imageSmoothingEnabled=true;
  const tinted=recolor(img,O,time);
- c.drawImage(tinted,col*112,row*144,112,144,-17,-42,34,43);
+ c.drawImage(tinted,col*112,row*144,112,144,-19,-47,38,48);
  c.restore();
+ if(String(O.effect||'none')!=='none')particlesFor(c,x,y,String(O.effect),time,moving,ground,dir,ghost);
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
  return true;
 }
