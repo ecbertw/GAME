@@ -76,32 +76,13 @@ function platform(c,name,x,y,w,index,state={}){
  const height=long?27:clamp(13+w*.17,17,29),top=y-5;
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
- // The city and snow atlas contains obsolete flat cyan rails. Draw the new
- // material from the approved scene palette instead of showing those rails.
- if(name==='city'||name==='snow'){
-  const city=name==='city',edge=city?'#5b819b':'#a9d4ed',dark=city?'#17283e':'#395778';
-  c.fillStyle=dark;c.fillRect(x+2,y+3,w-4,9);
-  c.fillStyle=city?'#334f6c':'#7299b5';c.fillRect(x+1,y,w-2,7);
-  c.fillStyle=edge;c.fillRect(x,y-3,w,4);
-  c.fillStyle=city?'#9cb9d1':'#f8fdff';c.fillRect(x+3,y-4,w-6,2);
-  for(let j=8;j<w-5;j+=17){
-   if(city){
-    c.fillStyle='#24374e';c.fillRect(x+j,y+5,7,2);
-    c.fillStyle='#d2b177';c.fillRect(x+j+2,y+5,2,1);
-   }else{
-    c.fillStyle='#d8f5ff';c.fillRect(x+j,y-5,6,2);
-    c.fillStyle='#8cbfd8';c.fillRect(x+j+3,y+5,2,4);
-    if(j%3===2){c.fillStyle='#d8f5ff';c.fillRect(x+j+4,y+8,1,4)}
-   }
-  }
-  c.fillStyle=city?'#111f30':'#304d6c';c.fillRect(x+4,y+10,w-8,3);
- }else{
-  c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
-  if(name==='desert'&&index===0){
-   const lip=c.createLinearGradient(0,top-2,0,top+4);
-   lip.addColorStop(0,'rgba(255,241,183,.92)');lip.addColorStop(1,'rgba(235,147,83,.38)');
-   c.fillStyle=lip;c.fillRect(x,top-2,w,2);
-  }
+ // Use the actual approved transparent biome atlas for ALL four worlds.
+ // The previous geometric city/snow substitute discarded the supplied artwork.
+ c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
+ if(name==='desert'&&index===0){
+  const lip=c.createLinearGradient(0,top-2,0,top+4);
+  lip.addColorStop(0,'rgba(255,241,183,.92)');lip.addColorStop(1,'rgba(235,147,83,.38)');
+  c.fillStyle=lip;c.fillRect(x,top-2,w,2);
  }
  c.shadowBlur=0;c.shadowOffsetY=0;
  if(state.fragile){
@@ -177,22 +158,8 @@ function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
  }
  c.restore();
 }
-function hairMotion(c,style,time,moving,ground,vy){
- // The approved sprite already contains the hairstyle. Animate only its
- // trailing tips, anchored to the rear of the head, without changing the face.
- const energy=moving?1:ground?.4:.85;
- const sway=Math.sin(time*(moving?18:6))*energy;
- const lift=!ground?Math.max(-1,Math.min(1,vy/180)):0;
- const base=style.hair&&HEX.test(style.hair)?style.hair:'#e952a8';
- c.save();c.lineCap='round';c.lineJoin='round';c.strokeStyle=base;c.lineWidth=1.5;
- for(let i=0;i<4;i++){
-  const yy=-34+i*1.8,xx=-8-i*.4;
-  c.beginPath();c.moveTo(xx,yy);
-  c.quadraticCurveTo(xx-3-sway*1.5,yy-1.5-lift,xx-6-sway*(2+i*.35),yy-2+sway*1.3-lift);
-  c.stroke();
- }
- c.restore();
-}
+// Do not paint synthetic hair strands. The approved hair belongs to the
+// sprite itself; a separate alpha-isolated hair layer is needed for deformation.
 function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  const img=images.runner;if(!has(img))return false;
  const O=style||{},dir=motion.facing===-1?-1:1,moving=!!motion.moving,
@@ -208,12 +175,12 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  c.imageSmoothingEnabled=true;
  const tinted=recolor(img,O,time);
  // Discard the disconnected marks in the top margin of jump frames.
- c.drawImage(tinted,col*112,row*144+16,112,128,-19,-42,38,43);
- hairMotion(c,O,time,moving,ground,vy);
+ c.drawImage(tinted,col*112,row*144,112,144,-19,-47,38,48);
+
  c.restore();
  if(String(O.effect||'none')!=='none')particlesFor(c,x,y,String(O.effect),time,moving,ground,dir,ghost,name);
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
  return true;
 }
-root.EixoJumpExactArt={version:'approved-assets-motion3-20260924',ready,background,platform,runner,images};
+root.EixoJumpExactArt={version:'approved-assets-atlas4-20260924',ready,background,platform,runner,images};
 })(window);
