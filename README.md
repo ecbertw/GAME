@@ -2,6 +2,36 @@
 
 > Este documento mantém **apenas os dois relatórios de atualização mais recentes**. Em cada nova atualização, o relatório mais antigo deve ser removido e o novo relatório colocado no topo.
 
+# EIXO V2.5.0 — JUMP: arte de referência integrada
+
+**Data:** 24/09/2026  
+**Tipo:** JUMP / imagens aprovadas / animação / quatro biomas
+
+## 1. ALTERADO
+
+- Os quatro fundos são agora imagens efetivas das referências aprovadas pelo criador, em vez dos anteriores mapas reduzidos para 120×68 píxeis.
+- As plataformas passam a ser desenhadas a partir dos quatro atlas transparentes aprovados, mantendo largura, movimento, fragilidade e colisões definidos na física do jogo.
+- A personagem utiliza as seis poses recortadas da folha de sprites fornecida, com seleção de pose por movimento, salto e queda, orientação esquerda/direita e tentativa de recoloração das opções de personalização.
+- Os efeitos VIP utilizam o atlas visual fornecido, com escala, brilho e variação temporal; a animação original permanece como fallback em caso de erro de carregamento.
+
+## 2. ADICIONADO
+
+- `jump-exact-renderer.js` e dez assets reais, codificados em WebP dentro de scripts estáticos em `assets/jump-exact/`; não exigem CDN externa nem alteração à base de dados.
+- Verificações automáticas de formato WebP, carregamento por ordem e integração com o motor em `tests/jump-exact-assets.test.js`.
+- Validação sintática dos scripts gráficos durante o deploy.
+
+## 3. GARANTIAS
+
+- A física em `jump-physics.js`, as APIs e tabelas de contas, pontuações, rankings e pagamentos PayPal não são alteradas.
+- A alteração está limitada à camada visual; se uma imagem não carregar, o JUMP mantém o renderer anterior.
+- As referências originais são preservadas em composições WebP adaptadas ao tamanho do canvas; os atlas mantêm transparência.
+
+## 4. DEPLOY
+
+- Depois de integrar esta atualização em `main`, continuar a usar `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.
+
+---
+
 # EIXO V2.4.0 — JUMP Premium Art 2026
 
 **Data:** 24/09/2026  
@@ -33,27 +63,4 @@
 
 - A física e as hitboxes permanecem independentes do novo desenho visual.
 - Os fundos premium têm fallback seguro caso a API de descompressão do browser não esteja disponível.
-- O deploy continua manual através de `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.
-
----
-
-# EIXO V2.3.2 — Deploy autoatualizável
-
-**Data:** 24/09/2026  
-**Tipo:** Deploy / manutenção / robustez
-
-## 1. ALTERADO
-
-- O script de deploy passa a detetar quando o próprio `eixo-deploy.sh` foi alterado pelo `git pull`.
-- Quando isso acontece, o deploy reinicia automaticamente uma única vez com a versão acabada de descarregar.
-
-## 2. BUGS FIXED
-
-- **FIXED:** um deploy iniciado com uma versão antiga do script podia continuar a executar as instruções antigas mesmo depois de o `git pull` substituir o ficheiro no disco.
-- **FIXED:** alterações futuras ao próprio script de deploy passam a ter efeito no mesmo deploy, sem exigir uma execução manual adicional.
-
-## 3. VALIDAÇÃO
-
-- O reinício usa a variável `EIXO_DEPLOY_REEXEC` para impedir loops.
-- Se não houver atualização do commit, o deploy continua normalmente sem reiniciar.
 - O deploy continua manual através de `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.
