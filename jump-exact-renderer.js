@@ -82,11 +82,12 @@ function platform(c,name,x,y,w,index,state={}){
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  if(isDesertGround){
-  // One continuous long sandstone platform across the full playable floor.
-  // Stretch a SINGLE atlas sprite, never tile or splice its pieces.
-  // Keep the upper lip at the player's collision plane.
+  // The atlas row contains TWO separate long platforms side by side.
+  // Crop ONLY the left-hand platform, then scale that one continuous sprite
+  // across the whole floor, overscanning the canvas edges to hide its ends.
+  // Lower the artwork relative to the collision plane so shoes sit on top.
   c.shadowBlur=0;c.shadowOffsetY=0;
-  c.drawImage(img,0,272,724,99,x-2,y-9,w+4,39);
+  c.drawImage(img,8,272,344,99,x-18,y-1,w+36,39);
  }else{
   c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
  }
