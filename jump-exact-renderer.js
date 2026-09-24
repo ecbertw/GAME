@@ -71,19 +71,18 @@ function background(c,name,W,H,cam=0){
 function platform(c,name,x,y,w,index,state={}){
  const img=images.platforms[name];if(!has(img))return false;
  const long=w>115,variation=Math.abs(index)%4;
- const sx=long?15:variation*181,sy=long?401:36;
- const sw=long?680:181,sh=long?250:125;
- const top=y-5,isGround=index===0;
- // The middle atlas row is the complete approved ground strip for each biome.
- // Render it as a single image: slicing and stretching its lower masonry
- // destroyed the original proportions and made all four floors look wrong.
- const height=isGround?Math.max(28,195-top+3):long?28:clamp(13+w*.17,17,29);
+ const sx=long?0:variation*181,sy=long?(index%2?272:170):36;
+ const sw=long?724:181,sh=long?99:125;
+ const height=long?27:clamp(13+w*.17,17,29),top=y-5;
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
- if(isGround){
-  c.drawImage(img,15,401,680,250,x-2,top,w+4,height);
- }else{
-  c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
+ // Use the actual approved transparent biome atlas for ALL four worlds.
+ // The previous geometric city/snow substitute discarded the supplied artwork.
+ c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
+ if(name==='desert'&&index===0){
+  const lip=c.createLinearGradient(0,top-2,0,top+4);
+  lip.addColorStop(0,'rgba(255,241,183,.92)');lip.addColorStop(1,'rgba(235,147,83,.38)');
+  c.fillStyle=lip;c.fillRect(x,top-2,w,2);
  }
  c.shadowBlur=0;c.shadowOffsetY=0;
  if(state.fragile){
