@@ -121,6 +121,7 @@ function outfitColor(value,time,offset=0){
 }
 function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
  const O={hair:'#00e5ff',top:'#ffd84d',accent:'#00e5ff',pants:'#6f5cff',shoes:'#ffffff',effect:'none',...(style||outfit||{})};
+ if(window.EixoJumpExactArt?.runner?.(c,x,y,O,name,ghost,time,motion))return;
  const F={skin:'#f0c7a2',skinShade:'#cc8f69',eyes:'#07131f',...(fixedAppearance||{})};
  const dir=motion.facing===-1?-1:1,moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0),air=!ground||Math.abs(vy)>5;
  const phase=time*12,walk=moving&&ground?Math.sin(phase):0,bob=moving&&ground?Math.abs(Math.sin(phase))*1.1:0;

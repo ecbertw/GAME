@@ -27,10 +27,12 @@ function ambience(c,biome,time){
 }
 function draw(c,biome,seed,cam=0,time=0){
  const W=450,H=195;
+ if(root.EixoJumpExactArt?.background?.(c,biome,W,H,cam,time)){ambience(c,biome,time);return}
  if(!root.EixoJumpPremiumArt?.drawBackground?.(c,biome,W,H,cam,time))fallback(c,biome);
  ambience(c,biome,time);
 }
 function platform(c,biome,x,y,w,index,state={}){
+ if(root.EixoJumpExactArt?.platform?.(c,biome,x,y,w,index,state))return;
  const p=palettes[biome]||palettes.forest,fragile=!!state.fragile,progress=Math.max(0,Math.min(1,Number(state.progress)||0));
  x=Math.round(x);y=Math.round(y);w=Math.round(w);
  const q=(xx,yy,ww,hh,col)=>{c.fillStyle=col;c.fillRect(Math.round(xx),Math.round(yy),Math.max(1,Math.round(ww)),Math.max(1,Math.round(hh)))};

@@ -31,7 +31,8 @@ cd "$APP"
 sudo -u eixo npm install --omit=dev --ignore-scripts --package-lock=false
 
 echo "[3/5] Syntax"
-for f in server.js auth-server.js server-start.js paypal-server.js paypal-checkout.js ui.js vip-fix.js jump-server.js jump-physics.js jump-worlds.js jump.js; do node --check "$APP/$f"; done
+for f in server.js auth-server.js server-start.js paypal-server.js paypal-checkout.js ui.js vip-fix.js jump-server.js jump-physics.js jump-worlds.js jump-exact-renderer.js jump.js; do node --check "$APP/$f"; done
+for f in "$APP"/assets/jump-exact/*.js; do node --check "$f"; done
 node --test "$APP"/tests/*.test.js
 
 echo "[4/5] Restart"
