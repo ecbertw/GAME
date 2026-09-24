@@ -51,7 +51,7 @@
         moveCenter=(min+max)/2;
         moveAmp=Math.max(8,(max-min)/2);
         const speedProgress=Math.min(1,Math.max(0,(i-2)/10));
-        const desiredSpeed=(i<=2?.55:1.02+1.05*speedProgress)+hash(seed,i*11+8)*0.22;
+        const desiredSpeed=(1.02+1.05*speedProgress)+hash(seed,i*11+8)*0.22;
         moveSpeed=Math.min(2.24,desiredSpeed,106/Math.max(1,moveAmp));
         movePhase=hash(seed,i*11+9)*Math.PI*2;
       }
