@@ -82,47 +82,26 @@ function platform(c,name,x,y,w,index,state={}){
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  if(isDesertGround){
-  // Purpose-built continuous sandstone floor: no atlas stretching, joins or
-  // unrelated flat colour strip. Match the desert platforms' stone and foliage.
-  const left=x-2,right=x+w+2,lip=y-2,base=y+29;
-  const hash=n=>{const v=Math.sin(n*127.1+43.7)*43758.5453;return v-Math.floor(v)};
+  // Use the actual approved desert atlas artwork, not generated masonry.
+  // Tile a central sandstone section at native horizontal proportions.
+  // The top of the sprite is aligned with the collision plane; only 17px
+  // of its underside is visible, leaving the background unobstructed.
+  const left=x-2,right=x+w+2,top=y-3,depth=19;
   c.shadowBlur=0;c.shadowOffsetY=0;
-  c.save();c.beginPath();c.rect(left,lip,right-left,base-lip);c.clip();
-  const stone=c.createLinearGradient(0,lip,0,base);
-  stone.addColorStop(0,'#e7a04b');stone.addColorStop(.13,'#a94e2b');
-  stone.addColorStop(.48,'#783b30');stone.addColorStop(1,'#422a2c');
-  c.fillStyle=stone;c.fillRect(left,lip,right-left,base-lip);
-  // Small individual sandstone blocks, never a stretched sprite.
-  for(let row=0;row<3;row++){
-   const yy=lip+4+row*9,block=32,offset=row%2?16:0;
-   for(let xx=left-offset;xx<right;xx+=block){
-    const n=Math.floor((xx-left)/block)+row*79,v=hash(n);
-    c.fillStyle=v>.6?'#a75b39':v>.25?'#8b4936':'#704036';
-    c.fillRect(xx+1,yy,block-2,7);
-    c.fillStyle='rgba(248,163,83,.37)';c.fillRect(xx+2,yy,block-4,1);
-    c.fillStyle='rgba(29,17,23,.52)';c.fillRect(xx+1,yy+6,block-2,1);
-    c.fillStyle='rgba(35,20,24,.7)';c.fillRect(xx,yy,1,8);
-    if(v>.7){c.fillStyle='#d18a51';c.fillRect(xx+6,yy+2,2,1)}
-   }
+  c.save();c.beginPath();c.rect(left,top,right-left,depth);c.clip();
+  // Source: central uninterrupted masonry of the left long desert floor.
+  // No end caps, pillars, or stretching across the entire game width.
+  const sourceX=84,sourceY=282,sourceW=156,sourceH=64;
+  const tileW=156;
+  for(let dx=left;dx<right;dx+=tileW){
+   const dw=Math.min(tileW,right-dx);
+   c.drawImage(img,sourceX,sourceY,sourceW*dw/tileW,sourceH,dx,top,dw,depth);
   }
-  c.fillStyle='#452d29';c.fillRect(left,base-2,right-left,2);
-  c.fillStyle='#ffca65';c.fillRect(left,lip,right-left,1);
-  c.fillStyle='#f59a41';c.fillRect(left,lip+1,right-left,2);
-  c.fillStyle='#5e4a28';c.fillRect(left,lip-1,right-left,1);
-  // Sparse shrubs and trailing vines share the desert platform palette.
-  for(let i=0;i<Math.ceil(w/37);i++){
-   const px=left+i*37+hash(i+10)*16,seed=hash(i+31);
-   if(seed<.38)continue;
-   c.strokeStyle=seed>.7?'#5e642c':'#80652c';c.lineWidth=1;
-   c.beginPath();c.moveTo(px,lip);c.lineTo(px-3,lip-3-seed*3);
-   c.moveTo(px,lip);c.lineTo(px+4,lip-2-seed*4);c.stroke();
-   c.fillStyle=seed>.7?'#9a862d':'#6c6a2d';
-   c.fillRect(px-4,lip-3,5,2);c.fillRect(px+1,lip-4,5,2);
-   if(seed>.84){
-    c.strokeStyle='#62602a';c.beginPath();c.moveTo(px,lip+3);
-    c.lineTo(px+2,lip+11);c.lineTo(px-1,lip+16);c.stroke();
-    c.fillStyle='#8d782b';c.fillRect(px,lip+8,4,2);
-   }
+  // Overlay occasional foliage from the SAME atlas, rather than drawn lines.
+  for(let i=0;i<Math.ceil(w/220);i++){
+   const px=left+70+i*220;
+   if(px>=right)break;
+   c.drawImage(img,76,286,44,65,px,top,Math.min(44,right-px),depth);
   }
   c.restore();
  }else{
