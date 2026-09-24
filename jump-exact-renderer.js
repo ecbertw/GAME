@@ -134,7 +134,7 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
        ground=motion.ground!==false,vy=Number(motion.vy)||0;
  let frame=0;
  if(!ground||Math.abs(vy)>5)frame=vy>18?3:vy< -65?5:4;
- else if(moving)frame=1+(Math.floor(time*13)%3);
+ else if(moving)frame=1+(Math.floor(time*13)%2);
  const col=frame%3,row=Math.floor(frame/3),bob=moving&&ground?Math.abs(Math.sin(time*26))*.8:0;
  c.save();c.translate(Math.round(x),Math.round(y-bob));c.scale(dir,1);
  if(ghost)c.globalAlpha=.62;
