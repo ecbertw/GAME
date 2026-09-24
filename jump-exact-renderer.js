@@ -78,41 +78,24 @@ function platform(c,name,x,y,w,index,state={}){
  const height=long?27:clamp(13+w*.17,17,29);
  // Preserve the original forest atlas and its original dimensions; only lift
  // its visible surface four logical pixels to meet the runner's shoe soles.
- const top=y-(isForestGround?9:5);
+ const top=y-(index===0?9:5);
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  if(isDesertGround){
-  // Rebuilt desert floor: draw opaque stone directly at the collision surface.
-  // This avoids atlas transparency and never changes other biomes or physics.
-  const floorTop=y-5, floorBottom=195, floorH=Math.max(24,floorBottom-floorTop+8);
+  // A shallow, opaque desert ledge: leave the valley visible below the masonry.
+  // Its top follows the collision plane; its bottom follows the marked cut line.
+  const floorTop=y-5, floorBottom=y+14, floorH=floorBottom-floorTop;
   c.shadowBlur=0;c.shadowOffsetY=0;
-  c.fillStyle='#43272c';c.fillRect(x,floorTop,w,floorH);
-  c.fillStyle='#a65b3c';c.fillRect(x,floorTop+3,w,5);
-  c.fillStyle='#f5b35b';c.fillRect(x,floorTop,w,2);
-  c.fillStyle='#d78043';c.fillRect(x,floorTop+2,w,2);
-  c.fillStyle='#704039';c.fillRect(x,floorTop+8,w,floorH-8);
-  // Offset sandstone masonry courses, with deliberate dark mortar.
-  for(let row=0;row<Math.ceil(floorH/11);row++){
-   const yy=floorTop+9+row*11;
-   for(let bx=x-(row%2)*17;bx<x+w;bx+=34){
-    const xx=Math.max(x,bx),right=Math.min(x+w,bx+33);
-    if(right<=xx)continue;
-    const shade=(row+Math.floor(bx/34))%4;
-    c.fillStyle=['#96513c','#a85c40','#854638','#b36b45'][shade];
-    c.fillRect(xx,yy,right-xx,9);
-    c.fillStyle='#d0834e';c.fillRect(xx,yy,right-xx,1);
-    c.fillStyle='#59302f';c.fillRect(xx,yy+8,right-xx,1);
-    c.fillRect(right-1,yy,1,9);
-    if(shade===1){c.fillStyle='#67382f';c.fillRect(xx+5,yy+4,5,1)}
-   }
-  }
-  // Small anchored tufts: no floating decorative atlas fragments.
-  for(let i=0;i<Math.floor(w/27);i++){
-   const xx=x+8+i*27+(i*7%9);
-   c.fillStyle=i%2?'#66552d':'#84703b';
-   c.fillRect(xx,floorTop-2,2,3);c.fillRect(xx-2,floorTop-1,2,1);
-   c.fillStyle='#d5a04b';c.fillRect(xx+2,floorTop-1,2,1);
-  }
+  c.save();c.beginPath();c.rect(x-2,floorTop,w+4,floorH);c.clip();
+  c.fillStyle='#56352f';c.fillRect(x-2,floorTop,w+4,floorH);
+  // Reuse the actual desert masonry artwork, rather than a flat brick pattern.
+  // The solid backing prevents the atlas transparency from opening holes.
+  c.drawImage(img,15,490,680,160,x-2,floorTop,w+4,42);
+  c.fillStyle='rgba(55,27,29,.18)';c.fillRect(x-2,floorTop+9,w+4,floorH-9);
+  c.fillStyle='#f6b45e';c.fillRect(x-2,floorTop,w+4,1.5);
+  c.fillStyle='#d98545';c.fillRect(x-2,floorTop+2,w+4,1);
+  c.fillStyle='#4e302d';c.fillRect(x-2,floorBottom-1,w+4,1);
+  c.restore();
  }else{
   c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
  }
