@@ -73,12 +73,17 @@ function platform(c,name,x,y,w,index,state={}){
  const long=w>115,variation=Math.abs(index)%4;
  const sx=long?0:variation*181,sy=long?(index%2?272:170):36;
  const sw=long?724:181,sh=long?99:125;
- const height=long?27:clamp(13+w*.17,17,29),top=y-5;
+ const height=long?(name==='desert'&&index===0?Math.max(27,c.canvas.height-y+8):27):clamp(13+w*.17,17,29),top=y-5;
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  // Use the actual approved transparent biome atlas for ALL four worlds.
  // The previous geometric city/snow substitute discarded the supplied artwork.
- c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
+ if(name==='desert'&&index===0){
+  // Stretch the lower stone body, not the decorative upper lip: cover the
+  // backdrop's horizontal seam without moving the physics contact surface.
+  c.drawImage(img,sx,sy+22,sw,sh-22,x-2,top+8,w+4,height-8);
+  c.drawImage(img,sx,sy,sw,22,x-2,top,w+4,9);
+ }else c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
  if(name==='desert'&&index===0){
   const lip=c.createLinearGradient(0,top-2,0,top+4);
   lip.addColorStop(0,'rgba(255,241,183,.92)');lip.addColorStop(1,'rgba(235,147,83,.38)');
@@ -183,5 +188,5 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
  return true;
 }
-root.EixoJumpExactArt={version:'approved-assets-vfx5-20260924',ready,background,platform,runner,images};
+root.EixoJumpExactArt={version:'approved-assets-vfx6-20260924',ready,background,platform,runner,images};
 })(window);
