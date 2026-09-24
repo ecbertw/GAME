@@ -71,9 +71,9 @@ function background(c,name,W,H,cam=0){
 function platform(c,name,x,y,w,index,state={}){
  const img=images.platforms[name];if(!has(img))return false;
  const long=w>115,variation=Math.abs(index)%4;
- const sx=long?0:variation*181,sy=long?(index%2?272:170):16;
- const sw=long?724:181,sh=long?99:145;
- const height=long?27:clamp(13+w*.17,17,29),top=y+1;
+ const sx=long?0:variation*181,sy=long?(index%2?272:170):36;
+ const sw=long?724:181,sh=long?99:125;
+ const height=long?27:clamp(13+w*.17,17,29),top=y-5;
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  // Use the actual approved transparent biome atlas for ALL four worlds.
