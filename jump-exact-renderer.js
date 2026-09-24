@@ -103,16 +103,16 @@ const fxColors={
  prismatic:['#ff5f9d','#72f7ff','#ffe86c','#a5ffb6']
 };
 let lastTick=0;
-function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost){
- const key=ghost?'ghost:'+String(x.toFixed(1))+':'+String(y.toFixed(1)):'local';
+function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
+ const key=ghost?'ghost:'+String(identity):'local';
  let p=particles.get(key);if(!p){p={items:[],last:time,carry:0};particles.set(key,p)}
  const dt=Math.max(0,Math.min(.05,time-p.last));p.last=time;
  if(time-lastTick>15){for(const [k,v] of particles)if(time-v.last>5)particles.delete(k);lastTick=time}
  const colors=fxColors[fx]||fxColors.glow;
- if(moving&&ground&&dt>0){
+ if(moving&&dt>0){
   p.carry+=dt*(fx==='mist'?48:fx==='ember'?35:42);
-  while(p.carry>=1){p.carry--;const n=p.items.length,rand=z=>{let v=Math.sin((n+1)*93.17+time*17.23+z*31.7)*43758.5453;return v-Math.floor(v)};
-   p.items.push({x:x-dir*(7+rand(1)*6),y:y-2-rand(2)*3,vx:-dir*(10+rand(3)*24)+(rand(4)-.5)*10,vy:-6-rand(5)*19,life:.32+rand(6)*.45,max:.77,size:rand(7)>.83?2:1,color:colors[Math.floor(rand(8)*colors.length)]});
+  while(p.carry>=1&&p.items.length<110){p.carry--;const n=p.items.length,rand=z=>{let v=Math.sin((n+1)*93.17+time*17.23+z*31.7)*43758.5453;return v-Math.floor(v)};
+   p.items.push({x:x-dir*(7+rand(1)*6),y:y-(ground?2:15)-rand(2)*3,vx:-dir*(10+rand(3)*24)+(rand(4)-.5)*10,vy:-6-rand(5)*19,life:.32+rand(6)*.45,max:.77,size:rand(7)>.83?2:1,color:colors[Math.floor(rand(8)*colors.length)]});
   }
  }
  c.save();c.globalCompositeOperation='screen';
@@ -125,8 +125,20 @@ function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost){
  }
  c.restore();
 }
-function effect(c,fx,time,moving){
- // No static effect decal: movement generates particles in particlesFor().
+// Animated tips supplement the approved sprite; face, outfit and hairstyle remain unchanged.
+function hairMotion(c,style,time,moving,ground,vy){
+ const energy=moving?1:ground?.32:.8;
+ const sway=Math.sin(time*(moving?15:5.5))*energy;
+ const lift=!ground?Math.max(-1,Math.min(1,vy/180)):0;
+ const base=style.hair&&HEX.test(style.hair)?style.hair:'#28c6ed';
+ c.save();c.lineCap='round';c.lineJoin='round';c.strokeStyle=base;c.lineWidth=1.05;
+ for(let i=0;i<3;i++){
+  const yy=-39+i*1.45,xx=-9-i*.9;
+  c.beginPath();c.moveTo(xx,yy);
+  c.quadraticCurveTo(xx-2.5-sway*.6,yy-1.3-lift,xx-4.1-sway*(1+i*.15),yy-1.7+sway*.5-lift);
+  c.stroke();
+ }
+ c.restore();
 }
 function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  const img=images.runner;if(!has(img))return false;
@@ -143,10 +155,11 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  c.imageSmoothingEnabled=true;
  const tinted=recolor(img,O,time);
  c.drawImage(tinted,col*112,row*144,112,144,-19,-47,38,48);
+ hairMotion(c,O,time,moving,ground,vy);
  c.restore();
- if(String(O.effect||'none')!=='none')particlesFor(c,x,y,String(O.effect),time,moving,ground,dir,ghost);
+ if(String(O.effect||'none')!=='none')particlesFor(c,x,y,String(O.effect),time,moving,ground,dir,ghost,name);
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
  return true;
 }
-root.EixoJumpExactArt={version:'approved-assets-20260924',ready,background,platform,runner,images};
+root.EixoJumpExactArt={version:'approved-assets-motion2-20260924',ready,background,platform,runner,images};
 })(window);
