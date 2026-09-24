@@ -54,7 +54,7 @@ test('city and snow use distinct new materials and effects remain visible at res
 
 test('VIP effects render behind the complete hero and all jump platforms move',()=>{
  const renderer=read('jump-exact-renderer.js'),physics=read('jump-physics.js');
- assert.ok(renderer.indexOf('particlesFor(c,x-dir*7')<renderer.indexOf('c.drawImage(tinted,col*112')));
+ assert.ok(renderer.indexOf('particlesFor(c,x-dir*7')<renderer.indexOf('c.drawImage(tinted,col*112'));
  assert.doesNotMatch(renderer,/Distinct animated ribbons/);
  assert.match(physics,/const moving=i>=1;/);
  assert.match(physics,/if\(gp\?\.moving\)s\.x\+=platformX/);
