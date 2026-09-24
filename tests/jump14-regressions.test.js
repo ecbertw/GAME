@@ -40,7 +40,7 @@ test('JUMP VIP wardrobe adds gold pants and natural effect variants',()=>{
  assert.match(server,/pants:\[\.\.\.baseColors,special\('#ffd84d','DOURADO',1\)/);
  for(const fx of ['shimmer','halo','frost','ember','mist','comet','prismatic'])assert.match(server,new RegExp("special\\('"+fx+"'"));
  const jump=fs.readFileSync(path.join(root,'jump.js'),'utf8');
- assert.match(jump,/Cosmetic particles stay close to the runner instead of orbiting like props/);
+ assert.match(jump,/Natural VIP particles: asymmetric, short-lived visual rhythm close to the silhouette/);
  assert.match(jump,/effect==='electric'/);
  assert.match(jump,/effect==='mist'/);
  assert.match(jump,/effect==='comet'/);
