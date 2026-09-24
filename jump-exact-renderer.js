@@ -15,6 +15,11 @@ for(const [name,url] of Object.entries(packed.backgrounds||{}))load(url,img=>ima
 for(const [name,url] of Object.entries(packed.platforms||{}))load(url,img=>images.platforms[name]=img);
 load(packed.runner,img=>images.runner=img);
 load(packed.effects,img=>images.effects=img);
+// Optional separately exported artwork from the approved Desert asset sheet.
+// Keep the previous packed atlas as a fallback until the new files load.
+const desertSheet={background:null,platforms:null};
+load('/assets/jump-exact/desert-20260925-background.webp',img=>desertSheet.background=img);
+load('/assets/jump-exact/desert-20260925-platforms.webp',img=>desertSheet.platforms=img);
 const ready=Promise.all(loads);
 const has=img=>!!(img&&img.complete&&img.naturalWidth>0);
 const clamp=(n,a=0,b=255)=>Math.max(a,Math.min(b,n));
@@ -59,7 +64,7 @@ function recolor(image,style,time){
  return cv;
 }
 function background(c,name,W,H,cam=0){
- const img=images.backgrounds[name];if(!has(img))return false;
+ const img=name==='desert'&&has(desertSheet.background)?desertSheet.background:images.backgrounds[name];if(!has(img))return false;
  c.save();c.imageSmoothingEnabled=true;
  // Preserve the entire approved composition, including moon/sun, skyline and foreground.
  c.drawImage(img,0,0,W,H);
@@ -69,7 +74,7 @@ function background(c,name,W,H,cam=0){
  c.restore();return true;
 }
 function platform(c,name,x,y,w,index,state={}){
- const img=images.platforms[name];if(!has(img))return false;
+ const img=name==='desert'&&has(desertSheet.platforms)?desertSheet.platforms:images.platforms[name];if(!has(img))return false;
  const long=w>115,variation=Math.abs(index)%4;
  const sx=long?0:variation*181,sy=long?(index%2?272:170):36;
  const sw=long?724:181,sh=long?99:125;
