@@ -8,7 +8,7 @@ test('approved JUMP artwork is loaded before the renderer, physics and game',()=
  const order=[...assets.map(n=>'assets/jump-exact/jump-exact-'+n+'.js'),'jump-exact-renderer.js','jump-worlds.js','jump.js'].map(n=>html.indexOf('src="'+n+'?'));
  assert.ok(order.every(x=>x>=0),'missing image asset or script');
  for(let i=1;i<order.length;i++)assert.ok(order[i]>order[i-1],'scripts are out of order');
- assert.match(html,/20260924-exact11/);
+ assert.match(html,/20260924-exact12/);
 });
 test('all four approved scenes, four transparent platform atlases, runner and VFX are real WebP artwork',()=>{
  for(const name of assets){
