@@ -168,7 +168,9 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  if(!ground||Math.abs(vy)>5)frame=vy>18?3:vy< -65?5:4;
  else if(moving)frame=1+(Math.floor(time*13)%2);
  const col=frame%3,row=Math.floor(frame/3),bob=moving&&ground?Math.abs(Math.sin(time*26))*.8:0;
- // Emit in world coordinates first: the character is drawn on top of the trail.\n if(String(O.effect||'none')!=='none')particlesFor(c,x-dir*7,y+1,String(O.effect),time,moving,ground,dir,ghost,name);\n c.save();c.translate(Math.round(x),Math.round(y-bob));c.scale(dir,1);
+ // Emit in world coordinates first: the character is drawn on top of the trail.
+ if(String(O.effect||'none')!=='none')particlesFor(c,x-dir*7,y+1,String(O.effect),time,moving,ground,dir,ghost,name);
+ c.save();c.translate(Math.round(x),Math.round(y-bob));c.scale(dir,1);
  if(ghost)c.globalAlpha=.62;
  if(ground){c.save();c.globalAlpha*=.3;c.fillStyle='#020712';c.beginPath();c.ellipse(0,1,12,2,0,0,Math.PI*2);c.fill();c.restore()}
  // Trail is rendered in world-space below, so particles persist after each step.
