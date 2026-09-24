@@ -40,5 +40,6 @@ test('visual polish preserves the approved hero and doubles the gameplay backing
  assert.match(renderer,/function particlesFor\(/);
  assert.match(renderer,/frame=1\+\(Math\.floor\(time\*13\)%2\)/);
  assert.doesNotMatch(renderer,/fillRect\(x\+5,y-3,Math\.max\(0,w-10\),1\)/);
- for(const biome of ['city','forest','desert','snow'])assert.match(worlds,new RegExp("biome==='"+biome+"'"));
+ for(const biome of ['city','forest','desert'])assert.match(worlds,new RegExp("biome==='"+biome+"'"));
+ assert.match(worlds,/Multiple snow speeds/);
 });
