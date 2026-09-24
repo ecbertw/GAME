@@ -80,6 +80,12 @@ function platform(c,name,x,y,w,index,state={}){
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
  c.shadowBlur=0;c.shadowOffsetY=0;
+ // The desert's first ledge needs a clear, warm collision silhouette against the sunset.
+ if(name==='desert'&&index===0){
+  const lip=c.createLinearGradient(0,top-2,0,top+4);
+  lip.addColorStop(0,'rgba(255,241,183,.92)');lip.addColorStop(1,'rgba(235,147,83,.38)');
+  c.fillStyle=lip;c.fillRect(x,top-2,w,2);
+ }
  // Movement is communicated by the slab's motion, not a universal cyan overlay.
  if(state.fragile){
   const p=clamp(Number(state.progress)||0,0,1),cracks=2+Math.floor(p*6);
@@ -104,11 +110,12 @@ const fxColors={
 };
 let lastTick=0;
 function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
- const key=ghost?'ghost:'+String(identity):'local';
+ const key=ghost?'ghost:'+String(identity||'peer'):'local';
  let p=particles.get(key);if(!p){p={items:[],last:time,carry:0};particles.set(key,p)}
  const dt=Math.max(0,Math.min(.05,time-p.last));p.last=time;
  if(time-lastTick>15){for(const [k,v] of particles)if(time-v.last>5)particles.delete(k);lastTick=time}
  const colors=fxColors[fx]||fxColors.glow;
+ if(p.fx!==fx){p.fx=fx;p.carry=0;p.items.length=0;}
  if(moving&&dt>0){
   p.carry+=dt*(fx==='mist'?48:fx==='ember'?35:42);
   while(p.carry>=1&&p.items.length<110){p.carry--;const n=p.items.length,rand=z=>{let v=Math.sin((n+1)*93.17+time*17.23+z*31.7)*43758.5453;return v-Math.floor(v)};
@@ -122,6 +129,7 @@ function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
   c.globalAlpha=(ghost?.35:.85)*Math.min(1,q.life/.18)*Math.min(1,(q.max-q.life)/.08);
   c.fillStyle=q.color;c.shadowColor=q.color;c.shadowBlur=fx==='mist'?2:4;
   c.fillRect(q.x,q.y,q.size,q.size);
+  if((fx==='comet'||fx==='electric'||fx==='prismatic')&&q.life>.15){c.globalAlpha*=.35;c.fillRect(q.x-q.vx*.035,q.y-q.vy*.035,q.size*.8,q.size*.8)}
  }
  c.restore();
 }
