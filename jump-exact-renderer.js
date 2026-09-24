@@ -73,7 +73,7 @@ function platform(c,name,x,y,w,index,state={}){
  const long=w>115,variation=Math.abs(index)%4;
  const sx=long?0:variation*181,sy=long?(index%2?272:170):16;
  const sw=long?724:181,sh=long?99:145;
- const height=long?27:clamp(13+w*.17,17,29),top=y-5;
+ const height=long?27:clamp(13+w*.17,17,29),top=y+1;
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  // Use the actual approved transparent biome atlas for ALL four worlds.
@@ -117,16 +117,16 @@ function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
  const colors=fxColors[fx]||fxColors.glow,kind=fxKinds[fx]||'dust';
  // A subtle, continuously animated signature makes the equipped effect
  // identifiable even while standing still; movement releases a larger trail.
- p.carry+=dt*(moving?95:42);
+ p.carry+=dt*(moving?39:13);
  let serial=p.serial||0;
- while(p.carry>=1&&p.items.length<130){
+ while(p.carry>=1&&p.items.length<48){
   p.carry--;serial++;
   const rand=z=>{const v=Math.sin(serial*93.17+z*31.7)*43758.5453;return v-Math.floor(v)};
-  const spread=moving?21:17;
+  const spread=moving?12:9;
   p.items.push({x:x+(rand(1)-.5)*spread-dir*(moving?5:0),
-   y:y-3-rand(2)*25,vx:(rand(3)-.5)*19-dir*(moving?44:0),
+   y:y-1-rand(2)*7,vx:(rand(3)-.5)*12-dir*(moving?29:0),
    vy:kind==='snow'?-(4+rand(4)*11):-(12+rand(4)*22),
-   life:.65+rand(5)*.8,max:1.45,size:1.8+rand(6)*3.4,
+   life:.4+rand(5)*.55,max:.95,size:.7+rand(6)*1.5,
    color:colors[Math.floor(rand(7)*colors.length)],seed:rand(8)*6.28});
  }
  p.serial=serial;
@@ -138,8 +138,8 @@ function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
   if(q.life<=0){p.items.splice(i,1);continue}
   const alpha=(ghost?.4:.92)*Math.min(1,q.life/.22)*Math.min(1,(q.max-q.life)/.12);
   c.globalAlpha=alpha;c.fillStyle=q.color;c.strokeStyle=q.color;
-  c.shadowColor=q.color;c.shadowBlur=kind==='fire'||kind==='lightning'?11:7;
-  const size=q.size*(kind==='cloud'?2.3:1);
+  c.shadowColor=q.color;c.shadowBlur=kind==='fire'||kind==='lightning'?5:3;
+  const size=q.size*(kind==='cloud'?1.6:1);
   if(kind==='fire'){
    c.beginPath();c.moveTo(q.x,q.y-size*1.8);c.quadraticCurveTo(q.x+size,q.y,q.x,q.y+size);
    c.quadraticCurveTo(q.x-size,q.y,q.x,q.y-size*1.8);c.fill();
@@ -156,24 +156,6 @@ function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
    c.beginPath();c.arc(q.x,q.y,size*.7,0,Math.PI*2);c.fill();
   }
  }
- // Distinct animated ribbons are constructed from moving particle positions,
- // never a fixed image hovering over the head. They rise at rest and stream
- // behind the runner, with each biome-independent VIP palette.
- if(p.items.length>3){
-  c.shadowBlur=10;c.lineCap='round';c.lineWidth=fx==='mist'?3:fx==='ember'?2.3:1.5;
-  for(let strand=0;strand<3;strand++){
-   const trail=p.items.filter((q,i)=>i%3===strand&&q.life>0).slice(-7);
-   if(trail.length<2)continue;
-   c.beginPath();c.moveTo(trail[0].x,trail[0].y);
-   for(let j=1;j<trail.length;j++){
-    const prev=trail[j-1],q=trail[j];
-    c.quadraticCurveTo(prev.x,prev.y,(prev.x+q.x)/2,(prev.y+q.y)/2);
-   }
-   c.strokeStyle=colors[strand%colors.length];
-   c.globalAlpha=(ghost?.13:.24)*(fx==='frost'?.8:1);
-   c.stroke();
-  }
- }
  c.restore();
 }
 // Do not paint synthetic hair strands. The approved hair belongs to the
@@ -186,7 +168,7 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  if(!ground||Math.abs(vy)>5)frame=vy>18?3:vy< -65?5:4;
  else if(moving)frame=1+(Math.floor(time*13)%2);
  const col=frame%3,row=Math.floor(frame/3),bob=moving&&ground?Math.abs(Math.sin(time*26))*.8:0;
- c.save();c.translate(Math.round(x),Math.round(y-bob));c.scale(dir,1);
+ // Emit in world coordinates first: the character is drawn on top of the trail.\n if(String(O.effect||'none')!=='none')particlesFor(c,x-dir*7,y+1,String(O.effect),time,moving,ground,dir,ghost,name);\n c.save();c.translate(Math.round(x),Math.round(y-bob));c.scale(dir,1);
  if(ghost)c.globalAlpha=.62;
  if(ground){c.save();c.globalAlpha*=.3;c.fillStyle='#020712';c.beginPath();c.ellipse(0,1,12,2,0,0,Math.PI*2);c.fill();c.restore()}
  // Trail is rendered in world-space below, so particles persist after each step.
@@ -196,9 +178,8 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  c.drawImage(tinted,col*112,row*144,112,144,-19,-47,38,48);
 
  c.restore();
- if(String(O.effect||'none')!=='none')particlesFor(c,x,y,String(O.effect),time,moving,ground,dir,ghost,name);
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
  return true;
 }
-root.EixoJumpExactArt={version:'approved-assets-atlas4-20260924',ready,background,platform,runner,images};
+root.EixoJumpExactArt={version:'approved-assets-vfx5-20260924',ready,background,platform,runner,images};
 })(window);

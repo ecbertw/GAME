@@ -8,7 +8,7 @@ test('approved JUMP artwork is loaded before the renderer, physics and game',()=
  const order=[...assets.map(n=>'assets/jump-exact/jump-exact-'+n+'.js'),'jump-exact-renderer.js','jump-worlds.js','jump.js'].map(n=>html.indexOf('src="'+n+'?'));
  assert.ok(order.every(x=>x>=0),'missing image asset or script');
  for(let i=1;i<order.length;i++)assert.ok(order[i]>order[i-1],'scripts are out of order');
- assert.match(html,/20260924-exact4/);
+ assert.match(html,/20260924-exact5/);
 });
 test('all four approved scenes, four transparent platform atlases, runner and VFX are real WebP artwork',()=>{
  for(const name of assets){
@@ -47,7 +47,15 @@ test('visual polish preserves the approved hero and doubles the gameplay backing
 test('city and snow use distinct new materials and effects remain visible at rest',()=>{
  const renderer=read('jump-exact-renderer.js');
  assert.match(renderer,/c\.drawImage\(img,sx,sy,sw,sh,x-2,top,w\+4,height\)/);
- assert.match(renderer,/moving\?95:42/);
+ assert.match(renderer,/moving\?39:13/);
  assert.match(renderer,/fxKinds=/);
  assert.match(renderer,/row\*144,112,144/);
+});
+
+test('VIP effects render behind the complete hero and all jump platforms move',()=>{
+ const renderer=read('jump-exact-renderer.js'),physics=read('jump-physics.js');
+ assert.ok(renderer.indexOf('particlesFor(c,x-dir*7')<renderer.indexOf('c.drawImage(tinted,col*112'));
+ assert.doesNotMatch(renderer,/Distinct animated ribbons/);
+ assert.match(physics,/const moving=i>=1;/);
+ assert.match(physics,/if\(gp\?\.moving\)s\.x\+=platformX/);
 });
