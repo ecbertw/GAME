@@ -8,7 +8,7 @@ test('approved JUMP artwork is loaded before the renderer, physics and game',()=
  const order=[...assets.map(n=>'assets/jump-exact/jump-exact-'+n+'.js'),'jump-exact-renderer.js','jump-worlds.js','jump.js'].map(n=>html.indexOf('src="'+n+'?'));
  assert.ok(order.every(x=>x>=0),'missing image asset or script');
  for(let i=1;i<order.length;i++)assert.ok(order[i]>order[i-1],'scripts are out of order');
- assert.match(html,/20260924-exact1/);
+ assert.match(html,/20260924-exact3/);
 });
 test('all four approved scenes, four transparent platform atlases, runner and VFX are real WebP artwork',()=>{
  for(const name of assets){
@@ -42,4 +42,12 @@ test('visual polish preserves the approved hero and doubles the gameplay backing
  assert.doesNotMatch(renderer,/fillRect\(x\+5,y-3,Math\.max\(0,w-10\),1\)/);
  for(const biome of ['city','forest','desert'])assert.match(worlds,new RegExp("biome==='"+biome+"'"));
  assert.match(worlds,/Multiple snow speeds/);
+});
+
+test('city and snow use distinct new materials and effects remain visible at rest',()=>{
+ const renderer=read('jump-exact-renderer.js');
+ assert.match(renderer,/name==='city'\|\|name==='snow'/);
+ assert.match(renderer,/moving\?65:19/);
+ assert.match(renderer,/fxKinds=/);
+ assert.match(renderer,/row\*144\+16/);
 });

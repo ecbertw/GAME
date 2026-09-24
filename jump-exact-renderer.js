@@ -71,22 +71,39 @@ function background(c,name,W,H,cam=0){
 function platform(c,name,x,y,w,index,state={}){
  const img=images.platforms[name];if(!has(img))return false;
  const long=w>115,variation=Math.abs(index)%4;
- // Approved transparent atlas is 724×543: top row has four short slabs,
- // subsequent rows supply two long slab materials.
  const sx=long?0:variation*181,sy=long?(index%2?272:170):16;
  const sw=long?724:181,sh=long?99:145;
  const height=long?27:clamp(13+w*.17,17,29),top=y-5;
  c.save();c.imageSmoothingEnabled=true;
  c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
- c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
- c.shadowBlur=0;c.shadowOffsetY=0;
- // The desert's first ledge needs a clear, warm collision silhouette against the sunset.
- if(name==='desert'&&index===0){
-  const lip=c.createLinearGradient(0,top-2,0,top+4);
-  lip.addColorStop(0,'rgba(255,241,183,.92)');lip.addColorStop(1,'rgba(235,147,83,.38)');
-  c.fillStyle=lip;c.fillRect(x,top-2,w,2);
+ // The city and snow atlas contains obsolete flat cyan rails. Draw the new
+ // material from the approved scene palette instead of showing those rails.
+ if(name==='city'||name==='snow'){
+  const city=name==='city',edge=city?'#5b819b':'#a9d4ed',dark=city?'#17283e':'#395778';
+  c.fillStyle=dark;c.fillRect(x+2,y+3,w-4,9);
+  c.fillStyle=city?'#334f6c':'#7299b5';c.fillRect(x+1,y,w-2,7);
+  c.fillStyle=edge;c.fillRect(x,y-3,w,4);
+  c.fillStyle=city?'#9cb9d1':'#f8fdff';c.fillRect(x+3,y-4,w-6,2);
+  for(let j=8;j<w-5;j+=17){
+   if(city){
+    c.fillStyle='#24374e';c.fillRect(x+j,y+5,7,2);
+    c.fillStyle='#d2b177';c.fillRect(x+j+2,y+5,2,1);
+   }else{
+    c.fillStyle='#d8f5ff';c.fillRect(x+j,y-5,6,2);
+    c.fillStyle='#8cbfd8';c.fillRect(x+j+3,y+5,2,4);
+    if(j%3===2){c.fillStyle='#d8f5ff';c.fillRect(x+j+4,y+8,1,4)}
+   }
+  }
+  c.fillStyle=city?'#111f30':'#304d6c';c.fillRect(x+4,y+10,w-8,3);
+ }else{
+  c.drawImage(img,sx,sy,sw,sh,x-2,top,w+4,height);
+  if(name==='desert'&&index===0){
+   const lip=c.createLinearGradient(0,top-2,0,top+4);
+   lip.addColorStop(0,'rgba(255,241,183,.92)');lip.addColorStop(1,'rgba(235,147,83,.38)');
+   c.fillStyle=lip;c.fillRect(x,top-2,w,2);
+  }
  }
- // Movement is communicated by the slab's motion, not a universal cyan overlay.
+ c.shadowBlur=0;c.shadowOffsetY=0;
  if(state.fragile){
   const p=clamp(Number(state.progress)||0,0,1),cracks=2+Math.floor(p*6);
   c.strokeStyle=p>.55?'rgba(255,211,112,.96)':'rgba(255,189,101,.7)';
@@ -108,42 +125,70 @@ const fxColors={
  plasma:['#49d7ff','#ff7dff'],comet:['#53c9ff','#ffd66c'],cosmic:['#8c5cff','#f3a6ff'],
  prismatic:['#ff5f9d','#72f7ff','#ffe86c','#a5ffb6']
 };
+const fxKinds={frost:'snow',ember:'fire',electric:'lightning',mist:'cloud',comet:'streak',cosmic:'star',prismatic:'star',spark:'star',plasma:'star'};
 let lastTick=0;
 function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
  const key=ghost?'ghost:'+String(identity||'peer'):'local';
- let p=particles.get(key);if(!p){p={items:[],last:time,carry:0};particles.set(key,p)}
+ let p=particles.get(key);if(!p){p={items:[],last:time,carry:0,fx:null};particles.set(key,p)}
  const dt=Math.max(0,Math.min(.05,time-p.last));p.last=time;
  if(time-lastTick>15){for(const [k,v] of particles)if(time-v.last>5)particles.delete(k);lastTick=time}
- const colors=fxColors[fx]||fxColors.glow;
- if(p.fx!==fx){p.fx=fx;p.carry=0;p.items.length=0;}
- if(moving&&dt>0){
-  p.carry+=dt*(fx==='mist'?48:fx==='ember'?35:42);
-  while(p.carry>=1&&p.items.length<110){p.carry--;const n=p.items.length,rand=z=>{let v=Math.sin((n+1)*93.17+time*17.23+z*31.7)*43758.5453;return v-Math.floor(v)};
-   p.items.push({x:x-dir*(7+rand(1)*6),y:y-(ground?2:15)-rand(2)*3,vx:-dir*(10+rand(3)*24)+(rand(4)-.5)*10,vy:-6-rand(5)*19,life:.32+rand(6)*.45,max:.77,size:rand(7)>.83?2:1,color:colors[Math.floor(rand(8)*colors.length)]});
-  }
+ if(p.fx!==fx){p.fx=fx;p.carry=0;p.items.length=0}
+ const colors=fxColors[fx]||fxColors.glow,kind=fxKinds[fx]||'dust';
+ // A subtle, continuously animated signature makes the equipped effect
+ // identifiable even while standing still; movement releases a larger trail.
+ p.carry+=dt*(moving?65:19);
+ let serial=p.serial||0;
+ while(p.carry>=1&&p.items.length<130){
+  p.carry--;serial++;
+  const rand=z=>{const v=Math.sin(serial*93.17+z*31.7)*43758.5453;return v-Math.floor(v)};
+  const spread=moving?15:11;
+  p.items.push({x:x+(rand(1)-.5)*spread-dir*(moving?5:0),
+   y:y-4-rand(2)*35,vx:(rand(3)-.5)*17-dir*(moving?18:0),
+   vy:kind==='snow'?-(4+rand(4)*11):-(12+rand(4)*22),
+   life:.55+rand(5)*.65,max:1.2,size:1.2+rand(6)*2.1,
+   color:colors[Math.floor(rand(7)*colors.length)],seed:rand(8)*6.28});
  }
+ p.serial=serial;
  c.save();c.globalCompositeOperation='screen';
  for(let i=p.items.length-1;i>=0;i--){
-  const q=p.items[i];q.life-=dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=(fx==='frost'?3:fx==='mist'?-2:13)*dt;q.vx*=1-dt*.7;
+  const q=p.items[i];q.life-=dt;q.x+=q.vx*dt+Math.sin(time*6+q.seed)*dt*3;
+  q.y+=q.vy*dt;q.vy+=(kind==='fire'?-7:kind==='snow'?2:7)*dt;
+  q.vx*=1-dt*.6;
   if(q.life<=0){p.items.splice(i,1);continue}
-  c.globalAlpha=(ghost?.35:.85)*Math.min(1,q.life/.18)*Math.min(1,(q.max-q.life)/.08);
-  c.fillStyle=q.color;c.shadowColor=q.color;c.shadowBlur=fx==='mist'?2:4;
-  c.fillRect(q.x,q.y,q.size,q.size);
-  if((fx==='comet'||fx==='electric'||fx==='prismatic')&&q.life>.15){c.globalAlpha*=.35;c.fillRect(q.x-q.vx*.035,q.y-q.vy*.035,q.size*.8,q.size*.8)}
+  const alpha=(ghost?.4:.92)*Math.min(1,q.life/.22)*Math.min(1,(q.max-q.life)/.12);
+  c.globalAlpha=alpha;c.fillStyle=q.color;c.strokeStyle=q.color;
+  c.shadowColor=q.color;c.shadowBlur=kind==='fire'||kind==='lightning'?8:5;
+  const size=q.size*(kind==='cloud'?1.8:1);
+  if(kind==='fire'){
+   c.beginPath();c.moveTo(q.x,q.y-size*1.8);c.quadraticCurveTo(q.x+size,q.y,q.x,q.y+size);
+   c.quadraticCurveTo(q.x-size,q.y,q.x,q.y-size*1.8);c.fill();
+  }else if(kind==='snow'){
+   c.fillRect(q.x-size*.5,q.y,size,1);c.fillRect(q.x,q.y-size*.5,1,size);
+  }else if(kind==='lightning'){
+   c.lineWidth=.85;c.beginPath();c.moveTo(q.x-2,q.y-3);c.lineTo(q.x+1,q.y);
+   c.lineTo(q.x-1,q.y+2);c.lineTo(q.x+2,q.y+4);c.stroke();
+  }else if(kind==='star'){
+   c.fillRect(q.x-size,q.y,2*size,.8);c.fillRect(q.x,q.y-size,.8,2*size);
+  }else if(kind==='streak'){
+   c.fillRect(q.x,q.y,size,1.5);c.globalAlpha=alpha*.4;c.fillRect(q.x-q.vx*.07,q.y-q.vy*.07,size*1.6,1);
+  }else{
+   c.beginPath();c.arc(q.x,q.y,size*.55,0,Math.PI*2);c.fill();
+  }
  }
  c.restore();
 }
-// Animated tips supplement the approved sprite; face, outfit and hairstyle remain unchanged.
 function hairMotion(c,style,time,moving,ground,vy){
- const energy=moving?1:ground?.32:.8;
- const sway=Math.sin(time*(moving?15:5.5))*energy;
+ // The approved sprite already contains the hairstyle. Animate only its
+ // trailing tips, anchored to the rear of the head, without changing the face.
+ const energy=moving?1:ground?.4:.85;
+ const sway=Math.sin(time*(moving?18:6))*energy;
  const lift=!ground?Math.max(-1,Math.min(1,vy/180)):0;
- const base=style.hair&&HEX.test(style.hair)?style.hair:'#28c6ed';
- c.save();c.lineCap='round';c.lineJoin='round';c.strokeStyle=base;c.lineWidth=1.05;
- for(let i=0;i<3;i++){
-  const yy=-39+i*1.45,xx=-9-i*.9;
+ const base=style.hair&&HEX.test(style.hair)?style.hair:'#e952a8';
+ c.save();c.lineCap='round';c.lineJoin='round';c.strokeStyle=base;c.lineWidth=1.5;
+ for(let i=0;i<4;i++){
+  const yy=-34+i*1.8,xx=-8-i*.4;
   c.beginPath();c.moveTo(xx,yy);
-  c.quadraticCurveTo(xx-2.5-sway*.6,yy-1.3-lift,xx-4.1-sway*(1+i*.15),yy-1.7+sway*.5-lift);
+  c.quadraticCurveTo(xx-3-sway*1.5,yy-1.5-lift,xx-6-sway*(2+i*.35),yy-2+sway*1.3-lift);
   c.stroke();
  }
  c.restore();
@@ -162,12 +207,13 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  // Trail is rendered in world-space below, so particles persist after each step.
  c.imageSmoothingEnabled=true;
  const tinted=recolor(img,O,time);
- c.drawImage(tinted,col*112,row*144,112,144,-19,-47,38,48);
+ // Discard the disconnected marks in the top margin of jump frames.
+ c.drawImage(tinted,col*112,row*144+16,112,128,-19,-42,38,43);
  hairMotion(c,O,time,moving,ground,vy);
  c.restore();
  if(String(O.effect||'none')!=='none')particlesFor(c,x,y,String(O.effect),time,moving,ground,dir,ghost,name);
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
  return true;
 }
-root.EixoJumpExactArt={version:'approved-assets-motion2-20260924',ready,background,platform,runner,images};
+root.EixoJumpExactArt={version:'approved-assets-motion3-20260924',ready,background,platform,runner,images};
 })(window);
