@@ -171,8 +171,10 @@ test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
  assert.match(js,/activeMinPlatform/);
  assert.match(js,/data-eixo-color-label/);
  assert.match(js,/facing,ground:local\.ground/);
- assert.match(js,/const spriteScale=\.72/);
- assert.match(js,/c\.translate\(0,-14\)/);
+ assert.match(js,/function tintedRunner\(pose,O,time\)/);
+ assert.match(js,/window\.EixoJumpArt\?\.runner/);
+ assert.match(js,/const target=38/);
+ assert.doesNotMatch(js,/const spriteScale=\.72/);
  assert.match(js,/function stepLocalWithAudio\(dt\)/);
  assert.match(js,/jumpBiome\?\.\(biome\)/);
  assert.doesNotMatch(js,/jumpDuoButton|jumpTrioButton|\/api\/jump\/teams\//);
