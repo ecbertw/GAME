@@ -18,9 +18,9 @@ load(packed.effects,img=>images.effects=img);
 // Exported directly from the approved 25 September desert art sheet.
 const desertSheet={background:null,ground:null,platforms:[null,null,null]};
 const desertBase='/assets/jump-exact/desert-20260925-';
-load(desertBase+'background.webp',img=>desertSheet.background=img);
-load(desertBase+'ground.webp',img=>desertSheet.ground=img);
-for(let i=0;i<3;i++)load(desertBase+'platform-'+(i+1)+'.webp',img=>desertSheet.platforms[i]=img);
+load(desertBase+'background.svg',img=>desertSheet.background=img);
+load(desertBase+'ground.svg',img=>desertSheet.ground=img);
+for(let i=0;i<3;i++)load(desertBase+'platform.svg',img=>desertSheet.platforms[i]=img);
 const ready=Promise.all(loads);
 const has=img=>!!(img&&img.complete&&img.naturalWidth>0);
 const clamp=(n,a=0,b=255)=>Math.max(a,Math.min(b,n));
@@ -219,5 +219,5 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
  return true;
 }
-root.EixoJumpExactArt={version:'approved-assets-vfx8-20260924',ready,background,platform,runner,images};
+root.EixoJumpExactArt={version:'desert-svg-integrated-20260925',ready,background,platform,runner,images};
 })(window);
