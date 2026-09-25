@@ -20,6 +20,6 @@ test('wardrobe preview keeps the full runner inside its canvas',()=>{
 });
 
 test('online peers use velocity-assisted snapshot smoothing',()=>{
- const js=read('jump.js');assert.match(js,/velocityX/);assert.match(js,/snapshotAt/);assert.match(js,/Math\.exp\(-18/);
- const server=read('jump-server.js');assert.match(server,/sort\(\(a,b\)=>b\.players\.size-a\.players\.size\|\|a\.epoch-b\.epoch\)/);
+ const js=read('jump.js');assert.match(js,/velocityX/);assert.match(js,/snapshotAt/);assert.match(js,/Math\.exp\(-18/);assert.match(js,/motion:local\?/);
+ const server=read('jump-server.js');assert.match(server,/sort\(\(a,b\)=>b\.players\.size-a\.players\.size\|\|a\.epoch-b\.epoch\)/);assert.match(server,/run\.motion=/);assert.match(server,/ground:motion\?motion\.ground/);
 });

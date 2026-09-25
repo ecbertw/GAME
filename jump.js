@@ -81,10 +81,11 @@ function mergePeerSnapshots(incoming=[]){
  peers=(incoming||[]).map(p=>{
   const prev=old.get(String(p.id));
   const x=Number(p.x)||0,y=Number(p.y)||0;
-  if(!prev)return {...p,renderX:x,renderY:y,targetX:x,targetY:y,snapshotAt:now,velocityX:0,velocityY:0};
+  if(!prev)return {...p,renderX:x,renderY:y,targetX:x,targetY:y,snapshotAt:now,velocityX:Number(p.vx)||0,velocityY:Number(p.vy)||0};
   const elapsed=Math.max(.03,Math.min(.25,(now-Number(prev.snapshotAt||now-60))/1000));
-  const velocityX=Math.max(-170,Math.min(170,(x-Number(prev.targetX??prev.x??x))/elapsed));
-  const velocityY=Math.max(-330,Math.min(330,(y-Number(prev.targetY??prev.y??y))/elapsed));
+  const measuredX=(x-Number(prev.targetX??prev.x??x))/elapsed,measuredY=(y-Number(prev.targetY??prev.y??y))/elapsed;
+  const velocityX=Math.max(-170,Math.min(170,Number.isFinite(Number(p.vx))?Number(p.vx):measuredX));
+  const velocityY=Math.max(-330,Math.min(240,Number.isFinite(Number(p.vy))?Number(p.vy):measuredY));
   return {...prev,...p,renderX:Number(prev.renderX??prev.x??x)||0,renderY:Number(prev.renderY??prev.y??y)||0,targetX:x,targetY:y,snapshotAt:now,velocityX,velocityY};
  });
 }
@@ -101,7 +102,8 @@ async function sync(){
  if(!run||busy||current!=='jump')return;
  const identity=run.runId;busy=true;
  try{
-  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jump:keys.jump,platform:Number(local?.bestPlatform||0),position:local?{x:local.x,y:local.y}:null})});
+  const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jump:keys.jump,platform:Number(local?.bestPlatform||0),position:local?{x:local.x,y:local.y}:null,
+    motion:local?{vx:((keys.right?1:0)-(keys.left?1:0))*136,vy:local.vy,ground:!!local.ground,moving:keys.left!==keys.right,facing}:null})});
   if(run?.runId!==identity)return;
   lastState=out;if(mode!=='solo'&&local&&Number.isFinite(out.worldTime)){const drift=Number(out.worldTime)-Number(local.time||0);local.time+=Math.max(-.08,Math.min(.08,drift))*.12;}mergePeerSnapshots(out.peers||[]);confirmedScore=Number(out.state?.score||0);
   // The HUD shows only server-confirmed platform points, while the local

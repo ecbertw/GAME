@@ -165,7 +165,12 @@ function advance(run){
 function playersIn(run){
   const inst=instances.get(run.instanceId);
   if(!inst)return[];
-  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round((r.position||r.state).x),y:Math.round((r.position||r.state).y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,vy:Math.round(r.state.vy||0),ground:!!r.state.ground,facing:r.facing||1,moving:!!r.keys.left!==!!r.keys.right,outfit:r.outfit}));
+  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>{
+    const live=Date.now()-Number(r.positionAt||0)<500,position=live&&r.position?r.position:r.state,motion=live&&r.motion?r.motion:null;
+    return{id:r.playerId,name:r.name,x:Math.round(position.x*10)/10,y:Math.round(position.y*10)/10,best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,
+      vx:motion?motion.vx:((r.keys.right?1:0)-(r.keys.left?1:0))*136,vy:motion?motion.vy:Math.round(r.state.vy||0),ground:motion?motion.ground:!!r.state.ground,
+      facing:motion?motion.facing:(r.facing||1),moving:motion?motion.moving:!!r.keys.left!==!!r.keys.right,outfit:r.outfit};
+  });
 }
 function confirmProgress(run,raw){
   const claimed=Number(raw??run.confirmedPlatform??0);
@@ -197,6 +202,9 @@ function input(p,d){
     const previous=run.position||run.state;
     if(x>=8&&x<=physics.W-8&&Math.abs(x-previous.x)<=136*elapsed+12&&Math.abs(y-previous.y)<=282*elapsed+16){
       run.position={x,y};run.positionAt=Date.now();
+      const m=d.motion&&typeof d.motion==='object'?d.motion:{};
+      run.motion={vx:Math.max(-150,Math.min(150,Number(m.vx)||0)),vy:Math.max(-300,Math.min(220,Number(m.vy)||0)),ground:m.ground===true,
+        moving:m.moving===true,facing:m.facing===-1?-1:1};
     }
   }
   const inst=instances.get(run.instanceId);

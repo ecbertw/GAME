@@ -150,9 +150,11 @@ test('multiplayer peers receive the equipped outfit and effect',async()=>{
  const ar=await J.start(db,a,{biome:'snow',multiplayer:true});
  const br=await J.start(db,b,{biome:'snow',multiplayer:true});
  await J.saveOutfit(db,a,{outfit:{...J.DEFAULTS,effect:'glow'}});
+ J.input(a,{runId:ar.runId,left:false,right:true,jump:true,platform:0,position:{x:230,y:20},motion:{vx:136,vy:175,ground:false,moving:true,facing:1}});
  const seen=J.input(b,{runId:br.runId,left:false,right:false,jump:false,platform:0});
  const peer=seen.peers.find(p=>p.id===a.id);
  assert.equal(peer.outfit.effect,'glow');
+ assert.deepEqual({x:peer.x,y:peer.y,vx:peer.vx,vy:peer.vy,ground:peer.ground,moving:peer.moving,facing:peer.facing},{x:230,y:20,vx:136,vy:175,ground:false,moving:true,facing:1});
  J.leave(a);J.leave(b);
 });
 test('browser preserves server scoring and never snaps to server Y',()=>{
