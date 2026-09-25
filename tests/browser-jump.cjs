@@ -41,7 +41,7 @@ const root=path.resolve(__dirname,'..'),J=require(root+'/jump-server');
 
   const a=await pageFor(players[0]),b=await pageFor(players[1]);
   // World renderer contact sheet.
-  await a.evaluate(()=>{const c=document.createElement('canvas');c.id='worldSheet';c.width=900;c.height=1560;c.style='position:fixed;inset:0;z-index:99999;width:900px;height:1560px';document.body.append(c);const ctx=c.getContext('2d');ctx.scale(2,2);for(const [i,b] of ['city','forest','desert','snow'].entries()){ctx.save();ctx.translate(0,i*195);EixoJumpWorlds.draw(ctx,b,73,0,0);for(const [n,p] of EixoJumpPhysics.platforms(73,4).entries())EixoJumpWorlds.platform(ctx,b,p.x,165-p.y,p.w,n);ctx.fillStyle='#fff';ctx.font='8px monospace';ctx.fillText(b.toUpperCase(),12,16);ctx.restore();}});
+  await a.evaluate(()=>{const c=document.createElement('canvas');c.id='worldSheet';c.width=900;c.height=1560;c.style='position:fixed;inset:0;z-index:99999;width:900px;height:1560px';document.body.append(c);const ctx=c.getContext('2d');ctx.scale(2,2);for(const [i,b] of ['city','forest','snow'].entries()){ctx.save();ctx.translate(0,i*195);EixoJumpWorlds.draw(ctx,b,73,0,0);for(const [n,p] of EixoJumpPhysics.platforms(73,4).entries())EixoJumpWorlds.platform(ctx,b,p.x,165-p.y,p.w,n);ctx.fillStyle='#fff';ctx.font='8px monospace';ctx.fillText(b.toUpperCase(),12,16);ctx.restore();}});
   await a.locator('#worldSheet').screenshot({path:path.join(root,'tmp/jump-qa/worlds.png')});await a.locator('#worldSheet').evaluate(e=>e.remove());
 
   // ONLINE is one matchmaking action. Two independent browsers must converge on

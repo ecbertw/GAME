@@ -1,16 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
-const M=require('../jump-motion'),P=require('../jump-physics');
+const M=require('../jump-motion');
 const input=(time,x=0,extra={})=>({time,x,y:0,ground:true,moving:true,dir:1,fx:'comet',run:'one',...extra});
-test('first ten desert platforms preserve source proportions at every generated width',()=>{
- for(const seed of [1,73,998])for(const [i,p] of P.platforms(seed,12).entries()){
-  if(i<1||i>10)continue;
-  for(const [w,h] of [[180,102],[124,69],[134,65],[136,81]]){
-   const size=M.platformSize(p.w,w,h,true);assert.ok(Math.abs(size.width/size.height-w/h)<1e-10);assert.equal(size.width,p.w+4);
-  }
- }
- assert.equal(M.platformSize(50,180,102,false).height,21.5);
-});
 test('run cycle alternates support and lifted recovery with a flight phase',()=>{
  let airborne=false;
  for(let i=0;i<100;i++){
@@ -38,6 +29,16 @@ test('jump and landing emit short separate bursts and idle never repeats them',(
  assert.equal(s.items.filter(p=>p.event==='jump').length,7);
  M.updateEmitter(s,input(.04,0,{ground:true}));assert.equal(s.items.filter(p=>p.event==='land').length,10);
  M.updateEmitter(s,input(.06,0,{moving:false}));assert.equal(s.items.filter(p=>p.event==='land').length,10);
+});
+test('shoe effects remain continuously visible through a complete jump and its apex',()=>{
+ const s=M.createEmitter();M.updateEmitter(s,input(0));
+ const arc=[-8,-18,-29,-38,-45,-49,-50,-49,-45,-38,-28,-16,-5];
+ for(let i=0;i<arc.length;i++){
+  M.updateEmitter(s,input((i+1)/30,i*.8,{ground:false,y:arc[i]}));
+  assert.ok(s.items.length>0,'airborne frame '+i+' lost every effect');
+ }
+ assert.ok(s.items.some(p=>p.event==='air'),'jump needs a continuous airborne wake');
+ assert.ok(s.items.some(p=>p.max>=.46),'air particles must survive the slower apex');
 });
 test('restarts, teleports, hidden-tab gaps and effect changes cannot leave stale trails',()=>{
  for(const change of [{time:2},{time:-1},{run:'two'},{x:900},{fx:'none'}]){

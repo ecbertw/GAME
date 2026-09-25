@@ -2,9 +2,9 @@
 
 ## Modos atuais
 
-**SOLO:** o jogador entra sozinho num dos quatro ambientes JUMP. A câmara, progressão, derrota e pontuação são individuais.
+**SOLO:** o jogador entra sozinho num dos três ambientes JUMP. A câmara, progressão, derrota e pontuação são individuais.
 
-**ONLINE:** existe uma única ação **JOGAR ONLINE**. O jogador não escolhe o mapa. O servidor mantém uma instância pública ativa e coloca os novos jogadores nessa instância até atingir **20 jogadores**. Apenas quando a instância atual fica cheia é criada a seguinte, com um ambiente escolhido automaticamente entre CITY, FOREST, DESERT e SNOW.
+**ONLINE:** existe uma única ação **JOGAR ONLINE**. O jogador não escolhe o mapa. O servidor mantém uma instância pública ativa e coloca os novos jogadores nessa instância até atingir **20 jogadores**. Apenas quando a instância atual fica cheia é criada a seguinte, com um ambiente escolhido automaticamente entre CITY, FOREST e SNOW.
 
 Todos os jogadores da mesma instância usam a mesma seed de plataformas e o mesmo relógio do mapa. Não existe colisão entre jogadores: cada pessoa mantém a sua física, câmara, progressão e derrota. As posições remotas são interpoladas no cliente para reduzir movimentos aos saltos sem alterar a validação de pontuação.
 
@@ -21,7 +21,7 @@ Durante a migração, as tabelas antigas `jump_team_members`, `jump_team_scores`
 - `jump-server.js`: SOLO, salas privadas e matchmaking público de 20 jogadores.
 - `jump.js`: renderização local, interpolação dos jogadores ONLINE, ranking individual e personalização do runner.
 - `jump-physics.js`: física, dificuldade, plataformas móveis e frágeis.
-- `jump-worlds.js`: CITY, FOREST, DESERT e SNOW.
+- `jump-worlds.js`: CITY, FOREST e SNOW.
 - `audio-fix.js`: volumes independentes para música do site, efeitos do jogo e música do mapa.
 
 A instância ONLINE vive no processo Node atual. Reiniciar o serviço termina partidas públicas em curso; os rankings já gravados permanecem em PostgreSQL.

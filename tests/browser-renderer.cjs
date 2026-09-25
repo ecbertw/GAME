@@ -17,13 +17,13 @@ const root=path.resolve(__dirname,'..');
   const failures=[];page.on('pageerror',e=>failures.push(e.message));page.on('response',r=>{if(r.status()>=400)failures.push(r.url());});
   await page.goto('http://127.0.0.1:'+server.address().port+'/jump.js');
   await page.setContent('<body style="margin:0;background:#152032;color:white;font:16px sans-serif"><canvas id="preview" width="1000" height="1230"></canvas></body>');
-  for(const name of ['bg-city','bg-forest','bg-desert','bg-snow','runner','platform-city','platform-forest','platform-desert','platform-snow','effects'])await page.addScriptTag({url:'/assets/jump-exact/jump-exact-'+name+'.js'});
+  for(const name of ['bg-city','bg-forest','bg-snow','runner','platform-city','platform-forest','platform-snow','effects'])await page.addScriptTag({url:'/assets/jump-exact/jump-exact-'+name+'.js'});
   await page.addScriptTag({url:'/jump-motion.js'});
   await page.addScriptTag({url:'/jump-exact-renderer.js'});
   await page.evaluate(async()=>{
    const art=window.EixoJumpExactArt;await art.ready;
    const c=document.getElementById('preview').getContext('2d');
-   for(const [i,name] of ['city','forest','desert','snow'].entries()){
+   for(const [i,name] of ['city','forest','snow'].entries()){
     const x=20+(i%2)*490,y=35+Math.floor(i/2)*255;c.fillStyle='white';c.fillText(name.toUpperCase(),x,y-9);
     c.save();c.translate(x,y);art.background(c,name,450,195);
     art.platform(c,name,0,163,450,0);
@@ -40,7 +40,7 @@ const root=path.resolve(__dirname,'..');
     art.runner(c,0,0,{},'',false,0,{ground:false,vy:[150,0,-100][i]});c.restore();
    }
    c.fillStyle='white';c.fillText('Platform silhouettes on a plain background',20,940);
-   for(const [i,name] of ['city','forest','desert','snow'].entries())for(let n=1;n<=4;n++){
+   for(const [i,name] of ['city','forest','snow'].entries())for(let n=1;n<=4;n++){
     c.save();c.translate(30+(n-1)*235,980+i*60);c.scale(2,2);art.platform(c,name,0,0,85,n);c.restore();
    }
   });
@@ -53,7 +53,7 @@ const root=path.resolve(__dirname,'..');
    const jumpComponents=[150,0,-100].map(vy=>components(sample(0,{ground:false,vy}),112));
    const a=sample(.0625,{ground:true,moving:true}),b=sample(.3125,{ground:true,moving:true});
    let changedLegPixels=0;for(let y=108;y<148;y++)for(let x=0;x<112;x++){const i=(y*112+x)*4;if(a[i+3]!==b[i+3])changedLegPixels++;}
-   const cv=document.createElement('canvas');cv.width=450;cv.height=195;art.background(cv.getContext('2d'),'desert',450,195);
+   const cv=document.createElement('canvas');cv.width=450;cv.height=195;art.background(cv.getContext('2d'),'forest',450,195);
    return {changedLegPixels,jumpComponents,backgroundSample:[...cv.getContext('2d').getImageData(225,90,1,1).data]};
   });
   assert.ok(checks.changedLegPixels>50,JSON.stringify(checks));assert.deepEqual(checks.jumpComponents,[1,1,1]);assert.equal(checks.backgroundSample[3],255);assert.deepEqual(failures,[]);
@@ -63,7 +63,7 @@ const root=path.resolve(__dirname,'..');
   await game.addInitScript(()=>localStorage.setItem('eixo_player',JSON.stringify({id:'00000000-0000-4000-8000-000000000001',name:'Renderer QA',country:'PT',vipLevel:0})));
   await game.route('**/api/**',async route=>{
    const req=route.request(),url=new URL(req.url());let out={ok:true,players:[],rooms:[],messages:[],total:0,pages:1,page:1};
-   if(url.pathname==='/api/jump/run/start')out={ok:true,runId:'qa-run',seed:73,biome:'desert',mode:'solo',outfit:{},worldTime:0};
+   if(url.pathname==='/api/jump/run/start')out={ok:true,runId:'qa-run',seed:73,biome:'forest',mode:'solo',outfit:{},worldTime:0};
    if(url.pathname==='/api/jump/run/input'){inputs.push(req.postDataJSON());out={ok:true,state:{score:0},peers:[]};}
    await route.fulfill({json:out});
   });
@@ -75,7 +75,7 @@ const root=path.resolve(__dirname,'..');
   await game.keyboard.up('ArrowLeft');await game.waitForTimeout(150);assert.equal(inputs.at(-1)?.left,false);
   await game.keyboard.down('d');await game.evaluate(()=>window.dispatchEvent(new Event('blur')));
   await game.waitForTimeout(150);assert.equal(inputs.at(-1)?.right,false);await game.keyboard.up('d');
-  await game.locator('#jumpCanvas').screenshot({path:path.join(root,'tmp/jump-qa/desert-game.png')});
+  await game.locator('#jumpCanvas').screenshot({path:path.join(root,'tmp/jump-qa/forest-game.png')});
   assert.deepEqual(failures,[]);
   console.log('Renderer and game-page browser checks passed:',JSON.stringify(checks));
  }finally{await browser?.close();await new Promise(r=>server.close(r));}

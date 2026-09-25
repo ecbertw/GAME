@@ -4,7 +4,6 @@
 const palettes={
  city:{top:'#8cf7ff',edge:'#3197bb',mid:'#24475f',under:'#102535',glow:'#ff5fd0',fragile:'#ffc86b'},
  forest:{top:'#b9f28f',edge:'#66a267',mid:'#3e654d',under:'#213c31',glow:'#d8ff8c',fragile:'#ffc86b'},
- desert:{top:'#ffd889',edge:'#d38b58',mid:'#9a5848',under:'#523342',glow:'#ffb15e',fragile:'#ffc86b'},
  snow:{top:'#f6fdff',edge:'#9cd7eb',mid:'#4f7899',under:'#263f5d',glow:'#80f3ff',fragile:'#ffc86b'}
 };
 function fallback(c,biome){
@@ -32,14 +31,6 @@ function ambience(c,biome,time){
    c.globalAlpha=.2+.48*(.5+.5*Math.sin(tick*1.6));c.fillStyle=i%3?'#e2ff94':'#7efee5';
    c.fillRect(x,y,i%7===0?1.5:1,1);
   }
- }else if(biome==='desert'){
-  // Heat shimmer and airborne sand. The starting slab remains a foreground object.
-  for(let i=0;i<22;i++){
-   const x=wrap(i*41+t*(3+i%4),W),y=34+(i*31)%152;
-   c.globalAlpha=.08+(i%4)*.035;c.fillStyle=i%3?'#ffdb9c':'#fff0c1';
-   c.fillRect(x,y,i%6===0?3:1,.6);
-  }
-  for(let i=0;i<5;i++){const y=60+i*26;const x=wrap(i*117+t*1.5,W);c.globalAlpha=.055;c.fillStyle='#ffd49d';c.fillRect(x,y,44,1)}
  }else{
   // Multiple snow speeds, including slow foreground flakes.
   for(let i=0;i<35;i++){
@@ -79,8 +70,6 @@ function platform(c,biome,x,y,w,index,state={}){
  }else if(biome==='forest'){
   for(let j=5;j<w-4;j+=13){q(x+j,y-5,3,2,index%2?'#9ee477':'#d0f7a2');q(x+j+2,y-6,1,2,'#deffb8');}
   q(x+8,y+8,2,6,'#37533e');
- }else if(biome==='desert'){
-  q(x+4,y-2,w-8,1,'#fff0b1');for(let j=10;j<w-5;j+=19){q(x+j,y+4,1,5,'#70404a');q(x+j+1,y+7,5,1,'#bd7156');}
  }else{
   q(x+2,y-5,w-4,3,'#f8feff');q(x+5,y-6,Math.max(2,w-10),1,'#ffffff');
   for(let j=9;j<w-5;j+=18){q(x+j,y+5,3,5,'#75c7e2');q(x+j+1,y+10,1,3,'#c9f4ff');}

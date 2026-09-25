@@ -110,7 +110,7 @@ test('public matchmaking keeps one sequential 20-player lobby before opening the
  const first=J.input(users[0],{runId:starts[0].runId,left:false,right:false,jump:false,platform:0});
  assert.equal(first.peers.length,19);assert.equal(first.maxPlayers,20);
  J.leave(users[0]);
- const newUser=await J.start(db,{id:'jump-test-new',name:'N',country:'PT'},{biome:'desert',multiplayer:true});
+ const newUser=await J.start(db,{id:'jump-test-new',name:'N',country:'PT'},{biome:'snow',multiplayer:true});
  assert.equal(newUser.instanceId,starts[20].instanceId,'new arrivals must keep filling the current public lobby instead of fragmenting players');
  for(const u of users)J.leave(u);J.leave({id:'jump-test-new'});
 });

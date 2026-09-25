@@ -16,9 +16,6 @@ for(const [name,url] of Object.entries(packed.backgrounds||{}))load(url,img=>ima
 for(const [name,url] of Object.entries(packed.platforms||{}))load(url,img=>images.platforms[name]=img);
 load(packed.runner,img=>images.runner=img);
 load(packed.effects,img=>images.effects=img);
-// Exported directly from the approved 25 September desert art sheet.
-const desertSheet={image:null};
-load('/assets/jump-exact/desert-approved-20260925.png',img=>desertSheet.image=img);
 const ready=Promise.all(loads);
 const has=img=>!!(img&&(img.complete?img.naturalWidth>0:img.getContext&&img.width>0));
 const spriteCache=new Map();
@@ -26,10 +23,9 @@ const spriteCache=new Map();
 const platformRects={
  city:[[6,20,175,151],[193,20,188,155],[390,20,170,153],[568,20,152,153]],
  forest:[[3,0,203,152],[209,5,173,173],[385,5,193,183],[582,5,138,172]],
- snow:[[0,0,201,158],[203,0,194,158],[399,0,165,158],[566,0,158,168]],
- desert:[[40,565,180,102],[24,672,124,69],[160,674,134,65],[553,660,136,81]]
+ snow:[[0,0,201,158],[203,0,194,158],[399,0,165,158],[566,0,158,168]]
 };
-const floorRects={city:[8,183,706,93],forest:[5,179,711,95],snow:[5,169,714,88],desert:[9,390,1965,123]};
+const floorRects={city:[8,183,706,93],forest:[5,179,711,95],snow:[5,169,714,88]};
 function atlasSprite(image,rect,key,checker=false){
  if(spriteCache.has(key))return spriteCache.get(key);
  const cv=document.createElement('canvas');cv.width=rect[2];cv.height=rect[3];
@@ -97,30 +93,26 @@ function recolor(image,style,time){
  return cv;
 }
 function background(c,name,W,H,cam=0){
- const sheet=name==='desert'&&has(desertSheet.image);const img=sheet?desertSheet.image:images.backgrounds[name];if(!has(img))return false;
+ const img=images.backgrounds[name];if(!has(img))return false;
  c.save();c.imageSmoothingEnabled=true;
  // The supplied panorama is wider than the viewport. Frame the sun and arch
  // without stretching the ruins; labels and the other atlas rows stay outside.
- if(sheet){const sw=344*W/H;c.drawImage(img,(1983-sw)*.62,0,sw,344,0,0,W,H);}else c.drawImage(img,0,0,W,H);
+ c.drawImage(img,0,0,W,H);
  const shade=c.createLinearGradient(0,0,0,H);
  shade.addColorStop(0,'rgba(4,8,18,.02)');shade.addColorStop(.70,'rgba(4,8,18,.03)');shade.addColorStop(1,'rgba(4,8,18,.17)');
  c.fillStyle=shade;c.fillRect(0,0,W,H);
  c.restore();return true;
 }
 function platform(c,name,x,y,w,index,state={}){
- const supplied=name==='desert'&&has(desertSheet.image);
- const img=supplied?desertSheet.image:images.platforms[name];if(!has(img))return false;
- // While the new desert sheet loads, use the existing world renderer fallback.
- if(name==='desert'&&!supplied)return false;
+ const img=images.platforms[name];if(!has(img))return false;
  const ground=index===0,rect=ground?floorRects[name]:platformRects[name]?.[Math.abs(index)%4];
  if(!rect)return false;
- const art=atlasSprite(img,rect,name+':'+(ground?'floor':Math.abs(index)%4),supplied);
- const earlyDesert=name==='desert'&&index>=1&&index<=10;
- const height=ground?(name==='desert'?32:27):Motion.platformSize(w,rect[2],rect[3],earlyDesert).height;
- const surface=ground?({city:19,forest:29,snow:26,desert:27}[name]):({city:[34,34,34,34],forest:[53,50,49,46],snow:[51,51,51,51],desert:[17,8,8,8]}[name][Math.abs(index)%4]);
+ const art=atlasSprite(img,rect,name+':'+(ground?'floor':Math.abs(index)%4));
+ const height=ground?27:clamp(13+w*.17,17,29);
+ const surface=ground?({city:19,forest:29,snow:26}[name]):({city:[34,34,34,34],forest:[53,50,49,46],snow:[51,51,51,51]}[name][Math.abs(index)%4]);
  const top=y-surface/rect[3]*height;
- c.save();c.imageSmoothingEnabled=!earlyDesert;
- c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=earlyDesert?0:3;c.shadowOffsetY=3;
+ c.save();c.imageSmoothingEnabled=true;
+ c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
  c.drawImage(art,0,0,art.width,art.height,x-2,top,w+4,height);
  c.shadowBlur=0;c.shadowOffsetY=0;
  if(state.fragile){
@@ -159,7 +151,7 @@ function particlesFor(c,state,offset,ghost){
  c.save();c.globalCompositeOperation='screen';
  // A short tapered wake connects recent emissions, never a full-body aura.
  if(['glow','comet','plasma','prismatic','electric'].includes(state.fx)){
-  const trail=state.items.filter((p,i)=>p.event==='trail'&&p.life/p.max>.35&&i%2===0).slice(-9);
+  const trail=state.items.filter((p,i)=>(p.event==='trail'||p.event==='air')&&p.life/p.max>.22&&i%2===0).slice(-12);
   if(trail.length>2){
    const first=trail[0],last=trail[trail.length-1],colors=fxColors[state.fx];
    const fade=Math.min(1,last.life/.15),g=c.createLinearGradient(first.x,first.y+offset,last.x+.01,last.y+offset);

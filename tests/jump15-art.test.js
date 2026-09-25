@@ -2,12 +2,11 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..');
 
-test('JUMP15 loads all four generated premium backgrounds before the renderer',()=>{
+test('JUMP15 loads all three generated premium backgrounds before the renderer',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const order=[
   'assets/jump15/jump-art-bg-city.js',
   'assets/jump15/jump-art-bg-forest.js',
-  'assets/jump15/jump-art-bg-desert.js',
   'assets/jump15/jump-art-bg-snow.js',
   'jump15-art.js','jump-worlds.js','jump.js'
  ].map(x=>html.indexOf(x));
@@ -22,7 +21,7 @@ test('premium art runtime decodes packed generated art and worlds consume it',()
  assert.match(art,/EixoJumpPremiumArt/);
  assert.match(worlds,/EixoJumpPremiumArt\?\.drawBackground/);
  assert.match(worlds,/version:'jump15'/);
- for(const b of ['city','forest','desert','snow']){
+ for(const b of ['city','forest','snow']){
   const file=fs.readFileSync(path.join(root,'assets/jump15/jump-art-bg-'+b+'.js'),'utf8');
   assert.match(file,new RegExp('backgrounds\\["'+b+'"\\]'));
   assert.match(file,/w:120,h:68/);

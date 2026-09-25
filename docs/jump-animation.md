@@ -11,16 +11,12 @@ O ciclo usa contacto, compressão, impulso, recuperação com o calcanhar levant
 Os efeitos são pequenos elementos desenhados no canvas, inspirados nas famílias da referência do criador: luz azul, ouro, gelo, brasas, névoa, cometa, prisma e cósmico. Não é desenhada uma imagem estática do tamanho da personagem.
 
 - Emissão junto às solas, com frequência por distância percorrida.
-- Pequenas emissões adicionais no impulso do salto e na aterragem.
+- Emissão aérea contínua durante toda a subida, o ponto mais alto e a descida, além dos reforços no impulso e na aterragem.
 - Partículas persistem em coordenadas do mundo; apenas o desenho aplica o deslocamento da câmara.
-- Cada partícula vive 0,32–0,54 segundos, move-se e desvanece-se. Parado, o jogador não gera partículas novas.
+- As partículas no chão vivem 0,32–0,54 segundos; no ar vivem 0,46–0,72 segundos para o rasto não desaparecer junto ao ponto mais alto. Todas se movem e desvanecem naturalmente.
 - Rastros luminosos ligam apenas as emissões mais recentes, com extremidade transparente.
 - Limite de 64 partículas por personagem; preview, jogador local e jogadores remotos têm estados separados.
 - Reinício, teletransporte, mudança de efeito ou regresso de um separador suspenso limpa partículas antigas.
-
-## Plataformas
-
-Nas plataformas DESERT 1–10, a altura decorativa acompanha a largura segundo a proporção original de cada recorte. A interpolação e a sombra desfocada são desativadas nessas dez plataformas. A superfície visual continua alinhada com a colisão. O chão inicial e as plataformas posteriores mantêm as regras anteriores; não há alteração da física, pontuação ou dificuldade.
 
 ## Referências consultadas
 

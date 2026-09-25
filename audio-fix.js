@@ -49,7 +49,6 @@
  const jumpThemes={
   city:{interval:510,notes:[130.81,196,261.63,329.63,392],bass:[65.41,73.42,82.41,98],wave:'square'},
   forest:{interval:760,notes:[261.63,329.63,392,493.88,587.33],bass:[98,110,130.81,146.83],wave:'sine'},
-  desert:{interval:690,notes:[146.83,174.61,220,261.63,329.63],bass:[73.42,82.41,98,110],wave:'triangle'},
   snow:{interval:830,notes:[329.63,440,493.88,659.25,783.99],bass:[82.41,98,110,130.81],wave:'sine'}
  };
  function jumpStop(){
@@ -61,7 +60,7 @@
   if(jumpBiomeName===biome&&jumpTimer)return;
   if(jumpTimer)clearInterval(jumpTimer);jumpBiomeName=biome;jumpStep=0;
   if(siteGain&&ctx)siteGain.gain.setTargetAtTime(0,ctx.currentTime,.035);
-  const tick=()=>{if(!ready())return;const i=jumpStep++,n=theme.notes[i%theme.notes.length],b=theme.bass[Math.floor(i/2)%theme.bass.length];note(n,.18,theme.wave,.011,mapGain,0);if(i%2===0)note(b,.35,'sine',.0075,mapGain,.015);if(biome==='city'&&i%4===3)note(n*2,.05,'square',.0055,mapGain,.08);if(biome==='forest'&&i%5===4)note(n*1.5,.28,'sine',.006,mapGain,.11);if(biome==='desert'&&i%4===2)note(n*.75,.24,'triangle',.006,mapGain,.1);if(biome==='snow'&&i%3===2)note(n*2,.4,'sine',.0045,mapGain,.14);};
+  const tick=()=>{if(!ready())return;const i=jumpStep++,n=theme.notes[i%theme.notes.length],b=theme.bass[Math.floor(i/2)%theme.bass.length];note(n,.18,theme.wave,.011,mapGain,0);if(i%2===0)note(b,.35,'sine',.0075,mapGain,.015);if(biome==='city'&&i%4===3)note(n*2,.05,'square',.0055,mapGain,.08);if(biome==='forest'&&i%5===4)note(n*1.5,.28,'sine',.006,mapGain,.11);if(biome==='snow'&&i%3===2)note(n*2,.4,'sine',.0045,mapGain,.14);};
   tick();jumpTimer=setInterval(tick,theme.interval);
  }
  // Short dry tap (22–32 ms), inspired by compact UI clicks; no ringing tail.

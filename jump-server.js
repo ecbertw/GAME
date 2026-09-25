@@ -2,7 +2,7 @@
 /* Isolated JUMP storage with SOLO, private rooms and 20-player public instances. PULSE tables remain untouched. */
 const crypto=require('crypto');
 const physics=require('./jump-physics');
-const BIOMES=['city','forest','desert','snow'];
+const BIOMES=['city','forest','snow'];
 const PUBLIC_CAPACITY=20;
 const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#263c5c','#111827'];
 const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a'};
@@ -66,6 +66,7 @@ async function initDb(db){
   await db.query('CREATE TABLE IF NOT EXISTS jump_scores(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query("CREATE TABLE IF NOT EXISTS jump_cosmetics(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,colors JSONB NOT NULL DEFAULT '{}'::jsonb)");
   await db.query('CREATE TABLE IF NOT EXISTS jump_rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,biome VARCHAR(12) NOT NULL,max_players INTEGER NOT NULL DEFAULT 5,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+  await db.query("UPDATE jump_rooms SET biome='forest' WHERE biome='desert'");
   await db.query('CREATE TABLE IF NOT EXISTS jump_room_members(room_id UUID NOT NULL REFERENCES jump_rooms(id) ON DELETE CASCADE,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(room_id,player_id))');
   // Score v2 is platform-based: each new highest platform is worth 12 points.
   // Existing development scores stored raw height, so migrate them once.

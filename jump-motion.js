@@ -29,7 +29,7 @@ function reset(s,now){s.items.length=0;s.last=now;s.distance=0;s.phase=0;}
 function random(s,k){const n=Math.sin(s.serial*91.37+k*27.1)*43758.5453;return n-Math.floor(n);}
 function emit(s,x,y,dir,fx,count,event){
  for(let i=0;i<count&&s.items.length<64;i++){
-  s.serial++;const life=.32+random(s,2)*.22;
+  s.serial++;const life=(event==='air'?.46:.32)+random(s,2)*(event==='air'?.26:.22);
   s.items.push({x:x+(random(s,3)-.5)*3,y:y+random(s,4)*2,
    vx:-dir*(9+random(s,5)*22)+(random(s,6)-.5)*16,vy:-(6+random(s,7)*20),
    life,max:life,size:1.1+random(s,8)*1.1,angle:random(s,9)*6.28,spin:(random(s,10)-.5)*5,
@@ -57,13 +57,14 @@ function updateEmitter(s,input){
    while(s.distance>=3){s.distance-=3;const leg=pose.legs.find(l=>l.foot.contact)||pose.legs[step%2];
     emit(s,x+dir*(leg.foot.x-56)*38/112,y+(leg.foot.y-132)/3,dir,fx,2,'trail');}
    if(step!==oldStep){const leg=pose.legs[step%2];emit(s,x+dir*(leg.foot.x-56)*38/112,y,dir,fx,4,'step');}
-  }else if(!ground&&Math.abs(y-s.y)>.05){s.distance+=Math.abs(y-s.y)*.35;if(s.distance>=7){s.distance=0;emit(s,x-dir*3,y,dir,fx,2,'air');}}
+  }else if(!ground){
+   // Keep a light shoe wake alive for the whole jump, including the apex.
+   s.distance+=Math.hypot(x-s.x,y-s.y)+dt*18;
+   while(s.distance>=2.8){s.distance-=2.8;emit(s,x-dir*3,y,dir,fx,2,'air');}
+  }
  }
  s.last=time;s.x=x;s.y=y;s.ground=ground;s.run=run;
  return {pose,active,dt};
 }
-function platformSize(width,sourceWidth,sourceHeight,early){
- return early?{width:width+4,height:(width+4)*sourceHeight/sourceWidth}:{width:width+4,height:clamp(13+width*.17,17,29)};
-}
-return {gait,footAt,knee,createEmitter,updateEmitter,platformSize};
+return {gait,footAt,knee,createEmitter,updateEmitter};
 });

@@ -37,7 +37,6 @@
 .jump-world-option strong{font-size:11px}.jump-world-option small{font-size:6px}
 .jump-world-option.city{background:linear-gradient(135deg,#8ac9f1,#4c6b94 65%,#25405c)}
 .jump-world-option.forest{background:linear-gradient(135deg,#9fe8d7,#49a57a 60%,#225240)}
-.jump-world-option.desert{background:linear-gradient(135deg,#84c5ea,#e5b36a 60%,#a65e42)}
 .jump-world-option.snow{background:linear-gradient(135deg,#c5eaff,#91bad8 60%,#46688d)}
 .jump-custom-note{margin:0 0 10px;padding:9px 10px;border:1px solid #51677a;background:#0b151f;color:#9fb2c0;font-size:6px;line-height:1.8;text-align:center}
 .jump-custom-preview{display:grid;place-items:center;background:linear-gradient(180deg,#17344d,#0d1d2a);border:2px solid #5d819d;margin-bottom:14px;height:165px;overflow:hidden}
