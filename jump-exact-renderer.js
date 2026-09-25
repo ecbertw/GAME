@@ -2,6 +2,7 @@
 (function(root){
 'use strict';
 const packed=root.EixoJumpExactPacked||{};
+const Motion=root.EixoJumpMotion;
 const images={backgrounds:{},platforms:{},runner:null,effects:null};
 const loads=[];
 function load(src,done){
@@ -114,11 +115,12 @@ function platform(c,name,x,y,w,index,state={}){
  const ground=index===0,rect=ground?floorRects[name]:platformRects[name]?.[Math.abs(index)%4];
  if(!rect)return false;
  const art=atlasSprite(img,rect,name+':'+(ground?'floor':Math.abs(index)%4),supplied);
- const height=ground?(name==='desert'?32:27):clamp(13+w*.17,17,29);
+ const earlyDesert=name==='desert'&&index>=1&&index<=10;
+ const height=ground?(name==='desert'?32:27):Motion.platformSize(w,rect[2],rect[3],earlyDesert).height;
  const surface=ground?({city:19,forest:29,snow:26,desert:27}[name]):({city:[34,34,34,34],forest:[53,50,49,46],snow:[51,51,51,51],desert:[17,8,8,8]}[name][Math.abs(index)%4]);
  const top=y-surface/rect[3]*height;
- c.save();c.imageSmoothingEnabled=true;
- c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
+ c.save();c.imageSmoothingEnabled=!earlyDesert;
+ c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=earlyDesert?0:3;c.shadowOffsetY=3;
  c.drawImage(art,0,0,art.width,art.height,x-2,top,w+4,height);
  c.shadowBlur=0;c.shadowOffsetY=0;
  if(state.fragile){
@@ -133,7 +135,7 @@ function platform(c,name,x,y,w,index,state={}){
  }
  c.restore();return true;
 }
-// Particle trails are simulated in world-space and emitted only by actual movement.
+// Emit in world coordinates; rendering alone applies the camera offset.
 const particles=new Map();
 const fxColors={
  glow:['#73eaff','#c4fbff'],pulse:['#ffdb70','#fff4b2'],shimmer:['#ffe08b','#ffffff'],
@@ -142,57 +144,90 @@ const fxColors={
  plasma:['#49d7ff','#ff7dff'],comet:['#53c9ff','#ffd66c'],cosmic:['#8c5cff','#f3a6ff'],
  prismatic:['#ff5f9d','#72f7ff','#ffe86c','#a5ffb6']
 };
-const fxKinds={frost:'snow',ember:'fire',electric:'lightning',mist:'cloud',comet:'streak',cosmic:'star',prismatic:'star',spark:'star',plasma:'star'};
-let lastTick=0;
-function particlesFor(c,x,y,fx,time,moving,ground,dir,ghost,identity='local'){
- const key=ghost?'ghost:'+String(identity||'peer'):'local';
- let p=particles.get(key);if(!p){p={items:[],last:time,carry:0,fx:null};particles.set(key,p)}
- const dt=Math.max(0,Math.min(.05,time-p.last));p.last=time;
- if(time-lastTick>15){for(const [k,v] of particles)if(time-v.last>5)particles.delete(k);lastTick=time}
- if(p.fx!==fx){p.fx=fx;p.carry=0;p.items.length=0}
- const colors=fxColors[fx]||fxColors.glow,kind=fxKinds[fx]||'dust';
- // A subtle, continuously animated signature makes the equipped effect
- // identifiable even while standing still; movement releases a larger trail.
- p.carry+=dt*(moving?39:13);
- let serial=p.serial||0;
- while(p.carry>=1&&p.items.length<48){
-  p.carry--;serial++;
-  const rand=z=>{const v=Math.sin(serial*93.17+z*31.7)*43758.5453;return v-Math.floor(v)};
-  const spread=moving?12:9;
-  p.items.push({x:x+(rand(1)-.5)*spread-dir*(moving?5:0),
-   y:y-1-rand(2)*7,vx:(rand(3)-.5)*12-dir*(moving?29:0),
-   vy:kind==='snow'?-(4+rand(4)*11):-(12+rand(4)*22),
-   life:.4+rand(5)*.55,max:.95,size:.7+rand(6)*1.5,
-   color:colors[Math.floor(rand(7)*colors.length)],seed:rand(8)*6.28});
- }
- p.serial=serial;
+
+function motionState(x,y,time,motion,ghost,name,fx){
+ const key=String(motion.identity||(ghost?'peer:'+name:'local'));
+ let state=particles.get(key);if(!state){state=Motion.createEmitter();particles.set(key,state);}
+ const result=Motion.updateEmitter(state,{time,x,y:Number.isFinite(motion.worldY)?motion.worldY:y,
+  ground:motion.ground!==false,moving:!!motion.moving,dir:motion.facing===-1?-1:1,fx,
+  run:motion.runId||null,preview:!!motion.preview});
+ // Expire inactive remote/preview emitters without tying them to another clock.
+ state.touched=performance.now();for(const [k,p] of particles)if(state.touched-p.touched>10000)particles.delete(k);
+ return {state,...result};
+}
+function particlesFor(c,state,offset,ghost){
  c.save();c.globalCompositeOperation='screen';
- for(let i=p.items.length-1;i>=0;i--){
-  const q=p.items[i];q.life-=dt;q.x+=q.vx*dt+Math.sin(time*6+q.seed)*dt*3;
-  q.y+=q.vy*dt;q.vy+=(kind==='fire'?-7:kind==='snow'?2:7)*dt;
-  q.vx*=1-dt*.6;
-  if(q.life<=0){p.items.splice(i,1);continue}
-  const alpha=(ghost?.4:.92)*Math.min(1,q.life/.22)*Math.min(1,(q.max-q.life)/.12);
-  c.globalAlpha=alpha;c.fillStyle=q.color;c.strokeStyle=q.color;
-  c.shadowColor=q.color;c.shadowBlur=kind==='fire'||kind==='lightning'?5:3;
-  const size=q.size*(kind==='cloud'?1.6:1);
-  if(kind==='fire'){
-   c.beginPath();c.moveTo(q.x,q.y-size*1.8);c.quadraticCurveTo(q.x+size,q.y,q.x,q.y+size);
-   c.quadraticCurveTo(q.x-size,q.y,q.x,q.y-size*1.8);c.fill();
-  }else if(kind==='snow'){
-   c.fillRect(q.x-size*.7,q.y,size*1.4,1);c.fillRect(q.x,q.y-size*.7,1,size*1.4);
-  }else if(kind==='lightning'){
-   c.lineWidth=.85;c.beginPath();c.moveTo(q.x-2,q.y-3);c.lineTo(q.x+1,q.y);
-   c.lineTo(q.x-1,q.y+2);c.lineTo(q.x+2,q.y+4);c.stroke();
-  }else if(kind==='star'){
-   c.fillRect(q.x-size,q.y,2*size,1.2);c.fillRect(q.x,q.y-size,1.2,2*size);
-  }else if(kind==='streak'){
-   c.fillRect(q.x,q.y,size,1.5);c.globalAlpha=alpha*.4;c.fillRect(q.x-q.vx*.07,q.y-q.vy*.07,size*1.6,1);
-  }else{
-   c.beginPath();c.arc(q.x,q.y,size*.7,0,Math.PI*2);c.fill();
+ // A short tapered wake connects recent emissions, never a full-body aura.
+ if(['glow','comet','plasma','prismatic','electric'].includes(state.fx)){
+  const trail=state.items.filter((p,i)=>p.event==='trail'&&p.life/p.max>.35&&i%2===0).slice(-9);
+  if(trail.length>2){
+   const first=trail[0],last=trail[trail.length-1],colors=fxColors[state.fx];
+   const fade=Math.min(1,last.life/.15),g=c.createLinearGradient(first.x,first.y+offset,last.x+.01,last.y+offset);
+   g.addColorStop(0,'transparent');g.addColorStop(.45,colors[0]);g.addColorStop(1,colors[1]);
+   c.strokeStyle=g;c.lineWidth=1.25;c.lineCap='round';c.globalAlpha=(ghost?.25:.65)*fade;c.shadowColor=colors[0];c.shadowBlur=2;
+   c.beginPath();c.moveTo(first.x,first.y+offset);
+   for(let i=1;i<trail.length;i++){const a=trail[i-1],b=trail[i];c.quadraticCurveTo(a.x,a.y+offset-1,(a.x+b.x)/2,(a.y+b.y)/2+offset);}
+   c.lineTo(last.x,last.y+offset);c.stroke();
   }
  }
+ for(const p of state.items){
+  const age=1-p.life/p.max,fade=Math.sin(Math.PI*Math.min(1,age))*(1-age*.4);
+  const colors=fxColors[p.fx]||fxColors.glow,color=colors[p.serial%colors.length];
+  const x=p.x,y=p.y+offset,size=p.size*(1-age*.45);
+  c.save();c.translate(x,y);c.globalAlpha=(ghost?.42:.85)*fade;
+  c.fillStyle=color;c.strokeStyle=color;c.lineWidth=.65;c.shadowColor=color;c.shadowBlur=p.fx==='mist'?0:1.7;
+  if(p.event==='land'&&p.serial%4===0){
+   c.beginPath();c.ellipse(0,0,2+age*8,.6+age*1.7,0,0,Math.PI*2);c.stroke();
+  }else if(p.fx==='mist'){
+   c.globalAlpha*=.42;c.beginPath();c.ellipse(0,0,size*(1+age*1.6),size*(.5+age*.6),p.angle,0,Math.PI*2);c.fill();
+  }else if(p.fx==='ember'){
+   c.beginPath();c.moveTo(0,-size*1.8);c.quadraticCurveTo(size*1.4,0,0,size*.7);c.quadraticCurveTo(-size,0,0,-size*1.8);c.fill();
+   c.fillStyle='#fff0a0';c.fillRect(-.3,-.5,.6,.8);
+  }else if(p.fx==='frost'||p.fx==='prismatic'){
+   c.rotate(p.angle);c.beginPath();c.moveTo(0,-size*1.8);c.lineTo(size*.7,0);c.lineTo(0,size);c.lineTo(-size*.7,0);c.closePath();c.fill();
+   c.strokeStyle='#f2ffff';c.lineWidth=.35;c.beginPath();c.moveTo(0,-size*1.5);c.lineTo(0,size*.6);c.stroke();
+  }else if(p.fx==='comet'||p.fx==='glow'||p.fx==='electric'||p.fx==='plasma'){
+   const tail=Math.min(7,2+Math.abs(p.vx)*.12)*(1-age);
+   c.lineWidth=size*.65;c.beginPath();c.moveTo(0,0);c.quadraticCurveTo(-Math.sign(p.vx||1)*tail*.6,-size,-Math.sign(p.vx||1)*tail,-size*.4);c.stroke();
+   c.fillStyle=p.fx==='comet'?'#ffe7a2':'#edffff';c.fillRect(-.4,-.4,.8,.8);
+  }else if(p.fx==='halo'||p.fx==='pulse'){
+   c.rotate(p.angle);c.beginPath();c.ellipse(0,0,size*(1+age),size*.45,0,0,Math.PI*1.5);c.stroke();
+  }else{
+   c.rotate(p.angle*.25);c.beginPath();c.moveTo(-size,0);c.lineTo(size,0);c.moveTo(0,-size);c.lineTo(0,size);c.stroke();
+   if(p.fx==='cosmic'&&p.serial%3===0){c.beginPath();c.arc(0,0,size*1.5,0,Math.PI*2);c.stroke();}
+  }
+  c.restore();
+ }
  c.restore();
+}
+// A two-bone rig uses source-space masks instead of slicing both legs in half.
+// Joint positions follow the contact/recovery gait; the original pixels remain.
+const rigParts={
+ backThigh:{a:[60,84],b:[43,113],poly:[[52,78],[68,84],[61,99],[52,116],[43,123],[30,119],[33,108],[44,96]]},
+ backShin:{a:[43,113],b:[37,132],poly:[[33,108],[54,112],[49,122],[44,133],[28,133],[31,122]]},
+ frontThigh:{a:[75,84],b:[80,115],poly:[[67,79],[83,81],[88,98],[92,116],[86,124],[70,122],[69,110]]},
+ frontShin:{a:[80,115],b:[81,132],poly:[[70,112],[92,112],[89,125],[91,133],[73,133],[71,125]]}
+};
+function drawBone(c,sprite,part,a,b){
+ const r=rigParts[part],angle=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(r.b[1]-r.a[1],r.b[0]-r.a[0]);
+ const scale=Math.hypot(b.x-a.x,b.y-a.y)/Math.hypot(r.b[0]-r.a[0],r.b[1]-r.a[1]);
+ c.save();c.translate(a.x,a.y);c.rotate(angle);c.scale(Math.min(1.12,scale),scale);c.translate(-r.a[0],-r.a[1]);
+ c.beginPath();r.poly.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.closePath();c.clip();c.drawImage(sprite,0,0);c.restore();
+}
+function drawRun(c,sprite,torso,pose){
+ c.save();c.translate(-19,-47);c.scale(38/112,48/144);
+ for(const [i,leg] of pose.legs.entries()){
+  const prefix=i?'front':'back';c.save();if(!i)c.globalAlpha*=.86;
+  drawBone(c,sprite,prefix+'Thigh',leg.hip,leg.knee);
+  drawBone(c,sprite,prefix+'Shin',leg.knee,leg.foot);
+  // Shoes retain their silhouette instead of being rotated as another shin.
+  const shoe=i?[72,126,32,18,81]:[25,126,23,18,37];
+  c.save();c.translate(leg.foot.x,leg.foot.y);c.rotate(leg.foot.contact?0:-.2);
+  c.drawImage(sprite,shoe[0],shoe[1],shoe[2],shoe[3],shoe[0]-shoe[4],-6,shoe[2],shoe[3]);c.restore();c.restore();
+ }
+ c.save();c.translate(65,84+pose.bob);c.rotate(pose.lean*.18);c.translate(-65,-84);
+ // Use the approved leaning run torso and bent arms, not the upright idle pose.
+ c.drawImage(torso,0,0,112,96,5,-12,112,96);c.restore();c.restore();
 }
 // Do not paint synthetic hair strands. The approved hair belongs to the
 // sprite itself; a separate alpha-isolated hair layer is needed for deformation.
@@ -203,10 +238,12 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  let frame=0;
  if(!ground||Math.abs(vy)>5)frame=vy>18?3:vy< -65?5:4;
  else if(moving)frame=0;
- const col=frame%3,row=Math.floor(frame/3),bob=moving&&ground?Math.abs(Math.sin(time*26))*.8:0;
+ const movement=motionState(x,y,time,motion,ghost,name,String(O.effect||'none'));
+ const running=moving&&ground&&movement.active;
+ const col=frame%3,row=Math.floor(frame/3);
  // Emit in world coordinates first: the character is drawn on top of the trail.
- if(String(O.effect||'none')!=='none')particlesFor(c,x-dir*7,y+1,String(O.effect),time,moving,ground,dir,ghost,name);
- c.save();c.translate(Math.round(x),Math.round(y-bob));c.scale(dir,1);
+ particlesFor(c,movement.state,Number(motion.cameraY)||0,ghost);
+ c.save();c.translate(Math.round(x),Math.round(y));c.scale(dir,1);
  if(ghost)c.globalAlpha=.62;
  if(ground){c.save();c.globalAlpha*=.3;c.fillStyle='#020712';c.beginPath();c.ellipse(0,1,12,2,0,0,Math.PI*2);c.fill();c.restore()}
  // Trail is rendered in world-space below, so particles persist after each step.
@@ -216,27 +253,17 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  const inset=row===1?16:0;
  const sprite=atlasSprite(tinted,[col*112,row*144+inset,112,144-inset],'runner:'+frame+':'+colorKeys.map(k=>O[k]||'').join(':')+':'+(colorKeys.some(k=>O[k]==='rainbow')?Math.floor(time*12):''));
  // Bound the cache when rainbow cosmetics generate new colour variants.
- if(spriteCache.size>100)for(const key of spriteCache.keys()){if(key.startsWith('runner:'))spriteCache.delete(key);if(spriteCache.size<=60)break;}
+ if(spriteCache.size>100)for(const key of spriteCache.keys()){if(/^(runner|torso):/.test(key))spriteCache.delete(key);if(spriteCache.size<=60)break;}
  // Discard the disconnected marks in the top margin of jump frames.
- if(moving&&ground){
-  // Articulated legs use the approved standing sprite. Each swings around
-  // its own hip; the torso covers the joint, preserving a continuous body.
-  const stride=Math.sin(time*Math.PI*4),lift=Math.abs(Math.cos(time*Math.PI*4));
-  c.save();c.translate(-19,-47);c.scale(38/112,48/144);
-  for(const leg of [{sx:0,sw:61,hip:54,phase:1},{sx:61,sw:51,hip:73,phase:-1}]){
-   c.save();c.translate(leg.hip,87);c.rotate(stride*.48*leg.phase);
-   c.scale(1,1-.10*lift);
-   c.drawImage(sprite,leg.sx,87,leg.sw,29,leg.sx-leg.hip,0,leg.sw,29);
-   // Bend the trailing knee during recovery instead of sliding rigid legs.
-   c.translate(0,27);c.rotate(Math.max(0,-stride*leg.phase)*.65);
-   c.drawImage(sprite,leg.sx,114,leg.sw,30,leg.sx-leg.hip,0,leg.sw,30);c.restore();
-  }
-  c.drawImage(sprite,0,0,112,91,0,0,112,91);c.restore();
+ if(running){
+  const runFrame=1+(Math.floor(movement.state.phase*2)%2);
+  const torso=atlasSprite(tinted,[runFrame*112,0,112,144],'torso:'+runFrame+':'+colorKeys.map(k=>O[k]||'').join(':')+':'+(colorKeys.some(k=>O[k]==='rainbow')?Math.floor(time*12):''));
+  drawRun(c,sprite,torso,movement.pose);
  }else c.drawImage(sprite,0,0,112,144-inset,-19,-47+inset/3,38,(144-inset)/3);
 
  c.restore();
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
  return true;
 }
-root.EixoJumpExactArt={version:'approved-desert-controls-animation-20260925',ready,background,platform,runner,images};
+root.EixoJumpExactArt={version:'run-cycle-shoe-trails-20260925',ready,background,platform,runner,images};
 })(window);

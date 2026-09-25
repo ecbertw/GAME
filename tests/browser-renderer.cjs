@@ -18,6 +18,7 @@ const root=path.resolve(__dirname,'..');
   await page.goto('http://127.0.0.1:'+server.address().port+'/jump.js');
   await page.setContent('<body style="margin:0;background:#152032;color:white;font:16px sans-serif"><canvas id="preview" width="1000" height="1230"></canvas></body>');
   for(const name of ['bg-city','bg-forest','bg-desert','bg-snow','runner','platform-city','platform-forest','platform-desert','platform-snow','effects'])await page.addScriptTag({url:'/assets/jump-exact/jump-exact-'+name+'.js'});
+  await page.addScriptTag({url:'/jump-motion.js'});
   await page.addScriptTag({url:'/jump-exact-renderer.js'});
   await page.evaluate(async()=>{
    const art=window.EixoJumpExactArt;await art.ready;
@@ -32,7 +33,7 @@ const root=path.resolve(__dirname,'..');
    c.fillStyle='white';c.fillText('RUN: alternating legs · JUMP: clean upper margin',20,560);
    for(let i=0;i<8;i++){
     c.save();c.translate(55+i*122,690);c.scale(2,2);
-    art.runner(c,0,0,{},'',false,i/16,{ground:true,moving:true});c.restore();
+    art.runner(c,0,0,{},'',false,i/16,{ground:true,moving:true,preview:true,identity:'contact-sheet'});c.restore();
    }
    for(let i=0;i<3;i++){
     c.save();c.translate(150+i*300,880);c.scale(3,3);
@@ -47,7 +48,7 @@ const root=path.resolve(__dirname,'..');
   await page.screenshot({path:path.join(root,'tmp/jump-qa/renderer.png')});
   const checks=await page.evaluate(()=>{
    const art=window.EixoJumpExactArt;
-   function sample(time,motion){const cv=document.createElement('canvas');cv.width=112;cv.height=160;const c=cv.getContext('2d');c.scale(2,2);art.runner(c,28,70,{},'',false,time,motion);return c.getImageData(0,0,112,160).data;}
+   function sample(time,motion){const cv=document.createElement('canvas');cv.width=112;cv.height=160;const c=cv.getContext('2d');c.scale(2,2);art.runner(c,28,70,{},'',false,time,{...motion,preview:true,identity:'sample'});return c.getImageData(0,0,112,160).data;}
    function components(p,w){const n=p.length/4,seen=new Uint8Array(n);let count=0;for(let i=0;i<n;i++){if(seen[i]||p[i*4+3]<32)continue;count++;const q=[i];seen[i]=1;for(let j=0;j<q.length;j++){const at=q[j],x=at%w,y=Math.floor(at/w);for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy,k=yy*w+xx;if(xx<0||xx>=w||k<0||k>=n||seen[k]||p[k*4+3]<32)continue;seen[k]=1;q.push(k);}}}return count;}
    const jumpComponents=[150,0,-100].map(vy=>components(sample(0,{ground:false,vy}),112));
    const a=sample(.0625,{ground:true,moving:true}),b=sample(.3125,{ground:true,moving:true});

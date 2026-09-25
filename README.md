@@ -2,6 +2,21 @@
 
 > Este documento mantém **apenas os dois relatórios de atualização mais recentes**. Em cada nova atualização, o relatório mais antigo deve ser removido e o novo relatório colocado no topo.
 
+# EIXO V2.6.1 — JUMP: corrida e efeitos ligados ao movimento
+
+**Data:** 25/09/2026
+**Tipo:** JUMP / nitidez / ciclo de corrida / efeitos dos sapatos
+
+- DESERT: as plataformas 1–10 preservam a proporção dos recortes e usam desenho nítido sem sombra desfocada. Larguras, colisões e dificuldade mantêm-se.
+- Corrida com tronco inclinado, poses de apoio e recuperação distintas, joelhos articulados e cadência ligada à distância percorrida.
+- Efeitos dos sapatos refeitos com pequenas partículas, rastros curtos e emissões de salto/aterragem; dissipam-se ao parar e acompanham corretamente a câmara.
+- Emissores independentes para jogador, preview e jogadores ONLINE. Reinícios e mudanças de efeito eliminam rastros antigos.
+- 56 testes automáticos aprovados e verificações no navegador; pré-visualização animada cobre corrida, salto, inversão e paragem.
+- Referências, decisões e comandos de teste em `docs/jump-animation.md`. Arte original reutilizada; física e APIs preservadas.
+- Deploy: `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.
+
+---
+
 # EIXO V2.6.0 — JUMP: novo DESERT e animação de corrida
 
 **Data:** 25/09/2026
@@ -18,33 +33,3 @@
 - Física, colisões, APIs e regras de pontuação preservadas. Cache do cliente atualizada.
 - Validação: 48 testes automáticos e `tests/browser-renderer.cjs` no navegador, com inspeção visual dos quatro ambientes e das poses. O teste de navegador requer Playwright; `JUMP_BROWSER_CHANNEL=msedge` permite usar Edge instalado. As chamadas de API nesse teste usam respostas locais simuladas.
 - Deploy manual após integração: `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.
-
----
-
-# EIXO V2.5.0 — JUMP: arte de referência integrada
-
-**Data:** 24/09/2026  
-**Tipo:** JUMP / imagens aprovadas / animação / quatro biomas
-
-## 1. ALTERADO
-
-- Os quatro fundos são agora imagens efetivas das referências aprovadas pelo criador, em vez dos anteriores mapas reduzidos para 120×68 píxeis.
-- As plataformas passam a ser desenhadas a partir dos quatro atlas transparentes aprovados, mantendo largura, movimento, fragilidade e colisões definidos na física do jogo.
-- A personagem utiliza as seis poses recortadas da folha de sprites fornecida, com seleção de pose por movimento, salto e queda, orientação esquerda/direita e tentativa de recoloração das opções de personalização.
-- Os efeitos VIP utilizam o atlas visual fornecido, com escala, brilho e variação temporal; a animação original permanece como fallback em caso de erro de carregamento.
-
-## 2. ADICIONADO
-
-- `jump-exact-renderer.js` e dez assets reais, codificados em WebP dentro de scripts estáticos em `assets/jump-exact/`; não exigem CDN externa nem alteração à base de dados.
-- Verificações automáticas de formato WebP, carregamento por ordem e integração com o motor em `tests/jump-exact-assets.test.js`.
-- Validação sintática dos scripts gráficos durante o deploy.
-
-## 3. GARANTIAS
-
-- A física em `jump-physics.js`, as APIs e tabelas de contas, pontuações, rankings e pagamentos PayPal não são alteradas.
-- A alteração está limitada à camada visual; se uma imagem não carregar, o JUMP mantém o renderer anterior.
-- As referências originais são preservadas em composições WebP adaptadas ao tamanho do canvas; os atlas mantêm transparência.
-
-## 4. DEPLOY
-
-- Depois de integrar esta atualização em `main`, continuar a usar `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.

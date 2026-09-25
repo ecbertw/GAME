@@ -38,23 +38,23 @@ test('visual polish preserves the approved hero and doubles the gameplay backing
  assert.match(game,/ctx\.setTransform\(2,0,0,2,0,0\)/);
  assert.doesNotMatch(renderer,/function hairMotion\(/);
  assert.match(renderer,/function particlesFor\(/);
- assert.match(renderer,/const stride=Math\.sin/);
+ assert.match(renderer,/function drawRun\(/);
  assert.doesNotMatch(renderer,/fillRect\(x\+5,y-3,Math\.max\(0,w-10\),1\)/);
  for(const biome of ['city','forest','desert'])assert.match(worlds,new RegExp("biome==='"+biome+"'"));
  assert.match(worlds,/Multiple snow speeds/);
 });
 
-test('city and snow use distinct new materials and effects remain visible at rest',()=>{
+test('city and snow use their own atlas materials and shoe effects follow motion',()=>{
  const renderer=read('jump-exact-renderer.js');
  assert.match(renderer,/const art=atlasSprite\(img,rect/);
- assert.match(renderer,/moving\?39:13/);
- assert.match(renderer,/fxKinds=/);
+ assert.match(renderer,/Motion\.updateEmitter/);
+ assert.match(renderer,/p\.y\+offset/);
  assert.match(renderer,/const inset=row===1\?16:0/);
 });
 
 test('VIP effects render behind the complete hero and all jump platforms move',()=>{
  const renderer=read('jump-exact-renderer.js'),physics=read('jump-physics.js');
- assert.ok(renderer.indexOf('particlesFor(c,x-dir*7')<renderer.indexOf('const sprite=atlasSprite(tinted'));
+ const emission=renderer.indexOf('particlesFor(c,movement.state');assert.ok(emission>=0&&emission<renderer.indexOf('const sprite=atlasSprite(tinted'));
  assert.doesNotMatch(renderer,/Distinct animated ribbons/);
  assert.match(physics,/const moving=i>=1;/);
  assert.match(physics,/if\(gp\?\.moving\)s\.x\+=platformX/);
