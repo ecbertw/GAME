@@ -25,7 +25,7 @@ async function api(path,options={}){
  if(!r.ok)throw Error(d.error||'JUMP unavailable');return d;
 }
 function modal(title,body){
- keys={left:false,right:false,jump:false};closePanel();panel=document.createElement('div');panel.className='modal-backdrop jump-modal-backdrop';panel.id='jumpPanel';
+ resetControls();closePanel();panel=document.createElement('div');panel.className='modal-backdrop jump-modal-backdrop';panel.id='jumpPanel';
  panel.innerHTML='<div class="modal-card jump-panel" role="dialog" aria-modal="true"><button class="modal-close" type="button" id="jumpPanelClose">×</button><h2>'+esc(title)+'</h2><div id="jumpPanelBody">'+body+'</div></div>';
  document.body.appendChild(panel);$('jumpPanelClose').onclick=closePanel;panel.addEventListener('click',e=>{if(e.target===panel)closePanel()});return panel;
 }
@@ -52,7 +52,7 @@ async function switchGame(next){
    refreshRankings();if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}},5500);
  }else{
    clearInterval(rankTimer);clearInterval(networkTimer);if(animation)cancelAnimationFrame(animation);animation=null;
-   keys={left:false,right:false,jump:false};$('rankingModal')?.classList.add('hidden');if($('rankingModalTitle'))$('rankingModalTitle').textContent='RANKING';window.eixoRefreshRankings?.();window.resetGame?.();
+   resetControls();$('rankingModal')?.classList.add('hidden');if($('rankingModalTitle'))$('rankingModalTitle').textContent='RANKING';window.eixoRefreshRankings?.();window.resetGame?.();
  }
 }
 async function stopRun(){
@@ -66,7 +66,7 @@ function updateHud(){
 }
 async function newRun(options={}){
  const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
- await stopRun();keys={left:false,right:false,jump:false};confirmedScore=0;facing=1;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
+ await stopRun();resetControls();confirmedScore=0;facing=1;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
@@ -221,13 +221,22 @@ function loop(now){
  }
  draw();animation=requestAnimationFrame(loop);
 }
-function setKey(code,on){
- if(code==='KeyA'||code==='ArrowLeft')keys.left=on;
- if(code==='KeyD'||code==='ArrowRight')keys.right=on;
- if(code==='KeyW'||code==='Space'||code==='ArrowUp')keys.jump=on;
+const controlSources={left:new Set(),right:new Set(),jump:new Set()};
+const controlCodes={KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',KeyW:'jump',Space:'jump',ArrowUp:'jump'};
+function setControl(action,source,on){
+ const sources=controlSources[action];if(!sources)return;
+ if(on)sources.add(source);else sources.delete(source);
+ keys[action]=sources.size>0;
 }
+function resetControls(){
+ for(const action of Object.keys(controlSources)){controlSources[action].clear();keys[action]=false;}
+ void sync();
+}
+function setKey(code,on){setControl(controlCodes[code],code,on);}
 function onKeyboard(e){
- if(current!=='jump'||panel||e.target?.matches('input,select,textarea,[contenteditable]'))return;
+ // Always release tracked keys, even if focus moved into a form or modal.
+ if(e.type==='keyup'&&controlCodes[e.code]){setKey(e.code,false);void sync();}
+ if(current!=='jump'||panel||e.target?.closest?.('input,select,textarea,[contenteditable]'))return;
  if(['KeyA','KeyD','KeyW','Space','ArrowLeft','ArrowRight','ArrowUp'].includes(e.code)){
    e.preventDefault();e.stopImmediatePropagation();
    if(e.type==='keydown'&&e.repeat)return;
@@ -237,10 +246,12 @@ function onKeyboard(e){
 }
 function bindControls(){
  window.addEventListener('keydown',onKeyboard,true);window.addEventListener('keyup',onKeyboard,true);
- window.addEventListener('blur',()=>{keys={left:false,right:false,jump:false}});
+ window.addEventListener('blur',resetControls);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)resetControls()});
+ document.addEventListener('focusin',e=>{if(e.target?.closest?.('input,select,textarea,[contenteditable]'))resetControls()});
  for(const button of document.querySelectorAll('[data-jump-key]')){
-  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture?.(e.pointerId);keys[k]=true;void sync()});
-  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>{keys[k]=false;void sync()});
+  const k=button.dataset.jumpKey;button.addEventListener('pointerdown',e=>{if(current!=='jump'||panel||e.button!==0)return;e.preventDefault();button.setPointerCapture?.(e.pointerId);setControl(k,'pointer:'+e.pointerId,true);void sync()});
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,e=>{setControl(k,'pointer:'+e.pointerId,false);void sync()});
  }
 }
 const flags=c=>[...String(c||'PT')].map(x=>String.fromCodePoint(127397+x.charCodeAt())).join('');

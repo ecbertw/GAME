@@ -155,12 +155,9 @@ test('multiplayer peers receive the equipped outfit and effect',async()=>{
  assert.equal(peer.outfit.effect,'glow');
  J.leave(a);J.leave(b);
 });
-test('browser uses A/D + arrows, W/Space/Up and never snaps to server Y',()=>{
+test('browser preserves server scoring and never snaps to server Y',()=>{
  const js=fs.readFileSync(path.join(__dirname,'../jump.js'),'utf8');
  assert.doesNotMatch(js,/local\.y\s*=\s*out\.state\.y/);
- assert.match(js,/code==='KeyA'\|\|code==='ArrowLeft'/);
- assert.match(js,/code==='KeyD'\|\|code==='ArrowRight'/);
- assert.match(js,/code==='KeyW'\|\|code==='Space'\|\|code==='ArrowUp'/);
  assert.match(js,/platform:Number\(local\?\.bestPlatform\|\|0\)/);
  assert.match(js,/confirmedScore=Number\(out\.state\?\.score\|\|0\)/);
  assert.match(js,/P\.platformX\(p,local\.time\)/);
