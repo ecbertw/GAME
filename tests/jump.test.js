@@ -111,7 +111,7 @@ test('public matchmaking keeps one sequential 20-player lobby before opening the
  assert.equal(first.peers.length,19);assert.equal(first.maxPlayers,20);
  J.leave(users[0]);
  const newUser=await J.start(db,{id:'jump-test-new',name:'N',country:'PT'},{biome:'snow',multiplayer:true});
- assert.equal(newUser.instanceId,starts[20].instanceId,'new arrivals must keep filling the current public lobby instead of fragmenting players');
+ assert.equal(newUser.instanceId,starts[0].instanceId,'new arrivals must refill the busiest reopened lobby instead of fragmenting players');
  for(const u of users)J.leave(u);J.leave({id:'jump-test-new'});
 });
 test('server confirms platform points and rate-limits impossible progression',async()=>{

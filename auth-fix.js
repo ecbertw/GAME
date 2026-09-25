@@ -10,7 +10,7 @@
 
   const englishErrors={
     'Email inválido.':'Invalid email address.',
-    'A palavra-passe deve ter pelo menos 8 caracteres.':'The password must contain at least 12 characters.',
+    'A palavra-passe deve ter pelo menos 6 caracteres e uma letra maiúscula.':'The password must contain at least 6 characters and one uppercase letter.',
     'Nome inválido. Usa 3–8 letras ou números, sem espaços ou símbolos.':'Invalid player name. Use 3–8 letters or numbers, with no spaces or symbols.',
     'País inválido.':'Invalid country.',
     'Já existe uma conta com esse email.':'An account already exists with that email address.',
@@ -47,7 +47,7 @@
     $('authIntro').textContent=login?'Sign in to your account to start playing.':reset?'Enter your email address. If an account exists, recovery instructions will be sent.':'Create your EIXO account to start playing.';
     $('authLoginTab').textContent='SIGN IN';$('authRegisterTab').textContent='CREATE ACCOUNT';
     $('authLoginEmail').placeholder='EMAIL';$('authLoginPassword').placeholder='PASSWORD';
-    $('authRegisterName').placeholder='PLAYER NAME';$('authRegisterEmail').placeholder='EMAIL';$('authRegisterPassword').placeholder='PASSWORD (MIN. 12 CHARACTERS)';
+    $('authRegisterName').placeholder='PLAYER NAME';$('authRegisterEmail').placeholder='EMAIL';$('authRegisterPassword').placeholder='PASSWORD (MIN. 6 + 1 UPPERCASE)';
     $('authResetEmail').placeholder='EMAIL';$('authForgotButton').textContent='FORGOT PASSWORD';$('authBackLogin').textContent='BACK TO SIGN IN';if($('authRememberLabel'))$('authRememberLabel').textContent='KEEP ME SIGNED IN';
     loginForm.querySelector('button[type="submit"]').textContent='SIGN IN ▶';registerForm.querySelector('button[type="submit"]').textContent='CREATE ACCOUNT ▶';resetForm.querySelector('button[type="submit"]').textContent='SEND INSTRUCTIONS ▶';
     $('authClose').textContent='CLOSE';

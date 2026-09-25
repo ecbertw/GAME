@@ -76,17 +76,23 @@ async function newRun(options={}){
  }catch(e){run=null;showError(e.message)}
 }
 function mergePeerSnapshots(incoming=[]){
+ const now=performance.now();
  const old=new Map((peers||[]).map(p=>[String(p.id),p]));
  peers=(incoming||[]).map(p=>{
   const prev=old.get(String(p.id));
-  if(!prev)return {...p,renderX:Number(p.x)||0,renderY:Number(p.y)||0,targetX:Number(p.x)||0,targetY:Number(p.y)||0};
-  return {...prev,...p,renderX:Number(prev.renderX??prev.x??p.x)||0,renderY:Number(prev.renderY??prev.y??p.y)||0,targetX:Number(p.x)||0,targetY:Number(p.y)||0};
+  const x=Number(p.x)||0,y=Number(p.y)||0;
+  if(!prev)return {...p,renderX:x,renderY:y,targetX:x,targetY:y,snapshotAt:now,velocityX:0,velocityY:0};
+  const elapsed=Math.max(.03,Math.min(.25,(now-Number(prev.snapshotAt||now-60))/1000));
+  const velocityX=Math.max(-170,Math.min(170,(x-Number(prev.targetX??prev.x??x))/elapsed));
+  const velocityY=Math.max(-330,Math.min(330,(y-Number(prev.targetY??prev.y??y))/elapsed));
+  return {...prev,...p,renderX:Number(prev.renderX??prev.x??x)||0,renderY:Number(prev.renderY??prev.y??y)||0,targetX:x,targetY:y,snapshotAt:now,velocityX,velocityY};
  });
 }
 function smoothPeerViews(dt){
- const k=1-Math.pow(.001,Math.max(0,dt));
+ const now=performance.now(),k=1-Math.exp(-18*Math.max(0,dt));
  for(const p of peers||[]){
-  const tx=Number(p.targetX??p.x)||0,ty=Number(p.targetY??p.y)||0;
+  const age=Math.min(.12,Math.max(0,(now-Number(p.snapshotAt||now))/1000));
+  const tx=(Number(p.targetX??p.x)||0)+(Number(p.velocityX)||0)*age,ty=(Number(p.targetY??p.y)||0)+(Number(p.velocityY)||0)*age;
   p.renderX=Number(p.renderX??p.x??tx)||0;p.renderY=Number(p.renderY??p.y??ty)||0;
   p.renderX+=(tx-p.renderX)*k;p.renderY+=(ty-p.renderY)*k;
  }
@@ -355,7 +361,7 @@ async function customize(){
    return '<option value="'+esc(item.value)+'" data-eixo-color-label="keep"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+prefix+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
  }).join('');
  modal(txt('character'),'<div class="jump-custom-note">JUMP RUNNER · ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="180" height="130"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
- const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,180,130);c.save();c.translate(90,105);c.scale(3,3);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true,preview:true,identity:"wardrobe"});c.restore()};
+ const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,180,130);c.save();c.translate(90,112);c.scale(2.1,2.1);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true,preview:true,identity:"wardrobe"});c.restore()};
  panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.onchange=()=>{outfit[sel.dataset.jumpOutfit]=sel.value;preview()}});
  let previewTimer=setInterval(()=>{if(!panel||!$('jumpAvatarPreview')){clearInterval(previewTimer);return}preview()},70);preview();
  $('jumpSave').onclick=async()=>{

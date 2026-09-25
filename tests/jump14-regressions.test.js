@@ -21,8 +21,8 @@ test('ONLINE uses one sequential public lobby with capacity 20',()=>{
  const server=fs.readFileSync(path.join(root,'jump-server.js'),'utf8');
  assert.match(server,/const PUBLIC_CAPACITY=20/);
  assert.match(server,/let publicLobbyId=null/);
- assert.match(server,/publicLobbyId&&instances\.get\(publicLobbyId\)/);
- assert.match(server,/current\.players\.size<PUBLIC_CAPACITY/);
+ assert.match(server,/b\.players\.size-a\.players\.size/);
+ assert.match(server,/inst\.players\.size>0&&inst\.players\.size<PUBLIC_CAPACITY/);
  assert.match(server,/maxPlayers:run\.kind==='public'\?PUBLIC_CAPACITY:5/);
  const jump=fs.readFileSync(path.join(root,'jump.js'),'utf8');
  assert.match(jump,/lastState\?\.maxPlayers\|\|run\?\.maxPlayers\|\|20/);

@@ -5,12 +5,12 @@
   const wall=$('pixelWall');if(!wall)return;
 
   const I18N={
-    en:{claim:'CLAIM PIXEL',claimed:'CLAIMED PIXEL',owner:'OWNER',standard:'STANDARD COLORS',vip:'VIP COLORS',ranking:'RANK COLORS',custom:'CUSTOM COLOR',choose:'CHOOSE COLOR',save:'SAVE COLOR',take:'CLAIM PIXEL',owned:'THIS PIXEL ALREADY HAS AN OWNER.',rainbow:'RAINBOW · TOP 1'},
-    pt:{claim:'MARCAR PIXEL',claimed:'PIXEL MARCADO',owner:'DONO',standard:'CORES NORMAIS',vip:'CORES VIP',ranking:'CORES DE RANKING',custom:'COR PERSONALIZADA',choose:'ESCOLHER COR',save:'GUARDAR COR',take:'MARCAR PIXEL',owned:'ESTE PIXEL JÁ TEM DONO.',rainbow:'ARCO-ÍRIS · TOP 1'},
-    es:{claim:'MARCAR PÍXEL',claimed:'PÍXEL MARCADO',owner:'DUEÑO',standard:'COLORES NORMALES',vip:'COLORES VIP',ranking:'COLORES DE RANKING',custom:'COLOR PERSONALIZADO',choose:'ELEGIR COLOR',save:'GUARDAR COLOR',take:'MARCAR PÍXEL',owned:'ESTE PÍXEL YA TIENE DUEÑO.',rainbow:'ARCOÍRIS · TOP 1'},
-    fr:{claim:'MARQUER PIXEL',claimed:'PIXEL MARQUÉ',owner:'PROPRIÉTAIRE',standard:'COULEURS NORMALES',vip:'COULEURS VIP',ranking:'COULEURS DE CLASSEMENT',custom:'COULEUR PERSONNALISÉE',choose:'CHOISIR COULEUR',save:'ENREGISTRER',take:'MARQUER PIXEL',owned:'CE PIXEL A DÉJÀ UN PROPRIÉTAIRE.',rainbow:'ARC-EN-CIEL · TOP 1'},
-    de:{claim:'PIXEL MARKIEREN',claimed:'PIXEL MARKIERT',owner:'BESITZER',standard:'NORMALE FARBEN',vip:'VIP-FARBEN',ranking:'RANGLISTENFARBEN',custom:'EIGENE FARBE',choose:'FARBE WÄHLEN',save:'FARBE SPEICHERN',take:'PIXEL MARKIEREN',owned:'DIESES PIXEL HAT BEREITS EINEN BESITZER.',rainbow:'REGENBOGEN · TOP 1'},
-    it:{claim:'MARCA PIXEL',claimed:'PIXEL MARCATO',owner:'PROPRIETARIO',standard:'COLORI NORMALI',vip:'COLORI VIP',ranking:'COLORI CLASSIFICA',custom:'COLORE PERSONALIZZATO',choose:'SCEGLI COLORE',save:'SALVA COLORE',take:'MARCA PIXEL',owned:'QUESTO PIXEL HA GIÀ UN PROPRIETARIO.',rainbow:'ARCOBALENO · TOP 1'}
+    en:{close:'CLOSE',claim:'CLAIM PIXEL',claimed:'CLAIMED PIXEL',owner:'OWNER',standard:'STANDARD COLORS',vip:'VIP COLORS',ranking:'RANK COLORS',custom:'CUSTOM COLOR',choose:'CHOOSE COLOR',save:'SAVE COLOR',take:'CLAIM PIXEL',owned:'THIS PIXEL ALREADY HAS AN OWNER.',rainbow:'RAINBOW · TOP 1'},
+    pt:{close:'FECHAR',claim:'MARCAR PIXEL',claimed:'PIXEL MARCADO',owner:'DONO',standard:'CORES NORMAIS',vip:'CORES VIP',ranking:'CORES DE RANKING',custom:'COR PERSONALIZADA',choose:'ESCOLHER COR',save:'GUARDAR COR',take:'MARCAR PIXEL',owned:'ESTE PIXEL JÁ TEM DONO.',rainbow:'ARCO-ÍRIS · TOP 1'},
+    es:{close:'CERRAR',claim:'MARCAR PÍXEL',claimed:'PÍXEL MARCADO',owner:'DUEÑO',standard:'COLORES NORMALES',vip:'COLORES VIP',ranking:'COLORES DE RANKING',custom:'COLOR PERSONALIZADO',choose:'ELEGIR COLOR',save:'GUARDAR COLOR',take:'MARCAR PÍXEL',owned:'ESTE PÍXEL YA TIENE DUEÑO.',rainbow:'ARCOÍRIS · TOP 1'},
+    fr:{close:'FERMER',claim:'MARQUER PIXEL',claimed:'PIXEL MARQUÉ',owner:'PROPRIÉTAIRE',standard:'COULEURS NORMALES',vip:'COULEURS VIP',ranking:'COULEURS DE CLASSEMENT',custom:'COULEUR PERSONNALISÉE',choose:'CHOISIR COULEUR',save:'ENREGISTRER',take:'MARQUER PIXEL',owned:'CE PIXEL A DÉJÀ UN PROPRIÉTAIRE.',rainbow:'ARC-EN-CIEL · TOP 1'},
+    de:{close:'SCHLIESSEN',claim:'PIXEL MARKIEREN',claimed:'PIXEL MARKIERT',owner:'BESITZER',standard:'NORMALE FARBEN',vip:'VIP-FARBEN',ranking:'RANGLISTENFARBEN',custom:'EIGENE FARBE',choose:'FARBE WÄHLEN',save:'FARBE SPEICHERN',take:'PIXEL MARKIEREN',owned:'DIESES PIXEL HAT BEREITS EINEN BESITZER.',rainbow:'REGENBOGEN · TOP 1'},
+    it:{close:'CHIUDI',claim:'MARCA PIXEL',claimed:'PIXEL MARCATO',owner:'PROPRIETARIO',standard:'COLORI NORMALI',vip:'COLORI VIP',ranking:'COLORI CLASSIFICA',custom:'COLORE PERSONALIZZATO',choose:'SCEGLI COLORE',save:'SALVA COLORE',take:'MARCA PIXEL',owned:'QUESTO PIXEL HA GIÀ UN PROPRIETARIO.',rainbow:'ARCOBALENO · TOP 1'}
   };
   const tr=()=>I18N[String(document.documentElement.lang||'en').split('-')[0]]||I18N.en;
 
@@ -18,7 +18,8 @@
     #backgroundClaimCanvas{position:absolute;inset:0;z-index:5;width:100%;height:100%;pointer-events:auto;image-rendering:pixelated}
     .claim-tooltip{position:fixed;z-index:90;display:none;padding:7px 8px;background:#070c11;border:1px solid #626e79;color:#fff;font:6px/1.6 'Press Start 2P',monospace;pointer-events:none;box-shadow:3px 3px 0 #020407;max-width:220px}
     .claim-menu{position:fixed;z-index:95;width:270px;max-height:min(620px,78vh);overflow:auto;background:#080d12;border:2px solid #626e79;box-shadow:6px 6px 0 #020407;padding:11px;color:#fff;font:6px/1.6 'Press Start 2P',monospace}
-    .claim-menu.hidden{display:none}.claim-menu>strong{display:block;margin-bottom:8px;font-size:7px}.claim-owner{color:#8f9aa5;margin-bottom:9px}
+    .claim-menu.hidden{display:none}.claim-menu>strong{display:block;margin:0 58px 8px 0;font-size:7px}.claim-owner{color:#8f9aa5;margin-bottom:9px}
+    .claim-menu .claim-close{position:absolute;right:8px;top:7px;width:auto;margin:0;padding:4px 5px;border:0;background:transparent;color:#9da7b0;font-size:5px}.claim-menu .claim-close:hover{color:#fff;background:transparent}
     .claim-palette-group{margin:10px 0;padding-top:9px;border-top:1px solid #27323b}.claim-palette-title{display:block;color:#8d99a3;font-size:5px;margin-bottom:7px}
     .claim-swatches{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.claim-swatch{position:relative!important;width:28px!important;height:28px!important;min-width:0!important;margin:0!important;padding:0!important;border:2px solid #394651!important;background:var(--swatch)!important;box-shadow:none!important}
     .claim-swatch.rainbow{background:linear-gradient(135deg,#ff3b30,#ffcc00,#34c759,#00e5ff,#0a84ff,#bf5af2,#ff2d55)!important}
@@ -67,7 +68,7 @@
         '<button class="primary" data-claim-save>'+(claim?esc(t.save):esc(t.take))+'</button>';
     }else chooser='<div class="claim-owner">'+esc(t.owned)+'</div>';
     if(!active)return;
-    menu.innerHTML='<strong>'+(claim?esc(t.claimed):esc(t.claim))+'</strong>'+(claim?'<div class="claim-owner">'+esc(t.owner)+': '+esc(claim.ownerName)+'</div>':'')+chooser+(admin&&claim?'<button class="danger" data-claim-clear>CLEAR THIS PIXEL</button><button class="danger" data-claim-clear-all>CLEAR ALL OWNER PIXELS</button><button class="danger" data-claim-ban24>CLEAR + BAN 24H</button><button class="danger" data-claim-banperm>CLEAR + PERMANENT BAN</button>':'');
+    menu.innerHTML='<button type="button" class="claim-close" data-claim-close>'+esc(t.close)+'</button><strong>'+(claim?esc(t.claimed):esc(t.claim))+'</strong>'+(claim?'<div class="claim-owner">'+esc(t.owner)+': '+esc(claim.ownerName)+'</div>':'')+chooser+(admin&&claim?'<button class="danger" data-claim-clear>CLEAR THIS PIXEL</button><button class="danger" data-claim-clear-all>CLEAR ALL OWNER PIXELS</button><button class="danger" data-claim-ban24>CLEAR + BAN 24H</button><button class="danger" data-claim-banperm>CLEAR + PERMANENT BAN</button>':'');
     menu.classList.remove('hidden');placeMenu(e);refreshSelected();
     $('claimColor')?.addEventListener('input',ev=>{if(!active)return;active.selectedColor=ev.target.value.toLowerCase();refreshSelected()});
   }
@@ -77,6 +78,7 @@
   canvas.addEventListener('click',e=>{e.stopPropagation();const{x,y}=pos(e),c=claims.get(key(x,y)),p=me(),at={clientX:e.clientX,clientY:e.clientY};if(!p){window.eixoOpenAuth?.('login');return;}openMenu(at,x,y,c);});
   document.addEventListener('click',e=>{if(!e.target.closest('.claim-menu')&&e.target!==canvas)hideMenu()});
   menu.addEventListener('click',async e=>{
+    if(e.target.closest('[data-claim-close]')){hideMenu();return;}
     const colorButton=e.target.closest('[data-claim-color]');
     if(colorButton&&active){active.selectedColor=colorButton.dataset.claimColor;const input=$('claimColor');if(input&&/^#[0-9a-f]{6}$/i.test(active.selectedColor))input.value=active.selectedColor;refreshSelected();return;}
     const b=e.target.closest('button');if(!b||!active)return;const p=me();if(!p)return;

@@ -104,10 +104,8 @@ function findInstance(biome,kind,roomId){
   return newInstance(biome,kind,roomId);
 }
 function findPublicInstance(){
-  const current=publicLobbyId&&instances.get(publicLobbyId);
-  if(current&&current.kind==='public'&&!current.roomId&&current.players.size<PUBLIC_CAPACITY)return current;
   const open=[...instances.values()].filter(inst=>inst.kind==='public'&&!inst.roomId&&inst.players.size>0&&inst.players.size<PUBLIC_CAPACITY)
-    .sort((a,b)=>a.epoch-b.epoch);
+    .sort((a,b)=>b.players.size-a.players.size||a.epoch-b.epoch);
   if(open[0]){publicLobbyId=open[0].id;return open[0];}
   const biome=BIOMES[crypto.randomInt(0,BIOMES.length)],inst=newInstance(biome,'public',null);
   publicLobbyId=inst.id;return inst;
@@ -141,6 +139,9 @@ async function start(db,p,d){
     if(!r.rowCount)throw error('Não pertences a esta sala JUMP.',403);
     roomId=r.rows[0].id;biome=r.rows[0].biome;kind='private';
   }
+  // Remove the player's previous run before selecting a lobby. Selecting first
+  // could return a one-player lobby that removeSession then deletes, orphaning
+  // the replacement run where no future player can join it.
   removeSession(sessions.get(activeByPlayer.get(p.id)));
   let inst=kind==='solo'?newInstance(biome,kind,null):kind==='public'?findPublicInstance():findInstance(biome,kind,roomId);
   biome=inst.biome;
@@ -164,7 +165,7 @@ function advance(run){
 function playersIn(run){
   const inst=instances.get(run.instanceId);
   if(!inst)return[];
-  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round((r.position||r.state).x),y:Math.round((r.position||r.state).y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,vy:Math.round(r.state.vy||0),ground:!!r.state.ground,facing:r.facing||1,moving:!!(r.keys.left||r.keys.right),outfit:r.outfit}));
+  return [...inst.players.values()].filter(r=>r.id!==run.id&&Date.now()-r.lastSeen<30000).map(r=>({id:r.playerId,name:r.name,x:Math.round((r.position||r.state).x),y:Math.round((r.position||r.state).y),best:Math.floor(r.state.best),score:r.confirmedScore||0,alive:r.state.alive,vy:Math.round(r.state.vy||0),ground:!!r.state.ground,facing:r.facing||1,moving:!!r.keys.left!==!!r.keys.right,outfit:r.outfit}));
 }
 function confirmProgress(run,raw){
   const claimed=Number(raw??run.confirmedPlatform??0);

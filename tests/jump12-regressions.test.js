@@ -8,6 +8,9 @@ test('JUMP online multiplayer uses interpolation and never hard-snaps remote pla
  assert.match(js,/function smoothPeerViews\(dt\)/);
  assert.match(js,/renderX/);
  assert.match(js,/targetX/);
+ assert.match(js,/velocityX/);
+ assert.match(js,/snapshotAt/);
+ assert.match(js,/Math\.min\(\.12/);
  assert.doesNotMatch(js,/Math\.abs\(dx\)>38\|\|Math\.abs\(dy\)>44/);
  assert.match(js,/local\.time\+=Math\.max\(-\.08,Math\.min\(\.08,drift\)\)\*\.12/);
 });
