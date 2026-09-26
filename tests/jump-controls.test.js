@@ -32,3 +32,7 @@ test('blur, hidden document and form focus clear every input source',()=>{
 test('lost pointer capture releases only its own source',()=>{
  const {context:c,key,pointer}=controls();key('KeyD');pointer('right','pointerdown',4);pointer('right','lostpointercapture',4);assert.equal(c.keys.right,true);key('KeyD','keyup');assert.equal(c.keys.right,false);
 });
+
+test('JUMP keyboard controls ignore Passport and other pages',()=>{
+ for(const route of ['home','passport','rankings','rooms','vip','pulse']){const {context:c,key}=controls();c.window.eixoRoute=route;key('Space');key('KeyA');assert.equal(c.keys.jump,false);assert.equal(c.keys.left,false);}
+});

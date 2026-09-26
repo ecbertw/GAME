@@ -261,6 +261,7 @@
     }
   }
   async function open(mode='vip'){
+    if(!getPlayer()?.id){window.eixoOpenAuth?.('login');return;}
     view=mode==='donation'?'donation':'vip';
     ensureModal();modal.classList.remove('hidden');$('vipStoreStatus').textContent='LOADING...';
     try{store=await loadStore();render();if(store.configured&&(supportMode()||store.nextLevel))await setupPayPal();}

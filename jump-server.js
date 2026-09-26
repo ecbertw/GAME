@@ -238,12 +238,12 @@ async function rankings(db,country,page){
 }
 async function playerRank(db,p){
   const q=await db.query(`WITH ranked AS (
-    SELECT s.player_id,
+    SELECT s.player_id,s.best_score AS "bestScore",
       ROW_NUMBER() OVER(ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS "worldRank",
       ROW_NUMBER() OVER(PARTITION BY p.country ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS "countryRank"
     FROM jump_scores s JOIN players p ON p.id=s.player_id WHERE s.best_score>0
-  ) SELECT "worldRank","countryRank" FROM ranked WHERE player_id=$1`,[p.id]);
-  return{worldRank:Number(q.rows[0]?.worldRank||0)||null,countryRank:Number(q.rows[0]?.countryRank||0)||null};
+  ) SELECT "worldRank","countryRank","bestScore" FROM ranked WHERE player_id=$1`,[p.id]);
+  return{worldRank:Number(q.rows[0]?.worldRank||0)||null,countryRank:Number(q.rows[0]?.countryRank||0)||null,bestScore:Number(q.rows[0]?.bestScore||0)};
 }
 async function roomCreate(db,p,d){
   const name=String(d.name||'').trim(),biome=validBiome(d.biome);

@@ -114,7 +114,7 @@ document.getElementById('nextPage').addEventListener('click',()=>{if(rankingPage
 document.getElementById('rankingClose').addEventListener('click',()=>closeModal(rankingModal));
 rankingModal.addEventListener('click',e=>{if(e.target===rankingModal)closeModal(rankingModal);});
 playButton.addEventListener('click',()=>{if(!window.eixoJumpActive)resetGame()});canvas.addEventListener('pointerdown',hit);
-window.addEventListener('keydown',e=>{if(window.eixoJumpActive)return;if(['Space','Enter'].includes(e.code)){e.preventDefault();hit();}});
+window.addEventListener('keydown',e=>{if(window.eixoJumpActive||(window.eixoRoute&&window.eixoRoute!=='pulse')||e.target?.closest?.('input,select,textarea,button,a,[contenteditable]')||document.querySelector('.modal-backdrop:not(.hidden)'))return;if(['Space','Enter'].includes(e.code)){e.preventDefault();hit();}});
 countryButton.addEventListener('click',()=>{if(player)return;const open=countryMenu.classList.toggle('open');countryButton.setAttribute('aria-expanded',String(open));});
 document.addEventListener('click',e=>{if(!e.target.closest('.profile-area')){countryMenu.classList.remove('open');countryButton.setAttribute('aria-expanded','false');}});
 
