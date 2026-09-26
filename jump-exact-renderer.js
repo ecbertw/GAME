@@ -1,135 +1,56 @@
-/* JUMP — faithful approved image assets. Presentation only: physics, rankings and payments remain untouched. */
+/* JUMP · Sky gardens. Art, cloth and lighting are presentation-only. */
 (function(root){
 'use strict';
-const packed=root.EixoJumpExactPacked||{};
-const Motion=root.EixoJumpMotion;
-const images={backgrounds:{},platforms:{},runner:null,effects:null};
-const loads=[];
-function load(src,done){
- if(!src)return;
- const img=new Image();img.decoding='async';
- img.onload=()=>done(img);img.onerror=()=>console.warn('JUMP exact asset failed to load');
- img.src=src;
- loads.push(img.decode?.().catch(()=>{})||Promise.resolve());
-}
-for(const [name,url] of Object.entries(packed.backgrounds||{}))load(url,img=>images.backgrounds[name]=img);
-for(const [name,url] of Object.entries(packed.platforms||{}))load(url,img=>images.platforms[name]=img);
-// V2.9 scenery replaces only the maps. The approved runner and its palette logic stay untouched.
-for(const name of ['city','forest','snow'])load(`/assets/game-v290/jump-${name}.webp`,img=>images.backgrounds[name]=img);
-load(packed.runner,img=>images.runner=img);
-load(packed.effects,img=>images.effects=img);
-const ready=Promise.all(loads);
-const has=img=>!!(img&&(img.complete?img.naturalWidth>0:img.getContext&&img.width>0));
-const spriteCache=new Map();
-// Atlas cells are not evenly spaced. Explicit bounds exclude neighbouring art.
-const platformRects={
- city:[[6,20,175,151],[193,20,188,155],[390,20,170,153],[568,20,152,153]],
- forest:[[3,0,203,152],[209,5,173,173],[385,5,193,183],[582,5,138,172]],
- snow:[[0,0,201,158],[203,0,194,158],[399,0,165,158],[566,0,158,168]]
-};
-const floorRects={city:[8,183,706,93],forest:[5,179,711,95],snow:[5,169,714,88]};
-function atlasSprite(image,rect,key,checker=false){
- if(spriteCache.has(key))return spriteCache.get(key);
- const cv=document.createElement('canvas');cv.width=rect[2];cv.height=rect[3];
- const c=cv.getContext('2d',{willReadFrequently:true});c.drawImage(image,...rect,0,0,cv.width,cv.height);
- const data=c.getImageData(0,0,cv.width,cv.height),p=data.data,n=cv.width*cv.height;
- // The supplied presentation sheet has a baked checkerboard, not alpha.
- // Its neutral light pixels are distinct from the warm masonry and foliage.
- if(checker)for(let i=0;i<p.length;i+=4){const hi=Math.max(p[i],p[i+1],p[i+2]),lo=Math.min(p[i],p[i+1],p[i+2]);if(lo>105&&hi-lo<30)p[i+3]=0;}
- // Retain the main connected silhouette, discarding stray atlas fragments.
- const seen=new Uint8Array(n),queue=new Int32Array(n);let largest=[];
- for(let start=0;start<n;start++){
-  if(seen[start]||p[start*4+3]<32)continue;
-  let head=0,tail=1;queue[0]=start;seen[start]=1;
-  while(head<tail){const at=queue[head++],x=at%cv.width,y=Math.floor(at/cv.width);
-   for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-    if(x+dx<0||x+dx>=cv.width||y+dy<0||y+dy>=cv.height)continue;
-    const next=at+dy*cv.width+dx;if(!seen[next]&&p[next*4+3]>=32){seen[next]=1;queue[tail++]=next;}
-   }
-  }
-  if(tail>largest.length)largest=queue.slice(0,tail);
- }
- const keep=new Uint8Array(n);for(const at of largest)keep[at]=1;
- for(let i=0;i<n;i++)if(!keep[i])p[i*4+3]=0;
- c.putImageData(data,0,0);spriteCache.set(key,cv);return cv;
-}
-const clamp=(n,a=0,b=255)=>Math.max(a,Math.min(b,n));
-const HEX=/^#[0-9a-f]{6}$/i;
-const defaults={hair:'#19222d',top:'#172b3b',pants:'#263c5c',shoes:'#ffffff',accent:'#00e5ff'};
-const colorKeys=['hair','top','pants'];
-const variants=new Map();
-function paletteColor(v,time){
- if(v==='rainbow'){
-  const h=(Math.floor(time*12)*20)%360;
-  const k=n=>(n+h/30)%12,a=.78,b=.38;
-  const f=n=>Math.round(255*(b-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1))));
-  return [f(0),f(8),f(4)];
- }
- if(!HEX.test(String(v)))return null;
- return [parseInt(v.slice(1,3),16),parseInt(v.slice(3,5),16),parseInt(v.slice(5,7),16)];
-}
-function recolor(image,style,time){
- if(!has(image))return image;
- const chosen=colorKeys.filter(k=>style[k]&&style[k]!==defaults[k]);
- if(!chosen.length)return image;
- const key=chosen.map(k=>k+':'+style[k]+(style[k]==='rainbow'?Math.floor(time*12):'')).join('|');
- if(variants.has(key))return variants.get(key);
- const cv=document.createElement('canvas');cv.width=image.naturalWidth;cv.height=image.naturalHeight;
- const c=cv.getContext('2d',{willReadFrequently:true});c.drawImage(image,0,0);
- const data=c.getImageData(0,0,cv.width,cv.height),p=data.data;
- const target={};for(const k of chosen)target[k]=paletteColor(style[k],time);
- for(let i=0;i<p.length;i+=4){
-  const [r,g,b,a]=[p[i],p[i+1],p[i+2],p[i+3]];if(a<14)continue;
-  // Classify the approved hero's cyan hair, golden jacket and purple trousers.
-  // Skin, eyes, shadow outlines and the orange/blue scarf are preserved.
-  const hair=b>r*1.36&&b>g*.91&&g>r*1.28&&b>85;
-  const jacket=r>92&&r>g*1.08&&g>b*1.35&&g>54;
-  const trousers=b>g*1.33&&r>g*1.20&&b>r*.96&&b>60;
-  const kind=hair?'hair':jacket?'top':trousers?'pants':null;
-  const t=kind&&target[kind];if(!t)continue;
-  const light=clamp((r*.22+g*.53+b*.25)/205,.22,1.18);
-  p[i]=clamp(t[0]*light);p[i+1]=clamp(t[1]*light);p[i+2]=clamp(t[2]*light);
- }
- c.putImageData(data,0,0);variants.set(key,cv);
- if(variants.size>38)variants.delete(variants.keys().next().value);
- return cv;
-}
-function background(c,name,W,H,cam=0){
+const Motion=root.EixoJumpMotion,images={backgrounds:{},platforms:{},grounds:{},props:{},hero:null},loads=[];
+let heroParts={};
+const BIOMES=['forest','city','snow','astral'];
+const themes={forest:{top:'#c0ddb0',rim:'#83aa73',stone:'#9eaa9a',shade:'#526960',glow:'#e4d590'},city:{top:'#efd498',rim:'#cea55c',stone:'#bda781',shade:'#72584a',glow:'#ffd994'},snow:{top:'#f4fcff',rim:'#afdddf',stone:'#9ebbc6',shade:'#536f8c',glow:'#aff6f4'},astral:{top:'#dcd9f1',rim:'#a4a8d1',stone:'#9295b5',shade:'#535375',glow:'#e3baff'}};
+function load(src,done){const img=new Image();img.decoding='async';loads.push(new Promise(resolve=>{img.onload=()=>{done(img);resolve()};img.onerror=resolve;img.src=src}));}
+for(const biome of BIOMES){load('/assets/game-v300/jump-'+biome+'.webp',img=>images.backgrounds[biome]=img);load('/assets/game-v300/platform-'+biome+'.png',img=>images.platforms[biome]=img);load('/assets/game-v300/ground-'+biome+'.png',img=>images.grounds[biome]=img);}
+for(const name of ['banner-navy','banner-copper','banner-violet','lantern-gold','lantern-ice','crystal-lamp','vines','collectible-shard'])load('/assets/game-v300/prop-'+name+'.png',img=>images.props[name]=img);
+load('/assets/game-v300/hero-parts.png',img=>images.hero=img);
+loads.push(fetch('/assets/game-v300/hero-parts.json').then(r=>r.ok?r.json():{}).then(d=>{heroParts=d.parts||{}}).catch(()=>{}));
+const ready=Promise.all(loads),has=img=>!!(img&&img.naturalWidth>0),clamp=(n,a=0,b=255)=>Math.max(a,Math.min(b,n));
+function color(value,time,offset=0){return value==='rainbow'?'hsl('+((time*90+offset)%360)+' 84% 66%)':/^#[a-f0-9]{6}$/i.test(value||'')?value:'#a6d5d5';}
+function background(c,name,W,H,cam=0,time=0){
  const img=images.backgrounds[name];if(!has(img))return false;
  c.save();c.imageSmoothingEnabled=true;
- // The supplied panorama is wider than the viewport. Frame the sun and arch
- // without stretching the ruins; labels and the other atlas rows stay outside.
- c.drawImage(img,0,0,W,H);
- const shade=c.createLinearGradient(0,0,0,H);
- shade.addColorStop(0,'rgba(4,8,18,.02)');shade.addColorStop(.70,'rgba(4,8,18,.03)');shade.addColorStop(1,'rgba(4,8,18,.17)');
- c.fillStyle=shade;c.fillRect(0,0,W,H);
- c.restore();return true;
+ const cover=Math.max(W/img.naturalWidth,H/img.naturalHeight)*1.035,dw=img.naturalWidth*cover,dh=img.naturalHeight*cover;
+ const drift=Math.sin(cam/2200)*Math.min(10,(dh-H)/2);
+ c.drawImage(img,(W-dw)/2,(H-dh)/2+drift,dw,dh);
+ const shade=c.createLinearGradient(0,0,0,H);shade.addColorStop(0,'#121f3212');shade.addColorStop(.5,'#121f3200');shade.addColorStop(1,'#121f322b');c.fillStyle=shade;c.fillRect(0,0,W,H);
+ drawWorldProps(c,name,W,H,time);c.restore();return true;
 }
+function prop(c,name,x,y,w,h,alpha=1){const img=images.props[name];if(!has(img))return;c.save();c.globalAlpha=alpha;c.drawImage(img,x,y,w,h);c.restore()}
+function cloth(c,name,x,y,w,h,time){const img=images.props[name];if(!has(img))return;const slices=10;c.save();for(let i=0;i<slices;i++){const sy=i*img.naturalHeight/slices,dy=y+i*h/slices,wave=Math.sin(time*2.1-i*.5)*i*.17;c.drawImage(img,0,sy,img.naturalWidth,img.naturalHeight/slices,x+wave,dy,w,h/slices+.4)}c.restore()}
+function drawWorldProps(c,name,W,H,time){
+ const banner=name==='city'?'banner-copper':name==='astral'?'banner-violet':'banner-navy';
+ cloth(c,banner,W*.045,H*.15,48,98,time);cloth(c,banner,W*.90,H*.22,43,88,time+.8);
+ if(name==='forest')prop(c,'vines',W*.82,H*.08,70,96,.58);
+ const lamp=name==='snow'?'lantern-ice':name==='astral'?'crystal-lamp':'lantern-gold';
+ const pulse=.78+Math.sin(time*2)*.08;prop(c,lamp,W*.085,H*.48,28,43,pulse);prop(c,lamp,W*.885,H*.55,26,40,pulse);
+}
+function polygon(c,points,fill){c.fillStyle=fill;c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill()}
 function platform(c,name,x,y,w,index,state={}){
- const ground=index===0,h=ground?18:12,variant=Math.abs(index)%4;
- const themes={city:{top:'#82f1ff',edge:'#2779a7',body:'#152f4a',deep:'#091827',light:'#ff5dcc'},forest:{top:'#b5ed83',edge:'#4d965f',body:'#254b39',deep:'#10271f',light:'#8dffc1'},snow:{top:'#f4fdff',edge:'#80cbe5',body:'#315d83',deep:'#182f50',light:'#8cf2ff'}},theme=themes[name]||themes.forest;
- c.save();c.imageSmoothingEnabled=false;c.shadowColor='#020812aa';c.shadowBlur=5;c.shadowOffsetY=4;
- const rect=(xx,yy,ww,hh,color)=>{c.fillStyle=color;c.fillRect(Math.round(xx),Math.round(yy),Math.max(1,Math.round(ww)),Math.max(1,Math.round(hh)))};
- rect(x+3,y+5,w-1,h,theme.deep);rect(x,y,w,h-3,theme.body);rect(x,y,w,3,theme.edge);rect(x+3,y-2,w-6,3,theme.top);c.shadowBlur=0;c.shadowOffsetY=0;
- if(name==='city'){
-  rect(x+5,y+4,w-10,2,'#0b1d31');for(let px=x+8;px<x+w-7;px+=14){rect(px,y+5,6,1,variant%2?theme.light:'#69dfff');rect(px+2,y+8,2,1,'#b8f8ff')}
-  rect(x+2,y-1,2,2,theme.light);rect(x+w-4,y-1,2,2,'#6be8ff');
- }else if(name==='forest'){
-  for(let px=x+5;px<x+w-4;px+=11){rect(px,y-4-(px%3),4,3,variant%2?'#63bc67':'#8cdb73');rect(px+2,y-6-(px%2),1,3,'#ccf897')}
-  for(let px=x+10;px<x+w-8;px+=19)rect(px,y+4,2,h-3,'#173527');
+ const t=themes[name]||themes.forest,h=index===0?38:Math.min(27,14+w*.045),img=index===0?images.grounds[name]:images.platforms[name];
+ c.save();c.imageSmoothingEnabled=true;
+ if(has(img)){
+  // End caps retain their shape; only the stone between them expands.
+  const sw=img.naturalWidth,sh=img.naturalHeight,dh=h+12,cap=Math.min(w/3,dh*.95),cut=Math.round(sw*.22);
+  c.drawImage(img,0,0,cut,sh,x,y-5,cap,dh);c.drawImage(img,cut,0,sw-cut*2,sh,x+cap,y-5,Math.max(1,w-cap*2),dh);c.drawImage(img,sw-cut,0,cut,sh,x+w-cap,y-5,cap,dh);
  }else{
-  rect(x+2,y-5,w-4,4,'#f8feff');rect(x+6,y-6,Math.max(2,w-12),1,'#ffffff');for(let px=x+9;px<x+w-6;px+=16){rect(px,y+4,4,6,'#55a8d0');rect(px+2,y+9,1,3,'#b9f3ff')}
+  // A readable collision lip on a tapered floating masonry island.
+  polygon(c,[[x,y],[x+w,y],[x+w-7,y+h*.66],[x+w*.7,y+h],[x+w*.38,y+h+4],[x+6,y+h*.62]],t.shade);
+  polygon(c,[[x+1,y+3],[x+w-2,y+3],[x+w-9,y+h*.6],[x+w*.55,y+h-1],[x+8,y+h*.55]],t.stone);
+  c.fillStyle=t.rim;c.fillRect(x,y-2,w,5);c.fillStyle=t.top;c.fillRect(x+2,y-3,w-4,3);
+  c.globalAlpha=.30;c.strokeStyle=t.shade;c.lineWidth=1;
+  for(let dx=15;dx<w-8;dx+=20){c.beginPath();c.moveTo(x+dx,y+4);c.lineTo(x+dx+2,y+h*.7);c.stroke()}c.restore();c.save();
+  if(name==='forest')for(let dx=9;dx<w-6;dx+=17){c.fillStyle=dx%3?'#82a976':'#d4e2af';c.fillRect(x+dx,y-5,5,3)}
+  if(name==='snow')for(let dx=15;dx<w-6;dx+=27)polygon(c,[[x+dx,y+6],[x+dx+5,y+6],[x+dx+2,y+h+7]],'#bce7ef');
  }
- if(state.fragile){
-  const p=clamp(Number(state.progress)||0,0,1),cracks=2+Math.floor(p*6);
-  c.strokeStyle=p>.55?'rgba(255,211,112,.96)':'rgba(255,189,101,.7)';
-  c.lineWidth=.75;
-  for(let k=0;k<cracks;k++){
-   const xx=x+6+(Math.abs(index*19+k*17)%Math.max(10,w-12));
-   c.beginPath();c.moveTo(xx,y-3);c.lineTo(xx+1,y-1);c.lineTo(xx-.5,y+1+p*3);c.stroke();
-  }
-  if(p>.7){c.globalAlpha=.2+.2*Math.sin(p*24);c.fillStyle='#ffd47d';c.fillRect(x,y-4,w,2)}
- }
+ // A small moving-platform lantern explains motion without changing material.
+ if(state.moving){c.fillStyle=t.glow;c.shadowColor=t.glow;c.shadowBlur=6;c.fillRect(x+w/2-2,y+8,4,3);c.shadowBlur=0}
+ if(state.fragile){const progress=clamp(Number(state.progress)||0,0,1);c.strokeStyle=progress>.55?'#ffb56f':'#7d6356';c.lineWidth=1.1;for(let k=0;k<3+Math.floor(progress*4);k++){const xx=x+8+(index*19+k*23)%Math.max(10,w-16);c.beginPath();c.moveTo(xx,y-2);c.lineTo(xx-2,y+4);c.lineTo(xx+3,y+9);c.stroke()}}
  c.restore();return true;
 }
 // Emit in world coordinates; rendering alone applies the camera offset.
@@ -197,70 +118,81 @@ function particlesFor(c,state,offset,ghost){
  }
  c.restore();
 }
-// A two-bone rig uses source-space masks instead of slicing both legs in half.
-// Joint positions follow the contact/recovery gait; the original pixels remain.
-const rigParts={
- backThigh:{a:[60,84],b:[43,113],poly:[[52,78],[68,84],[61,99],[52,116],[43,123],[30,119],[33,108],[44,96]]},
- backShin:{a:[43,113],b:[37,132],poly:[[33,108],[54,112],[49,122],[44,133],[28,133],[31,122]]},
- frontThigh:{a:[75,84],b:[80,115],poly:[[67,79],[83,81],[88,98],[92,116],[86,124],[70,122],[69,110]]},
- frontShin:{a:[80,115],b:[81,132],poly:[[70,112],[92,112],[89,125],[91,133],[73,133],[71,125]]}
-};
-function drawBone(c,sprite,part,a,b){
- const r=rigParts[part],angle=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(r.b[1]-r.a[1],r.b[0]-r.a[0]);
- const scale=Math.hypot(b.x-a.x,b.y-a.y)/Math.hypot(r.b[0]-r.a[0],r.b[1]-r.a[1]);
- c.save();c.translate(a.x,a.y);c.rotate(angle);c.scale(Math.min(1.12,scale),scale);c.translate(-r.a[0],-r.a[1]);
- c.beginPath();r.poly.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.closePath();c.clip();c.drawImage(sprite,0,0);c.restore();
-}
-function drawRun(c,sprite,torso,pose){
- c.save();c.translate(-19,-47);c.scale(38/112,48/144);
- for(const [i,leg] of pose.legs.entries()){
-  const prefix=i?'front':'back';c.save();if(!i)c.globalAlpha*=.86;
-  drawBone(c,sprite,prefix+'Thigh',leg.hip,leg.knee);
-  drawBone(c,sprite,prefix+'Shin',leg.knee,leg.foot);
-  // Shoes retain their silhouette instead of being rotated as another shin.
-  const shoe=i?[72,126,32,18,81]:[25,126,23,18,37];
-  c.save();c.translate(leg.foot.x,leg.foot.y);c.rotate(leg.foot.contact?0:-.2);
-  c.drawImage(sprite,shoe[0],shoe[1],shoe[2],shoe[3],shoe[0]-shoe[4],-6,shoe[2],shoe[3]);c.restore();c.restore();
- }
- c.save();c.translate(65,84+pose.bob);c.rotate(pose.lean*.18);c.translate(-65,-84);
- // Use the approved leaning run torso and bent arms, not the upright idle pose.
- c.drawImage(torso,0,0,112,96,5,-12,112,96);c.restore();c.restore();
-}
-// Do not paint synthetic hair strands. The approved hair belongs to the
-// sprite itself; a separate alpha-isolated hair layer is needed for deformation.
-function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
- const img=images.runner;if(!has(img))return false;
- const O=style||{},dir=motion.facing===-1?-1:1,moving=!!motion.moving,
-       ground=motion.ground!==false,vy=Number(motion.vy)||0;
- let frame=0;
- if(!ground||Math.abs(vy)>5)frame=vy>18?3:vy< -65?5:4;
- else if(moving)frame=0;
- const movement=motionState(x,y,time,motion,ghost,name,String(O.effect||'none'));
- const running=moving&&ground&&movement.active;
- const col=frame%3,row=Math.floor(frame/3);
- // Emit in world coordinates first: the character is drawn on top of the trail.
- particlesFor(c,movement.state,Number(motion.cameraY)||0,ghost);
- c.save();c.translate(Math.round(x),Math.round(y));c.scale(dir,1);
- if(ghost)c.globalAlpha=.62;
- if(ground){c.save();c.globalAlpha*=.3;c.fillStyle='#020712';c.beginPath();c.ellipse(0,1,12,2,0,0,Math.PI*2);c.fill();c.restore()}
- // Trail is rendered in world-space below, so particles persist after each step.
- c.imageSmoothingEnabled=true;
- const tinted=recolor(img,O,time);
- // Keep the original cell placement but omit the upper row's shoe fragments.
- const inset=row===1?16:0;
- const sprite=atlasSprite(tinted,[col*112,row*144+inset,112,144-inset],'runner:'+frame+':'+colorKeys.map(k=>O[k]||'').join(':')+':'+(colorKeys.some(k=>O[k]==='rainbow')?Math.floor(time*12):''));
- // Bound the cache when rainbow cosmetics generate new colour variants.
- if(spriteCache.size>100)for(const key of spriteCache.keys()){if(/^(runner|torso):/.test(key))spriteCache.delete(key);if(spriteCache.size<=60)break;}
- // Discard the disconnected marks in the top margin of jump frames.
- if(running){
-  const runFrame=1+(Math.floor(movement.state.phase*2)%2);
-  const torso=atlasSprite(tinted,[runFrame*112,0,112,144],'torso:'+runFrame+':'+colorKeys.map(k=>O[k]||'').join(':')+':'+(colorKeys.some(k=>O[k]==='rainbow')?Math.floor(time*12):''));
-  drawRun(c,sprite,torso,movement.pose);
- }else c.drawImage(sprite,0,0,112,144-inset,-19,-47+inset/3,38,(144-inset)/3);
 
- c.restore();
- if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle=ghost?'#d9efff':'#fff';c.textAlign='center';c.font='bold 5px monospace';c.fillText(String(name).slice(0,12),Math.round(x),Math.round(y)-44);c.restore()}
+const pieceCache=new Map();
+function pieceImage(part,tint){
+ const spec=heroParts[part];if(!spec||!has(images.hero))return null;
+ const key=part+':'+(tint||'');if(pieceCache.has(key))return pieceCache.get(key);
+ const rect=spec.rect,cv=document.createElement('canvas');cv.width=rect[2];cv.height=rect[3];const c=cv.getContext('2d');c.drawImage(images.hero,...rect,0,0,cv.width,cv.height);
+ if(tint){
+  const probe=document.createElement('canvas');probe.width=probe.height=1;const pc=probe.getContext('2d');pc.fillStyle=tint;pc.fillRect(0,0,1,1);const target=pc.getImageData(0,0,1,1).data,data=c.getImageData(0,0,cv.width,cv.height),px=data.data;
+  for(let i=0;i<px.length;i+=4){const r=px[i],g=px[i+1],b=px[i+2];if(px[i+3]<20)continue;
+   const skin=r>145&&g>85&&r>g*1.12&&g>b*1.18;
+   const navy=b>r*.97&&b>g*.9&&r<145;
+   if(part==='head'&&!navy)continue;
+   if(part==='forearm'&&skin)continue;
+   if((part==='torso'||part==='upperArm')&&(Math.max(r,g,b)<45||(r>g*1.5&&g>b*1.35)))continue;
+   const base=part==='head'||part==='thigh'||part==='shin'?64:part==='cape'?140:part==='boot'?96:210;
+   const light=clamp((r*.22+g*.53+b*.25)/base,.13,1.45);px[i]=clamp(target[0]*light);px[i+1]=clamp(target[1]*light);px[i+2]=clamp(target[2]*light);
+  }c.putImageData(data,0,0);
+ }
+ pieceCache.set(key,cv);if(pieceCache.size>100)pieceCache.delete(pieceCache.keys().next().value);return cv;
+}
+function piece(c,part,x,y,w,h,angle,tint){const img=pieceImage(part,tint);if(!img)return false;c.save();c.translate(x,y);c.rotate(angle||0);c.drawImage(img,-w/2,0,w,h);c.restore();return true;}
+function limb(c,a,b,width,tint,part){
+ const angle=Math.atan2(b.y-a.y,b.x-a.x)-Math.PI/2,length=Math.hypot(b.x-a.x,b.y-a.y);
+ if(piece(c,part,a.x,a.y,width+2,length+1,angle,tint))return;
+ c.lineCap='round';c.strokeStyle='#24313d';c.lineWidth=width+1.8;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();c.strokeStyle=tint;c.lineWidth=width;c.stroke();c.strokeStyle='#ffffff38';c.lineWidth=.7;c.beginPath();c.moveTo(a.x-.8,a.y+1);c.lineTo(b.x-.8,b.y-1);c.stroke();
+}
+function cape(c,time,moving,vy,tint,accessory){
+ if(accessory==='none')return;
+ const sprite=accessory==='cape'||!accessory?pieceImage('cape',tint):null;
+ if(sprite){
+  const lift=clamp(vy/360,-.5,1),h=19,w=moving?24:20;
+  // Short horizontal strips follow a travelling wave, anchored at the shoulder.
+  for(let i=0;i<12;i++){const f=i/12,sy=f*sprite.height,sh=Math.ceil(sprite.height/12),wave=Math.sin(time*(moving?7:2.6)-f*3)*f*1.5; c.drawImage(sprite,0,sy,sprite.width,sh,-w+3-f*lift*3+wave,-26+f*h-f*lift*7,w,h/12+.3)}
+  return;
+ }
+ const sway=Math.sin(time*(moving?8:2.2)),lift=clamp(vy/240,-.8,1),length=accessory==='scarf'?20:18;
+ const edge=[];for(let i=0;i<=6;i++){const t=i/6;edge.push([-3-t*(moving?12:5)+Math.sin(time*6-t*3)*t*1.8,-24+t*length-lift*t*8])}
+ const width=accessory==='scarf'?2:8;
+ polygon(c,[[-4,-25],[3,-24],...edge.slice().reverse().map(([x,y],i)=>[x+width*(1-i/7),y]),...edge],tint);
+ c.strokeStyle='#ffffff45';c.lineWidth=.8;c.beginPath();edge.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();
+ if(accessory==='satchel'){c.fillStyle='#785f4a';c.fillRect(-10,-21,7,10);c.strokeStyle='#d9b88a';c.strokeRect(-10,-21,7,10)}
+}
+function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
+ const O={hair:'#19222d',top:'#172b3b',pants:'#263c5c',shoes:'#ffffff',accent:'#00e5ff',effect:'none',accessory:'cape',...(style||{})};
+ const dir=motion.facing===-1?-1:1,ground=motion.ground!==false,moving=!!motion.moving,vy=Number(motion.vy)||0;
+ const movement=motionState(x,y,time,motion,ghost,name,String(O.effect||'none'));
+ particlesFor(c,movement.state,Number(motion.cameraY)||0,ghost);
+ const top=color(O.top,time),pants=color(O.pants,time,100),hair=color(O.hair,time,200),accent=color(O.accent,time,300),shoe=color(O.shoes,time,50);
+ c.save();c.translate(x,y);c.scale(dir,1);if(ghost)c.globalAlpha=.72;c.imageSmoothingEnabled=true;
+ if(ground){c.save();c.globalAlpha*=.2;c.fillStyle='#153744';c.beginPath();c.ellipse(0,1,10,2,0,0,Math.PI*2);c.fill();c.restore()}
+ const phase=movement.state.phase*Math.PI*2,stride=moving&&ground?Math.sin(phase):0,bob=moving&&ground?Math.abs(Math.sin(phase))*1.1:Math.sin(time*2.2)*.28;
+ cape(c,time,moving,vy,accent,O.accessory);
+ const hips=[{x:-2.5,y:-14-bob},{x:2,y:-14-bob}];
+ for(let i=0;i<2;i++){
+  const s=i?1:-1,hip=hips[i];let foot={x:s*3-stride*s*6,y:-1};
+  if(!ground)foot={x:s*4+(vy>0?(i?-2:4):i?3:-3),y:vy>0?(i?-4:-8):-2};
+  else if(moving)foot.y-=Math.max(0,stride*s)*5;
+  const knee=Motion.knee(hip,foot,8,8);if(!i)c.globalAlpha*=.83;
+  limb(c,hip,knee,3.8,pants,'thigh');limb(c,knee,foot,3.3,pants,'shin');
+  if(!piece(c,'boot',foot.x+1,foot.y-2,7,4,0,shoe)){c.fillStyle='#263342';c.fillRect(foot.x-2.5,foot.y-2,7,3.5);c.fillStyle=shoe;c.fillRect(foot.x-2,foot.y-2,6,2)}
+  if(!i)c.globalAlpha/=.83;
+ }
+ const shoulder={x:-1,y:-25-bob},armSwing=ground?stride*3:clamp(vy/70,-3,4);
+ limb(c,{x:-4,y:-24-bob},{x:-6-armSwing,y:-18-bob},3.5,top,'upperArm');limb(c,{x:-6-armSwing,y:-18-bob},{x:-4-armSwing,y:-14-bob},2.2,'#d6b69a','forearm');
+ if(!piece(c,'torso',0,-26-bob,12,14,0,top)){
+  polygon(c,[[-5,-26-bob],[4,-26-bob],[6,-15-bob],[-5,-14-bob]],top);c.fillStyle='#f5e1b2';c.fillRect(-4,-15-bob,9,1.4);c.fillStyle='#ffffff38';c.fillRect(-3,-24-bob,1,8);
+ }
+ limb(c,{x:4,y:-24-bob},{x:5+armSwing,y:-19-bob},3.5,top,'upperArm');limb(c,{x:5+armSwing,y:-19-bob},{x:7+armSwing,y:-15-bob},2.2,'#d6b69a','forearm');
+ if(!piece(c,'head',1,-36-bob,10,11,0,hair)){
+  c.fillStyle='#263543';c.fillRect(-4,-35-bob,9,10);c.fillStyle='#dfc2a3';c.fillRect(-2,-33-bob,7,7);c.fillStyle='#ffe0b7';c.fillRect(1,-33-bob,4,5);c.fillStyle='#243444';c.fillRect(3,-31-bob,1,1.5);
+ }
+ if(!has(images.hero)){polygon(c,[[-5,-34-bob],[-4,-37-bob],[2,-37-bob],[6,-33-bob],[2,-33-bob],[0,-31-bob],[-3,-32-bob],[-3,-29-bob],[-5,-31-bob]],hair);c.fillStyle='#ffffff25';c.fillRect(-3,-36-bob,5,1)}
+ c.fillStyle=accent;c.fillRect(-4,-26-bob,8,2);c.restore();
+ if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-46);c.fillText(String(name).slice(0,16),x,y-46);c.restore()}
  return true;
 }
-root.EixoJumpExactArt={version:'run-cycle-shoe-trails-20260925',ready,background,platform,runner,images};
+root.EixoJumpExactArt={version:'sky-gardens-v3',ready,background,platform,runner,images,themes,heroHeight:37};
 })(window);

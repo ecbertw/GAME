@@ -118,7 +118,7 @@
   async function openRoomFromList(roomId,options={}){
     try{
       const c=credentials();
-      const data=await api(`/api/rooms/rankings?id=${encodeURIComponent(c.id)}&token=${encodeURIComponent(c.token)}&roomId=${encodeURIComponent(roomId)}`);
+      const data=await api(`/api/pulse/orbit/rooms/rankings?id=${encodeURIComponent(c.id)}&token=${encodeURIComponent(c.token)}&roomId=${encodeURIComponent(roomId)}`);
       const room=[...roomsList.querySelectorAll('.room-card')].find(card=>card.querySelector('.enter-room-button')?.dataset.roomId===roomId);
       const board=document.getElementById('roomBoard'),list=document.getElementById('roomRanking');
       if(!board||!list)throw new Error('Não foi possível abrir a sala.');

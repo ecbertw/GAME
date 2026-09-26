@@ -17,7 +17,7 @@ test('platform generation is deterministic, endless and progressively harder',()
   assert.ok(s.platforms.length>first);
   const ps=P.platforms(73,120);
   assert.ok(ps[8].w>ps[80].w,'later platforms should be narrower');
-  for(let i=1;i<ps.length;i++)assert.ok(ps[i].y-ps[i-1].y<=51,'vertical gap must remain within jump envelope');
+  for(let i=1;i<ps.length;i++)assert.ok(ps[i].y-ps[i-1].y<=102,'vertical gap must remain within jump envelope');
 });
 test('moving platforms are deterministic and really move horizontally',()=>{
  const ps=P.platforms(91,140),moving=ps.filter(p=>p.moving);
@@ -37,7 +37,7 @@ test('moving platforms accelerate early but remain catchable',()=>{
  assert.ok(early.length&&later.length);
  const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
  assert.ok(avg(later)>avg(early)+0.25,'speed should ramp noticeably within the first dozen jumps');
- assert.ok(samples.every(x=>x.speed<=2.241&&x.linear<=106.01),'moving platforms must stay inside the catchable velocity cap');
+ assert.ok(samples.every(x=>x.speed<=2.241&&x.linear<=212.01),'moving platforms must stay inside the catchable velocity cap');
 });
 test('old platforms retire, cannot catch the player, and death happens at the visible floor',()=>{
  const s=P.create(313);
@@ -64,8 +64,8 @@ test('hard mode avoids vertical ladders and makes moving platforms dominant',()=
  for(let i=6;i<ps.length;i++){
    const prev=ps[i-1],p=ps[i];
    const a=prev.x+prev.w/2,b=p.x+p.w/2;
-   assert.ok(Math.abs(a-b)>=40,'late platforms must not form easy vertical ladders');
-   assert.ok(Math.abs(a-b)<=122,'generated jumps must stay inside horizontal movement envelope');
+   assert.ok(Math.abs(a-b)>=80,'late platforms must not form easy vertical ladders');
+   assert.ok(Math.abs(a-b)<=244,'generated jumps must stay inside horizontal movement envelope');
  }
  assert.ok(ps[10].w>ps[40].w,'platforms should become clearly narrower');
 });
@@ -150,11 +150,11 @@ test('multiplayer peers receive the equipped outfit and effect',async()=>{
  const ar=await J.start(db,a,{biome:'snow',multiplayer:true});
  const br=await J.start(db,b,{biome:'snow',multiplayer:true});
  await J.saveOutfit(db,a,{outfit:{...J.DEFAULTS,effect:'glow'}});
- J.input(a,{runId:ar.runId,left:false,right:true,jump:true,platform:0,position:{x:230,y:20},motion:{vx:136,vy:175,ground:false,moving:true,facing:1}});
+ J.input(a,{runId:ar.runId,left:false,right:true,jump:true,platform:0,position:{x:490,y:20},motion:{vx:136,vy:175,ground:false,moving:true,facing:1}});
  const seen=J.input(b,{runId:br.runId,left:false,right:false,jump:false,platform:0});
  const peer=seen.peers.find(p=>p.id===a.id);
  assert.equal(peer.outfit.effect,'glow');
- assert.deepEqual({x:peer.x,y:peer.y,vx:peer.vx,vy:peer.vy,ground:peer.ground,moving:peer.moving,facing:peer.facing},{x:230,y:20,vx:136,vy:175,ground:false,moving:true,facing:1});
+ assert.deepEqual({x:peer.x,y:peer.y,vx:peer.vx,vy:peer.vy,ground:peer.ground,moving:peer.moving,facing:peer.facing},{x:490,y:20,vx:136,vy:175,ground:false,moving:true,facing:1});
  J.leave(a);J.leave(b);
 });
 test('browser preserves server scoring and never snaps to server Y',()=>{

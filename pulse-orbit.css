@@ -1,0 +1,5 @@
+body[data-page="pulse"] #gameCanvas{touch-action:manipulation;cursor:crosshair;outline-offset:-5px}
+body[data-page="pulse"] #gameCanvas:focus-visible{outline:2px solid #f1cc91}
+body[data-page="pulse"] .game-frame:not(.jump-mode)>.score,
+body[data-page="pulse"] .game-frame:not(.jump-mode)>#feedback{clip-path:inset(50%);position:absolute;width:1px;height:1px;overflow:hidden}
+body[data-page="pulse"] #gameMessage{left:50%;bottom:55px;top:auto;transform:translateX(-50%);width:min(80%,540px);font-size:11px;color:#efb2a0;line-height:1.5;text-align:center;pointer-events:none}

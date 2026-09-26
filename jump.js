@@ -7,13 +7,13 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const lang=()=>String(document.documentElement.lang||'en').startsWith('pt')?'pt':'en';
 const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'PONTOS',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'A / D OU ◀ / ▶ PARA MOVER • W / ESPAÇO / ▲ PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'POINTS',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'A / D OR ◀ / ▶ TO MOVE • W / SPACE / ▲ TO JUMP',soon:'COMING SOON'}};
 const txt=k=>T[lang()][k]||k;
-const BIOMES=['city','forest','snow'];
+const BIOMES=['city','forest','snow','astral'];
 const themes={
   city:{sky:'#78c6ee',low:'#f0c8bb',hills:'#719ec0',far:'#467293',near:'#294b6d',top:'#7dc5dc',edge:'#466f9b',under:'#465671'},
   forest:{sky:'#89d9e7',low:'#daf4b6',hills:'#77ba9c',far:'#397a65',near:'#234e42',top:'#55c970',edge:'#31864c',under:'#78533a'},
   snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
 };
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='solo',biome='forest',seed=0,peers=[],outfit=null,wardrobe=null,fixedAppearance=null,keys={left:false,right:false,jump:false},confirmedScore=0,facing=1,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='public',biome='forest',seed=0,peers=[],outfit=null,wardrobe=null,fixedAppearance=null,keys={left:false,right:false,jump:false},confirmedScore=0,facing=1,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
@@ -44,7 +44,7 @@ async function switchGame(next,options={}){
  const shouldPlay=options.play!==false;
  if(next==='eat'){modal('EAT','<p>'+txt('soon')+'</p>');return}
  if(current===next&&next==='jump'){
-   if(shouldPlay){window.eixoJumpActive=true;await newRun({biome,mode,roomId});if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}},5500);}
+   if(shouldPlay){window.eixoJumpActive=true;await newRun({biome,mode:'public'});if(!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}},5500);}
    else await refreshRankings();
    return;
  }
@@ -52,7 +52,7 @@ async function switchGame(next,options={}){
  if(current==='jump'){await stopRun();window.EixoAudio?.jumpStop?.();}
  current=next;window.eixoJumpActive=current==='jump';closePanel();showMode();
  if(current==='jump'){
-   window.stopGame?.();if(shouldPlay)await newRun({biome:BIOMES[Math.floor(Math.random()*BIOMES.length)],mode:'solo'});
+   window.stopGame?.();if(shouldPlay)await newRun({biome:BIOMES[Math.floor(Math.random()*BIOMES.length)],mode:'public'});
    refreshRankings();if(shouldPlay&&!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);if(shouldPlay)rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}},5500);
  }else{
    clearInterval(rankTimer);clearInterval(networkTimer);if(animation)cancelAnimationFrame(animation);animation=null;
@@ -66,15 +66,15 @@ async function stopRun(){
 function updateHud(){
  const pointsLabel=$('jumpHeight')?.previousElementSibling;if(pointsLabel)pointsLabel.textContent=txt('height');
  $('jumpHeight').textContent=String(Math.max(0,Number(confirmedScore)||0)).padStart(3,'0');
- $('jumpWorld').textContent=biome.toUpperCase()+(mode==='solo'?' · SOLO':' · ONLINE '+(lastState?.players||run?.players||1)+'/'+(lastState?.maxPlayers||run?.maxPlayers||20));
- $('jumpSoloButton').textContent=txt('solo');$('jumpJoinButton').textContent='ONLINE';$('jumpCustomizeButton').textContent=txt('character');if($('jumpHelp'))$('jumpHelp').textContent=txt('help');
+ $('jumpWorld').textContent=biome.toUpperCase()+' · ONLINE '+(lastState?.players||run?.players||1)+'/'+(lastState?.maxPlayers||run?.maxPlayers||20);
+ $('jumpSoloButton').textContent='ONLINE';$('jumpJoinButton').textContent=lang()==='pt'?'LOBBY DE AMIGOS':'FRIEND LOBBY';$('jumpCustomizeButton').textContent=txt('character');if($('jumpHelp'))$('jumpHelp').textContent=txt('help');
 }
 async function newRun(options={}){
- const b=options.biome||biome;biome=b;mode=options.mode||'solo';roomId=options.roomId||null;roomLabel=options.roomLabel||'';
+ const b=options.biome||biome;biome=b;mode='public';roomId=null;roomLabel='';
  await stopRun();resetControls();confirmedScore=0;facing=1;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
-   const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:mode==='public',roomId})});
+   const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:true})});
    run=out;seed=out.seed;biome=out.biome;mode=out.mode;outfit=out.outfit||outfit;wardrobe=out.parts?{parts:out.parts}:wardrobe;fixedAppearance=out.fixedAppearance||fixedAppearance;
    window.EixoAudio?.jumpBiome?.(biome);
    local=P.create(seed);local.time=Number(out.worldTime)||0;last=performance.now();updateHud();draw();refreshRoomBoard();clearInterval(networkTimer);
@@ -115,7 +115,7 @@ async function sync(){
  const identity=run.runId;busy=true;
  try{
   const out=await api('/api/jump/run/input',{method:'POST',body:JSON.stringify({runId:identity,left:keys.left,right:keys.right,jump:keys.jump,platform:Number(local?.bestPlatform||0),position:local?{x:local.x,y:local.y}:null,
-    motion:local?{vx:((keys.right?1:0)-(keys.left?1:0))*136,vy:local.vy,ground:!!local.ground,moving:keys.left!==keys.right,facing}:null})});
+    motion:local?{vx:((keys.right?1:0)-(keys.left?1:0))*P.SPEED,vy:local.vy,ground:!!local.ground,moving:keys.left!==keys.right,facing}:null})});
   if(run?.runId!==identity)return;
   lastState=out;if(mode!=='solo'&&local&&Number.isFinite(out.worldTime)){const drift=Number(out.worldTime)-Number(local.time||0);local.time+=Math.max(-.08,Math.min(.08,drift))*.12;}mergePeerSnapshots(out.peers||[]);confirmedScore=Number(out.state?.score||0);
   // The HUD shows only server-confirmed platform points, while the local
@@ -368,7 +368,7 @@ async function customize(){
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  let out;try{out=await api('/api/jump/cosmetics')}catch(e){showError(e.message);return}
  outfit={...out.outfit};wardrobe={parts:out.parts};fixedAppearance=out.fixedAppearance||fixedAppearance;
- const vip=Math.max(Number(out.vipLevel||0),Number(getPlayer()?.vipLevel||0)),labels={hair:'CABELO',top:'CASACO',accent:'DETALHES',pants:'CALÇAS',shoes:'SAPATILHAS',effect:'EFEITO'};
+ const vip=Math.max(Number(out.vipLevel||0),Number(getPlayer()?.vipLevel||0)),labels={hair:'CABELO',top:'CASACO',accent:'DETALHES',pants:'CALÇAS',shoes:'SAPATILHAS',accessory:'ACESSÓRIO',effect:'EFEITO'};
  const options=part=>(out.parts?.[part]||[]).map(item=>{
    const level=Number(item.minVip||0),locked=vip<level,vipOnly=level>0,suffix=vipOnly?' · VIP '+level:'';
    const prefix=vipOnly?(part==='effect'?(lang()==='pt'?'EFEITO VIP · ':'VIP EFFECT · '):(lang()==='pt'?'COR VIP · ':'VIP COLOR · ')):'';
@@ -419,23 +419,18 @@ async function submitJumpRoom(){
  const button=$('jumpRoomCreateSubmit'),error=$('jumpRoomCreateError');if(!button)return;
  error.textContent='';button.disabled=true;
  try{
-  const d=await api('/api/jump/rooms/create',{method:'POST',body:JSON.stringify({name:$('jumpRoomNameInput').value,biome:$('jumpRoomBiomeInput').value})});
-  $('jumpCreatedRoomCode').textContent=d.room.code;$('jumpRoomCreated').classList.remove('hidden');$('jumpRoomNameInput').value='';
+  const d=await api('/api/jump/lobby/create',{method:'POST',body:JSON.stringify({name:$('jumpRoomNameInput').value})});
+  $('jumpCreatedRoomCode').textContent=d.lobby.code;$('jumpRoomCreated').classList.remove('hidden');$('jumpRoomNameInput').value='';
  }catch(e){error.textContent=e.message}finally{button.disabled=false}
 }
 async function loadJumpRooms(){
  const list=$('jumpRoomsList');if(!list)return;
  try{
-  const d=await api('/api/jump/rooms');
-  list.innerHTML=(d.rooms||[]).length?d.rooms.map(r=>{
-   const full=Number(r.memberCount)>=5;
-   return '<article class="room-card"><div class="room-card-main"><div class="room-card-name">'+esc(r.name)+'</div><div class="room-card-meta">'+esc(r.ownerName)+' · '+r.biome.toUpperCase()+' · '+r.memberCount+'/5 PLAYERS</div></div><div class="room-card-code">'+esc(r.code)+'</div><div class="room-card-actions"><span class="room-status">'+(full?'FULL':r.memberCount+'/5')+'</span><button type="button" class="board-more enter-room-button" data-jump-room-id="'+esc(r.id)+'">'+txt('enter')+'</button></div></article>';
-  }).join(''):'<div class="rooms-empty">NO JUMP ROOMS YET</div>';
-  list.querySelectorAll('[data-jump-room-id]').forEach(btn=>btn.onclick=()=>{
-   const item=d.rooms.find(x=>x.id===btn.dataset.jumpRoomId);if(!item)return;
-   $('jumpRoomsModal').classList.add('hidden');
-   newRun({biome:item.biome,mode:'private',roomId:item.id,roomLabel:item.name});
-  });
+  const d=await api('/api/jump/lobby'),l=d.lobby,p=getPlayer();
+  if(!l){list.innerHTML='<div class="rooms-empty">'+(lang()==='pt'?'CRIA UM LOBBY OU ENTRA COM UM CÓDIGO.':'CREATE A LOBBY OR JOIN WITH A CODE.')+'</div>';return}
+  list.innerHTML='<article class="room-card"><div class="room-card-main"><div class="room-card-name">'+esc(l.name)+'</div><div class="room-card-meta">'+l.members.map(m=>esc(m.name)).join(' · ')+'</div></div><div class="room-card-code">'+esc(l.code)+'</div><div class="room-card-actions"><span class="room-status">'+l.memberCount+'/5</span>'+(l.leaderId===p?.id?'<button type="button" class="board-more enter-room-button" id="jumpLobbyStart">'+(lang()==='pt'?'INICIAR JUNTOS':'START TOGETHER')+'</button>':'<span class="room-status">'+(lang()==='pt'?'À ESPERA DO LÍDER':'WAITING FOR LEADER')+'</span>')+'<button type="button" class="board-more danger" id="jumpLobbyLeave">'+txt('leave')+'</button></div></article>';
+  $('jumpLobbyStart')?.addEventListener('click',async()=>{const b=$('jumpLobbyStart');b.disabled=true;try{await api('/api/jump/lobby/start',{method:'POST',body:'{}'});$('jumpRoomsModal').classList.add('hidden');await newRun({mode:'public'})}catch(e){showError(e.message);b.disabled=false}});
+  $('jumpLobbyLeave')?.addEventListener('click',async()=>{await api('/api/jump/lobby/leave',{method:'POST',body:'{}'});await loadJumpRooms()});
  }catch(e){list.innerHTML='<div class="rooms-empty">'+esc(e.message)+'</div>'}
 }
 async function jumpRooms(){
@@ -451,7 +446,7 @@ async function jumpRooms(){
   $('jumpJoinRoomCode').addEventListener('keydown',e=>{if(e.key==='Enter')$('jumpJoinRoomSubmit').click()});
   $('jumpJoinRoomSubmit').onclick=async()=>{
    const button=$('jumpJoinRoomSubmit');button.disabled=true;$('jumpJoinRoomError').textContent='';
-   try{await api('/api/jump/rooms/join',{method:'POST',body:JSON.stringify({code:$('jumpJoinRoomCode').value})});$('jumpJoinRoomCode').value='';$('jumpRoomsAddPanel').classList.add('hidden');await loadJumpRooms()}
+   try{await api('/api/jump/lobby/join',{method:'POST',body:JSON.stringify({code:$('jumpJoinRoomCode').value})});$('jumpJoinRoomCode').value='';$('jumpRoomsAddPanel').classList.add('hidden');await loadJumpRooms()}
    catch(e){$('jumpJoinRoomError').textContent=e.message}finally{button.disabled=false}
   };
  }
@@ -467,7 +462,7 @@ function confirmAbandonJumpRoom(){
   const close=()=>m.classList.add('hidden');$('jumpAbandonClose').onclick=close;$('jumpAbandonCancel').onclick=close;m.addEventListener('click',e=>{if(e.target===m)close()});
   $('jumpAbandonConfirm').onclick=async()=>{
    const id=roomId,button=$('jumpAbandonConfirm');button.disabled=true;
-   try{await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})});m.classList.add('hidden');roomId=null;roomLabel='';await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*BIOMES.length)]})}
+   try{await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})});m.classList.add('hidden');roomId=null;roomLabel='';await newRun({mode:'public',biome:BIOMES[Math.floor(Math.random()*BIOMES.length)]})}
    catch(e){showError(e.message)}finally{button.disabled=false}
   };
  }
@@ -485,16 +480,16 @@ function init(){
  main.insertBefore(switcher,$('gameIntro'));
  switcher.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>switchGame(b.dataset.game));
  const root=document.createElement('div');root.id='jumpRoot';root.className='jump-root hidden';
- root.innerHTML='<canvas id="jumpCanvas" width="900" height="390" aria-label="JUMP platformer"></canvas>'+
- '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">FOREST · SOLO</div></div>'+
- '<div class="jump-tools"><button id="jumpSoloButton">SOLO</button><button id="jumpJoinButton">ONLINE</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
+ root.innerHTML='<canvas id="jumpCanvas" width="1920" height="1080" aria-label="JUMP online platformer"></canvas>'+
+ '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">FOREST · ONLINE</div></div>'+
+ '<div class="jump-tools"><button id="jumpSoloButton">ONLINE</button><button id="jumpJoinButton">FRIEND LOBBY</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
  '<div class="jump-status" id="jumpStatus" role="status"></div>'+
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
  '<div class="jump-end hidden" id="jumpEnd"><strong id="jumpEndTitle">GAME OVER</strong><p>'+txt('height')+': <span id="jumpFinal">0</span></p><button id="jumpRestart">RESTART</button></div>';
  frame.appendChild(root);canvas=$('jumpCanvas');ctx=canvas.getContext('2d');ctx.setTransform(2,0,0,2,0,0);ctx.imageSmoothingEnabled=true;
  const boards=document.querySelector('.boards');
  const createPanel=document.createElement('section');createPanel.id='jumpRoomCreatePanel';createPanel.className='room-create-panel hidden';
- createPanel.innerHTML='<div class="room-panel-heading"><span class="room-panel-mark">◆</span><span>CRIAR UMA SALA · JUMP</span></div><div class="room-create-grid"><label class="room-field"><span>NOME DA SALA</span><input id="jumpRoomNameInput" class="pixel-input" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="EX: JUMP NIGHT"></label><label class="room-field"><span>AMBIENTE</span><select id="jumpRoomBiomeInput" class="pixel-input">'+BIOMES.map(b=>'<option value="'+b+'">'+b.toUpperCase()+'</option>').join('')+'</select></label><button class="modal-button primary room-create-submit" id="jumpRoomCreateSubmit" type="button">CRIAR SALA</button></div><div class="form-error" id="jumpRoomCreateError"></div><div class="room-created hidden" id="jumpRoomCreated"><div class="room-created-label">SALA CRIADA</div><div class="room-code" id="jumpCreatedRoomCode">ABC123</div><div class="room-created-hint">Dá este código aos teus amigos para entrarem.</div><button class="board-more" id="jumpCopyRoomCode" type="button">COPIAR CÓDIGO</button></div>';
+ createPanel.innerHTML='<div class="room-panel-heading"><span class="room-panel-mark">◆</span><span>LOBBY DE AMIGOS · JUMP</span></div><div class="room-create-grid"><label class="room-field"><span>NOME DO LOBBY</span><input id="jumpRoomNameInput" class="pixel-input" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="EX: JUMP NIGHT"></label><button class="modal-button primary room-create-submit" id="jumpRoomCreateSubmit" type="button">CRIAR LOBBY</button></div><div class="form-error" id="jumpRoomCreateError"></div><div class="room-created hidden" id="jumpRoomCreated"><div class="room-created-label">LOBBY CRIADO · MÁX. 5</div><div class="room-code" id="jumpCreatedRoomCode">ABC123</div><div class="room-created-hint">Partilha este código. O grupo entra junto numa instância online.</div><button class="board-more" id="jumpCopyRoomCode" type="button">COPIAR CÓDIGO</button></div>';
  boards?.after(createPanel);
  $('jumpRoomCreateSubmit').onclick=submitJumpRoom;
  $('jumpCopyRoomCode').onclick=async()=>{const code=$('jumpCreatedRoomCode').textContent;try{await navigator.clipboard.writeText(code);$('jumpCopyRoomCode').textContent='COPIADO';setTimeout(()=>{$('jumpCopyRoomCode').textContent='COPIAR CÓDIGO'},1400)}catch(_){$('jumpCopyRoomCode').textContent=code}};
@@ -502,11 +497,11 @@ function init(){
  const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='room-board jump-room-board hidden';
  roomBoard.innerHTML='<div class="room-board-heading"><div><span class="room-panel-mark">◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><small id="jumpRoomMeta"></small></div><div class="room-board-actions"><button class="board-more" id="jumpRoomLeave" type="button">SAIR DA SALA</button><button class="board-more danger" id="jumpRoomAbandon" type="button">ABANDONAR SALA</button></div></div><ol id="jumpRoomRanking"></ol>';
  createPanel.after(roomBoard);
- $('jumpRoomLeave').onclick=async()=>{roomId=null;roomLabel='';await newRun({mode:'solo',biome:BIOMES[Math.floor(Math.random()*BIOMES.length)]})};
+ $('jumpRoomLeave').onclick=async()=>{await api('/api/jump/lobby/leave',{method:'POST',body:'{}'}).catch(()=>{});roomId=null;roomLabel='';await newRun({mode:'public',biome:BIOMES[Math.floor(Math.random()*BIOMES.length)]})};
  $('jumpRoomAbandon').onclick=confirmAbandonJumpRoom;
 
- $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*BIOMES.length)],mode:'solo'});
- $('jumpJoinButton').onclick=chooseWorld;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode,roomId,roomLabel});
+ $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*BIOMES.length)],mode:'public'});
+ $('jumpJoinButton').onclick=jumpRooms;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode:'public'});
  captureNative('.action.blue[href="#ranking"]',()=>openRank('world'));
  captureNative('.action.purple[href="#rooms"]',()=>jumpRooms());
  captureNative('#createRoomButton',toggleJumpCreateRoom);

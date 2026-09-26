@@ -5,13 +5,15 @@ const crypto=require('crypto');
 const authService=require('./auth-server');
 const paypalService=require('./paypal-server');
 const jumpService=require('./jump-server');
+const pulseOrbitService=require('./pulse-orbit-server');
+const progressionService=require('./progression-server');
 const PORT=Number(process.env.PORT)||3000;
 const HOST=String(process.env.HOST||'127.0.0.1');
 const ALLOWED_HOSTS=new Set(String(process.env.PUBLIC_HOSTS||'eixo.at,www.eixo.at,127.0.0.1,localhost').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean));
 function requestHost(req){return String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().toLowerCase().replace(/:\d+$/,'')}
 function allowedRequestHost(req){return ALLOWED_HOSTS.has(requestHost(req))}
 const ROOT=__dirname;
-const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','jump-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
+const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','jump-server.js','pulse-orbit-server.js','progression-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
 const PUBLIC_STATIC_EXTS=new Set(['.html','.css','.js','.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.woff','.woff2']);
 function isPublicStaticRequestPath(pathname){
   if(['/jump','/pulse','/passport','/rankings','/rooms','/vip'].includes(pathname))return true;
@@ -119,6 +121,8 @@ async function initDb(){
   await pool.query(`CREATE TABLE IF NOT EXISTS messages(id UUID PRIMARY KEY,type VARCHAR(20) NOT NULL,name VARCHAR(80),email VARCHAR(200),subject VARCHAR(160),message TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await paypalService.initDb(pool);
   await jumpService.initDb(pool);
+  await pulseOrbitService.initDb(pool);
+  await progressionService.initDb(pool);
   await pool.query(`CREATE TABLE IF NOT EXISTS background_claims(x INTEGER NOT NULL,y INTEGER NOT NULL,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,color VARCHAR(7) NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(x,y))`);
   await pool.query(`ALTER TABLE background_claims ALTER COLUMN color TYPE VARCHAR(16)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS background_claims_owner_idx ON background_claims(owner_id)`);
@@ -393,16 +397,26 @@ async function handleApi(req,res,url){
   if(url.pathname==='/api/jump/player-rank'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.playerRank(global.db,p));}
   if(url.pathname==='/api/jump/rankings'&&req.method==='GET')return json(res,200,await jumpService.rankings(global.db,url.searchParams.get('country'),url.searchParams.get('page')));
   if(url.pathname==='/api/jump/cosmetics'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,{ok:true,outfit:await jumpService.getOutfit(global.db,p),...jumpService.wardrobeFor(p)});}
+  if(url.pathname==='/api/jump/lobby'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,jumpService.lobbyStatus(p));}
   if(url.pathname==='/api/jump/rooms'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.roomList(global.db,p));}
   if(url.pathname==='/api/jump/rooms/rankings'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await jumpService.roomRankings(global.db,p,url.searchParams.get('roomId')));}
   if(url.pathname==='/api/jump/run/state'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,jumpService.state(p,url.searchParams.get('runId')));}
+  if(url.pathname==='/api/pulse/orbit/rankings'&&req.method==='GET')return json(res,200,await pulseOrbitService.rankings(global.db,url.searchParams.get('country'),url.searchParams.get('page')));
+  if(url.pathname==='/api/pulse/orbit/player-rank'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await pulseOrbitService.playerRank(global.db,p));}
+  if(['/api/pulse/orbit/room-rankings','/api/pulse/orbit/rooms/rankings'].includes(url.pathname)&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,{players:await pulseOrbitService.roomRankings(global.db,p,url.searchParams.get('roomId'))});}
+  if(url.pathname==='/api/passport'&&req.method==='GET'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));return json(res,200,await progressionService.profile(global.db,p));}
   if(url.pathname.startsWith('/api/jump/')&&req.method==='POST'){
     const d=await body(req),p=await roomAuth(d.id,d.token);
     if(url.pathname==='/api/jump/run/start'){if(!boundedRate(paypalRate,'jump-start:'+p.id,15,60*1000))throw Object.assign(new Error('Aguarda um momento antes de recomeçar.'),{status:429});return json(res,201,await jumpService.start(global.db,p,d));}
     if(url.pathname==='/api/jump/run/input'){if(!boundedRate(paypalRate,'jump-input:'+p.id,250,10*1000))throw Object.assign(new Error('Demasiadas atualizações JUMP.'),{status:429});return json(res,200,jumpService.input(p,d));}
-    if(url.pathname==='/api/jump/run/finish')return json(res,200,await jumpService.finish(global.db,p,d.runId,d.platform));
+    if(url.pathname==='/api/jump/run/finish'){const out=await jumpService.finish(global.db,p,d.runId,d.platform);out.progress=await progressionService.award(global.db,p.id,'jump',d.runId,out.score);return json(res,200,out);}
     if(url.pathname==='/api/jump/run/leave')return json(res,200,jumpService.leave(p));
     if(url.pathname==='/api/jump/cosmetics')return json(res,200,await jumpService.saveOutfit(global.db,p,d));
+    if(['/api/jump/lobby/create','/api/jump/lobby/join','/api/jump/lobby/start'].includes(url.pathname)&&!boundedRate(paypalRate,'jump-lobby:'+p.id,30,60*1000))throw Object.assign(new Error('Aguarda um momento antes de alterares o lobby.'),{status:429});
+    if(url.pathname==='/api/jump/lobby/create')return json(res,201,jumpService.lobbyCreate(p,d));
+    if(url.pathname==='/api/jump/lobby/join')return json(res,200,jumpService.lobbyJoin(p,d));
+    if(url.pathname==='/api/jump/lobby/leave')return json(res,200,jumpService.lobbyLeave(p));
+    if(url.pathname==='/api/jump/lobby/start')return json(res,200,await jumpService.lobbyStart(global.db,p));
     if(url.pathname==='/api/jump/rooms/create')return json(res,201,await jumpService.roomCreate(global.db,p,d));
     if(url.pathname==='/api/jump/rooms/join')return json(res,200,await jumpService.roomJoin(global.db,p,d));
     if(url.pathname==='/api/jump/rooms/leave')return json(res,200,await jumpService.roomLeave(global.db,p,d));
@@ -416,6 +430,8 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/players'){return json(res,410,{error:'Este endpoint foi substituído pelo sistema de contas EIXO.'});}
   if(req.method==='POST'&&url.pathname==='/api/game/start'){const d=await body(req);return json(res,201,await startGameRun(d.id,d.token,clientIp(req)));}
   if(req.method==='POST'&&url.pathname==='/api/scores'){const d=await body(req);return json(res,200,await submitScore(d.id,d.token,d.score,d.telemetry,d.runId,d.roomId||null));}
+  if(req.method==='POST'&&url.pathname==='/api/pulse/orbit/start'){const d=await body(req),p=await roomAuth(d.id,d.token);return json(res,201,await pulseOrbitService.start(global.db,p));}
+  if(req.method==='POST'&&url.pathname==='/api/pulse/orbit/scores'){const d=await body(req),p=await roomAuth(d.id,d.token),out=await pulseOrbitService.finish(global.db,p,d);out.progress=await progressionService.award(global.db,p.id,'pulse',d.runId,out.score);return json(res,200,out);}
   if(req.method==='GET'&&url.pathname==='/api/auth/me'){const p=await authenticateSession(url.searchParams.get('token'));if(p&&(p.bannedPermanent||(p.bannedUntil&&new Date(p.bannedUntil)>new Date())))return json(res,423,{error:'Conta bloqueada.',ban:{permanent:!!p.bannedPermanent,until:p.bannedUntil||null,reason:p.banReason||null}});return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
   if(req.method==='GET'&&url.pathname==='/api/me'){const p=await authenticate(url.searchParams.get('id'),url.searchParams.get('token'));if(p&&(p.bannedPermanent||(p.bannedUntil&&new Date(p.bannedUntil)>new Date())))return json(res,423,{error:'Conta bloqueada.',ban:{permanent:!!p.bannedPermanent,until:p.bannedUntil||null,reason:p.banReason||null}});return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
   if(req.method==='GET'&&url.pathname==='/api/profile/ranks'){const p=await roomAuth(url.searchParams.get('id'),url.searchParams.get('token'));const r=await ranked();return json(res,200,{worldRank:r.world.get(p.id)||null,countryRank:r.country.get(p.id)||null});}

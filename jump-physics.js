@@ -5,7 +5,9 @@
   else root.EixoJumpPhysics=api;
 })(typeof window!=='undefined'?window:this,function(){
   'use strict';
-  const W=450,H=195,SCORE_PER_PLATFORM=12;
+  // World units match the 16:9 art canvas. Time/difficulty stay independent of pixels.
+  const UNIT=2,W=960,H=540,SCORE_PER_PLATFORM=12,SPEED=272,JUMP=414,GRAVITY=772,MAX_FALL=564;
+  const PLAYER_RADIUS=10,CAMERA_ANCHOR=170,FLOOR_MARGIN=48;
   function hash(seed,n){let x=(seed+Math.imul(n,0x9e3779b9))|0;x=Math.imul(x^(x>>>16),0x85ebca6b);x=Math.imul(x^(x>>>13),0xc2b2ae35);return((x^(x>>>16))>>>0)/4294967296;}
   function platformX(p,time){
     if(!p?.moving)return Number(p?.x||0);
@@ -22,17 +24,17 @@
       // geometry is already close to the endless curve instead of staying easy
       // for the first 1000 points.
       const difficulty=Math.min(1,Math.max(0,(i-2)/14));
-      const gap=Math.min(51,35+Math.floor(a*(10+6*difficulty))+Math.floor(5*difficulty));
-      const width=Math.round(84-(42*difficulty)+c*(7-2*difficulty));
+      const gap=UNIT*Math.min(51,35+Math.floor(a*(10+6*difficulty))+Math.floor(5*difficulty));
+      const width=UNIT*Math.round(84-(42*difficulty)+c*(7-2*difficulty));
 
       // Force meaningful left/right routing while keeping the jump envelope
       // physically reachable at full horizontal speed.
       const prevCenter=Number(prev.x||0)+Number(prev.w||W)/2;
-      const minShift=i<=2?26:42+Math.round(34*difficulty);
-      const maxShift=i<=2?60:66+Math.round(52*difficulty);
+      const minShift=UNIT*(i<=2?26:42+Math.round(34*difficulty));
+      const maxShift=UNIT*(i<=2?60:66+Math.round(52*difficulty));
       const shift=minShift+hash(seed,i*11+4)*(maxShift-minShift);
       let direction=hash(seed,i*11+5)<.5?-1:1;
-      const minCenter=12+width/2,maxCenter=W-12-width/2;
+      const minCenter=24+width/2,maxCenter=W-24-width/2;
       let target=prevCenter+direction*shift;
       if(target<minCenter||target>maxCenter){direction*=-1;target=prevCenter+direction*shift}
       target=Math.max(minCenter,Math.min(maxCenter,target));
@@ -41,18 +43,17 @@
 
       // Moving platforms dominate the late game (normally 80%+) and accelerate
       // sooner than jump8 while remaining within a catchable linear velocity.
-      const moveChance=1;
-      const forcedMover=i>=9&&(i%4===0||i%7===0);
-      const moving=i>=1;
+      const moveChance=.30+.55*difficulty;
+      const moving=i>3&&(i%4===0||hash(seed,i*11+6)<moveChance);
       let moveCenter=x,moveAmp=0,moveSpeed=0,movePhase=0;
       if(moving){
-        const desired=(i<=2?8:19)+hash(seed,i*11+7)*(i<=2?6:22+13*difficulty);
-        const min=Math.max(12,x-desired),max=Math.min(W-width-12,x+desired);
+        const desired=UNIT*(19+hash(seed,i*11+7)*(22+13*difficulty));
+        const min=Math.max(24,x-desired),max=Math.min(W-width-24,x+desired);
         moveCenter=(min+max)/2;
-        moveAmp=Math.max(8,(max-min)/2);
+        moveAmp=Math.max(16,(max-min)/2);
         const speedProgress=Math.min(1,Math.max(0,(i-2)/10));
         const desiredSpeed=(1.02+1.05*speedProgress)+hash(seed,i*11+8)*0.22;
-        moveSpeed=Math.min(2.24,desiredSpeed,106/Math.max(1,moveAmp));
+        moveSpeed=Math.min(2.24,desiredSpeed,212/Math.max(1,moveAmp));
         movePhase=hash(seed,i*11+9)*Math.PI*2;
       }
 
@@ -110,11 +111,11 @@
 
     const dir=(keys.right?1:0)-(keys.left?1:0);
     const lastY=s.y;
-    s.x=Math.max(8,Math.min(W-8,s.x+dir*136*dt));
+    s.x=Math.max(PLAYER_RADIUS,Math.min(W-PLAYER_RADIUS,s.x+dir*SPEED*dt));
 
     if(s.ground&&groundIndex>=0){
       const gp=s.platforms[groundIndex],gx=platformX(gp,s.time);
-      if(s.x+7<=gx||s.x-7>=gx+gp.w){
+      if(s.x+PLAYER_RADIUS<=gx||s.x-PLAYER_RADIUS>=gx+gp.w){
         s.ground=false;s.groundPlatform=-1;s.jumpOrigin=groundIndex;
       }
     }
@@ -122,10 +123,10 @@
     if(keys.jump)s.jumpBuffer=.13;else s.jumpBuffer=Math.max(0,s.jumpBuffer-dt);
     if(s.ground&&s.jumpBuffer>0){
       s.jumpOrigin=Number.isInteger(s.groundPlatform)?s.groundPlatform:0;
-      s.vy=207;s.ground=false;s.groundPlatform=-1;s.jumpBuffer=0;
+      s.vy=JUMP;s.ground=false;s.groundPlatform=-1;s.jumpBuffer=0;
     }
 
-    s.vy=Math.max(-282,s.vy-386*dt);
+    s.vy=Math.max(-MAX_FALL,s.vy-GRAVITY*dt);
     s.y+=s.vy*dt;
     if(s.vy<=0){
       const firstAtLeast=(value)=>{let lo=0,hi=s.platforms.length;while(lo<hi){const mid=(lo+hi)>>1;if(s.platforms[mid].y<value)lo=mid+1;else hi=mid;}return lo;};
@@ -135,7 +136,7 @@
       for(let i=start;i<=end;i++){
         if(i<lowestAllowed||isBroken(s,i))continue;
         const p=s.platforms[i],px=platformX(p,s.time);
-        if(lastY>=p.y-.05&&s.y<=p.y&&s.x+7>px&&s.x-7<px+p.w){
+        if(lastY>=p.y-.05&&s.y<=p.y&&s.x+PLAYER_RADIUS>px&&s.x-PLAYER_RADIUS<px+p.w){
           s.y=p.y;s.vy=0;s.ground=true;s.groundPlatform=i;s.jumpOrigin=i;landed=true;
           if(p.fragile){
             s.fragilePlatform=i;
@@ -152,14 +153,14 @@
     }else{s.ground=false;s.groundPlatform=-1}
 
     s.best=Math.max(s.best,s.y);
-    if(s.platforms[s.platforms.length-1].y<s.best+350)extend(s.platforms,s.seed,s.platforms.length+25);
-    s.cam=Math.max(0,s.best-78);
-    if(s.y<=s.cam-22)s.alive=false;
+    if(s.platforms[s.platforms.length-1].y<s.best+H+160)extend(s.platforms,s.seed,s.platforms.length+25);
+    s.cam=Math.max(0,s.best-CAMERA_ANCHOR);
+    if(s.y<=s.cam-FLOOR_MARGIN)s.alive=false;
     return s;
   }
   function publicState(s){
     const broken=Array.isArray(s.broken)?s.broken:Object.keys(s.brokenPlatforms||{}).filter(k=>s.brokenPlatforms[k]).map(Number);
     return{x:Math.round(s.x*10)/10,y:Math.round(s.y*10)/10,best:Math.max(0,Math.floor(s.best)),platform:Math.max(0,Number(s.bestPlatform)||0),activeMinPlatform:Math.max(0,Number(s.activeMinPlatform)||0),score:Math.max(0,Number(s.score)||0),alive:s.alive,vy:Math.round(s.vy),ground:!!s.ground,groundPlatform:Number.isInteger(s.groundPlatform)?s.groundPlatform:-1,broken,fragilePlatform:Number(s.fragilePlatform??-1),fragileRatio:Math.round(Math.max(0,Math.min(1,Number(s.fragileRatio)||0))*100)/100};
   }
-  return{W,H,SCORE_PER_PLATFORM,hash,platformX,platforms,create,step,publicState,isBroken,fragileProgress};
+  return{W,H,UNIT,SPEED,JUMP,GRAVITY,MAX_FALL,PLAYER_RADIUS,CAMERA_ANCHOR,FLOOR_MARGIN,SCORE_PER_PLATFORM,hash,platformX,platforms,create,step,publicState,isBroken,fragileProgress};
 });

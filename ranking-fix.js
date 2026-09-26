@@ -27,8 +27,8 @@
    const code=registeredCountry();
    const p=(()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}})();
    try{
-     const requests=[fetch('/api/rankings?page=1',{cache:'no-store'}),fetch('/api/rankings?country='+encodeURIComponent(code)+'&page=1',{cache:'no-store'})];
-     if(p?.id)requests.push(fetch('/api/player-rank?id='+encodeURIComponent(p.id),{cache:'no-store',credentials:'same-origin'}));
+     const requests=[fetch('/api/pulse/orbit/rankings?page=1',{cache:'no-store'}),fetch('/api/pulse/orbit/rankings?country='+encodeURIComponent(code)+'&page=1',{cache:'no-store'})];
+     if(p?.id)requests.push(fetch('/api/pulse/orbit/player-rank?id='+encodeURIComponent(p.id),{cache:'no-store',credentials:'same-origin'}));
      const results=await Promise.all(requests);
      if(!results[0].ok||!results[1].ok)throw Error();
      const [w,c]=await Promise.all([results[0].json(),results[1].json()]);

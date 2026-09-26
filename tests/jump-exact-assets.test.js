@@ -1,67 +1,38 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const root=path.join(__dirname,'..');
-const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-const assets=['bg-city','bg-forest','bg-snow','runner','platform-city','platform-forest','platform-snow','effects'];
-test('approved JUMP artwork is loaded before the renderer, physics and game',()=>{
- const html=read('index.html');
- const order=[...assets.map(n=>'assets/jump-exact/jump-exact-'+n+'.js'),'jump-exact-renderer.js','jump-worlds.js','jump.js'].map(n=>html.indexOf('src="'+n+'?'));
- assert.ok(order.every(x=>x>=0),'missing image asset or script');
- for(let i=1;i<order.length;i++)assert.ok(order[i]>order[i-1],'scripts are out of order');
- assert.match(html,/20260924-exact13/);
+const root=path.join(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const biomes=['forest','city','snow','astral'];
+
+test('V3 JUMP loads its modular renderer before worlds and gameplay',()=>{
+ const html=read('index.html'),names=['jump-motion.js','jump-exact-renderer.js','jump-worlds.js','jump.js'];
+ const order=names.map(n=>html.indexOf(n));assert.ok(order.every(x=>x>=0));
+ for(let i=1;i<order.length;i++)assert.ok(order[i]>order[i-1]);
+ assert.match(html,/jump-exact-renderer\.js\?v=20260926-v300/);
 });
-test('all three approved scenes, transparent platform atlases, runner and VFX are real WebP artwork',()=>{
- for(const name of assets){
-  const js=read('assets/jump-exact/jump-exact-'+name+'.js');
-  const list=js.match(/\+\[\s*([\s\S]*?)\s*\]\.join\(""\)/);
-  assert.ok(list,'encoded artwork missing: '+name);
-  const parts=[...list[1].matchAll(/"([A-Za-z0-9+/=]+)"/g)].map(m=>m[1]);
-  const bytes=Buffer.from(parts.join(''),'base64');
-  assert.ok(bytes.length>50000,'placeholder / thumbnail instead of real artwork: '+name);
-  assert.equal(bytes.toString('ascii',0,4),'RIFF');
-  assert.equal(bytes.toString('ascii',8,12),'WEBP');
+test('each realm keeps background, platform and ground in separate editable assets',()=>{
+ for(const biome of biomes)for(const prefix of ['jump','platform','ground']){
+  const ext=prefix==='jump'?'webp':'png',file=path.join(root,'assets','game-v300',`${prefix}-${biome}.${ext}`);
+  assert.ok(fs.statSync(file).size>100000,`missing ${prefix} module for ${biome}`);
  }
-});
-test('approved sprites are active while the old renderer remains as a safe fallback',()=>{
- const game=read('jump.js'),worlds=read('jump-worlds.js'),renderer=read('jump-exact-renderer.js');
- assert.match(game,/EixoJumpExactArt\?\.runner/);
- assert.match(worlds,/EixoJumpExactArt\?\.background/);
- assert.match(worlds,/EixoJumpExactArt\?\.platform/);
- assert.match(renderer,/function recolor\(/);
- for(const fx of ['glow','pulse','shimmer','spark','halo','frost','electric','ember','mist','plasma','comet','cosmic','prismatic'])assert.match(renderer,new RegExp(fx+':\\['));
- assert.match(game,/const P=window\.EixoJumpPhysics/);
-});
-
-test('visual polish preserves the approved hero and doubles the gameplay backing resolution',()=>{
- const game=read('jump.js'),renderer=read('jump-exact-renderer.js'),worlds=read('jump-worlds.js');
- assert.match(game,/id="jumpCanvas" width="900" height="390"/);
- assert.match(game,/ctx\.setTransform\(2,0,0,2,0,0\)/);
- assert.doesNotMatch(renderer,/function hairMotion\(/);
- assert.match(renderer,/function particlesFor\(/);
- assert.match(renderer,/function drawRun\(/);
- assert.doesNotMatch(renderer,/fillRect\(x\+5,y-3,Math\.max\(0,w-10\),1\)/);
- for(const biome of ['city','forest'])assert.match(worlds,new RegExp("biome==='"+biome+"'"));
- assert.match(worlds,/Multiple snow speeds/);
-});
-
-test('redesigned maps use new scenery and biome materials while shoe effects follow motion',()=>{
  const renderer=read('jump-exact-renderer.js');
- for(const biome of ['city','forest','snow']){
-  const scene=path.join(root,'assets','game-v290','jump-'+biome+'.webp');
-  assert.ok(fs.statSync(scene).size>100000,'missing full map scenery: '+biome);
-  assert.match(renderer,new RegExp("jump-\\$\\{name\\}\\.webp"));
- }
- assert.match(renderer,/const themes=\{city:/);
- assert.match(renderer,/name==='forest'/);
- assert.match(renderer,/Motion\.updateEmitter/);
- assert.match(renderer,/p\.y\+offset/);
- assert.match(renderer,/const inset=row===1\?16:0/);
+ assert.match(renderer,/images=\{backgrounds:\{\},platforms:\{\},grounds:\{\},props:\{\},hero:null\}/);
+ assert.match(renderer,/index===0\?images\.grounds\[name\]:images\.platforms\[name\]/);
 });
 
-test('VIP effects render behind the complete hero and all jump platforms move',()=>{
- const renderer=read('jump-exact-renderer.js'),physics=read('jump-physics.js');
- const emission=renderer.indexOf('particlesFor(c,movement.state');assert.ok(emission>=0&&emission<renderer.indexOf('const sprite=atlasSprite(tinted'));
- assert.doesNotMatch(renderer,/Distinct animated ribbons/);
- assert.match(physics,/const moving=i>=1;/);
- assert.match(physics,/if\(gp\?\.moving\)s\.x\+=platformX/);
+test('animated scenery props and character body parts are independent modules',()=>{
+ for(const prop of ['banner-navy','banner-copper','banner-violet','lantern-gold','lantern-ice','crystal-lamp','vines','collectible-shard'])
+  assert.ok(fs.statSync(path.join(root,'assets','game-v300','prop-'+prop+'.png')).size>100000,'missing prop '+prop);
+ const manifest=JSON.parse(read('assets/game-v300/hero-parts.json'));
+ for(const part of ['head','torso','cape','upperArm','forearm','thigh','shin','boot'])assert.ok(manifest.parts[part]?.rect);
+ const renderer=read('jump-exact-renderer.js');
+ assert.match(renderer,/function cloth\(/);assert.match(renderer,/function drawWorldProps\(/);
+ assert.match(renderer,/function pieceImage\(/);assert.match(renderer,/function cape\(/);
+ for(const fx of ['glow','pulse','shimmer','spark','halo','frost','electric','ember','mist','plasma','comet','cosmic','prismatic'])assert.match(renderer,new RegExp(fx+':\\['));
+});
+
+test('the 16:9 world uses a 2x backing canvas and a small articulated runner',()=>{
+ const game=read('jump.js'),renderer=read('jump-exact-renderer.js'),css=read('redesign.css');
+ assert.match(game,/id="jumpCanvas" width="1920" height="1080"/);
+ assert.match(game,/ctx\.setTransform\(2,0,0,2,0,0\)/);assert.match(css,/aspect-ratio:16\/9/);
+ assert.match(renderer,/heroHeight:37/);assert.match(renderer,/Motion\.knee/);assert.match(renderer,/particlesFor\(c,movement\.state/);
 });

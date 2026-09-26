@@ -23,18 +23,14 @@ test('PULSE and JUMP intro copy use the game names and JUMP has only the top con
  assert.doesNotMatch(jump,/id="jumpHelp"/);
 });
 
-test('ONLINE shows one matchmaking card and does not expose a biome picker',()=>{
+test('JUMP exposes online matchmaking and a friend lobby without a biome picker',()=>{
  const jump=fs.readFileSync(path.join(root,'jump.js'),'utf8');
- const start=jump.indexOf('function chooseWorld(){'),end=jump.indexOf('async function customize()',start),fn=jump.slice(start,end);
- assert.ok(start>=0&&end>start);
- assert.match(fn,/JOGAR ONLINE/);
- assert.match(fn,/id="jumpOnlineMatch"/);
- assert.match(fn,/newRun\(\{mode:'public'\}\)/);
- assert.doesNotMatch(fn,/matchmaking procura|Matchmaking fills/);
- assert.doesNotMatch(fn,/BIOMES\.map/);
- assert.doesNotMatch(fn,/data-biome/);
+ assert.match(jump,/jumpSoloButton'\)\.textContent='ONLINE'/);
+ assert.match(jump,/LOBBY DE AMIGOS/);
+ assert.match(jump,/\/api\/jump\/lobby\/start/);
+ assert.doesNotMatch(jump,/id="jumpRoomBiomeInput"/);
  const server=fs.readFileSync(path.join(root,'jump-server.js'),'utf8');
- assert.match(server,/function findPublicInstance\(\)/);
+ assert.match(server,/function findPublicInstance\(groupSize=1\)/);
  assert.match(server,/const PUBLIC_CAPACITY=20/);
  assert.match(server,/b\.players\.size-a\.players\.size/);
 });

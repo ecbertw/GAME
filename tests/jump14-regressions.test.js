@@ -22,17 +22,16 @@ test('ONLINE uses one sequential public lobby with capacity 20',()=>{
  assert.match(server,/const PUBLIC_CAPACITY=20/);
  assert.match(server,/let publicLobbyId=null/);
  assert.match(server,/b\.players\.size-a\.players\.size/);
- assert.match(server,/inst\.players\.size>0&&inst\.players\.size<PUBLIC_CAPACITY/);
- assert.match(server,/maxPlayers:run\.kind==='public'\?PUBLIC_CAPACITY:5/);
+ assert.match(server,/inst\.players\.size>0&&inst\.players\.size\+groupSize<=PUBLIC_CAPACITY/);
+ assert.match(server,/maxPlayers:PUBLIC_CAPACITY/);
  const jump=fs.readFileSync(path.join(root,'jump.js'),'utf8');
  assert.match(jump,/lastState\?\.maxPlayers\|\|run\?\.maxPlayers\|\|20/);
 });
 
-test('ONLINE modal contains one play card without internal matchmaking explanation',()=>{
+test('friend lobby UI exposes create, join, start and leave actions',()=>{
  const jump=fs.readFileSync(path.join(root,'jump.js'),'utf8');
- const start=jump.indexOf('function chooseWorld(){'),end=jump.indexOf('async function customize()',start),fn=jump.slice(start,end);
- assert.match(fn,/id="jumpOnlineMatch"/);
- assert.doesNotMatch(fn,/matchmaking procura|Matchmaking fills|Só cria outra|new one opens/);
+ for(const route of ['create','join','start','leave'])assert.match(jump,new RegExp('/api/jump/lobby/'+route));
+ assert.match(jump,/l\.memberCount\+'\/5/);
 });
 
 test('JUMP VIP wardrobe adds gold pants and natural effect variants',()=>{

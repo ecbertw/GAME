@@ -49,7 +49,8 @@
  const jumpThemes={
   city:{interval:510,notes:[130.81,196,261.63,329.63,392],bass:[65.41,73.42,82.41,98],wave:'square'},
   forest:{interval:760,notes:[261.63,329.63,392,493.88,587.33],bass:[98,110,130.81,146.83],wave:'sine'},
-  snow:{interval:830,notes:[329.63,440,493.88,659.25,783.99],bass:[82.41,98,110,130.81],wave:'sine'}
+  snow:{interval:830,notes:[329.63,440,493.88,659.25,783.99],bass:[82.41,98,110,130.81],wave:'sine'},
+  astral:{interval:690,notes:[293.66,392,493.88,587.33,739.99],bass:[73.42,92.5,110,146.83],wave:'triangle'}
  };
  function jumpStop(){
   if(jumpTimer){clearInterval(jumpTimer);jumpTimer=null;}

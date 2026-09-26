@@ -1,0 +1,88 @@
+{
+  "image": "hero-parts.png",
+  "width": 1254,
+  "height": 1254,
+  "parts": {
+    "head": {
+      "rect": [
+        106,
+        242,
+        222,
+        219
+      ]
+    },
+    "torso": {
+      "rect": [
+        520,
+        211,
+        219,
+        324
+      ]
+    },
+    "cape": {
+      "rect": [
+        841,
+        226,
+        388,
+        274
+      ]
+    },
+    "arm": {
+      "rect": [
+        167,
+        766,
+        127,
+        354
+      ]
+    },
+    "leg": {
+      "rect": [
+        580,
+        759,
+        108,
+        361
+      ]
+    },
+    "boot": {
+      "rect": [
+        971,
+        938,
+        178,
+        169
+      ]
+    },
+    "upperArm": {
+      "rect": [
+        167,
+        766,
+        127,
+        181
+      ]
+    },
+    "forearm": {
+      "rect": [
+        167,
+        931,
+        127,
+        189
+      ]
+    },
+    "thigh": {
+      "rect": [
+        580,
+        759,
+        108,
+        188
+      ]
+    },
+    "shin": {
+      "rect": [
+        580,
+        931,
+        108,
+        189
+      ]
+    }
+  },
+  "recolor": "head navy hair only; keep peach skin and eye. torso cream jacket; arm cream sleeve only, keep hand. leg navy trousers; cape copper; boot brown."
+}

@@ -9,11 +9,11 @@ test('JUMP exposes distinct biome music and jump landing loss effects',()=>{
  assert.match(audio,/window\.EixoAudio=\{[^}]*jumpJump[^}]*jumpLand[^}]*jumpLose[^}]*jumpBiome[^}]*jumpStop/s);
 });
 
-test('JUMP worlds use the three generated premium scene identities',()=>{
+test('JUMP worlds use the four modular sky realm identities',()=>{
  const worlds=fs.readFileSync(path.join(root,'jump-worlds.js'),'utf8');
- assert.match(worlds,/EixoJumpPremiumArt\?\.drawBackground/);
- assert.match(worlds,/city:\{top:/);assert.match(worlds,/forest:\{top:/);assert.match(worlds,/snow:\{top:/);
- assert.match(worlds,/version:'jump15'/);
+ assert.match(worlds,/EixoJumpExactArt\?\.background/);
+ for(const name of ['city','forest','snow','astral'])assert.match(worlds,new RegExp(name+':\\{top:'));
+ assert.match(worlds,/version:'sky-gardens-v3'/);
 });
 test('JUMP customizer is wide, clips no horizontal content and retired team CSS is gone',()=>{
  const css=fs.readFileSync(path.join(root,'jump.css'),'utf8');

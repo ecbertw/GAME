@@ -26,8 +26,10 @@ const translations = {
 
 let currentCountryCode = localStorage.getItem('eixo_country') || 'PT';
 let player = JSON.parse(localStorage.getItem('eixo_player') || 'null');
-let running = false, score = 0, x = 0, direction = 1, speed = 4.2, lastTime = 0, pulse = 0, impact=0, impactType='good';
-let roundStartedAt=0,hitTelemetry=[],roundRunId=null,roundStartPromise=null,passArmed=true;
+const Orbit=window.EixoPulseOrbit;
+let running=false,score=0,orbitState=Orbit.createState(19),orbitRenderer=null,orbitFrame=null,orbitActive=false,orbitStatus='idle',orbitLoading=false,orbitGeneration=0;
+let roundStartedAt=0,hitTelemetry=[],roundRunId=null,roundRoomId=null,orbitFeedback='',orbitFeedbackAt=0,orbitBest=0;
+const orbitMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
 let rankingMode = 'country', rankingPage = 1, rankingPages = 1;
 const rankingModal = document.getElementById('rankingModal');
 const countrySelect = document.getElementById('countrySelect');
@@ -42,7 +44,7 @@ function applyLanguage(){
   const c=country(currentCountryCode||'PT');
   const flagEl=document.getElementById('countryFlag'),nameEl=document.getElementById('countryName'),nationalFlag=document.getElementById('nationalFlag'),nationalTitle=document.getElementById('nationalTitle'),modalCountryTab=document.getElementById('modalCountryTab');
   if(flagEl)flagEl.textContent=c.flag;if(nameEl)nameEl.textContent=c.name;if(nationalFlag)nationalFlag.textContent=c.flag;if(nationalTitle)nationalTitle.textContent=`TOP ${c.name}`;if(modalCountryTab)modalCountryTab.textContent=`${c.flag} ${c.name}`;
-  messageEl.textContent=t.instruction;
+  if(!orbitLoading)messageEl.textContent='';
 }
 function fillCountryControls(){
   if(countrySelect)countrySelect.innerHTML=countryCodes.map(code=>{const c=country(code);return `<option value="${code}">${c.flag} ${c.name}</option>`}).join('');
@@ -54,58 +56,63 @@ document.addEventListener('click',e=>{if(!e.target.closest('.profile-area')){cou
 function changeCountry(code){setCountry(code);countryMenu?.classList.remove('open');countryButton?.setAttribute('aria-expanded','false');}
 if(typeof window!=='undefined'){window.eixoGetPlayer=()=>player;window.eixoSetPlayer=p=>{player=p||null;window.dispatchEvent(new Event('eixo-player-updated'));};window.eixoGetCountry=()=>currentCountryCode;}
 
-let viewW=900,viewH=390;
-function dimensions(){return{w:viewW,h:viewH};}
-function center(){return{x:viewW/2,y:viewH/2};}
-function drawPixelCircle(cx,cy,radius,color,width=1,dashed=false){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dashed?[3,5]:[]);ctx.beginPath();ctx.arc(Math.round(cx),Math.round(cy),radius,0,Math.PI*2);ctx.stroke();ctx.restore();}
+function pulseVisible(){return orbitActive&&!document.hidden&&!window.eixoJumpActive&&window.eixoRoute==='pulse';}
+function orbitTime(){return running||orbitState.ended?Math.max(0,performance.now()-roundStartedAt):performance.now();}
 function draw(){
-  const{w,h}=dimensions(),c=center();ctx.clearRect(0,0,w,h);pulse+=.035;
-  const bg=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,Math.max(w,h)*.68);bg.addColorStop(0,'#102d38');bg.addColorStop(.46,'#0a1724');bg.addColorStop(1,'#050a12');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
-  // Perspective grid and side rails make the playfield feel like an arcade arena.
-  ctx.save();ctx.globalAlpha=.22;ctx.strokeStyle='#3ec7c1';ctx.lineWidth=1;
-  for(let i=-7;i<=7;i++){const bx=c.x+i*w*.09;ctx.beginPath();ctx.moveTo(c.x+i*8,c.y);ctx.lineTo(bx,h);ctx.stroke()}
-  for(let i=1;i<=7;i++){const yy=c.y+(h-c.y)*Math.pow(i/7,1.7);ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(w,yy);ctx.stroke()}
-  ctx.restore();
-  const scan=ctx.createLinearGradient(0,0,w,0);scan.addColorStop(0,'transparent');scan.addColorStop(.2,'#4ee7dd22');scan.addColorStop(.5,'#bffefa88');scan.addColorStop(.8,'#4ee7dd22');scan.addColorStop(1,'transparent');ctx.fillStyle=scan;ctx.fillRect(0,Math.round(c.y),w,2);
-  const outer=Math.max(28,Math.min(38,h*.095)),inner=Math.max(8,Math.min(11,h*.027));
-  ctx.save();ctx.shadowColor='#55e7df';ctx.shadowBlur=14;drawPixelCircle(c.x,c.y,outer+10,'#4b918f',1,true);drawPixelCircle(c.x,c.y,outer,'#64e0d7',2,false);drawPixelCircle(c.x,c.y,inner,'#d7fffc',2,false);ctx.restore();
-  const orbit=outer+16+Math.sin(pulse)*2;ctx.save();ctx.translate(c.x,c.y);ctx.rotate(pulse*.45);ctx.strokeStyle='#ad8aff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,orbit,-.34,.34);ctx.arc(0,0,orbit,Math.PI-.34,Math.PI+.34);ctx.stroke();ctx.restore();
-  const dotRadius=Math.max(7,Math.min(10,h*.024));ctx.save();ctx.shadowColor='#c0fff9';ctx.shadowBlur=14;ctx.fillStyle='#e8fffd';ctx.fillRect(Math.round(x-dotRadius/2),Math.round(c.y-dotRadius/2),Math.ceil(dotRadius),Math.ceil(dotRadius));ctx.fillStyle='#56dcd4';ctx.fillRect(Math.round(x-2),Math.round(c.y-2),4,4);ctx.restore();
-  if(impact>0){const color=impactType==='miss'?'#ff5d78':impactType==='ok'?'#ffd66f':'#79ffe1',r=outer+(1-impact)*55;ctx.save();ctx.globalAlpha=impact;ctx.strokeStyle=color;ctx.lineWidth=3;ctx.shadowColor=color;ctx.shadowBlur=16;ctx.beginPath();ctx.arc(c.x,c.y,r,0,Math.PI*2);ctx.stroke();ctx.restore();impact=Math.max(0,impact-.08)}
+  if(!orbitRenderer)orbitRenderer=Orbit.createRenderer(canvas);
+  orbitRenderer.draw(orbitState,orbitTime(),{status:orbitStatus,reducedMotion:!!orbitMotion?.matches,feedback:orbitFeedback,feedbackAt:orbitFeedbackAt,best:orbitBest,pt:document.documentElement.lang.startsWith('pt')});
 }
-function loop(time){if(!running)return;const dt=Math.min((time-lastTime)/16.67||1,2);lastTime=time;const{w,h}=dimensions(),margin=Math.max(24,w*.055);x+=direction*speed*dt;if(x>=w-margin){x=w-margin;direction=-1;}if(x<=margin){x=margin;direction=1;}const outer=Math.max(28,Math.min(38,h*.095));if(!passArmed&&Math.abs(x-w/2)>outer+12)passArmed=true;draw();requestAnimationFrame(loop);}
-async function beginServerRun(){const p=player;if(!p?.id)return null;try{const r=await fetch('/api/game/start',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,token:p.token})}),d=await r.json();if(!r.ok)throw Error(d.error||'Unable to start run.');roundRunId=d.runId;return d.runId}catch(e){roundRunId=null;console.warn('Run validation unavailable:',e.message);return null}}
-function resetGame(){score=0;scoreEl.textContent='0';const{w}=dimensions();x=Math.max(24,w*.1);direction=1;speed=4.2;running=true;passArmed=true;roundRunId=null;roundStartPromise=beginServerRun();roundStartedAt=performance.now();hitTelemetry=[];messageEl.textContent=getLang().instruction;lastTime=performance.now();requestAnimationFrame(loop);}
-function stopGame(){running=false;messageEl.textContent=getLang().instruction;draw();}
-function showFeedback(text,type){impact=1;impactType=type;feedbackEl.textContent=text;feedbackEl.className=`game-feedback ${type}`;void feedbackEl.offsetWidth;feedbackEl.classList.add('show');}
-function speedForScore(value){
-  const progress=Math.min(Math.max(Number(value)||0,0),100)/100;
-  const baseSpeed=4.2+(20-4.2)*progress;
-  // Mobile screens have a much shorter travel distance, so use a gentler curve there.
-  const mobile=window.matchMedia && window.matchMedia('(max-width: 820px)').matches;
-  return mobile ? baseSpeed*0.55 : baseSpeed;
+function loop(){orbitFrame=null;if(!pulseVisible())return;draw();if(running||!orbitMotion?.matches)orbitFrame=requestAnimationFrame(loop);}
+function scheduleOrbit(){if(!orbitFrame&&pulseVisible())orbitFrame=requestAnimationFrame(loop);}
+function resetGame(){
+  stopGame();orbitActive=true;orbitState=Orbit.createState(19);orbitStatus='idle';score=0;scoreEl.textContent='0';orbitFeedback='';messageEl.textContent='';
+  canvas.setAttribute('aria-label',document.documentElement.lang.startsWith('pt')?'PULSE Órbita. Espaço, Enter ou toque para acertar na zona dourada.':'PULSE Orbit. Space, Enter or tap to hit the golden zone.');
+  canvas.setAttribute('tabindex','0');resizeCanvas();scheduleOrbit();
 }
-async function hit(){
-  if(!player){if(window.eixoOpenAuth)window.eixoOpenAuth('login');return;}
-  if(!running){resetGame();return;}
-  const c=center(),signedOffset=x-c.x,distance=Math.abs(signedOffset),inner=Math.max(8,Math.min(11,dimensions().h*.027)),outer=Math.max(28,Math.min(38,dimensions().h*.095));
-  if(!passArmed&&distance<=outer+12)return;
-  let points=0;
-  if(distance<=inner+4){points=2;passArmed=false;score+=2;speed=speedForScore(score);showFeedback('+2','good');if(window.EixoAudio)window.EixoAudio.perfect();}
-  else if(distance<=outer){points=1;passArmed=false;score+=1;speed=speedForScore(score);showFeedback('+1','ok');if(window.EixoAudio)window.EixoAudio.hit();}
-  else{hitTelemetry.push({t:Math.round(performance.now()-roundStartedAt),offset:Math.round(signedOffset*10)/10,points:0});showFeedback('MISS','miss');if(window.EixoAudio)window.EixoAudio.miss();stopGame();await submitScore(score);return;}
-  hitTelemetry.push({t:Math.round(performance.now()-roundStartedAt),offset:Math.round(signedOffset*10)/10,points});
-  scoreEl.textContent=String(score);
+function completedRun(){return {runId:roundRunId,score,telemetry:hitTelemetry.slice(),roomId:roundRoomId,playerId:player?.id};}
+function stopGame(){
+  const completed=running&&score>0?completedRun():null;running=false;orbitActive=false;orbitLoading=false;orbitGeneration++;
+  if(orbitFrame)cancelAnimationFrame(orbitFrame);orbitFrame=null;
+  if(completed)void submitScore(completed);
 }
-async function submitScore(value){
-  if(!player||value<=0)return;
-  try{if(roundStartPromise)await roundStartPromise;const res=await fetch('/api/scores',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:player.id,token:player.token,score:value,telemetry:hitTelemetry.slice(0,600),runId:roundRunId,roomId:window.eixoActiveRoomId||null})});const data=await res.json();if(res.status===423&&data.ban){window.__eixoPendingBan=data.ban;window.dispatchEvent(new CustomEvent('eixo-ban',{detail:data.ban}));return;}if(res.ok&&data.player){player={...player,...data.player,token:player.token};localStorage.setItem('eixo_player',JSON.stringify(player));loadTopRankings();if(data.roomScoreAccepted&&data.roomId)window.dispatchEvent(new CustomEvent('eixo-room-score-updated',{detail:{roomId:data.roomId,score:data.roomScore}}));if(data.antiCheat?.flagged)console.info('EIXO run review flag:',data.antiCheat.risk,data.antiCheat.reasons);}}
-  catch(e){console.warn('Score could not be submitted:',e.message);}
+async function beginOrbit(){
+  if(orbitLoading||!pulseVisible())return;
+  if(!player?.id){window.eixoOpenAuth?.('login');return;}
+  const generation=++orbitGeneration;orbitLoading=true;orbitStatus='loading';messageEl.textContent='';draw();
+  try{
+    const res=await fetch('/api/pulse/orbit/start',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:player.id,token:player.token})}),data=await res.json();
+    if(generation!==orbitGeneration||!pulseVisible())return;
+    if(!res.ok)throw Error(data.error||'PULSE unavailable.');
+    if(!data.runId||data.mode!==Orbit.MODE||!Number.isInteger(data.seed))throw Error('PULSE unavailable.');
+    roundRunId=data.runId;roundRoomId=window.eixoActiveRoomId||null;orbitBest=Number(data.bestScore)||0;orbitState=Orbit.createState(data.seed);
+    score=0;scoreEl.textContent='0';orbitFeedback='';hitTelemetry=[];roundStartedAt=performance.now();running=true;orbitStatus='playing';
+  }catch(e){if(generation===orbitGeneration){orbitStatus='idle';messageEl.textContent=e.message;}}
+  finally{if(generation===orbitGeneration){orbitLoading=false;draw();scheduleOrbit();}}
+}
+function hit(){
+  if(!pulseVisible()||orbitLoading)return;
+  if(!running){void beginOrbit();return;}
+  const result=Orbit.hit(orbitState,Math.round(performance.now()-roundStartedAt));if(result.ignored)return;
+  hitTelemetry.push({t:result.t,points:result.points});score=orbitState.score;scoreEl.textContent=String(score);
+  const pt=document.documentElement.lang.startsWith('pt');orbitFeedback=result.points===2?(pt?'PERFEITO +2':'PERFECT +2'):result.points===1?'+1':pt?'FIM DA ÓRBITA':'ORBIT ENDED';orbitFeedbackAt=result.t;
+  feedbackEl.textContent=orbitFeedback;
+  if(result.points===2)window.EixoAudio?.perfect();else if(result.points)window.EixoAudio?.hit();else window.EixoAudio?.miss();
+  if(!result.points||hitTelemetry.length>=Orbit.MAX_EVENTS){running=false;orbitState.ended=true;orbitStatus='ended';void submitScore(completedRun());}
+  draw();scheduleOrbit();
+}
+async function submitScore(completed){
+  if(!completed.runId||!completed.telemetry.length||completed.playerId!==player?.id)return;
+  try{
+    const res=await fetch('/api/pulse/orbit/scores',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:player.id,token:player.token,score:completed.score,telemetry:completed.telemetry,runId:completed.runId,roomId:completed.roomId})}),data=await res.json();
+    if(res.status===423&&data.ban){window.__eixoPendingBan=data.ban;window.dispatchEvent(new CustomEvent('eixo-ban',{detail:data.ban}));return;}
+    if(!res.ok)throw Error(data.error||'Score could not be saved.');
+    if(data.scoreAccepted&&completed.playerId===player?.id){orbitBest=Math.max(orbitBest,Number(data.bestScore)||0);player={...player,pulseOrbitBest:orbitBest};localStorage.setItem('eixo_player',JSON.stringify(player));loadTopRankings();window.dispatchEvent(new Event('eixo-player-updated'));if(data.roomScoreAccepted&&data.roomId)window.dispatchEvent(new CustomEvent('eixo-room-score-updated',{detail:{roomId:data.roomId,score:data.roomScore}}));}
+  }catch(e){if(pulseVisible())messageEl.textContent=e.message;}
 }
 
 function renderTop(target,rows,empty='NO PLAYERS YET'){target.innerHTML=rows.length?rows.slice(0,10).map((p,i)=>`<li><span class="rank-number">${i+1}</span><span>${escapeHtml(p.name)}</span><span class="rank-score">${Number(p.score)}</span></li>`).join(''):`<li class="empty-row">${empty}</li>`;}
 function escapeHtml(value){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
-async function fetchRankings(countryCode=null,page=1){const params=new URLSearchParams({page:String(page)});if(countryCode)params.set('country',countryCode);const res=await fetch(`/api/rankings?${params}`);if(!res.ok)throw new Error('Ranking unavailable');return res.json();}
+async function fetchRankings(countryCode=null,page=1){const params=new URLSearchParams({page:String(page)});if(countryCode)params.set('country',countryCode);const res=await fetch(`/api/pulse/orbit/rankings?${params}`);if(!res.ok)throw new Error('Ranking unavailable');return res.json();}
 async function loadTopRankings(){if(typeof window.eixoRefreshRankings==='function')return window.eixoRefreshRankings();try{const[n,w]=await Promise.all([fetchRankings(currentCountryCode),fetchRankings()]);renderTop(document.getElementById('nationalRanking'),n.players);renderTop(document.getElementById('worldRanking'),w.players);}catch(e){console.warn(e.message);}}
 
 async function openFullRanking(mode){rankingMode=mode;rankingPage=1;rankingModal.classList.remove('hidden');updateRankingTabs();await loadFullRanking();}
@@ -120,12 +127,16 @@ document.getElementById('prevPage').addEventListener('click',()=>{if(rankingPage
 document.getElementById('nextPage').addEventListener('click',()=>{if(rankingPage<rankingPages){rankingPage++;loadFullRanking();}});
 document.getElementById('rankingClose').addEventListener('click',()=>closeModal(rankingModal));
 rankingModal.addEventListener('click',e=>{if(e.target===rankingModal)closeModal(rankingModal);});
-playButton.addEventListener('click',()=>{if(!window.eixoJumpActive)resetGame()});canvas.addEventListener('pointerdown',hit);
-window.addEventListener('keydown',e=>{if(window.eixoJumpActive||(window.eixoRoute&&window.eixoRoute!=='pulse')||e.target?.closest?.('input,select,textarea,button,a,[contenteditable]')||document.querySelector('.modal-backdrop:not(.hidden)'))return;if(['Space','Enter'].includes(e.code)){e.preventDefault();hit();}});
+playButton.addEventListener('click',()=>{if(!window.eixoJumpActive)hit()});canvas.addEventListener('pointerdown',e=>{if(e.button&&e.button!==0)return;hit()});
+window.addEventListener('keydown',e=>{if(window.eixoJumpActive||(window.eixoRoute&&window.eixoRoute!=='pulse')||e.target?.closest?.('input,select,textarea,button,a,[contenteditable]')||document.querySelector('.modal-backdrop:not(.hidden)'))return;if(['Space','Enter'].includes(e.code)){e.preventDefault();if(!e.repeat)hit();}});
 countryButton.addEventListener('click',()=>{if(player)return;const open=countryMenu.classList.toggle('open');countryButton.setAttribute('aria-expanded',String(open));});
 document.addEventListener('click',e=>{if(!e.target.closest('.profile-area')){countryMenu.classList.remove('open');countryButton.setAttribute('aria-expanded','false');}});
 
-function resizeCanvas(){const rect=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);viewW=Math.max(1,rect.width);viewH=Math.max(1,rect.height);canvas.width=Math.max(1,Math.floor(viewW*dpr));canvas.height=Math.max(1,Math.floor(viewH*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;if(x>viewW)x=viewW*.5;draw();}
+function resizeCanvas(){if(!orbitRenderer)orbitRenderer=Orbit.createRenderer(canvas);orbitRenderer.resize();draw();scheduleOrbit();}
+window.addEventListener('resize',resizeCanvas,{passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){if(running){const completed=completedRun();running=false;orbitState.ended=true;orbitStatus='ended';void submitScore(completed);}if(orbitFrame)cancelAnimationFrame(orbitFrame);orbitFrame=null;}else scheduleOrbit();});
+orbitMotion?.addEventListener?.('change',()=>{if(orbitFrame)cancelAnimationFrame(orbitFrame);orbitFrame=null;draw();scheduleOrbit();});
+
 function buildPixelWall(){
   const wall=document.getElementById('pixelWall');if(!wall)return;
   const colors=['#e83e45','#f1c438','#2f9bd1','#39b86a','#7d4ac7','#ef7b2d','#e7e7df','#172b3b'];
