@@ -2,15 +2,17 @@
 /* JUMP runs online in capped public instances. Friend lobbies travel together. */
 const crypto=require('crypto');
 const physics=require('./jump-physics');
-const BIOMES=['city','forest','snow','astral'];
+// Keep matchmaking on the polished Astral map. Retired artwork stays in assets.
+const BIOMES=Object.freeze(['astral']);
 const PUBLIC_CAPACITY=20;
 const LOBBY_CAPACITY=5,LOBBY_TIMEOUT=90000;
-const PALETTE=['#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#263c5c','#111827'];
+const PALETTE=['#e7d8b5','#b76632','#76503c','#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#263c5c','#111827'];
 const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a'};
-const OUTFIT_DEFAULTS={hair:'#19222d',top:'#172b3b',accent:'#00e5ff',pants:'#263c5c',shoes:'#ffffff',accessory:'cape',effect:'none'};
+const OUTFIT_DEFAULTS={hair:'#19222d',top:'#e7d8b5',accent:'#b76632',pants:'#263c5c',shoes:'#76503c',accessory:'cape',effect:'none'};
 const PARTS=['hair','top','accent','pants','shoes','accessory','effect'];
 const special=(value,label,minVip)=>({value,label,minVip});
 const COLOR_LABELS={
+ '#e7d8b5':'LINHO','#b76632':'COBRE','#76503c':'COURO',
  '#ffffff':'BRANCO','#e83e45':'VERMELHO','#ff7a2f':'LARANJA','#f1c438':'AMARELO',
  '#39b86a':'VERDE','#7bdc5a':'VERDE-LIMA','#00e5ff':'CIANO','#2f9bd1':'AZUL',
  '#3b82f6':'AZUL FORTE','#6f5cff':'ÍNDIGO','#a855f7':'ROXO','#ff4fd8':'MAGENTA',
@@ -37,7 +39,6 @@ const instances=new Map(),sessions=new Map(),activeByPlayer=new Map();
 const lobbies=new Map(),lobbyByPlayer=new Map();
 let publicLobbyId=null;
 const error=(message,status=400)=>Object.assign(new Error(message),{status});
-function validBiome(v){const b=String(v||'forest').toLowerCase();if(!BIOMES.includes(b))throw error('Ambiente inválido.');return b;}
 function vipLevel(p){return Math.max(0,Math.min(6,Number(p?.vipLevel)||0));}
 function normalizeOutfit(data){
   const raw=data&&typeof data==='object'?data:{};
@@ -70,7 +71,7 @@ async function initDb(db){
   await db.query('CREATE TABLE IF NOT EXISTS jump_scores(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query("CREATE TABLE IF NOT EXISTS jump_cosmetics(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,colors JSONB NOT NULL DEFAULT '{}'::jsonb)");
   await db.query('CREATE TABLE IF NOT EXISTS jump_rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,biome VARCHAR(12) NOT NULL,max_players INTEGER NOT NULL DEFAULT 5,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
-  await db.query("UPDATE jump_rooms SET biome='forest' WHERE biome='desert'");
+  await db.query("UPDATE jump_rooms SET biome='astral' WHERE biome<>'astral'");
   await db.query('CREATE TABLE IF NOT EXISTS jump_room_members(room_id UUID NOT NULL REFERENCES jump_rooms(id) ON DELETE CASCADE,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(room_id,player_id))');
   // Score v2 is platform-based: each new highest platform is worth 12 points.
   // Existing development scores stored raw height, so migrate them once.
@@ -103,16 +104,16 @@ function purge(){
   }
   for(const inst of [...instances.values()])if(!inst.players.size)instances.delete(inst.id);
 }
-function newInstance(biome,kind,roomId){
-  const inst={id:crypto.randomUUID(),biome,kind,roomId:roomId||null,seed:crypto.randomInt(1,2147483647),players:new Map(),platforms:null,epoch:Date.now()};
+function newInstance(kind,roomId){
+  const inst={id:crypto.randomUUID(),biome:BIOMES[0],kind,roomId:roomId||null,seed:crypto.randomInt(1,2147483647),players:new Map(),platforms:null,epoch:Date.now()};
   inst.platforms=physics.platforms(inst.seed,30);
   instances.set(inst.id,inst);return inst;
 }
 function findPublicInstance(groupSize=1){
-  const open=[...instances.values()].filter(inst=>inst.kind==='public'&&!inst.roomId&&inst.players.size>0&&inst.players.size+groupSize<=PUBLIC_CAPACITY)
+  const open=[...instances.values()].filter(inst=>inst.kind==='public'&&BIOMES.includes(inst.biome)&&!inst.roomId&&inst.players.size>0&&inst.players.size+groupSize<=PUBLIC_CAPACITY)
     .sort((a,b)=>b.players.size-a.players.size||a.epoch-b.epoch);
   if(open[0]){publicLobbyId=open[0].id;return open[0];}
-  const biome=BIOMES[crypto.randomInt(0,BIOMES.length)],inst=newInstance(biome,'public',null);
+  const inst=newInstance('public',null);
   publicLobbyId=inst.id;return inst;
 }
 async function getOutfit(db,p){
@@ -239,7 +240,7 @@ async function start(db,p,d={}){
   if(lobby&&!inst)throw error('A partida do grupo terminou. Volta ao lobby.',409);
   if(inst&&inst.players.size>=PUBLIC_CAPACITY)throw error('A instância do grupo está cheia. Aguarda o regresso ao lobby.',409);
   removeSession(previous);
-  // Legacy cached SOLO requests now join public matchmaking too.
+  // Cached SOLO and retired biome requests all join the active Astral map.
   inst=inst||findPublicInstance();
   return runResponse(createRun(p,outfit,inst,lobby?.id||null),p);
 }

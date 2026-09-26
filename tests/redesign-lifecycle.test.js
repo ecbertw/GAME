@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const source=fs.readFileSync(require.resolve('../jump.js'),'utf8');
 function lifecycle(current){
  const calls={reset:0,start:0};
- const c={current,window:{eixoRefreshRankings(){},resetGame(){calls.reset++},stopGame(){}},stopRun:async()=>{},closePanel(){},showMode(){},resetControls(){},refreshRankings:async()=>{},refreshRoomBoard(){},newRun:async()=>{calls.start++},rankTimer:null,networkTimer:null,animation:null,biome:'forest',mode:'solo',roomId:null,BIOMES:['forest'],clearInterval(){},setInterval(){return 1},requestAnimationFrame(){return 1},cancelAnimationFrame(){},loop(){},$:()=>null,document:{hidden:false},Math};
+ const c={current,window:{eixoRefreshRankings(){},resetGame(){calls.reset++},stopGame(){}},stopRun:async()=>{},closePanel(){},showMode(){},resetControls(){},refreshRankings:async()=>{},refreshRoomBoard(){},newRun:async()=>{calls.start++},rankTimer:null,networkTimer:null,animation:null,biome:'astral',mode:'public',roomId:null,ACTIVE_BIOME:'astral',clearInterval(){},setInterval(){return 1},requestAnimationFrame(){return 1},cancelAnimationFrame(){},loop(){},$:()=>null,document:{hidden:false},Math};
  vm.createContext(c);vm.runInContext(source.slice(source.indexOf('async function switchGame('),source.indexOf('async function stopRun(')),c);return {c,calls};
 }
 for(const from of ['jump','pulse'])for(const to of ['jump','pulse'])test(`viewing ${to} rankings from ${from} starts no game`,async()=>{const {c,calls}=lifecycle(from);await c.switchGame(to,{play:false});assert.equal(calls.reset,0);assert.equal(calls.start,0)});

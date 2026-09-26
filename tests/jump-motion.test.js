@@ -1,6 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const M=require('../jump-motion');
+const P=require('../jump-physics');
 const input=(time,x=0,extra={})=>({time,x,y:0,ground:true,moving:true,dir:1,fx:'comet',run:'one',...extra});
 test('run cycle alternates support and lifted recovery with a flight phase',()=>{
  let airborne=false;
@@ -54,4 +55,41 @@ test('wardrobe preview has independent emitter state from the game and peers',()
 test('camera scrolling is not part of emitter world coordinates',()=>{
  const s=M.createEmitter();M.updateEmitter(s,input(0));M.updateEmitter(s,input(.04,8));
  const p=s.items[0],before=p.y;M.updateEmitter(s,input(.04,8,{cameraY:100}));assert.equal(p.y,before);
+});
+
+test('the runner keeps planted soles on the collision surface throughout a stride',()=>{
+ for(let frame=0;frame<1000;frame++){
+  const pose=M.runnerPose(frame/1000,{moving:true,ground:true});
+  for(const leg of pose.legs){
+   assert.ok(leg.foot.y<=0,'a boot must never sink below the surface');
+   if(leg.foot.contact)assert.equal(leg.foot.y,0,'a planted boot must touch the surface');
+   assert.ok(Math.abs(Math.hypot(leg.knee.x-leg.hip.x,leg.knee.y-leg.hip.y)-9.5)<1e-6,'thigh length must not pulse');
+   assert.ok(Math.abs(Math.hypot(leg.foot.x-leg.knee.x,leg.foot.y-leg.knee.y)-8.5)<1e-6,'shin must remain connected');
+  }
+ }
+ for(const time of [0,.3,1,4])for(const leg of M.runnerPose(0,{ground:true,time}).legs)assert.equal(leg.foot.y,0);
+});
+
+test('running cadence stays near two strides per second at every frame rate and in wardrobe preview',()=>{
+ assert.equal(M.PREVIEW_SPEED,P.SPEED,'preview must have the same running cadence as the game');
+ for(const fps of [30,60,120])for(const preview of [false,true]){
+  const s=M.createEmitter();
+  for(let i=0;i<=fps;i++)M.updateEmitter(s,input(i/fps,preview?0:P.SPEED*i/fps,{preview,fx:'none'}));
+  assert.ok(s.phase>1.8&&s.phase<2.1,'one second must produce about two complete strides');
+  assert.ok(Math.abs(s.phase-P.SPEED/M.STRIDE_DISTANCE)<1e-9);
+ }
+});
+
+test('new shoe particles emerge from the modular runner sole in either direction',()=>{
+ for(const dir of [-1,1]){
+  const s=M.createEmitter();M.updateEmitter(s,input(0,0,{dir}));
+  M.updateEmitter(s,input(.04,dir*P.SPEED*.04,{dir}));
+  const pose=M.runnerPose(s.phase,{moving:true,ground:true});
+  const foot=pose.legs.find(leg=>leg.foot.contact).foot;
+  const trail=s.items.filter(p=>p.event==='trail');assert.ok(trail.length>0);
+  for(const p of trail){
+   assert.ok(Math.abs(p.x-(s.x+dir*foot.x))<=1.5,'particle must start at the rendered shoe');
+   assert.ok(p.y>=foot.y&&p.y<=foot.y+2);
+  }
+ }
 });

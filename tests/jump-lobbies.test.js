@@ -26,8 +26,30 @@ test('JUMP legacy solo requests join public instances and private runs are retir
   const first=await api.start(db,a,{mode:'solo',biome:'city'});
   const second=await api.start(db,b,{multiplayer:false,biome:'snow'});
   assert.equal(first.mode,'public');assert.equal(first.instanceId,second.instanceId);
+  assert.equal(first.biome,'astral');assert.equal(second.biome,'astral');
   assert.equal(first.maxPlayers,20);assert.equal(api.state(a,first.runId).peers[0].id,b.id);
   await assert.rejects(api.start(db,a,{roomId:'old-room'}),e=>e.status===410);
+});
+
+test('Astral remains the only map across full instances, cached biome requests and friend parties',async()=>{
+  const {api,db,player,group}=setup();
+  assert.deepEqual(api.BIOMES,['astral']);
+  const retiredBiomes=['city','snow','forest','desert'];
+  const singles=Array.from({length:41},(_,i)=>player('astral'+i));
+  const runs=await Promise.all(singles.map((p,i)=>api.start(db,p,{biome:retiredBiomes[i%retiredBiomes.length]})));
+  assert.equal(new Set(runs.map(r=>r.instanceId)).size,3);
+  assert.ok(runs.every(r=>r.biome==='astral'));
+  for(let i=0;i<singles.length;i++){
+    const state=api.state(singles[i],runs[i].runId);
+    assert.equal(state.biome,'astral');assert.ok(state.players<=20);
+  }
+  const party=group('astral-friends');
+  await api.lobbyStart(db,party[0]);
+  const partyRuns=party.map(p=>api.lobbyStatus(p).run);
+  assert.equal(new Set(partyRuns.map(r=>r.instanceId)).size,1);
+  assert.ok(partyRuns.every(r=>r.biome==='astral'));
+  assert.equal(partyRuns[0].instanceId,runs[40].instanceId);
+  assert.equal(api.state(party[0],partyRuns[0].runId).players,6);
 });
 
 test('friend lobbies cap at five, reject multiple memberships, and transfer leadership',async()=>{
@@ -164,6 +186,7 @@ test('legacy room endpoints expose only current friend lobbies and retire privat
   const created=await api.roomCreate(db,p,{name:'Amigos',biome:'snow'});
   assert.equal(created.room.id,created.lobby.id);
   assert.equal((await api.roomList(db,p)).rooms.length,1);
+  assert.equal((await api.lobbyStart(db,p)).run.biome,'astral');
   await assert.rejects(api.roomRankings(db,p,created.room.id),e=>e.status===410);
   await api.roomLeave(db,p,{roomId:created.room.id});
   assert.equal((await api.roomList(db,p)).rooms.length,0);

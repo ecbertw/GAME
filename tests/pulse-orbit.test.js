@@ -5,14 +5,26 @@ const Orbit=require('../pulse-orbit'),Progress=require('../progression-server');
 test('PULSE orbit is deterministic and verifies the exact accepted telemetry',()=>{
  const seed=18432,a=Orbit.createState(seed),b=Orbit.createState(seed);assert.deepEqual(a,b);
  const events=[];let now=0;
- for(let i=0;i<8&&!a.ended;i++){
-  const distance=Math.abs(Orbit.offset(a.target,a.angle));
+ for(let i=0;i<75&&!a.ended;i++){
+  const distance=Orbit.wrap(a.direction*(a.target-a.angle));
   now+=Math.max(160,Math.round(distance/Orbit.speed(a.score)*1000));
   const result=Orbit.hit(a,now);events.push({t:result.t,points:result.points});
  }
  const verified=Orbit.verifyRun(seed,events,a.score,now+10);
  assert.equal(verified.valid,true);assert.equal(verified.score,a.score);
+ assert.equal(a.ended,false);assert.equal(a.score,150);
  assert.equal(Orbit.verifyRun(seed,events,a.score+1,now+10).valid,false);
+});
+
+test('PULSE starts faster and reaches its modestly higher maximum exactly at 100 points',()=>{
+ assert.equal(Orbit.speed(-1),Orbit.speed(0));
+ assert.ok(Orbit.speed(0)>1.22);
+ assert.ok(Orbit.speed(10)-Orbit.speed(0)>.016*10);
+ for(let points=1;points<=100;points++)assert.ok(Orbit.speed(points)>Orbit.speed(points-1));
+ assert.ok(Orbit.speed(99)<Orbit.speed(100));
+ assert.equal(Orbit.speed(100),3.8);
+ assert.equal(Orbit.speed(101),Orbit.speed(100));
+ assert.equal(Orbit.speed(1200),Orbit.speed(100));
 });
 
 test('PULSE production assets, client and isolated score service are wired',()=>{
@@ -27,4 +39,3 @@ test('Passport levels grow predictably and progression stays server owned',()=>{
  const source=fs.readFileSync(path.join(__dirname,'../progression-server.js'),'utf8');
  assert.match(source,/UNIQUE\(game,run_id\)/);assert.match(source,/first-100/);assert.match(source,/skybound/);assert.match(source,/explorer/);
 });
-

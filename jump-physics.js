@@ -6,7 +6,7 @@
 })(typeof window!=='undefined'?window:this,function(){
   'use strict';
   // World units match the 16:9 art canvas. Time/difficulty stay independent of pixels.
-  const UNIT=2,W=960,H=540,SCORE_PER_PLATFORM=12,SPEED=272,JUMP=414,GRAVITY=772,MAX_FALL=564;
+  const UNIT=2,W=960,H=540,SCORE_PER_PLATFORM=12,SPEED=216,JUMP=414,GRAVITY=772,MAX_FALL=564;
   const PLAYER_RADIUS=10,CAMERA_ANCHOR=170,FLOOR_MARGIN=48;
   function hash(seed,n){let x=(seed+Math.imul(n,0x9e3779b9))|0;x=Math.imul(x^(x>>>16),0x85ebca6b);x=Math.imul(x^(x>>>13),0xc2b2ae35);return((x^(x>>>16))>>>0)/4294967296;}
   function platformX(p,time){
@@ -24,14 +24,16 @@
       // geometry is already close to the endless curve instead of staying easy
       // for the first 1000 points.
       const difficulty=Math.min(1,Math.max(0,(i-2)/14));
-      const gap=UNIT*Math.min(51,35+Math.floor(a*(10+6*difficulty))+Math.floor(5*difficulty));
+      const gap=UNIT*Math.min(48,35+Math.floor(a*(10+6*difficulty))+Math.floor(5*difficulty));
       const width=UNIT*Math.round(84-(42*difficulty)+c*(7-2*difficulty));
 
       // Force meaningful left/right routing while keeping the jump envelope
       // physically reachable at full horizontal speed.
       const prevCenter=Number(prev.x||0)+Number(prev.w||W)/2;
-      const minShift=UNIT*(i<=2?26:42+Math.round(34*difficulty));
-      const maxShift=UNIT*(i<=2?60:66+Math.round(52*difficulty));
+      // The calmer running speed needs shorter crossings, including the
+      // furthest opposing positions of two neighbouring moving platforms.
+      const minShift=UNIT*.8*(i<=2?26:42+Math.round(34*difficulty));
+      const maxShift=UNIT*.75*(i<=2?60:66+Math.round(52*difficulty));
       const shift=minShift+hash(seed,i*11+4)*(maxShift-minShift);
       let direction=hash(seed,i*11+5)<.5?-1:1;
       const minCenter=24+width/2,maxCenter=W-24-width/2;
@@ -47,7 +49,7 @@
       const moving=i>3&&(i%4===0||hash(seed,i*11+6)<moveChance);
       let moveCenter=x,moveAmp=0,moveSpeed=0,movePhase=0;
       if(moving){
-        const desired=UNIT*(19+hash(seed,i*11+7)*(22+13*difficulty));
+        const desired=Math.min(24,UNIT*(10+hash(seed,i*11+7)*8));
         const min=Math.max(24,x-desired),max=Math.min(W-width-24,x+desired);
         moveCenter=(min+max)/2;
         moveAmp=Math.max(16,(max-min)/2);

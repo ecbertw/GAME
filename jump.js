@@ -7,13 +7,8 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const lang=()=>String(document.documentElement.lang||'en').startsWith('pt')?'pt':'en';
 const T={pt:{solo:'SOLO',join:'JOIN SERVER',character:'PERSONAGEM',height:'PONTOS',restart:'RECOMEÇAR',gameOver:'FIM DE JOGO',rank:'RANKING JUMP',world:'MUNDIAL',country:'NACIONAL',rooms:'SALAS JUMP',create:'CRIAR SALA',enter:'ENTRAR',back:'VOLTAR',empty:'AINDA NÃO HÁ PONTUAÇÕES.',play:'JOGAR',saved:'GUARDADO',cancel:'CANCELAR',save:'GUARDAR',code:'CÓDIGO',noAccount:'ENTRA NA TUA CONTA PARA GUARDAR A PONTUAÇÃO.',leave:'SAIR',choose:'ESCOLHE O AMBIENTE',help:'A / D OU ◀ / ▶ PARA MOVER • W / ESPAÇO / ▲ PARA SALTAR',soon:'EM BREVE'},en:{solo:'SOLO',join:'JOIN SERVER',character:'CHARACTER',height:'POINTS',restart:'RESTART',gameOver:'GAME OVER',rank:'JUMP RANKING',world:'WORLD',country:'COUNTRY',rooms:'JUMP ROOMS',create:'CREATE ROOM',enter:'ENTER',back:'BACK',empty:'NO SCORES YET.',play:'PLAY',saved:'SAVED',cancel:'CANCEL',save:'SAVE',code:'CODE',noAccount:'SIGN IN TO SAVE YOUR SCORE.',leave:'LEAVE',choose:'CHOOSE YOUR WORLD',help:'A / D OR ◀ / ▶ TO MOVE • W / SPACE / ▲ TO JUMP',soon:'COMING SOON'}};
 const txt=k=>T[lang()][k]||k;
-const BIOMES=['city','forest','snow','astral'];
-const themes={
-  city:{sky:'#78c6ee',low:'#f0c8bb',hills:'#719ec0',far:'#467293',near:'#294b6d',top:'#7dc5dc',edge:'#466f9b',under:'#465671'},
-  forest:{sky:'#89d9e7',low:'#daf4b6',hills:'#77ba9c',far:'#397a65',near:'#234e42',top:'#55c970',edge:'#31864c',under:'#78533a'},
-  snow:{sky:'#7baedb',low:'#dbf0ff',hills:'#b0c9d8',far:'#799bb8',near:'#55708d',top:'#ecf9ff',edge:'#9ebdd5',under:'#6b869e'}
-};
-let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='public',biome='forest',seed=0,peers=[],outfit=null,wardrobe=null,fixedAppearance=null,keys={left:false,right:false,jump:false},confirmedScore=0,facing=1,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
+const ACTIVE_BIOME='astral';
+let current='pulse',run=null,local=null,frame=null,canvas=null,ctx=null,mode='public',biome=ACTIVE_BIOME,seed=0,peers=[],outfit=null,wardrobe=null,fixedAppearance=null,keys={left:false,right:false,jump:false},confirmedScore=0,facing=1,last=0,busy=false,finishing=false,rankTimer=null,networkTimer=null,animation=null,panel=null,page=1,rankTab='world',rankingData=null,gameOver=false,roomId=null,roomLabel='',lastState=null;
 const getPlayer=()=>{try{return window.eixoGetPlayer?.()||JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){return null}};
 async function api(path,options={}){
  const p=getPlayer(),url=new URL(path,location.origin);
@@ -52,7 +47,7 @@ async function switchGame(next,options={}){
  if(current==='jump'){await stopRun();window.EixoAudio?.jumpStop?.();}
  current=next;window.eixoJumpActive=current==='jump';closePanel();showMode();
  if(current==='jump'){
-   window.stopGame?.();if(shouldPlay)await newRun({biome:BIOMES[Math.floor(Math.random()*BIOMES.length)],mode:'public'});
+   window.stopGame?.();if(shouldPlay)await newRun({biome:ACTIVE_BIOME,mode:'public'});
    refreshRankings();if(shouldPlay&&!animation)animation=requestAnimationFrame(loop);clearInterval(rankTimer);if(shouldPlay)rankTimer=setInterval(()=>{if(!document.hidden&&current==='jump'){refreshRankings();refreshRoomBoard()}},5500);
  }else{
    clearInterval(rankTimer);clearInterval(networkTimer);if(animation)cancelAnimationFrame(animation);animation=null;
@@ -70,12 +65,14 @@ function updateHud(){
  $('jumpSoloButton').textContent='ONLINE';$('jumpJoinButton').textContent=lang()==='pt'?'LOBBY DE AMIGOS':'FRIEND LOBBY';$('jumpCustomizeButton').textContent=txt('character');if($('jumpHelp'))$('jumpHelp').textContent=txt('help');
 }
 async function newRun(options={}){
- const b=options.biome||biome;biome=b;mode='public';roomId=null;roomLabel='';
+ biome=ACTIVE_BIOME;mode='public';roomId=null;roomLabel='';
  await stopRun();resetControls();confirmedScore=0;facing=1;local=null;gameOver=false;finishing=false;peers=[];lastState=null;$('jumpEnd').classList.add('hidden');showError('');
  if(!getPlayer()?.id){showError(txt('noAccount'));return}
  try{
+   await window.EixoJumpExactArt?.ready;
+   if(window.EixoJumpExactArt?.isReady&&!window.EixoJumpExactArt.isReady())throw new Error(lang()==='pt'?'Não foi possível carregar a personagem. Atualiza a página para tentar novamente.':'The character could not load. Refresh to try again.');
    const out=await api('/api/jump/run/start',{method:'POST',body:JSON.stringify({biome,multiplayer:true})});
-   run=out;seed=out.seed;biome=out.biome;mode=out.mode;outfit=out.outfit||outfit;wardrobe=out.parts?{parts:out.parts}:wardrobe;fixedAppearance=out.fixedAppearance||fixedAppearance;
+   run=out;seed=out.seed;biome=ACTIVE_BIOME;mode=out.mode;outfit=out.outfit||outfit;wardrobe=out.parts?{parts:out.parts}:wardrobe;fixedAppearance=out.fixedAppearance||fixedAppearance;
    window.EixoAudio?.jumpBiome?.(biome);
    local=P.create(seed);local.time=Number(out.worldTime)||0;last=performance.now();updateHud();draw();refreshRoomBoard();clearInterval(networkTimer);
    networkTimer=setInterval(sync,60);sync();
@@ -139,7 +136,7 @@ function outfitColor(value,time,offset=0){
  return 'hsl('+Math.round(((time||0)*115+offset)%360)+' 92% 62%)';
 }
 function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
- const O={hair:'#00e5ff',top:'#ffd84d',accent:'#00e5ff',pants:'#6f5cff',shoes:'#ffffff',effect:'none',...(style||outfit||{})};
+ const O={hair:'#19222d',top:'#e7d8b5',accent:'#b76632',pants:'#263c5c',shoes:'#76503c',effect:'none',...(style||outfit||{})};
  if(window.EixoJumpExactArt?.runner?.(c,x,y,O,name,ghost,time,motion))return;
  const F={skin:'#f0c7a2',skinShade:'#cc8f69',eyes:'#07131f',...(fixedAppearance||{})};
  const dir=motion.facing===-1?-1:1,moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0),air=!ground||Math.abs(vy)>5;
@@ -208,7 +205,7 @@ function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
 function draw(){
  if(!ctx||current!=='jump')return;const c=ctx;drawBackground();
  if(!local)return;
- const cam=local.cam,screen=y=>P.H-30-(y-cam),t=themes[biome],activeMin=Math.max(0,Number(local.activeMinPlatform)||0);
+ const cam=local.cam,screen=y=>P.H-30-(y-cam),activeMin=Math.max(0,Number(local.activeMinPlatform)||0);
  for(let i=activeMin;i<local.platforms.length;i++){
    const p=local.platforms[i];if(!p||p.y<cam-12||p.y>cam+P.H+30)continue;
    if(P.isBroken?.(local,i))continue;
@@ -359,9 +356,9 @@ function openRank(modeName='world',number=1){
  modalEl.classList.remove('hidden');renderJumpFull();
 }
 function chooseWorld(){
- const onlineLabel=lang()==='pt'?'JOGAR ONLINE':'PLAY ONLINE',onlineHint=lang()==='pt'?'ENTRA NUMA INSTÂNCIA COM JOGADORES · MAPA AUTOMÁTICO':'JOINS AN INSTANCE WITH PLAYERS · AUTOMATIC MAP';
- modal(onlineLabel,'<div class="jump-world-grid jump-online-grid"><button class="jump-world-option forest jump-online-option" id="jumpOnlineMatch"><canvas width="450" height="195" aria-hidden="true"></canvas><strong>'+onlineLabel+'</strong><small>'+onlineHint+'</small></button></div>');
- const btn=$('jumpOnlineMatch');window.EixoJumpWorlds.draw(btn.querySelector('canvas').getContext('2d'),'forest',73,0,1.2);
+ const onlineLabel=lang()==='pt'?'JOGAR ONLINE':'PLAY ONLINE',onlineHint=lang()==='pt'?'ASTRAL · ENTRA NUMA INSTÂNCIA COM JOGADORES':'ASTRAL · JOIN AN INSTANCE WITH PLAYERS';
+ modal(onlineLabel,'<div class="jump-world-grid jump-online-grid"><button class="jump-world-option astral jump-online-option" id="jumpOnlineMatch"><canvas width="450" height="195" aria-hidden="true"></canvas><strong>'+onlineLabel+'</strong><small>'+onlineHint+'</small></button></div>');
+ const btn=$('jumpOnlineMatch');window.EixoJumpWorlds.draw(btn.querySelector('canvas').getContext('2d'),ACTIVE_BIOME,73,0,1.2);
  btn.onclick=()=>{closePanel();newRun({mode:'public'})};
 }
 async function customize(){
@@ -462,7 +459,7 @@ function confirmAbandonJumpRoom(){
   const close=()=>m.classList.add('hidden');$('jumpAbandonClose').onclick=close;$('jumpAbandonCancel').onclick=close;m.addEventListener('click',e=>{if(e.target===m)close()});
   $('jumpAbandonConfirm').onclick=async()=>{
    const id=roomId,button=$('jumpAbandonConfirm');button.disabled=true;
-   try{await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})});m.classList.add('hidden');roomId=null;roomLabel='';await newRun({mode:'public',biome:BIOMES[Math.floor(Math.random()*BIOMES.length)]})}
+   try{await api('/api/jump/rooms/leave',{method:'POST',body:JSON.stringify({roomId:id})});m.classList.add('hidden');roomId=null;roomLabel='';await newRun({mode:'public',biome:ACTIVE_BIOME})}
    catch(e){showError(e.message)}finally{button.disabled=false}
   };
  }
@@ -481,7 +478,7 @@ function init(){
  switcher.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>switchGame(b.dataset.game));
  const root=document.createElement('div');root.id='jumpRoot';root.className='jump-root hidden';
  root.innerHTML='<canvas id="jumpCanvas" width="1920" height="1080" aria-label="JUMP online platformer"></canvas>'+
- '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">FOREST · ONLINE</div></div>'+
+ '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">ASTRAL · ONLINE</div></div>'+
  '<div class="jump-tools"><button id="jumpSoloButton">ONLINE</button><button id="jumpJoinButton">FRIEND LOBBY</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
  '<div class="jump-status" id="jumpStatus" role="status"></div>'+
  '<div class="jump-touch-controls"><button data-jump-key="left">◀</button><button data-jump-key="right">▶</button><button data-jump-key="jump">▲</button></div>'+
@@ -497,10 +494,10 @@ function init(){
  const roomBoard=document.createElement('section');roomBoard.id='jumpRoomBoard';roomBoard.className='room-board jump-room-board hidden';
  roomBoard.innerHTML='<div class="room-board-heading"><div><span class="room-panel-mark">◆</span><strong id="jumpRoomTitle">JUMP ROOM</strong><small id="jumpRoomMeta"></small></div><div class="room-board-actions"><button class="board-more" id="jumpRoomLeave" type="button">SAIR DA SALA</button><button class="board-more danger" id="jumpRoomAbandon" type="button">ABANDONAR SALA</button></div></div><ol id="jumpRoomRanking"></ol>';
  createPanel.after(roomBoard);
- $('jumpRoomLeave').onclick=async()=>{await api('/api/jump/lobby/leave',{method:'POST',body:'{}'}).catch(()=>{});roomId=null;roomLabel='';await newRun({mode:'public',biome:BIOMES[Math.floor(Math.random()*BIOMES.length)]})};
+ $('jumpRoomLeave').onclick=async()=>{await api('/api/jump/lobby/leave',{method:'POST',body:'{}'}).catch(()=>{});roomId=null;roomLabel='';await newRun({mode:'public',biome:ACTIVE_BIOME})};
  $('jumpRoomAbandon').onclick=confirmAbandonJumpRoom;
 
- $('jumpSoloButton').onclick=()=>newRun({biome:BIOMES[Math.floor(Math.random()*BIOMES.length)],mode:'public'});
+ $('jumpSoloButton').onclick=()=>newRun({biome:ACTIVE_BIOME,mode:'public'});
  $('jumpJoinButton').onclick=jumpRooms;$('jumpCustomizeButton').onclick=customize;$('jumpRestart').onclick=()=>newRun({biome,mode:'public'});
  captureNative('.action.blue[href="#ranking"]',()=>openRank('world'));
  captureNative('.action.purple[href="#rooms"]',()=>jumpRooms());

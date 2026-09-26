@@ -7,6 +7,9 @@ test('redesign pages and assets load while server files stay private', {timeout:
  try{
   await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Test server did not start')),10000);child.once('error',e=>{clearTimeout(timer);reject(e)});child.once('exit',code=>{clearTimeout(timer);reject(Error('Test server exited '+code))});child.stdout.on('data',chunk=>{if(String(chunk).includes('listening')){clearTimeout(timer);resolve()}});child.stderr.resume();});
   const base='http://127.0.0.1:'+port;
+  const manifest=await fetch(base+'/assets/game-v300/hero-parts.json');assert.equal(manifest.status,200,'the production server must serve the character atlas manifest');
+  assert.match(manifest.headers.get('content-type'),/application\/json/);const rig=await manifest.json();assert.ok(rig.parts.head.rect&&rig.parts.torso.rect&&rig.parts.cape.rect);
+  const sprite=await fetch(base+'/assets/game-v300/'+rig.image);assert.equal(sprite.status,200);assert.match(sprite.headers.get('content-type'),/image\/png/);
   for(const route of ['/','/jump','/pulse','/passport','/rankings','/rooms','/vip']){const r=await fetch(base+route);assert.equal(r.status,200,route);assert.match(await r.text(),/redesign.js/);}
   for(const file of ['/.env','/.git/HEAD','/server.js','/auth-server.js','/jump-server.js','/package.json','/ops/deploy/eixo-deploy.sh'])assert.equal((await fetch(base+file)).status,404,file);
   const redirect=await fetch(base+'/passport/?view=profile',{redirect:'manual'});assert.equal(redirect.status,308);assert.equal(redirect.headers.get('location'),'/passport?view=profile');

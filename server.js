@@ -16,6 +16,7 @@ const ROOT=__dirname;
 const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','jump-server.js','pulse-orbit-server.js','progression-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
 const PUBLIC_STATIC_EXTS=new Set(['.html','.css','.js','.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.woff','.woff2']);
 function isPublicStaticRequestPath(pathname){
+  if(pathname==='/assets/game-v300/hero-parts.json')return true;
   if(['/jump','/pulse','/passport','/rankings','/rooms','/vip'].includes(pathname))return true;
   const clean=String(pathname||'').replace(/^\/+/,''),parts=clean.split('/');
   if(!clean)return true;

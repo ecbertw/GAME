@@ -1,4 +1,4 @@
-/* Four connected sky realms. Ambient motion never changes collision geometry. */
+/* Astral is the only live realm. Other palettes remain dormant for future art. Ambient motion never changes collision geometry. */
 (function(root){
 'use strict';
 const palettes={
@@ -27,10 +27,11 @@ function ambience(c,biome,time,W,H){
  c.restore();
 }
 function draw(c,biome,seed,cam=0,time=0){
+ biome='astral';
  const W=root.EixoJumpPhysics?.W||960,H=root.EixoJumpPhysics?.H||540;
  if(!root.EixoJumpExactArt?.background?.(c,biome,W,H,cam,time))fallback(c,biome,W,H,time);
  ambience(c,biome,time,W,H);
 }
-function platform(c,biome,x,y,w,index,state={}){return root.EixoJumpExactArt?.platform?.(c,biome,x,y,w,index,state)}
+function platform(c,biome,x,y,w,index,state={}){return root.EixoJumpExactArt?.platform?.(c,'astral',x,y,w,index,state)}
 root.EixoJumpWorlds={draw,platform,palettes,names,version:'sky-gardens-v3'};
 })(typeof window==='undefined'?globalThis:window);

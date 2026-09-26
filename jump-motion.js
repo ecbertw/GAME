@@ -2,6 +2,9 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.EixoJumpMotion=api;})(typeof window!=='undefined'?window:this,function(){
 'use strict';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),mix=(a,b,t)=>a+(b-a)*t;
+// One phase is a full left/right stride. At 216 world units per second this
+// gives just under two strides per second instead of the old six.
+const STRIDE_DISTANCE=112,PREVIEW_SPEED=216;
 // Contact -> compression -> toe-off -> folded recovery -> forward reach.
 // The support foot moves backwards linearly while the other clears the floor.
 const FOOT=[[0,19,132],[.16,0,132],[.32,-21,132],[.46,-28,111],[.64,-5,101],[.82,19,114],[1,19,132]];
@@ -24,6 +27,23 @@ function gait(phase){
   return {hip,knee:knee(hip,foot),foot,back:i===0};
  })};
 }
+// Coordinates are relative to the visible soles of the 42px modular runner.
+// Support feet stay exactly on y=0; only the recovery foot leaves the floor.
+function runnerPose(phase,{moving=false,ground=true,vy=0,time=0}={}){
+ const walk=gait(phase),running=moving&&ground;
+ const bob=running?walk.bob*.27:ground?Math.sin(time*2)*.12:0;
+ const rise=clamp(vy/300,0,1),fall=clamp(-vy/420,0,1);
+ const hipY=-16+bob;
+ const legs=[0,1].map(i=>{
+  const hip={x:i?2:-1.4,y:hipY};let foot;
+  if(running){const f=walk.legs[i].foot;foot={x:(f.x-64)*.26,y:(f.y-132)*.26,contact:f.contact};}
+  else if(ground)foot={x:i?4:-3,y:0,contact:true};
+  else foot={x:i?4-rise*2:-4-rise*2,y:i?-2-rise*3:-1-rise*7+fall,contact:false};
+  return {hip,knee:knee(hip,foot,9.5,8.5),foot,back:i===0};
+ });
+ return {bob,lean:running?.055:ground?0:rise*.025,hipY,shoulderY:-29+bob,headY:-42+bob,
+  armSwing:running?Math.sin(phase*Math.PI*2)*3.3:ground?Math.sin(time*2)*.12:rise*3-fall*1.5,legs};
+}
 function createEmitter(){return {items:[],last:null,x:0,y:0,phase:0,distance:0,ground:true,serial:0,fx:'none',run:null};}
 function reset(s,now){s.items.length=0;s.last=now;s.distance=0;s.phase=0;}
 function random(s,k){const n=Math.sin(s.serial*91.37+k*27.1)*43758.5453;return n-Math.floor(n);}
@@ -37,15 +57,16 @@ function emit(s,x,y,dir,fx,count,event){
  }
 }
 function updateEmitter(s,input){
- const {time,x,y,ground,moving,dir=1,fx='none',run=null,preview=false}=input;
+ const {time,x,y,ground,moving,vy=0,dir=1,fx='none',run=null,preview=false}=input;
  const elapsed=s.last===null?0:time-s.last;
  const discontinuity=s.last===null||elapsed<0||elapsed>.25||run!==s.run||Math.hypot(x-s.x,y-s.y)>90;
  if(discontinuity){reset(s,time);s.x=x;s.y=y;s.ground=ground;s.fx=fx;s.run=run;}
  if(s.fx!==fx){s.items.length=0;s.distance=0;s.fx=fx;}
- const dt=discontinuity?0:clamp(elapsed,0,.05),dx=x-s.x,travel=preview&&moving?136*dt:Math.abs(dx);
+ const dt=discontinuity?0:clamp(elapsed,0,.05),dx=x-s.x,travel=preview&&moving?PREVIEW_SPEED*dt:Math.abs(dx);
  const active=moving&&travel>.02;
- if(active&&ground)s.phase+=travel/44;
- const pose=gait(s.phase),oldStep=Math.floor((s.phase-travel/44)*2),step=Math.floor(s.phase*2);
+ const oldStep=Math.floor(s.phase*2);
+ if(active&&ground)s.phase+=travel/STRIDE_DISTANCE;
+ const pose=gait(s.phase),runner=runnerPose(s.phase,{moving:active,ground,vy,time}),step=Math.floor(s.phase*2);
  for(const p of s.items){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=(p.fx==='mist'?-4:30)*dt;p.vx*=Math.exp(-3*dt);p.angle+=p.spin*dt;}
  s.items=s.items.filter(p=>p.life>0);
  if(fx!=='none'&&!discontinuity){
@@ -54,9 +75,9 @@ function updateEmitter(s,input){
   if(active&&ground){
    s.distance+=travel;
    // Both soles emit at their actual animated positions, in world coordinates.
-   while(s.distance>=3){s.distance-=3;const leg=pose.legs.find(l=>l.foot.contact)||pose.legs[step%2];
-    emit(s,x+dir*(leg.foot.x-56)*38/112,y+(leg.foot.y-132)/3,dir,fx,2,'trail');}
-   if(step!==oldStep){const leg=pose.legs[step%2];emit(s,x+dir*(leg.foot.x-56)*38/112,y,dir,fx,4,'step');}
+   while(s.distance>=3){s.distance-=3;const leg=runner.legs.find(l=>l.foot.contact)||runner.legs[step%2];
+    emit(s,x+dir*leg.foot.x,y+leg.foot.y,dir,fx,2,'trail');}
+   if(step!==oldStep){const leg=runner.legs[step%2];emit(s,x+dir*leg.foot.x,y+leg.foot.y,dir,fx,4,'step');}
   }else if(!ground){
    // Keep a light shoe wake alive for the whole jump, including the apex.
    s.distance+=Math.hypot(x-s.x,y-s.y)+dt*18;
@@ -66,5 +87,5 @@ function updateEmitter(s,input){
  s.last=time;s.x=x;s.y=y;s.ground=ground;s.run=run;
  return {pose,active,dt};
 }
-return {gait,footAt,knee,createEmitter,updateEmitter};
+return {STRIDE_DISTANCE,PREVIEW_SPEED,gait,runnerPose,footAt,knee,createEmitter,updateEmitter};
 });
