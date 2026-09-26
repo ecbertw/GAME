@@ -26,7 +26,7 @@ const translations = {
 
 let currentCountryCode = localStorage.getItem('eixo_country') || 'PT';
 let player = JSON.parse(localStorage.getItem('eixo_player') || 'null');
-let running = false, score = 0, x = 0, direction = 1, speed = 4.2, lastTime = 0, pulse = 0;
+let running = false, score = 0, x = 0, direction = 1, speed = 4.2, lastTime = 0, pulse = 0, impact=0, impactType='good';
 let roundStartedAt=0,hitTelemetry=[],roundRunId=null,roundStartPromise=null,passArmed=true;
 let rankingMode = 'country', rankingPage = 1, rankingPages = 1;
 const rankingModal = document.getElementById('rankingModal');
@@ -59,18 +59,25 @@ function dimensions(){return{w:viewW,h:viewH};}
 function center(){return{x:viewW/2,y:viewH/2};}
 function drawPixelCircle(cx,cy,radius,color,width=1,dashed=false){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dashed?[3,5]:[]);ctx.beginPath();ctx.arc(Math.round(cx),Math.round(cy),radius,0,Math.PI*2);ctx.stroke();ctx.restore();}
 function draw(){
-  const{w,h}=dimensions(),c=center();ctx.clearRect(0,0,w,h);ctx.fillStyle='#080d12';ctx.fillRect(0,0,w,h);
-  ctx.fillStyle='#69747e';ctx.fillRect(0,Math.round(c.y),w,1);
+  const{w,h}=dimensions(),c=center();ctx.clearRect(0,0,w,h);pulse+=.035;
+  const bg=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,Math.max(w,h)*.68);bg.addColorStop(0,'#102d38');bg.addColorStop(.46,'#0a1724');bg.addColorStop(1,'#050a12');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  // Perspective grid and side rails make the playfield feel like an arcade arena.
+  ctx.save();ctx.globalAlpha=.22;ctx.strokeStyle='#3ec7c1';ctx.lineWidth=1;
+  for(let i=-7;i<=7;i++){const bx=c.x+i*w*.09;ctx.beginPath();ctx.moveTo(c.x+i*8,c.y);ctx.lineTo(bx,h);ctx.stroke()}
+  for(let i=1;i<=7;i++){const yy=c.y+(h-c.y)*Math.pow(i/7,1.7);ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(w,yy);ctx.stroke()}
+  ctx.restore();
+  const scan=ctx.createLinearGradient(0,0,w,0);scan.addColorStop(0,'transparent');scan.addColorStop(.2,'#4ee7dd22');scan.addColorStop(.5,'#bffefa88');scan.addColorStop(.8,'#4ee7dd22');scan.addColorStop(1,'transparent');ctx.fillStyle=scan;ctx.fillRect(0,Math.round(c.y),w,2);
   const outer=Math.max(28,Math.min(38,h*.095)),inner=Math.max(8,Math.min(11,h*.027));
-  drawPixelCircle(c.x,c.y,outer,'#7b858e',1,true);drawPixelCircle(c.x,c.y,inner,'#aeb6bd',1,false);
-  const dotRadius=Math.max(6,Math.min(9,h*.021));ctx.fillStyle='#f5f7f8';ctx.fillRect(Math.round(x-dotRadius/2),Math.round(c.y-dotRadius/2),Math.ceil(dotRadius),Math.ceil(dotRadius));
-  pulse+=.035;ctx.fillStyle=`rgba(255,255,255,${.13+Math.sin(pulse)*.04})`;ctx.fillRect(Math.round(x-2),Math.round(c.y-2),4,4);
+  ctx.save();ctx.shadowColor='#55e7df';ctx.shadowBlur=14;drawPixelCircle(c.x,c.y,outer+10,'#4b918f',1,true);drawPixelCircle(c.x,c.y,outer,'#64e0d7',2,false);drawPixelCircle(c.x,c.y,inner,'#d7fffc',2,false);ctx.restore();
+  const orbit=outer+16+Math.sin(pulse)*2;ctx.save();ctx.translate(c.x,c.y);ctx.rotate(pulse*.45);ctx.strokeStyle='#ad8aff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,orbit,-.34,.34);ctx.arc(0,0,orbit,Math.PI-.34,Math.PI+.34);ctx.stroke();ctx.restore();
+  const dotRadius=Math.max(7,Math.min(10,h*.024));ctx.save();ctx.shadowColor='#c0fff9';ctx.shadowBlur=14;ctx.fillStyle='#e8fffd';ctx.fillRect(Math.round(x-dotRadius/2),Math.round(c.y-dotRadius/2),Math.ceil(dotRadius),Math.ceil(dotRadius));ctx.fillStyle='#56dcd4';ctx.fillRect(Math.round(x-2),Math.round(c.y-2),4,4);ctx.restore();
+  if(impact>0){const color=impactType==='miss'?'#ff5d78':impactType==='ok'?'#ffd66f':'#79ffe1',r=outer+(1-impact)*55;ctx.save();ctx.globalAlpha=impact;ctx.strokeStyle=color;ctx.lineWidth=3;ctx.shadowColor=color;ctx.shadowBlur=16;ctx.beginPath();ctx.arc(c.x,c.y,r,0,Math.PI*2);ctx.stroke();ctx.restore();impact=Math.max(0,impact-.08)}
 }
 function loop(time){if(!running)return;const dt=Math.min((time-lastTime)/16.67||1,2);lastTime=time;const{w,h}=dimensions(),margin=Math.max(24,w*.055);x+=direction*speed*dt;if(x>=w-margin){x=w-margin;direction=-1;}if(x<=margin){x=margin;direction=1;}const outer=Math.max(28,Math.min(38,h*.095));if(!passArmed&&Math.abs(x-w/2)>outer+12)passArmed=true;draw();requestAnimationFrame(loop);}
 async function beginServerRun(){const p=player;if(!p?.id)return null;try{const r=await fetch('/api/game/start',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id,token:p.token})}),d=await r.json();if(!r.ok)throw Error(d.error||'Unable to start run.');roundRunId=d.runId;return d.runId}catch(e){roundRunId=null;console.warn('Run validation unavailable:',e.message);return null}}
 function resetGame(){score=0;scoreEl.textContent='0';const{w}=dimensions();x=Math.max(24,w*.1);direction=1;speed=4.2;running=true;passArmed=true;roundRunId=null;roundStartPromise=beginServerRun();roundStartedAt=performance.now();hitTelemetry=[];messageEl.textContent=getLang().instruction;lastTime=performance.now();requestAnimationFrame(loop);}
 function stopGame(){running=false;messageEl.textContent=getLang().instruction;draw();}
-function showFeedback(text,type){feedbackEl.textContent=text;feedbackEl.className=`game-feedback ${type}`;void feedbackEl.offsetWidth;feedbackEl.classList.add('show');}
+function showFeedback(text,type){impact=1;impactType=type;feedbackEl.textContent=text;feedbackEl.className=`game-feedback ${type}`;void feedbackEl.offsetWidth;feedbackEl.classList.add('show');}
 function speedForScore(value){
   const progress=Math.min(Math.max(Number(value)||0,0),100)/100;
   const baseSpeed=4.2+(20-4.2)*progress;
@@ -201,5 +208,4 @@ async function bootPlayer(){
 
 resizeCanvas();stopGame();buildPixelWall();
 bootPlayer();
-
 

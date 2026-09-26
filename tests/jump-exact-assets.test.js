@@ -44,9 +44,15 @@ test('visual polish preserves the approved hero and doubles the gameplay backing
  assert.match(worlds,/Multiple snow speeds/);
 });
 
-test('city and snow use their own atlas materials and shoe effects follow motion',()=>{
+test('redesigned maps use new scenery and biome materials while shoe effects follow motion',()=>{
  const renderer=read('jump-exact-renderer.js');
- assert.match(renderer,/const art=atlasSprite\(img,rect/);
+ for(const biome of ['city','forest','snow']){
+  const scene=path.join(root,'assets','game-v290','jump-'+biome+'.webp');
+  assert.ok(fs.statSync(scene).size>100000,'missing full map scenery: '+biome);
+  assert.match(renderer,new RegExp("jump-\\$\\{name\\}\\.webp"));
+ }
+ assert.match(renderer,/const themes=\{city:/);
+ assert.match(renderer,/name==='forest'/);
  assert.match(renderer,/Motion\.updateEmitter/);
  assert.match(renderer,/p\.y\+offset/);
  assert.match(renderer,/const inset=row===1\?16:0/);

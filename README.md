@@ -2,13 +2,14 @@
 
 > Este documento mantém **apenas os dois relatórios de atualização mais recentes**. Em cada nova atualização, o relatório mais antigo deve ser removido e o novo relatório colocado no topo.
 
-# EIXO V2.8.1 — área total e arcade modernizado
+# EIXO V2.9.0 — redesign dos jogos JUMP e PULSE
 
 **Data:** 26/09/2026
 **Estado:** validado localmente, pronto para integração e deploy
 
 - Página inicial ocupa sempre toda a altura do ecrã, sem expor o mural de píxeis abaixo do rodapé em monitores grandes.
-- JUMP e PULSE recebem uma apresentação arcade própria, com cabeçalho, moldura e cor de identidade para cada jogo.
+- JUMP recebe três cenários novos (CITY, FOREST e SNOW) e plataformas redesenhadas para cada material, preservando integralmente o boneco e as personalizações.
+- PULSE recebe uma arena nova dentro do canvas, com profundidade, grelha dinâmica, alvo energético, marcador luminoso e feedback visual de acerto.
 - Área de jogo ampliada com proporções preservadas; chat e ranking continuam na lateral em computador.
 - Passport com personagem original, personalizações existentes e prévia de conquistas em badges.
 - Navegação suspende jogos fora das páginas de jogo e rankings não iniciam partidas.

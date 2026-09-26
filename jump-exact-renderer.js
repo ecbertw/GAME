@@ -14,6 +14,8 @@ function load(src,done){
 }
 for(const [name,url] of Object.entries(packed.backgrounds||{}))load(url,img=>images.backgrounds[name]=img);
 for(const [name,url] of Object.entries(packed.platforms||{}))load(url,img=>images.platforms[name]=img);
+// V2.9 scenery replaces only the maps. The approved runner and its palette logic stay untouched.
+for(const name of ['city','forest','snow'])load(`/assets/game-v290/jump-${name}.webp`,img=>images.backgrounds[name]=img);
 load(packed.runner,img=>images.runner=img);
 load(packed.effects,img=>images.effects=img);
 const ready=Promise.all(loads);
@@ -104,17 +106,20 @@ function background(c,name,W,H,cam=0){
  c.restore();return true;
 }
 function platform(c,name,x,y,w,index,state={}){
- const img=images.platforms[name];if(!has(img))return false;
- const ground=index===0,rect=ground?floorRects[name]:platformRects[name]?.[Math.abs(index)%4];
- if(!rect)return false;
- const art=atlasSprite(img,rect,name+':'+(ground?'floor':Math.abs(index)%4));
- const height=ground?27:clamp(13+w*.17,17,29);
- const surface=ground?({city:19,forest:29,snow:26}[name]):({city:[34,34,34,34],forest:[53,50,49,46],snow:[51,51,51,51]}[name][Math.abs(index)%4]);
- const top=y-surface/rect[3]*height;
- c.save();c.imageSmoothingEnabled=true;
- c.shadowColor='rgba(3,7,16,.48)';c.shadowBlur=3;c.shadowOffsetY=3;
- c.drawImage(art,0,0,art.width,art.height,x-2,top,w+4,height);
- c.shadowBlur=0;c.shadowOffsetY=0;
+ const ground=index===0,h=ground?18:12,variant=Math.abs(index)%4;
+ const themes={city:{top:'#82f1ff',edge:'#2779a7',body:'#152f4a',deep:'#091827',light:'#ff5dcc'},forest:{top:'#b5ed83',edge:'#4d965f',body:'#254b39',deep:'#10271f',light:'#8dffc1'},snow:{top:'#f4fdff',edge:'#80cbe5',body:'#315d83',deep:'#182f50',light:'#8cf2ff'}},theme=themes[name]||themes.forest;
+ c.save();c.imageSmoothingEnabled=false;c.shadowColor='#020812aa';c.shadowBlur=5;c.shadowOffsetY=4;
+ const rect=(xx,yy,ww,hh,color)=>{c.fillStyle=color;c.fillRect(Math.round(xx),Math.round(yy),Math.max(1,Math.round(ww)),Math.max(1,Math.round(hh)))};
+ rect(x+3,y+5,w-1,h,theme.deep);rect(x,y,w,h-3,theme.body);rect(x,y,w,3,theme.edge);rect(x+3,y-2,w-6,3,theme.top);c.shadowBlur=0;c.shadowOffsetY=0;
+ if(name==='city'){
+  rect(x+5,y+4,w-10,2,'#0b1d31');for(let px=x+8;px<x+w-7;px+=14){rect(px,y+5,6,1,variant%2?theme.light:'#69dfff');rect(px+2,y+8,2,1,'#b8f8ff')}
+  rect(x+2,y-1,2,2,theme.light);rect(x+w-4,y-1,2,2,'#6be8ff');
+ }else if(name==='forest'){
+  for(let px=x+5;px<x+w-4;px+=11){rect(px,y-4-(px%3),4,3,variant%2?'#63bc67':'#8cdb73');rect(px+2,y-6-(px%2),1,3,'#ccf897')}
+  for(let px=x+10;px<x+w-8;px+=19)rect(px,y+4,2,h-3,'#173527');
+ }else{
+  rect(x+2,y-5,w-4,4,'#f8feff');rect(x+6,y-6,Math.max(2,w-12),1,'#ffffff');for(let px=x+9;px<x+w-6;px+=16){rect(px,y+4,4,6,'#55a8d0');rect(px+2,y+9,1,3,'#b9f3ff')}
+ }
  if(state.fragile){
   const p=clamp(Number(state.progress)||0,0,1),cracks=2+Math.floor(p*6);
   c.strokeStyle=p>.55?'rgba(255,211,112,.96)':'rgba(255,189,101,.7)';
