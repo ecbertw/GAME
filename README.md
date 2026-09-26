@@ -2,13 +2,14 @@
 
 > Este documento mantém **apenas os dois relatórios de atualização mais recentes**. Em cada nova atualização, o relatório mais antigo deve ser removido e o novo relatório colocado no topo.
 
-# EIXO V2.8.0 — redesign modern pixel
+# EIXO V2.8.1 — área total e arcade modernizado
 
 **Data:** 26/09/2026
 **Estado:** validado localmente, pronto para integração e deploy
 
-- Página inicial e páginas dedicadas a JUMP, PULSE, Passport, rankings, salas e VIP.
-- Área de jogo ampliada com proporções preservadas; chat e ranking na lateral em computador.
+- Página inicial ocupa sempre toda a altura do ecrã, sem expor o mural de píxeis abaixo do rodapé em monitores grandes.
+- JUMP e PULSE recebem uma apresentação arcade própria, com cabeçalho, moldura e cor de identidade para cada jogo.
+- Área de jogo ampliada com proporções preservadas; chat e ranking continuam na lateral em computador.
 - Passport com personagem original, personalizações existentes e prévia de conquistas em badges.
 - Navegação suspende jogos fora das páginas de jogo e rankings não iniciam partidas.
 - Arte, física, paletas e efeitos existentes preservados. EXP, níveis e atribuição de badges continuam por implementar.
