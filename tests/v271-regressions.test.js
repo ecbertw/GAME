@@ -16,7 +16,7 @@ test('pixel claim menu has a translated close control',()=>{
 });
 
 test('wardrobe preview keeps the full runner inside its canvas',()=>{
- const js=read('jump.js');assert.match(js,/translate\(90,112\);c\.scale\(2\.1,2\.1\)/);
+ const js=read('jump.js');assert.match(js,/translate\(90,118\);c\.scale\(1\.65,1\.65\)/);
 });
 
 test('online peers use velocity-assisted snapshot smoothing',()=>{

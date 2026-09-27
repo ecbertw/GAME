@@ -1,13 +1,13 @@
 /* JUMP · Sky gardens. Art, cloth and lighting are presentation-only. */
 (function(root){
 'use strict';
-const Motion=root.EixoJumpMotion,images={backgrounds:{},platforms:{},grounds:{},props:{},heroRun:null,heroAir:null},loads=[];
+const Motion=root.EixoJumpMotion,images={backgrounds:{},platforms:{},grounds:{},props:{},parts:{}},loads=[];
+const PARTS=['head','torso','upperArm','forearm','hand','thigh','shin','boot','cape'];
 const BIOMES=['astral'];
 const themes={forest:{top:'#c0ddb0',rim:'#83aa73',stone:'#9eaa9a',shade:'#526960',glow:'#e4d590'},city:{top:'#efd498',rim:'#cea55c',stone:'#bda781',shade:'#72584a',glow:'#ffd994'},snow:{top:'#f4fcff',rim:'#afdddf',stone:'#9ebbc6',shade:'#536f8c',glow:'#aff6f4'},astral:{top:'#dcd9f1',rim:'#a4a8d1',stone:'#9295b5',shade:'#535375',glow:'#e3baff'}};
 function load(src,done){const img=new Image();img.decoding='async';loads.push(new Promise(resolve=>{img.onload=()=>{done(img);resolve()};img.onerror=resolve;img.src=src}));}
 for(const biome of BIOMES){load('/assets/game-v300/jump-'+biome+'.webp',img=>images.backgrounds[biome]=img);load('/assets/game-v300/platform-'+biome+'.png',img=>images.platforms[biome]=img);load('/assets/game-v300/ground-'+biome+'.png',img=>images.grounds[biome]=img);}
-load('/assets/game-v300/hero-v7-run.png?v=20260927-v320',img=>images.heroRun=img);
-load('/assets/game-v300/hero-v7-air.png?v=20260927-v320',img=>images.heroAir=img);
+for(const part of PARTS)load('/assets/hero-v8/'+part+'.png?v=20260927-v321',img=>images.parts[part]=img);
 const ready=Promise.all(loads),has=img=>!!(img&&img.naturalWidth>0),clamp=(n,a=0,b=255)=>Math.max(a,Math.min(b,n));
 function color(value,time,offset=0){return value==='rainbow'?'hsl('+((time*90+offset)%360)+' 84% 66%)':/^#[a-f0-9]{6}$/i.test(value||'')?value:'#a6d5d5';}
 function background(c,name,W,H,cam=0,time=0){
@@ -102,100 +102,88 @@ function particlesFor(c,state,offset,ghost){
  c.restore();
 }
 
-const pieceCache=new Map();
-function pieceImage(part,tint){
- const spec=heroParts[part];if(!spec||!has(images.hero))return null;
- const original={head:'#19222d',torso:'#e7d8b5',upperArm:'#e7d8b5',forearm:'#e7d8b5',thigh:'#263c5c',shin:'#263c5c',cape:'#b76632',boot:'#76503c'};if(tint===original[part])tint=null;
- const key=part+':'+(tint||'');if(pieceCache.has(key))return pieceCache.get(key);
- const rect=spec.rect,cv=document.createElement('canvas');cv.width=rect[2];cv.height=rect[3];const c=cv.getContext('2d');c.drawImage(images.hero,...rect,0,0,cv.width,cv.height);
- if(tint){
-  const probe=document.createElement('canvas');probe.width=probe.height=1;const pc=probe.getContext('2d');pc.fillStyle=tint;pc.fillRect(0,0,1,1);const target=pc.getImageData(0,0,1,1).data,data=c.getImageData(0,0,cv.width,cv.height),px=data.data;
-  for(let i=0;i<px.length;i+=4){const r=px[i],g=px[i+1],b=px[i+2];if(px[i+3]<20)continue;
-   const skin=r>145&&g>85&&r>g*1.12&&g>b*1.18;
-   const navy=b>r*.97&&b>g*.9&&r<145;
-   if(part==='head'&&!navy)continue;
-   if(part==='forearm'&&skin)continue;
-   if((part==='torso'||part==='upperArm')&&(Math.max(r,g,b)<45||(r>g*1.5&&g>b*1.35)))continue;
-   const base=part==='head'||part==='thigh'||part==='shin'?64:part==='cape'?140:part==='boot'?96:210;
-   const light=clamp((r*.22+g*.53+b*.25)/base,.13,1.45);px[i]=clamp(target[0]*light);px[i+1]=clamp(target[1]*light);px[i+2]=clamp(target[2]*light);
-  }c.putImageData(data,0,0);
+const partCache=new Map(),bounds={};let partCacheBytes=0;
+const defaults={hair:'#19222d',top:'#e7d8b5',pants:'#263c5c',shoes:'#76503c',accent:'#b76632'};
+function material(part,r,g,b,y){
+ if(part==='head')return b>r*.95&&r<125?'hair':null;
+ if(part==='torso')return y>.75&&b>r*.95?'pants':r>110&&g>90&&b>55?'top':null;
+ if(part==='upperArm')return r>105&&g>85?'top':null;
+ if(part==='thigh'||part==='shin')return 'pants';
+ if(part==='boot')return r>g*1.08&&r>b*1.1?'shoes':null;
+ if(part==='cape')return 'accent';
+ return null;
+}
+function partImage(part,tones){
+ const img=images.parts[part];if(!has(img))return null;
+ const channels={head:['hair'],torso:['top','pants'],upperArm:['top'],forearm:[],hand:[],thigh:['pants'],shin:['pants'],boot:['shoes'],cape:['accent']}[part];
+ const original=channels.every(k=>tones[k]===defaults[k]),key=part+':'+(original?'original':channels.map(k=>tones[k]).join(':'));
+ if(partCache.has(key)){const value=partCache.get(key);partCache.delete(key);partCache.set(key,value);return value;}
+ const cv=document.createElement('canvas');cv.width=img.naturalWidth;cv.height=img.naturalHeight;
+ const q=cv.getContext('2d',{willReadFrequently:true});q.drawImage(img,0,0,cv.width,cv.height);
+ const pixels=q.getImageData(0,0,cv.width,cv.height),d=pixels.data;
+ let left=cv.width,right=0,top=cv.height,bottom=0;
+ const colors={};for(const k of Object.keys(defaults)){q.fillStyle=tones[k];q.fillRect(0,0,1,1);colors[k]=q.getImageData(0,0,1,1).data;}
+ for(let i=0;i<d.length;i+=4){
+  if(d[i+3]<200){d[i+3]=0;continue;}
+  const px=(i/4)%cv.width,py=Math.floor(i/4/cv.width);left=Math.min(left,px);right=Math.max(right,px);top=Math.min(top,py);bottom=Math.max(bottom,py);
+  if(original)continue;
+  const r=d[i],g=d[i+1],b=d[i+2],m=material(part,r,g,b,py/cv.height);
+  if(!m||tones[m]===defaults[m])continue;
+  const base=m==='top'?205:m==='hair'?57:m==='pants'?62:m==='accent'?120:90;
+  const light=clamp((r*.22+g*.55+b*.23)/base,.18,1.6),target=colors[m];
+  d[i]=clamp(target[0]*light);d[i+1]=clamp(target[1]*light);d[i+2]=clamp(target[2]*light);
  }
- pieceCache.set(key,cv);if(pieceCache.size>100)pieceCache.delete(pieceCache.keys().next().value);return cv;
+ q.putImageData(pixels,0,0);bounds[part]=[left,top,right-left+1,bottom-top+1];
+ const result={image:cv,rect:bounds[part],bytes:cv.width*cv.height*4};partCache.set(key,result);partCacheBytes+=result.bytes;
+ while(partCacheBytes>128*1024*1024&&partCache.size>1){const oldest=partCache.keys().next().value;partCacheBytes-=partCache.get(oldest).bytes;partCache.delete(oldest);}return result;
 }
-function piece(c,part,x,y,w,h,angle,tint){const img=pieceImage(part,tint);if(!img)return false;c.save();c.translate(x,y);c.rotate(angle||0);c.drawImage(img,-w/2,0,w,h);c.restore();return true;}
-function limb(c,a,b,width,tint,part){
- const angle=Math.atan2(b.y-a.y,b.x-a.x)-Math.PI/2,length=Math.hypot(b.x-a.x,b.y-a.y);
- if(piece(c,part,a.x,a.y,width+2,length+1,angle,tint))return;
- c.lineCap='round';c.strokeStyle='#24313d';c.lineWidth=width+1.8;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();c.strokeStyle=tint;c.lineWidth=width;c.stroke();c.strokeStyle='#ffffff38';c.lineWidth=.7;c.beginPath();c.moveTo(a.x-.8,a.y+1);c.lineTo(b.x-.8,b.y-1);c.stroke();
+function drawPart(c,part,tones,x,y,w,h,angle=0,pivotX=.5,pivotY=0){
+ const p=partImage(part,tones);if(!p)return;
+ c.save();c.translate(x,y);c.rotate(angle);c.drawImage(p.image,...p.rect,-w*pivotX,-h*pivotY,w,h);c.restore();
 }
-function armSegment(c,part,a,b,tint){
- const sprite=pieceImage(part,tint),spec=heroParts[part];if(!sprite||!spec.pivot||!spec.tip)return;
- const [px,py]=spec.pivot,[tx,ty]=spec.tip,sourceLength=Math.hypot(tx-px,ty-py);
- const scale=Math.hypot(b.x-a.x,b.y-a.y)/sourceLength;
- const angle=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(ty-py,tx-px);
- c.save();c.translate(a.x,a.y);c.rotate(angle);c.scale(scale,scale);
- // The sleeve pivots at its anatomical joint. Fingers extend past the wrist;
- // they are never compressed into the elbow-to-wrist bone.
- c.drawImage(sprite,-px,-py);c.restore();
+function segment(c,part,tones,a,b,width){
+ const length=Math.hypot(b.x-a.x,b.y-a.y),angle=Math.atan2(b.x-a.x,b.y-a.y);
+ // Canvas positive rotation takes the down-axis left; negate the bone angle.
+ drawPart(c,part,tones,a.x,a.y,width,length+2,-angle,.5,.06);
 }
-function arm(c,pose,tint){
- c.save();if(pose.back)c.globalAlpha*=.78;
- armSegment(c,'upperArm',pose.shoulder,pose.elbow,tint);
- armSegment(c,'forearm',pose.elbow,pose.wrist,tint);c.restore();
-}
-function cape(c,time,moving,ground,vy,tint,state){
- const sprite=pieceImage('cape',tint);if(!sprite)return;
- let cloth=state.cloth,dt=cloth?clamp(time-cloth.time,0,.05):0;
- if(!cloth||!Number.isFinite(dt)||time<cloth.time||time-cloth.time>.12)cloth=state.cloth={time,open:0,openV:0,lag:0,lagV:0,bend:0,bendV:0};
- cloth.time=time;const air=!ground,speed=state.speedBlend||0;
- const targets={open:moving?.72+.28*speed:air?.58+Math.min(.25,Math.abs(vy)/1200):0,lag:air?clamp(vy/330,-1,1):0,bend:moving?Math.sin(state.phase*Math.PI*4)*.7:0};
- // Reduced position-based cloth: the shoulder is a hard attachment, while
- // spread, vertical lag and curvature use critically damped spring constraints.
- for(const [key,stiff,damp] of [['open',48,11],['lag',35,9],['bend',28,8]]){
-  const v=key+'V';cloth[v]+=(targets[key]-cloth[key])*stiff*dt;cloth[v]*=Math.exp(-damp*dt);cloth[key]+=cloth[v]*dt;
+function drawCape(c,pose,state,dt,time,speed,vy,ground,tones){
+ const wanted=-.08-speed*.92+(ground?0:clamp(vy/1100,-.25,.25));
+ if(!state.cloth)state.cloth={angle:-.08,velocity:0};
+ const cloth=state.cloth;
+ cloth.velocity+=(wanted-cloth.angle)*40*dt;cloth.velocity*=Math.exp(-10*dt);cloth.angle+=cloth.velocity*dt;
+ const p=partImage('cape',tones);if(!p)return;
+ let previous={x:pose.shoulder.x-3,y:pose.shoulder.y-2};
+ const n=18,len=27/n;
+ for(let i=0;i<n;i++){
+  const f=(i+.5)/n,angle=cloth.angle+Math.sin(time*6-f*3)*.07*speed*f;
+  const next={x:previous.x+Math.sin(angle)*len,y:previous.y+Math.cos(angle)*len},width=3+f*10;
+  c.save();c.translate(previous.x,previous.y);c.rotate(-angle);
+  c.drawImage(p.image,p.rect[0],p.rect[1]+p.rect[3]*i/n,p.rect[2],p.rect[3]/n,-width/2,0,width,len+.4);c.restore();previous=next;
  }
- cloth.open=clamp(cloth.open,0,1);cloth.lag=clamp(cloth.lag,-1,1);
- const slices=14,w=13+cloth.open*12,h=24-cloth.open*6;
- for(let i=0;i<slices;i++){
-  const f=i/slices,sy=Math.floor(f*sprite.height),sh=Math.ceil(sprite.height/slices);
-  const curve=cloth.bend*f*f-cloth.open*f*1.4,y=-30+f*h+cloth.lag*f*4.2;
-  c.drawImage(sprite,0,sy,sprite.width,sh,-w+3+curve,y,w,h/slices+.35);
- }
-}
-const heroSheetCache=new Map();
-function rgb(value){const cv=document.createElement('canvas');cv.width=cv.height=1;const q=cv.getContext('2d');q.fillStyle=value;q.fillRect(0,0,1,1);return q.getImageData(0,0,1,1).data;}
-function recolorSheet(img,tones){
- const key=(img===images.heroRun?'run:':'air:')+tones.join(':');if(heroSheetCache.has(key))return heroSheetCache.get(key);
- const cv=document.createElement('canvas');cv.width=img.naturalWidth;cv.height=img.naturalHeight;const q=cv.getContext('2d',{willReadFrequently:true});q.drawImage(img,0,0);
- const data=q.getImageData(0,0,cv.width,cv.height),px=data.data,target=tones.map(rgb),h=cv.height;
- for(let i=0;i<px.length;i+=4){if(px[i+3]<24)continue;const r=px[i],g=px[i+1],b=px[i+2],y=((i/4/cv.width)|0),skin=r>145&&g>72&&r>g*1.13&&g>b*1.08;let group=-1,base=120;
-  if(!skin&&r>105&&r>g*1.30&&r>b*1.35){group=4;base=135;}
-  else if(!skin&&y>h*.57&&r>48&&r>g*1.12&&g>b*.82){group=3;base=82;}
-  else if(!skin&&y<h*.48&&r<105&&b>r*.82&&b>g*.78){group=0;base=58;}
-  else if(!skin&&r<115&&b>r*.92&&b>g*.82){group=2;base=61;}
-  else if(!skin&&r>135&&g>105&&b>68){group=1;base=190;}
-  if(group<0)continue;const light=clamp((r*.23+g*.55+b*.22)/base,.22,1.55),t=target[group];px[i]=clamp(t[0]*light);px[i+1]=clamp(t[1]*light);px[i+2]=clamp(t[2]*light);
- }
- q.putImageData(data,0,0);heroSheetCache.set(key,cv);if(heroSheetCache.size>12)heroSheetCache.delete(heroSheetCache.keys().next().value);return cv;
-}
-function heroFrame(c,state,pose,ground,moving,vy,tones){
- let img,count,index;if(ground&&state.landTime<.20){img=images.heroAir;count=6;index=5;}else if(!ground){img=images.heroAir;count=6;index=vy>150?2:vy>-90?3:4;}else if(moving||state.speedBlend>.08){img=images.heroRun;count=8;index=Math.floor((((state.phase%1)+1)%1)*count)%count;}else{img=images.heroAir;count=6;index=0;}
- const sheet=recolorSheet(img,tones),sw=sheet.width/count,sh=sheet.height,dh=84,dw=dh*sw/sh;c.drawImage(sheet,index*sw,0,sw,sh,-dw/2,-dh*.895,dw,dh);
 }
 function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
- const O={hair:'#19222d',top:'#e7d8b5',pants:'#263c5c',shoes:'#76503c',accent:'#b76632',effect:'none',accessory:'cape',...(style||{})};
- // Never silently replace the approved artwork with a different character.
- if(!has(images.heroRun)||!has(images.heroAir)){return true;}
- const dir=motion.facing===-1?-1:1,ground=motion.ground!==false,moving=!!motion.moving,vy=Number(motion.vy)||0;
- const movement=motionState(x,y,time,motion,ghost,name,String(O.effect||'none'));
- particlesFor(c,movement.state,Number(motion.cameraY)||0,ghost);
- const top=color(O.top,time),pants=color(O.pants,time,100),hair=color(O.hair,time,200),accent=color(O.accent,time,300),shoe=color(O.shoes,time,50);
- const pose=movement.pose;
- c.save();c.translate(x,y);c.scale(dir,1);if(ghost)c.globalAlpha=.72;c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
- if(ground){c.save();c.globalAlpha*=.2;c.fillStyle='#07101d';c.beginPath();c.ellipse(0,.5,15,2,0,0,Math.PI*2);c.fill();c.restore()}
- heroFrame(c,movement.state,pose,ground,moving,vy,[hair,top,pants,shoe,accent]);c.restore();
- if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-78);c.fillText(String(name).slice(0,16),x,y-78);c.restore()}
+ if(!root.EixoJumpRig||!PARTS.every(p=>has(images.parts[p])))return true;
+ const O={...defaults,accessory:'cape',effect:'none',...(style||{})},tones={};
+ // Rainbow uses a bounded palette, avoiding full-sheet work on every frame.
+ for(const key of Object.keys(defaults))tones[key]=color(O[key],Math.floor(time*8)/8);
+ const ground=motion.ground!==false,vy=Number(motion.vy)||0,dir=motion.facing===-1?-1:1;
+ const movement=motionState(x,y,time,motion,ghost,name,O.effect),state=movement.state;
+ const discontinuity=!state.rig||movement.dt===0&&state.rig.time!==time;
+ if(!state.rig||discontinuity)state.rig={};
+ const pose=root.EixoJumpRig.pose(state.rig,state.phase,{ground,vy,time,speed:state.speedBlend,landing:movement.pose.landing},movement.dt,discontinuity);
+ state.rig.time=time;
+ particlesFor(c,state,Number(motion.cameraY)||0,ghost);
+ c.save();c.translate(x,y);c.scale(dir,1);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';if(ghost)c.globalAlpha=.72;
+ if(ground){c.save();c.globalAlpha*=.15;c.fillStyle='#07101d';c.beginPath();c.ellipse(0,.8,10,1.5,0,0,Math.PI*2);c.fill();c.restore();}
+ if(O.accessory!=='none')drawCape(c,pose,state.rig,movement.dt,time,state.speedBlend,vy,ground,tones);
+ function leg(l){c.save();if(l.back)c.filter='brightness(0.72)';segment(c,'thigh',tones,l.hip,l.knee,7);segment(c,'shin',tones,l.knee,l.ankle,5.6);drawPart(c,'boot',tones,l.sole.x,l.sole.y,9,5,0,.35,1);c.restore();}
+ function arm(a){c.save();if(a.back)c.filter='brightness(0.72)';segment(c,'upperArm',tones,a.shoulder,a.elbow,6);segment(c,'forearm',tones,a.elbow,a.wrist,3.8);drawPart(c,'hand',tones,a.wrist.x,a.wrist.y,4,5,-a.b,.5,.1);c.restore();}
+ leg(pose.legs[0]);arm(pose.arms[0]);leg(pose.legs[1]);
+ drawPart(c,'torso',tones,pose.shoulder.x,pose.shoulder.y-3,12,27,-pose.lean,.47,0);
+ drawPart(c,'head',tones,pose.head.x,pose.head.y,15,17,0,.53,0);
+ arm(pose.arms[1]);c.restore();
+ if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-65);c.fillText(String(name).slice(0,16),x,y-65);c.restore();}
  return true;
 }
-root.EixoJumpExactArt={version:'eixo-runner-v7-hd',ready,background,platform,runner,images,themes,heroHeight:64,isReady:()=>has(images.heroRun)&&has(images.heroAir)};
+root.EixoJumpExactArt={version:'eixo-runner-v8-rig',ready,background,platform,runner,images,themes,heroHeight:64,isReady:()=>PARTS.every(p=>has(images.parts[p]))};
 })(window);

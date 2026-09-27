@@ -63,7 +63,7 @@ function validOutfit(data,p){
   }
   return outfit;
 }
-function wardrobeFor(p){return{vipLevel:vipLevel(p),parts:WARDROBE,fixedAppearance:FIXED_APPEARANCE};}
+function wardrobeFor(p){return{vipLevel:vipLevel(p),parts:WARDROBE,defaults:{...OUTFIT_DEFAULTS},fixedAppearance:FIXED_APPEARANCE};}
 async function initDb(db){
   // DUO/TRIO was removed from JUMP. Clean the retired persistent data so old
   // teams/rankings cannot reappear after deploys or restarts.

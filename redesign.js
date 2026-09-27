@@ -29,7 +29,7 @@ rankTabs.setAttribute('aria-label',t('Âmbito do ranking','Ranking scope'));
 rankWrap.append(rankTabs,boards);social.append(rankWrap,chat);playLayout.append(playMain,social);views.jump.append(gameMast,gameTools,switcher,intro,playLayout);playMain.append(hero);
 for(const id of ['roomCreatePanel','roomBoard','jumpRoomCreatePanel','jumpRoomBoard']){const e=$(id);if(e)playMain.append(e);}
 const rankMount=make('div','rx-ranking-mount');
-const character=make('canvas','');character.id='rxCharacter';character.width=560;character.height=580;character.setAttribute('aria-label',t('A tua personagem JUMP','Your JUMP character'));
+const character=make('canvas','');character.id='rxCharacter';character.width=1120;character.height=1160;character.setAttribute('aria-label',t('A tua personagem JUMP','Your JUMP character'));
 const notice=make('div','rx-notice');notice.hidden=true;notice.setAttribute('role','status');document.body.append(notice);
 let noticeTimer;
 function notify(message){clearTimeout(noticeTimer);notice.textContent=String(message||'');notice.hidden=!message;noticeTimer=setTimeout(()=>notice.hidden=true,6000);}
@@ -123,7 +123,7 @@ async function refreshProfile(){
 }
 function drawCharacter(outfit){
  cancelAnimationFrame(characterFrame);character.hidden=false;$('rxCharacterFallback').hidden=true;
- const render=()=>{if(route!=='passport'||character.hidden){characterFrame=0;return;}const now=performance.now()/1000,c=character.getContext('2d');c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.clearRect(0,0,560,580);c.save();c.translate(280+Math.sin(now*1.9)*3,490+Math.sin(now*7.2)*1.4);c.scale(5.2,5.2);window.EixoJumpExactArt.runner(c,0,0,outfit,'',false,now,{facing:1,ground:true,vy:0,moving:true,preview:true,identity:'passport-live'});c.restore();characterFrame=requestAnimationFrame(render);};render();
+ const render=()=>{if(route!=='passport'||character.hidden){characterFrame=0;return;}const now=performance.now()/1000,c=character.getContext('2d');c.setTransform(2,0,0,2,0,0);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.clearRect(0,0,560,580);c.save();c.translate(280+Math.sin(now*1.9)*3,490+Math.sin(now*7.2)*1.4);c.scale(5.2,5.2);window.EixoJumpExactArt.runner(c,0,0,outfit,'',false,now,{facing:1,ground:true,vy:0,moving:true,preview:true,identity:'passport-live'});c.restore();characterFrame=requestAnimationFrame(render);};render();
 }
 async function action(type){
  if(['name','character','account','rooms','create-room'].includes(type)&&!player())return window.eixoOpenAuth?.('login');

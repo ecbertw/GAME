@@ -366,16 +366,18 @@ async function customize(){
    const prefix=vipOnly?(part==='effect'?(lang()==='pt'?'EFEITO VIP · ':'VIP EFFECT · '):(lang()==='pt'?'COR VIP · ':'VIP COLOR · ')):'';
    return '<option value="'+esc(item.value)+'" data-eixo-color-label="keep"'+(outfit[part]===item.value?' selected':'')+(locked?' disabled':'')+'>'+prefix+esc(item.label)+suffix+(locked?' · BLOQUEADO':'')+'</option>';
  }).join('');
- modal(txt('character'),'<div class="jump-custom-note">'+(lang()==='pt'?'Cabelo e Roupa editáveis':'Hair and clothing editable')+'</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="180" height="130"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
- const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,180,130);c.save();c.translate(90,112);c.scale(2.1,2.1);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true,preview:true,identity:"wardrobe"});c.restore()};
+ modal(txt('character'),'<div class="jump-custom-note">'+(lang()==='pt'?'Cabelo e Roupa editáveis':'Hair and clothing editable')+'</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="720" height="520"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
+ const resetButton=document.createElement('button');resetButton.type='button';resetButton.className='modal-button';resetButton.id='jumpResetOutfit';resetButton.textContent=lang()==='pt'?'Repor original':'Reset to original';$('jumpSave').before(resetButton);
+ resetButton.onclick=()=>{outfit={...out.defaults};panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.value=outfit[sel.dataset.jumpOutfit]});$('jumpSaveStatus').textContent=lang()==='pt'?'Original reposto. Guarda para aplicar.':'Original restored. Save to apply.';preview()};
+ const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.setTransform(4,0,0,4,0,0);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.clearRect(0,0,180,130);c.save();c.translate(90,118);c.scale(1.65,1.65);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true,preview:true,identity:"wardrobe"});c.restore()};
  panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.onchange=()=>{outfit[sel.dataset.jumpOutfit]=sel.value;preview()}});
- let previewTimer=setInterval(()=>{if(!panel||!$('jumpAvatarPreview')){clearInterval(previewTimer);return}preview()},70);preview();
+ const previewPanel=panel;let previewTimer;const animatePreview=()=>{if(panel!==previewPanel||!$('jumpAvatarPreview'))return;preview();previewTimer=requestAnimationFrame(animatePreview)};animatePreview();
  $('jumpSave').onclick=async()=>{
   try{
    const saved=await api('/api/jump/cosmetics',{method:'POST',body:JSON.stringify({outfit})});
    outfit={...saved.outfit};$('jumpSaveStatus').textContent=txt('saved');window.dispatchEvent(new Event('eixo-outfit-updated'));
    if(run)run.outfit=outfit;
-   setTimeout(()=>{clearInterval(previewTimer);closePanel()},600);
+   setTimeout(()=>{cancelAnimationFrame(previewTimer);if(panel===previewPanel)closePanel()},600);
   }catch(e){$('jumpSaveStatus').textContent=e.message}
  };
 }

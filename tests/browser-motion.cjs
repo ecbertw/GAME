@@ -9,7 +9,7 @@ const root=path.resolve(__dirname,'..');
   const page=await browser.newPage({viewport:{width:960,height:660}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/jump.js');
   await page.setContent('<body style="margin:0"><canvas width="960" height="660"></canvas></body>');
-  for(const src of ['assets/jump-exact/jump-exact-runner.js','jump-motion.js','jump-exact-renderer.js'])await page.addScriptTag({url:'/'+src});
+  for(const src of ['jump-motion.js','jump-rig.js','jump-exact-renderer.js'])await page.addScriptTag({url:'/'+src});
   await page.evaluate(async()=>{
    await EixoJumpExactArt.ready;
    window.paint=t=>{
