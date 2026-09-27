@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="crispEdges" aria-labelledby="title">
-  <title id="title">EIXO — E com ponto vermelho</title>
-  <rect width="64" height="64" fill="#000"/>
-  <path d="M9 19H47V29H20V34H40V43H20V48H47V58H9Z" fill="#fff"/>
-  <rect x="44" y="5" width="15" height="15" fill="#ff172b"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="eixoIconTitle"><title id="eixoIconTitle">EIXO — E com ponto vermelho</title><rect width="64" height="64" rx="15" fill="#101827"/><path d="M14 20V49H49M14 20H47M14 34H41" fill="none" stroke="#f1f4ff" stroke-width="8" stroke-linecap="square" stroke-linejoin="miter"/><rect x="42" y="7" width="12" height="12" rx="2" fill="#ff435d"/><path d="M9 9v46" stroke="#a98df2" stroke-opacity=".5" stroke-width="2"/></svg>
