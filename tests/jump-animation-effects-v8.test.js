@@ -6,8 +6,8 @@ test('JUMP restores the previous full-frame HD animation without touching gamepl
  const motion=read('jump-motion.js'),renderer=read('jump-exact-renderer.js'),physics=read('jump-physics.js');
  assert.match(motion,/const STRIDE_DISTANCE=112,PREVIEW_SPEED=216/);
  for(const key of ['RUN_LEG','RUN_ARM','AIR','sampleLeg','sampleArm','sampleAir','landing:land'])assert.ok(motion.includes(key),key);
- assert.match(renderer,/version:'eixo-runner-v10-clean'/);
- assert.match(renderer,/hero-v10-run/);assert.match(renderer,/hero-v10-air/);assert.match(renderer,/function heroFrame/);assert.doesNotMatch(renderer,/EixoJumpRig\.pose/);assert.match(renderer,/imageSmoothingQuality='high'/);
+ assert.match(renderer,/version:'eixo-runner-v11-alternating'/);
+ assert.match(renderer,/hero-v11-run/);assert.match(renderer,/hero-v10-air/);assert.match(renderer,/function heroFrame/);assert.doesNotMatch(renderer,/EixoJumpRig\.pose/);assert.match(renderer,/imageSmoothingQuality='high'/);
  assert.doesNotMatch(physics,/RUN_LEG|RUN_ARM|sampleAir|footAngle/);
 });
 
