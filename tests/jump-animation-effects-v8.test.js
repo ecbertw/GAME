@@ -2,13 +2,13 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 
-test('JUMP runner v4 uses rigged natural locomotion without touching gameplay physics',()=>{
+test('JUMP runner v5 uses contact-driven natural locomotion without touching gameplay physics',()=>{
  const motion=read('jump-motion.js'),renderer=read('jump-exact-renderer.js'),physics=read('jump-physics.js');
- assert.match(motion,/const STRIDE_DISTANCE=94,PREVIEW_SPEED=216/);
- for(const key of ['scaleX','scaleY','headTilt','footAngle','armDrive','landing:land'])assert.ok(motion.includes(key),key);
- assert.match(renderer,/version:'eixo-runner-v4'/);
+ assert.match(motion,/const STRIDE_DISTANCE=108,PREVIEW_SPEED=216/);
+ for(const key of ['scaleX','scaleY','headTilt','footAngle','forwardKnee','landing:land'])assert.ok(motion.includes(key),key);
+ assert.match(renderer,/version:'eixo-runner-v5'/);
  assert.match(renderer,/pose\.scaleX/);assert.match(renderer,/leg\.footAngle/);assert.match(renderer,/pose\.headTilt/);
- assert.doesNotMatch(physics,/scaleX|headTilt|footAngle|armDrive/);
+ assert.doesNotMatch(physics,/scaleX|headTilt|footAngle|forwardKnee/);
 });
 
 test('JUMP effects V2 are orbit-led, tiered and migrate legacy selections',()=>{

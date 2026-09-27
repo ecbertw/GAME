@@ -1,20 +1,26 @@
-/* EIXO JUMP motion v4 — natural 2026 locomotion, presentation only; gameplay physics untouched. */
+/* EIXO JUMP motion v5 — contact-driven, layered locomotion; gameplay physics untouched. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.EixoJumpMotion=api;})(typeof window!=='undefined'?window:this,function(){
 'use strict';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),mix=(a,b,t)=>a+(b-a)*t,smooth=t=>t*t*(3-2*t);
-const STRIDE_DISTANCE=94,PREVIEW_SPEED=216;
-const FOOT=[[0,5.4,0,true],[.09,3.4,.25,true],[.2,-.5,.15,true],[.31,-5.6,0,true],[.39,-6.4,-1.8,false],[.54,-3.8,-7.6,false],[.68,.4,-9.4,false],[.82,4.9,-5.5,false],[.94,6.1,-1.3,false],[1,5.4,0,false]];
+const STRIDE_DISTANCE=108,PREVIEW_SPEED=216;
+// One stride in canonical right-facing space. During stance the foot is locked
+// to the floor; during recovery it follows a heel-led arc with toe clearance.
+const FOOT=[[0,6.2,0,true],[.12,2.4,0,true],[.24,-2.2,0,true],[.36,-6.1,0,true],[.44,-6.5,-2.2,false],[.57,-3.8,-7.5,false],[.70,.8,-9.1,false],[.84,5.2,-5.1,false],[.94,6.5,-1.2,false],[1,6.2,0,false]];
 function footAt(phase){
  const u=((phase%1)+1)%1;let a=FOOT[0],b=FOOT[1];
  for(let i=1;i<FOOT.length;i++)if(u<=FOOT[i][0]){a=FOOT[i-1];b=FOOT[i];break;}
  let t=smooth(clamp((u-a[0])/(b[0]-a[0]),0,1));
- const contact=u<.32;
+ const contact=u<.36;
  return{x:mix(a[1],b[1],t),y:contact?0:mix(a[2],b[2],t),contact,phase:u};
 }
 function knee(hip,ankle,l1=9.7,l2=8.8,bias=1){
  const dx=ankle.x-hip.x,dy=ankle.y-hip.y,d=clamp(Math.hypot(dx,dy),.01,l1+l2-.01);
  const base=Math.atan2(dy,dx),off=Math.acos(clamp((l1*l1+d*d-l2*l2)/(2*l1*d),-1,1));
  const angle=base-off*bias;return{x:hip.x+Math.cos(angle)*l1,y:hip.y+Math.sin(angle)*l1};
+}
+function forwardKnee(hip,ankle,l1=9.7,l2=8.8){
+ const a=knee(hip,ankle,l1,l2,1),b=knee(hip,ankle,l1,l2,-1);
+ return a.x>b.x?a:b;
 }
 function gait(phase){
  const u=((phase%1)+1)%1,cycle=Math.sin(u*Math.PI*2),double=Math.sin(u*Math.PI*4);
@@ -24,37 +30,37 @@ function gait(phase){
 }
 function runnerPose(phase,{moving=false,ground=true,vy=0,time=0,speedBlend=1,airTime=0,landTime=9}={}){
  speedBlend=clamp(speedBlend,0,1);const run=moving&&ground,g=gait(phase);
- const rise=clamp(vy/340,0,1),fall=clamp(-vy/450,0,1),launch=!ground?clamp(1-airTime/.15,0,1):0;
- const land=ground&&landTime<.20?Math.sin(clamp(landTime/.20,0,1)*Math.PI):0;
- const anticipation=ground&&moving&&landTime>.22?0:0;
- const airTuck=!ground?Math.max(rise*.6,(1-fall)*.27):0;
- const bob=run?g.pelvisY*(.5+.5*speedBlend):ground?Math.sin(time*1.45)*.07:0;
- const squash=land*.095,stretch=launch*.075;
- const scaleX=1+squash*.7-stretch*.38,scaleY=1-squash+stretch;
- const lean=run?(.055+.045*speedBlend):!ground?.08*rise-.035*fall:0;
- const hipY=-15+bob-airTuck*1.2+fall*.45+land*1.35;
- const hipX=run?g.pelvisX*(.35+.65*speedBlend):0;
+ const rise=clamp(vy/360,0,1),fall=clamp(-vy/460,0,1),launch=!ground?clamp(1-airTime/.14,0,1):0;
+ const land=ground&&landTime<.24?Math.sin(clamp(landTime/.24,0,1)*Math.PI):0;
+ const airTuck=!ground?Math.max(rise*.72,(1-fall)*.30):0;
+ const bob=run?(.18+Math.abs(Math.sin(phase*Math.PI*2))*.55)*speedBlend:ground?Math.sin(time*1.2)*.045:0;
+ const squash=land*.055,stretch=launch*.035;
+ const scaleX=1+squash*.38-stretch*.18,scaleY=1-squash+stretch;
+ const lean=run?(.045+.035*speedBlend):!ground?.07*rise-.025*fall:0;
+ const hipY=-15+bob-airTuck*1.45+fall*.38+land*.92;
+ const hipX=run?Math.sin(phase*Math.PI*2)*.28*speedBlend:0;
  const legs=[0,1].map(i=>{
   const split=i?1:-1,hip={x:hipX+split*1.7,y:hipY};let foot;
-  if(run){const f=g.legs[i].foot,scale=.72+.28*speedBlend;foot={x:f.x*scale,y:f.y*(.76+.24*speedBlend),contact:f.contact};}
+  if(run){const f=g.legs[i].foot,scale=.70+.30*speedBlend;foot={x:f.x*scale,y:f.contact?0:f.y*(.72+.28*speedBlend),contact:f.contact};}
   else if(ground)foot={x:split*3,y:0,contact:true};
-  else foot={x:split*(3.1+airTuck*2.5)+rise*(i?-1.1:.8),y:-1-airTuck*(i?7.1:8.7)+fall*(i?1.25:1.7),contact:false};
-  const k=knee(hip,foot,9.7,8.8,i?1:-1);
-  const footAngle=run?Math.sin((g.legs[i].foot.phase-.12)*Math.PI*2)*.16*(1-g.legs[i].foot.contact*.65):!ground?(rise?-.22:.12):0;
-  return{hip,knee:k,foot,footAngle,back:i===0};
+  else foot={x:split*(3.0+airTuck*2.4)+rise*(i?-.7:.9),y:-1.1-airTuck*(i?7.0:8.4)+fall*(i?1.2:1.8),contact:false};
+  const ankle={x:foot.x,y:foot.y-3.45},k=forwardKnee(hip,ankle,8.1,7.1);
+  const footAngle=run?(foot.contact?-.035:Math.sin((g.legs[i].foot.phase-.12)*Math.PI*2)*.13):!ground?(rise?-.18:.09):0;
+  return{hip,knee:k,ankle,foot,footAngle,back:i===0};
  });
- const torsoY=bob+(ground?land*.42:rise*.4-fall*.12);
- const shoulderY=hipY-13+torsoY*.2;
+ const torsoY=bob+(ground?land*.30:rise*.34-fall*.10);
+ const shoulderY=hipY-13+torsoY*.18;
  const stride=Math.sin(phase*Math.PI*2);
- const torsoAngle=run?-.055-stride*.025*speedBlend:!ground?-.13*rise+.055*fall:land*.02;
- const headTilt=run?stride*.018:!ground?.06*rise-.035*fall:0;
- const armDrive=run?stride*(2.7+2*speedBlend):!ground?(rise*4.2-fall*1.9):Math.sin(time*1.35)*.3;
- const arms=[true,false].map(back=>{
-  const side=back?1:-1,shoulder={x:(back?3.1:-3.5)+lean*11,y:shoulderY+3.6};
-  const swing=side*armDrive,upperAngle=-.08+swing*.105;
-  const bend=run?.58+Math.abs(swing)*.025:ground?.42:.82+launch*.10;
+ const torsoAngle=run?-.045-stride*.018*speedBlend:!ground?-.11*rise+.045*fall:land*.012;
+ const headTilt=run?stride*.012:!ground?.045*rise-.025*fall:0;
+ const arms=[true,false].map((back,i)=>{
+  const shoulder={x:(back?3.0:-3.35)+lean*11,y:shoulderY+3.55};
+  const legX=legs[i].foot.x,drive=run?clamp(-legX/6.5,-1,1)*speedBlend:0;
+  const upperAngle=!ground?.48*rise-.20*fall:run?drive*.56:Math.sin(time*1.2+(back?Math.PI:0))*.025;
+  // The forearm always folds towards the character's forward side. This keeps
+  // the elbow anatomical throughout the swing instead of flipping its bend.
+  const foreAngle=!ground?.72+.14*rise:run?.34+drive*.16:.30;
   const elbow={x:shoulder.x+Math.sin(upperAngle)*6.5,y:shoulder.y+Math.cos(upperAngle)*6.5};
-  const foreAngle=upperAngle+side*bend;
   const wrist={x:elbow.x+Math.sin(foreAngle)*4.4,y:elbow.y+Math.cos(foreAngle)*4.4};
   return{back,shoulder,elbow,wrist};
  });
@@ -88,5 +94,5 @@ function updateEmitter(s,input){
  }
  s.last=time;s.x=x;s.y=y;s.ground=ground;s.run=run;return{pose,active,dt};
 }
-return{STRIDE_DISTANCE,PREVIEW_SPEED,gait,runnerPose,footAt,knee,createEmitter,updateEmitter};
+return{STRIDE_DISTANCE,PREVIEW_SPEED,gait,runnerPose,footAt,knee,forwardKnee,createEmitter,updateEmitter};
 });
