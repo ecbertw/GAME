@@ -11,7 +11,7 @@ test('site uses animated ambient background instead of a pixel wall UI',()=>{
 });
 test('homepage and VIP visuals do not use old runner or old winter screenshot',()=>{
  const js=read('redesign.js'),css=read('site-polish.css');
- assert.match(js,/rx-hero-visual/);assert.match(js,/rx-vip-art/);
+ assert.match(js,/rx-hero-visual/);assert.match(js,/rx-vip-showcase/);
  assert.match(css,/\.rx-hero-core/);assert.match(css,/\.rx-game-card/);
  assert.doesNotMatch(css,/snow\.webp|runner\.webp/);
 });
