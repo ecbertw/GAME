@@ -1,0 +1,29 @@
+/* EIXO readability pass: ranking names at an accessible arcade scale. */
+/* Explicitly target the inner span because older styles force 8–10px on it. */
+body.eixo-modern[data-page="rankings"] .rx-ranking-mount .board .rank-player-name,
+body.eixo-modern[data-page="rankings"] .rx-ranking-mount .board .rank-player-name .name-letter{
+ font-size:clamp(13px,1vw,15px)!important;
+ font-family:Inter,Arial,sans-serif!important;
+ line-height:1.5!important;
+ letter-spacing:.05px;
+}
+body.eixo-modern[data-page="rankings"] .full-ranking-list .rank-player-name,
+body.eixo-modern[data-page="rankings"] .full-ranking-list .rank-player-name .name-letter,
+body.eixo-modern[data-page="rankings"] .full-ranking-list .full-player>b{
+ font-size:clamp(12px,.9vw,14px)!important;
+ font-family:Inter,Arial,sans-serif!important;line-height:1.5!important;
+}
+body.eixo-modern .rx-social .board .rank-player-name,
+body.eixo-modern .rx-social .board .rank-player-name .name-letter{
+ font:750 clamp(11px,.8vw,13px)/1.45 Inter,Arial,sans-serif!important;
+ letter-spacing:0!important;
+}
+body.eixo-modern .rx-social .board li{min-height:44px}
+body.eixo-modern .rx-social .rank-name-wrap{gap:5px;flex-wrap:wrap}
+body.eixo-modern .rx-social .rank-player-name{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:690px){
+ body.eixo-modern[data-page="rankings"] .rx-ranking-mount .board .rank-player-name,
+ body.eixo-modern[data-page="rankings"] .rx-ranking-mount .board .rank-player-name .name-letter{font-size:12px!important}
+ body.eixo-modern .rx-social .board .rank-player-name,
+ body.eixo-modern .rx-social .board .rank-player-name .name-letter{font-size:11px!important}
+}

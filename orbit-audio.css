@@ -1,0 +1,69 @@
+/* EIXO Orbit Audio — integrated site sound mixer (after interface-v6.css). */
+body.eixo-modern .rx-nav .rx-audio-menu{position:relative;display:flex;align-items:center;flex:0 0 auto}
+body.eixo-modern .rx-sound-trigger{
+ display:inline-flex;align-items:center;gap:8px;min-height:37px;padding:8px 13px;
+ background:linear-gradient(145deg,rgba(35,39,65,.95),rgba(18,27,42,.96));
+ color:#d1c5f5;border:1px solid rgba(170,155,234,.44);border-radius:10px;
+ font:750 11px/1.2 Inter,Arial,sans-serif;letter-spacing:.25px;box-shadow:none;
+}
+body.eixo-modern .rx-sound-trigger:hover,body.eixo-modern .rx-sound-trigger[aria-expanded="true"]{
+ color:#f0e9ff;border-color:#b3a0ee;background:#34304e;
+}
+body.eixo-modern .rx-sound-trigger>span:first-child{font:700 16px/1 Inter,Arial,sans-serif}
+body.eixo-modern .rx-sound-chevron{margin-left:3px;color:#a494ce;font-size:14px}
+body.eixo-modern .rx-sound-popover{
+ position:absolute;right:0;top:calc(100% + 11px);z-index:11000;
+ width:min(324px,calc(100vw - 24px));max-height:min(620px,calc(100dvh - 90px));overflow:auto;
+ border:1px solid rgba(125,143,184,.39);border-radius:17px;padding:19px;
+ background:linear-gradient(155deg,rgba(28,38,59,.99),rgba(12,21,35,.99));
+ box-shadow:0 25px 70px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.065);
+ backdrop-filter:blur(16px);
+}
+body.eixo-modern .rx-sound-popover[hidden]{display:none!important}
+body.eixo-modern .rx-sound-heading{
+ margin-bottom:16px;color:#e0d4ff;font:800 10px/1.5 Inter,Arial,sans-serif;letter-spacing:1.6px
+}
+body.eixo-modern .rx-sound-row{
+ display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;
+ margin:0 0 17px;color:#b4c2dc;font:650 11px/1.35 Inter,Arial,sans-serif;
+}
+body.eixo-modern .rx-sound-row>span{min-width:0}
+body.eixo-modern .rx-sound-row output{font:800 11px/1.35 Inter,Arial,sans-serif;color:#ddcffd;font-variant-numeric:tabular-nums}
+body.eixo-modern .rx-sound-row input[type=range]{
+ grid-column:1/-1;width:100%;height:5px;margin:1px 0 0;padding:0;
+ appearance:none;-webkit-appearance:none;border:0!important;border-radius:999px;
+ background:linear-gradient(90deg,#736eaf,#667d9c)!important;outline:none;
+ cursor:url('/eixo-cursor-action.svg?v=20260927-v314') 3 3,ew-resize!important;
+}
+body.eixo-modern .rx-sound-row input[type=range]::-webkit-slider-thumb{
+ appearance:none;-webkit-appearance:none;width:15px;height:15px;border:2px solid #f2e9ff;
+ border-radius:50%;background:#a68ee6;box-shadow:0 0 0 3px rgba(161,140,228,.21);
+ cursor:url('/eixo-cursor-action.svg?v=20260927-v314') 3 3,ew-resize!important;
+}
+body.eixo-modern .rx-sound-row input[type=range]::-moz-range-thumb{
+ width:12px;height:12px;border:2px solid #f2e9ff;border-radius:50%;background:#a68ee6;
+ box-shadow:0 0 0 3px rgba(161,140,228,.21);
+ cursor:url('/eixo-cursor-action.svg?v=20260927-v314') 3 3,ew-resize!important;
+}
+body.eixo-modern .rx-sound-row input[type=range]:focus-visible{outline:2px solid #ccbbff!important;outline-offset:5px}
+body.eixo-modern .rx-sound-hint{margin:0;padding-top:4px;color:#8195b0;font:500 10px/1.55 Inter,Arial,sans-serif}
+@media(max-width:650px){
+ body.eixo-modern .rx-sound-popover{
+  position:fixed;left:12px;right:12px;top:82px;width:auto;max-height:calc(100dvh - 98px);
+  padding:17px;
+ }
+ body.eixo-modern .rx-sound-trigger{min-height:35px;padding:7px 11px;font-size:10px}
+}
+
+/* Override legacy game-frame volume layout for the new header popover. */
+body.eixo-modern #eixoAudioControls.rx-sound-popover{
+ width:min(324px,calc(100vw - 24px))!important;
+ max-width:calc(100vw - 24px)!important;
+ margin:0!important;display:block;
+}
+@media(max-width:650px){
+ body.eixo-modern #eixoAudioControls.rx-sound-popover{
+  width:auto!important;max-width:none!important;margin:0!important;
+  left:12px;right:12px;
+ }
+}

@@ -23,10 +23,10 @@ test('Passport retains original JUMP character renderer and real progress plus b
  assert.match(js,/rx-badge-symbol/);
  assert.match(js,/rx-level-disc/);
 });
-test('all ranking surfaces display podium medals and preserve custom accent and VIP labels',()=>{
+test('all ranking surfaces display podium medals with fixed finishes and VIP labels',()=>{
  const css=read('site-polish.css');
  for(const file of ['ranking-fix.js','full-ranking-fix.js','jump.js']){
-  const js=read(file);assert.match(js,/rank-tag medal-rank/);assert.match(js,/rank-medal-icon/);assert.match(js,/--rank-accent/);assert.match(js,/vip-rank-tag/);
+  const js=read(file);assert.match(js,/rank-tag medal-rank/);assert.match(js,/rank-medal-icon/);assert.doesNotMatch(js,/--rank-accent|tagGlobalColor|tagCountryColor/);assert.match(js,/vip-rank-tag/);
  }
  for(const selector of ['world-2','.world-3','.rank-medal-label'])assert.ok(css.includes(selector),selector);
 });

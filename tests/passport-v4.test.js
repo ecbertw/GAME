@@ -38,7 +38,7 @@ test('Global and national podium medals are distinct and contain no visible labe
   assert.match(js,/rank-medal-number/);
   assert.match(js,/aria-label/);
   assert.doesNotMatch(js,/rank-medal-label/);
-  assert.match(js,/--rank-accent/);
+  assert.doesNotMatch(js,/--rank-accent|tagGlobalColor|tagCountryColor/);
   assert.match(js,/vip-medal/);
   for(const tier of ['◆','✧','✦','♛','★','∞'])assert.ok(js.includes(tier),file+' '+tier);
  }

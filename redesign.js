@@ -35,7 +35,7 @@ if($('eixoAudioControls'))$('eixoAudioControls').hidden=true;
 function labels(){
  character.setAttribute('aria-label',t('A tua personagem JUMP','Your JUMP character'));
  nav.setAttribute('aria-label',t('Navegação principal','Main navigation'));rankTabs.setAttribute('aria-label',t('Âmbito do ranking','Ranking scope'));
- nav.innerHTML=routes.filter(x=>!['jump','pulse'].includes(x)).map(x=>'<a href="'+paths[x]+'" data-rx-route="'+x+'">'+({home:t('Início','Home'),passport:passportWord(),rankings:'Rankings',rooms:t('Salas','Rooms'),vip:'VIP'})[x]+'</a>').join('');
+ nav.innerHTML=routes.filter(x=>!['jump','pulse'].includes(x)).map(x=>'<a href="'+paths[x]+'" data-rx-route="'+x+'">'+({home:t('Início','Home'),passport:passportWord(),rankings:'Rankings',rooms:t('Salas','Rooms'),vip:'VIP'})[x]+'</a>').join('');window.EixoAudio?.mountMenu?.(nav);
  gameMast.innerHTML='<div class="rx-game-mast-copy"><p class="rx-eyebrow">EIXO ARCADE / <span data-rx-game-name>JUMP</span></p><h1 data-rx-game-title>'+t('Salta. Supera. Repete.','Jump. Beat it. Repeat.')+'</h1><p data-rx-game-copy>'+t('Cada plataforma conta. Bate o teu recorde e sobe no ranking.','Every platform counts. Beat your best and climb the ranking.')+'</p></div><div class="rx-game-live"><i aria-hidden="true"></i><span>'+t('AO VIVO','LIVE')+'</span><strong data-rx-game-mode>JUMP</strong></div>';
  gameTools.innerHTML='<a class="rx-button" href="/" data-rx-route="home">← '+t('Início','Home')+'</a><a class="rx-button" href="/passport" data-rx-route="passport">'+passportWord()+'</a><button class="rx-button" type="button" data-rx-action="sound">'+t('Som','Sound')+'</button><button class="rx-button" type="button" data-rx-action="fullscreen">'+t('Ecrã inteiro','Fullscreen')+'</button>';
  rankTabs.innerHTML='<button type="button" data-rx-scope="world">'+t('Global','Global')+'</button><button type="button" data-rx-scope="country">'+t('Nacional','National')+'</button>';
@@ -133,7 +133,7 @@ async function action(type){
  if(type==='rooms'){await navigate(roomGame);if(roomGame==='jump')return window.eixoJump.openRooms();return window.eixoOpenRooms?.();}
  if(type==='create-room'){await navigate(roomGame);$('createRoomButton').click();return;}
  if(type==='full-ranking'){document.querySelector('.action.blue').click();return;}
- if(type==='sound'){const controls=$('eixoAudioControls');if(controls)controls.hidden=!controls.hidden;return;}
+ if(type==='sound'){window.EixoAudio?.toggleMenu?.();return;}
  if(type==='fullscreen'){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch(_){notify(t('O ecrã inteiro não está disponível neste navegador.','Fullscreen is not available in this browser.'));}return;}
 }
 document.addEventListener('click',e=>{

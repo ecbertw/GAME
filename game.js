@@ -62,7 +62,7 @@ function draw(){
   if(!orbitRenderer)orbitRenderer=Orbit.createRenderer(canvas);
   orbitRenderer.draw(orbitState,orbitTime(),{status:orbitStatus,reducedMotion:!!orbitMotion?.matches,feedback:orbitFeedback,feedbackAt:orbitFeedbackAt,best:orbitBest,pt:document.documentElement.lang.startsWith('pt')});
 }
-function loop(){orbitFrame=null;if(!pulseVisible())return;draw();if(running||!orbitMotion?.matches)orbitFrame=requestAnimationFrame(loop);}
+function loop(){orbitFrame=null;if(!pulseVisible())return;draw();if(running&&!orbitMotion?.matches)window.EixoAudio?.orbitTick?.(Orbit.speed(orbitState.score));if(running||!orbitMotion?.matches)orbitFrame=requestAnimationFrame(loop);}
 function scheduleOrbit(){if(!orbitFrame&&pulseVisible())orbitFrame=requestAnimationFrame(loop);}
 function resetGame(){
   stopGame();orbitActive=true;orbitState=Orbit.createState(19);orbitStatus='idle';score=0;scoreEl.textContent='0';orbitFeedback='';messageEl.textContent='';
@@ -71,7 +71,7 @@ function resetGame(){
 }
 function completedRun(){return {runId:roundRunId,score,telemetry:hitTelemetry.slice(),roomId:roundRoomId,playerId:player?.id};}
 function stopGame(){
-  const completed=running&&score>0?completedRun():null;running=false;orbitActive=false;orbitLoading=false;orbitGeneration++;
+  const completed=running&&score>0?completedRun():null;running=false;orbitActive=false;orbitLoading=false;orbitGeneration++;window.EixoAudio?.orbitStop?.();
   if(orbitFrame)cancelAnimationFrame(orbitFrame);orbitFrame=null;
   if(completed)void submitScore(completed);
 }
@@ -85,7 +85,7 @@ async function beginOrbit(){
     if(!res.ok)throw Error(data.error||'PULSE unavailable.');
     if(!data.runId||data.mode!==Orbit.MODE||!Number.isInteger(data.seed))throw Error('PULSE unavailable.');
     roundRunId=data.runId;roundRoomId=window.eixoActiveRoomId||null;orbitBest=Number(data.bestScore)||0;orbitState=Orbit.createState(data.seed);
-    score=0;scoreEl.textContent='0';orbitFeedback='';hitTelemetry=[];roundStartedAt=performance.now();running=true;orbitStatus='playing';
+    score=0;scoreEl.textContent='0';orbitFeedback='';hitTelemetry=[];roundStartedAt=performance.now();running=true;orbitStatus='playing';window.EixoAudio?.orbitStart?.();
   }catch(e){if(generation===orbitGeneration){orbitStatus='idle';messageEl.textContent=e.message;}}
   finally{if(generation===orbitGeneration){orbitLoading=false;draw();scheduleOrbit();}}
 }
@@ -97,7 +97,7 @@ function hit(){
   const pt=document.documentElement.lang.startsWith('pt');orbitFeedback=result.points===2?(pt?'PERFEITO +2':'PERFECT +2'):result.points===1?'+1':pt?'FIM DA ÓRBITA':'ORBIT ENDED';orbitFeedbackAt=result.t;
   feedbackEl.textContent=orbitFeedback;
   if(result.points===2)window.EixoAudio?.perfect();else if(result.points)window.EixoAudio?.hit();else window.EixoAudio?.miss();
-  if(!result.points||hitTelemetry.length>=Orbit.MAX_EVENTS){running=false;orbitState.ended=true;orbitStatus='ended';void submitScore(completedRun());}
+  if(!result.points||hitTelemetry.length>=Orbit.MAX_EVENTS){running=false;orbitState.ended=true;orbitStatus='ended';window.EixoAudio?.orbitStop?.();void submitScore(completedRun());}
   draw();scheduleOrbit();
 }
 async function submitScore(completed){

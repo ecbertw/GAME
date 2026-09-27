@@ -2,16 +2,13 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.join(__dirname,'..');
 
-test('audio exposes three independent buses: site music, game effects and map soundtrack',()=>{
+test('orbit audio exposes isolated buses and a main-menu mixer',()=>{
  const audio=fs.readFileSync(path.join(root,'audio-fix.js'),'utf8');
- assert.match(audio,/const state=\{site:\.24,game:\.48,map:\.32\}/);
- assert.match(audio,/mapGain=ctx\.createGain\(\)/);
- assert.match(audio,/id="siteVolume"/);
- assert.match(audio,/id="gameVolume"/);
- assert.match(audio,/id="mapVolume"/);
- assert.match(audio,/note\(n,\.18,theme\.wave,\.011,mapGain,0\)/);
- assert.match(audio,/setMapVolume\(v\)/);
- assert.doesNotMatch(audio,/jumpBiomeName\?state\.site\*\.12:state\.site/);
+ for(const channel of ['master','site','map','game','orbit','ui'])assert.match(audio,new RegExp(channel+'Volume|'+channel+':'));
+ for(const id of ['siteVolume','gameVolume','mapVolume','orbitVolume','uiVolume','masterVolume'])assert.ok(audio.includes(id));
+ for(const name of ['hit','perfect','miss','jumpJump','jumpLand','jumpLose','orbitTick','jumpBiome','jumpStop','mountMenu'])assert.match(audio,new RegExp('function '+name+'\\('));
+ assert.match(audio,/window\.EixoAudio=\{/);
+ assert.doesNotMatch(audio,/type='square'|wave:'square'/);
 });
 
 test('PULSE and JUMP intro copy use the game names and JUMP has only the top control hint',()=>{
@@ -35,10 +32,12 @@ test('JUMP exposes online matchmaking and a friend lobby without a biome picker'
  assert.match(server,/b\.players\.size-a\.players\.size/);
 });
 
-test('white is removed from VIP tag choices and legacy white values normalize to defaults',()=>{
+test('ranking TAG colours cannot be edited in the VIP interface or profile endpoint',()=>{
  const vip=fs.readFileSync(path.join(root,'vip-fix.js'),'utf8');
  const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
- assert.match(vip,/colors\.filter\(\(\[v\]\)=>!\['#f5f7ff','#ffffff'\]/);
- assert.match(server,/tagBlocked=new Set\(\['#ffffff','#f5f7ff'\]\)/);
- assert.match(server,/if\(tagBlocked\.has\(tagGlobalColor\)\)tagGlobalColor='#e53935'/);
+ const customize=server.slice(server.indexOf('async function customize('),server.indexOf('async function buyVip('));
+ assert.doesNotMatch(vip,/vipGlobalTagColor|vipCountryTagColor|vipTagCustomize/);
+ assert.doesNotMatch(customize,/data\.tagGlobalColor|data\.tagCountryColor|tag_global_color=\$5/);
+ assert.match(customize,/letter_styles=\$4,updated_at=NOW\(\)/);
 });
+

@@ -273,7 +273,7 @@ function bindControls(){
 const flags=c=>[...String(c||'PT')].map(x=>String.fromCodePoint(127397+x.charCodeAt())).join('');
 const rankLabels={pt:'O TEU RANK É:',en:'YOUR RANK IS:'};
 const rankLabel=()=>rankLabels[lang()]||rankLabels.en;
-const rankTag=(type,n,country,p)=>{const me=getPlayer();const raw=type==='country'?(p?.tagCountryColor||(me&&me.id===p?.id?me.tagCountryColor:'#ff7a2f')):(p?.tagGlobalColor||(me&&me.id===p?.id?me.tagGlobalColor:'#e53935'));const c=String(raw||'').toLowerCase(),rainbow=c==='rainbow';const accent=!rainbow&&/^#[0-9a-f]{6}$/.test(c)?' style="--rank-accent:'+c+'"':'';const label=type==='country'?esc(country)+' #'+n:'GLOBAL #'+n;return '<span class="rank-tag medal-rank '+type+'-'+n+(rainbow?' tag-rainbow':'')+'" title="'+label+'" aria-label="'+label+'"'+accent+'><span class="rank-medal-icon" aria-hidden="true"><span class="rank-medal-number">'+n+'</span></span></span>';}
+const rankTag=(type,n,country,p)=>{const label=type==='country'?esc(country)+' #'+n:'GLOBAL #'+n;return '<span class="rank-tag medal-rank '+type+'-'+n+'" title="'+label+'" aria-label="'+label+'"><span class="rank-medal-icon" aria-hidden="true"><span class="rank-medal-number">'+n+'</span></span></span>';}
 const rankVip=n=>n>0?'<span class="vip-rank-tag vip-medal vip-rank-'+Math.min(n,6)+'" title="VIP '+(n>=6?'∞':n)+'" aria-label="VIP '+(n>=6?'∞':n)+'"><span class="vip-medal-mark" aria-hidden="true">'+['','◆','✧','✦','♛','★','∞'][Math.min(n,6)]+'</span></span>':'';
 const rankLetters=(text,styles)=>{
  const arr=Array.isArray(styles)?styles:[];

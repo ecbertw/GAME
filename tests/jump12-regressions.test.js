@@ -15,13 +15,14 @@ test('JUMP online multiplayer uses interpolation and never hard-snaps remote pla
  assert.match(js,/local\.time\+=Math\.max\(-\.08,Math\.min\(\.08,drift\)\)\*\.12/);
 });
 
-test('VIP tag colours use the visible palette except white; wardrobe standard colours have names',()=>{
+test('ranking medals use fixed metal finishes; wardrobe standard colours keep their names',()=>{
  const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
- assert.match(server,/tagBlocked=new Set\(\['#ffffff','#f5f7ff'\]\)/);
- assert.match(server,/tagAllowed=\[\.\.\.new Set\(\[\.\.\.normalAllowed,\.\.\.VIP_COLORS\.map/);
  const vip=fs.readFileSync(path.join(root,'vip-fix.js'),'utf8');
- assert.match(vip,/tagColors=\[\.\.\.colors\.filter/);
- assert.match(vip,/!\['#f5f7ff','#ffffff'\]/);
+ const rank=fs.readFileSync(path.join(root,'ranking-fix.js'),'utf8');
+ assert.doesNotMatch(vip,/vipTagCustomize|vipGlobalTagColor|vipCountryTagColor|tagColors=/);
+ assert.doesNotMatch(rank,/tagGlobalColor|tagCountryColor|--rank-accent/);
+ const customize=server.slice(server.indexOf('async function customize('),server.indexOf('async function buyVip('));
+ assert.doesNotMatch(customize,/data\.tagGlobalColor|data\.tagCountryColor|tagAllowed|tagBlocked/);
  const jumpServer=fs.readFileSync(path.join(root,'jump-server.js'),'utf8');
  assert.match(jumpServer,/const COLOR_LABELS=\{/);
  assert.match(jumpServer,/'#ffffff':'BRANCO'/);

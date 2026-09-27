@@ -16,14 +16,7 @@
     }).join('');
   };
   // Reuse the same compact podium/VIP medal markup used on the ranking pages.
-  const tag=(type,n,country,p)=>{
-    const kind=type==='global'?'world':'country',rank=Number(n);
-    if(!Number.isInteger(rank)||rank<1||rank>3)return '';
-    const raw=kind==='world'?(p.tagGlobalColor||'#e53935'):(p.tagCountryColor||'#ff7a2f');
-    const color=String(raw).toLowerCase(),rainbow=color==='rainbow',accent=!rainbow&&safeColor(color)?' style="--rank-accent:'+esc(color)+'"':'';
-    const label=(kind==='world'?'GLOBAL':String(country||'').toUpperCase())+' #'+rank;
-    return '<span class="rank-tag medal-rank '+kind+'-'+rank+(rainbow?' tag-rainbow':'')+'" title="'+esc(label)+'" aria-label="'+esc(label)+'"'+accent+'><span class="rank-medal-icon" aria-hidden="true"><span class="rank-medal-number">'+rank+'</span></span></span>';
-  };
+  const tag=(type,n,country,p)=>{const kind=type==='global'?'world':'country',rank=Number(n);if(!Number.isInteger(rank)||rank<1||rank>3)return '';const label=(kind==='world'?'GLOBAL':String(country||'').toUpperCase())+' #'+rank;return '<span class="rank-tag medal-rank '+kind+'-'+rank+'" title="'+esc(label)+'" aria-label="'+esc(label)+'"><span class="rank-medal-icon" aria-hidden="true"><span class="rank-medal-number">'+rank+'</span></span></span>';};
   const vip=n=>{const level=Math.min(6,Math.max(0,Number(n)||0));return level?'<span class="vip-rank-tag vip-medal vip-rank-'+level+'" title="VIP '+(level===6?'∞':level)+'" aria-label="VIP '+(level===6?'∞':level)+'"><span class="vip-medal-mark" aria-hidden="true">'+['','◆','✧','✦','♛','★','∞'][level]+'</span></span>':'';};
   const chatI18n={
     pt:{title:'CHAT',global:'GLOBAL',all:'TODOS OS JOGADORES',only:'APENAS',write:'ESCREVE UMA MENSAGEM...',writeN:'ESCREVE PARA O TEU PAÍS...',hint:'MÁX. 300 CARACTERES · EVITA SPAM',empty:'AINDA NÃO HÁ MENSAGENS.<br>SEJA O PRIMEIRO A FALAR.',need:'CRIA O TEU JOGADOR PARA ENTRAR NO CHAT.',sending:'A ENVIAR...'},

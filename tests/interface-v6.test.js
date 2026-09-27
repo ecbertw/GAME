@@ -31,7 +31,7 @@ test('passport name child is enlarged, community badge is simplified',()=>{
 test('VIP customization copy and JUMP note use the new presentation',()=>{
  const css=read('interface-v6.css'),jump=read('jump.js');
  assert.match(css,/#vipCustomizeModal \.vip-customize-modal>p/);
- assert.match(css,/#vipCustomizeModal \.vip-tag-lock/);
+ assert.doesNotMatch(read('vip-fix.js'),/vipTagCustomize|vipGlobalTagColor|vipCountryTagColor/);
  assert.match(css,/text-align:left!important/);
  assert.match(jump,/Cabelo e Roupa editáveis/);
  assert.doesNotMatch(jump,/JUMP RUNNER · ROSTO E PELE FIXOS · CABELO E ROUPA EDITÁVEIS/);
