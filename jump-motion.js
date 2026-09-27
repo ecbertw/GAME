@@ -8,7 +8,8 @@ function footAt(phase){
  const u=((phase%1)+1)%1;let a=FOOT[0],b=FOOT[1];
  for(let i=1;i<FOOT.length;i++)if(u<=FOOT[i][0]){a=FOOT[i-1];b=FOOT[i];break;}
  let t=smooth(clamp((u-a[0])/(b[0]-a[0]),0,1));
- return{x:mix(a[1],b[1],t),y:mix(a[2],b[2],t),contact:u<.32,phase:u};
+ const contact=u<.32;
+ return{x:mix(a[1],b[1],t),y:contact?0:mix(a[2],b[2],t),contact,phase:u};
 }
 function knee(hip,ankle,l1=9.7,l2=8.8,bias=1){
  const dx=ankle.x-hip.x,dy=ankle.y-hip.y,d=clamp(Math.hypot(dx,dy),.01,l1+l2-.01);

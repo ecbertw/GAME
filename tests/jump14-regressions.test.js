@@ -37,12 +37,10 @@ test('friend lobby UI exposes create, join, start and leave actions',()=>{
 test('JUMP VIP wardrobe adds gold pants and natural effect variants',()=>{
  const server=fs.readFileSync(path.join(root,'jump-server.js'),'utf8');
  assert.match(server,/pants:\[\.\.\.baseColors,special\('#ffd84d','DOURADO',1\)/);
- for(const fx of ['shimmer','halo','frost','ember','mist','comet','prismatic'])assert.match(server,new RegExp("special\\('"+fx+"'"));
- const jump=fs.readFileSync(path.join(root,'jump.js'),'utf8');
- assert.match(jump,/Natural VIP particles: asymmetric, short-lived visual rhythm close to the silhouette/);
- assert.match(jump,/effect==='electric'/);
- assert.match(jump,/effect==='mist'/);
- assert.match(jump,/effect==='comet'/);
+ for(const fx of ['orbit','stardust','aurora','supernova','void','comet','prism'])assert.match(server,new RegExp("special\\('"+fx+"'"));
+ const renderer=fs.readFileSync(path.join(root,'jump-exact-renderer.js'),'utf8');
+ assert.match(renderer,/Signature effects have a quiet core language/);
+ for(const fx of ['orbit','aurora','void','comet','prism'])assert.match(renderer,new RegExp(fx));
 });
 
 test('README keeps exactly two update reports in descending version order',()=>{

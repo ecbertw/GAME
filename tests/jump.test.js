@@ -138,12 +138,12 @@ test('skin stays fixed, hair is editable and VIP wardrobe unlocks are enforced s
  const free={id:'jump-free-outfit',vipLevel:0};
  await assert.rejects(()=>J.saveOutfit(db,free,{outfit:{...J.DEFAULTS,effect:'cosmic'}}),/requer VIP 6/);
  const saved=await J.saveOutfit(db,{id:'jump-vip-outfit',vipLevel:6},{outfit:{...J.DEFAULTS,hair:'rainbow',top:'rainbow',effect:'cosmic',skin:'#000000'}});
- assert.equal(saved.outfit.effect,'cosmic');
+ assert.equal(saved.outfit.effect,'singularity');
  assert.equal(saved.outfit.top,'rainbow');
  assert.equal(saved.outfit.hair,'rainbow');
  assert.equal('skin' in saved.outfit,false,'submitted skin values must be ignored');
  const goldPants=J.WARDROBE.pants.find(x=>x.value==='#ffd84d');assert.equal(goldPants?.minVip,1,'gold pants should unlock at VIP 1');
- for(const fx of ['shimmer','halo','frost','ember','mist','comet','prismatic'])assert.ok(J.WARDROBE.effect.some(x=>x.value===fx),'missing VIP effect '+fx);
+ for(const fx of ['orbit','stardust','aurora','supernova','void','comet','prism'])assert.ok(J.WARDROBE.effect.some(x=>x.value===fx),'missing VIP effect '+fx);
 });
 test('retired accessories normalize to the cape and persistent outfits are migrated',async()=>{
  const queries=[];await J.initDb({query:async q=>{queries.push(String(q));return{rows:[],rowCount:0}}});
@@ -161,7 +161,7 @@ test('multiplayer peers receive the equipped outfit and effect',async()=>{
  J.input(a,{runId:ar.runId,left:false,right:true,jump:true,platform:0,position:{x:490,y:20},motion:{vx:136,vy:175,ground:false,moving:true,facing:1}});
  const seen=J.input(b,{runId:br.runId,left:false,right:false,jump:false,platform:0});
  const peer=seen.peers.find(p=>p.id===a.id);
- assert.equal(peer.outfit.effect,'glow');
+ assert.equal(peer.outfit.effect,'orbit');
  assert.deepEqual({x:peer.x,y:peer.y,vx:peer.vx,vy:peer.vy,ground:peer.ground,moving:peer.moving,facing:peer.facing},{x:490,y:20,vx:136,vy:175,ground:false,moving:true,facing:1});
  J.leave(a);J.leave(b);
 });
