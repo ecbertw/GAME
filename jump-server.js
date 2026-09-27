@@ -31,7 +31,7 @@ const WARDROBE={
   accent:[...baseColors,special('#ffe66d','DOURADO',1),special('#56f7ff','GELO ELÉTRICO',2),special('#ff70dc','ROSA LASER',3),special('#b8ff66','BRILHO TÓXICO',4),special('#ff8a4c','SOLAR',5),special('rainbow','ARCO-ÍRIS VIP',6)],
   pants:[...baseColors,special('#ffd84d','DOURADO',1),special('#5b4bff','VIOLETA REAL',1),special('#00d9ff','AZUL CYBER',2),special('#da4cff','ROXO VOID',3),special('#68ff84','VERDE NEON',4),special('#ff425f','VERMELHO PLASMA',5),special('rainbow','ARCO-ÍRIS VIP',6)],
   shoes:[...baseColors,special('#ffe66d','SOLAS DOURADAS',1),special('#75f8ff','SOLAS DE GELO',2),special('#ff8be8','LUZ ROSA',3),special('#c8ff75','LUZ LIMA',4),special('#ff9a62','LUZ DE FOGO',5),special('rainbow','ARCO-ÍRIS VIP',6)],
-  accessory:[special('cape','CAPA DO VIAJANTE',0),special('none','SEM ACESSÓRIO',0),special('scarf','CACHECOL DO VENTO',2),special('satchel','BOLSA DO EXPLORADOR',4)],
+  accessory:[special('cape','CAPA DO VIAJANTE',0),special('none','SEM ACESSÓRIO',0)],
   effect:[special('none','NONE',0),special('glow','BRILHO SUAVE',1),special('pulse','AURA RESPIRANTE',2),special('shimmer','CINTILAÇÃO',2),special('spark','FAÍSCAS SUAVES',3),special('halo','HALO',3),special('frost','GELO',3),special('electric','ELETRICIDADE',4),special('ember','BRASAS',4),special('mist','NÉVOA',4),special('plasma','PLASMA SUAVE',5),special('comet','RASTO',5),special('cosmic','AURA CÓSMICA',6),special('prismatic','PRISMÁTICO',6)]
 };
 const DEFAULTS=OUTFIT_DEFAULTS;
@@ -42,13 +42,14 @@ const error=(message,status=400)=>Object.assign(new Error(message),{status});
 function vipLevel(p){return Math.max(0,Math.min(6,Number(p?.vipLevel)||0));}
 function normalizeOutfit(data){
   const raw=data&&typeof data==='object'?data:{};
+  const accessory=['cape','none'].includes(String(raw.accessory||'').toLowerCase())?String(raw.accessory).toLowerCase():OUTFIT_DEFAULTS.accessory;
   return{
     hair:String(raw.hair||OUTFIT_DEFAULTS.hair).toLowerCase(),
     top:String(raw.top||raw.shirt||OUTFIT_DEFAULTS.top).toLowerCase(),
     accent:String(raw.accent||raw.arms||OUTFIT_DEFAULTS.accent).toLowerCase(),
     pants:String(raw.pants||OUTFIT_DEFAULTS.pants).toLowerCase(),
     shoes:String(raw.shoes||OUTFIT_DEFAULTS.shoes).toLowerCase(),
-    accessory:String(raw.accessory||OUTFIT_DEFAULTS.accessory).toLowerCase(),
+    accessory,
     effect:String(raw.effect||OUTFIT_DEFAULTS.effect).toLowerCase()
   };
 }
@@ -70,6 +71,7 @@ async function initDb(db){
   await db.query('DROP TABLE IF EXISTS jump_teams');
   await db.query('CREATE TABLE IF NOT EXISTS jump_scores(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query("CREATE TABLE IF NOT EXISTS jump_cosmetics(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,colors JSONB NOT NULL DEFAULT '{}'::jsonb)");
+  await db.query(`UPDATE jump_cosmetics SET colors=jsonb_set(colors,'{accessory}','"cape"'::jsonb,true) WHERE colors->>'accessory' IN ('scarf','satchel')`);
   await db.query('CREATE TABLE IF NOT EXISTS jump_rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,biome VARCHAR(12) NOT NULL,max_players INTEGER NOT NULL DEFAULT 5,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query("UPDATE jump_rooms SET biome='astral' WHERE biome<>'astral'");
   await db.query('CREATE TABLE IF NOT EXISTS jump_room_members(room_id UUID NOT NULL REFERENCES jump_rooms(id) ON DELETE CASCADE,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(room_id,player_id))');

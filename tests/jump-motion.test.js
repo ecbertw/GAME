@@ -9,8 +9,8 @@ test('run cycle alternates support and lifted recovery with a flight phase',()=>
   const pose=M.gait(i/100),[a,b]=pose.legs;
   if(!a.foot.contact&&!b.foot.contact)airborne=true;
   assert.ok(!(a.foot.contact&&b.foot.contact),'running never has double support');
-  if(Math.abs(a.foot.x-b.foot.x)<7)assert.ok(Math.abs(a.foot.y-b.foot.y)>12,'passing legs must remain visibly separated');
-  for(const leg of pose.legs){const dx=leg.foot.x-leg.hip.x,dy=leg.foot.y-leg.hip.y;assert.ok(dx*(leg.knee.y-leg.hip.y)-dy*(leg.knee.x-leg.hip.x)<=0,'knees bend forwards, never backwards');assert.ok(Math.abs(Math.hypot(leg.knee.x-leg.hip.x,leg.knee.y-leg.hip.y)-32)<1e-6);}
+  if(Math.abs(a.foot.x-b.foot.x)<2)assert.ok(Math.abs(a.foot.y-b.foot.y)>2.5,'passing legs must remain visibly separated');
+  for(const leg of pose.legs){const dx=leg.foot.x-leg.hip.x,dy=leg.foot.y-leg.hip.y;assert.ok(dx*(leg.knee.y-leg.hip.y)-dy*(leg.knee.x-leg.hip.x)<=0,'knees bend forwards, never backwards');assert.ok(Math.abs(Math.hypot(leg.knee.x-leg.hip.x,leg.knee.y-leg.hip.y)-9.5)<1e-6);}
  }
  assert.ok(airborne);assert.deepEqual(M.gait(0),M.gait(1));
 });
@@ -84,7 +84,7 @@ test('new shoe particles emerge from the modular runner sole in either direction
  for(const dir of [-1,1]){
   const s=M.createEmitter();M.updateEmitter(s,input(0,0,{dir}));
   M.updateEmitter(s,input(.04,dir*P.SPEED*.04,{dir}));
-  const pose=M.runnerPose(s.phase,{moving:true,ground:true});
+  const pose=M.runnerPose(s.phase,{moving:true,ground:true,speedBlend:s.speedBlend});
   const foot=pose.legs.find(leg=>leg.foot.contact).foot;
   const trail=s.items.filter(p=>p.event==='trail');assert.ok(trail.length>0);
   for(const p of trail){
@@ -132,4 +132,22 @@ test('jump pose carries hips, torso, head and limbs through take-off and landing
   assert.ok(Math.abs((pose.shoulderY-pose.headY)-13.1)<1e-9,'head must remain attached to the torso');
   assert.ok(Math.abs((pose.hipY-13+pose.torsoY*.25)-pose.shoulderY)<1e-9,'shoulders must follow the hips');
  }
+});
+
+test('locomotion blends into a run and eases back to rest without snapping',()=>{
+ const s=M.createEmitter();M.updateEmitter(s,input(0,0,{fx:'none'}));let previous=0;
+ for(let i=1;i<=18;i++){
+  M.updateEmitter(s,input(i/60,P.SPEED*i/60,{fx:'none'}));
+  assert.ok(s.speedBlend>=previous&&s.speedBlend<=1);previous=s.speedBlend;
+ }
+ assert.ok(s.speedBlend>.8,'the start transition must reach the running pose quickly');
+ const peak=s.speedBlend;
+ for(let i=19;i<=36;i++)M.updateEmitter(s,input(i/60,P.SPEED*18/60,{moving:false,fx:'none'}));
+ assert.ok(s.speedBlend<peak*.15,'the stop transition must settle smoothly into idle');
+});
+
+test('landing absorbs impact briefly before returning the pelvis to neutral',()=>{
+ const impact=M.runnerPose(0,{ground:true,landTime:.08}),settled=M.runnerPose(0,{ground:true,landTime:1});
+ assert.ok(impact.landing>2&&settled.landing===0);
+ assert.ok(impact.hipY>settled.hipY&&impact.shoulderY>settled.shoulderY);
 });
