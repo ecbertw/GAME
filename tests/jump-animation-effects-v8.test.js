@@ -2,12 +2,12 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 
-test('JUMP runner v6 uses authored pose locomotion without touching gameplay physics',()=>{
+test('JUMP runner v7 uses high-resolution 2.5D sprite animation without touching gameplay physics',()=>{
  const motion=read('jump-motion.js'),renderer=read('jump-exact-renderer.js'),physics=read('jump-physics.js');
  assert.match(motion,/const STRIDE_DISTANCE=112,PREVIEW_SPEED=216/);
  for(const key of ['RUN_LEG','RUN_ARM','AIR','sampleLeg','sampleArm','sampleAir','landing:land'])assert.ok(motion.includes(key),key);
- assert.match(renderer,/version:'eixo-runner-v6'/);
- assert.match(renderer,/pose\.scaleX/);assert.match(renderer,/leg\.footAngle/);assert.match(renderer,/pose\.headTilt/);
+ assert.match(renderer,/version:'eixo-runner-v7-hd'/);
+ assert.match(renderer,/hero-v7-run\.png/);assert.match(renderer,/hero-v7-air\.png/);assert.match(renderer,/imageSmoothingQuality='high'/);
  assert.doesNotMatch(physics,/RUN_LEG|RUN_ARM|sampleAir|footAngle/);
 });
 

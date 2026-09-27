@@ -28,7 +28,8 @@ test('Passport character uses the wardrobe runner in moving preview mode and sto
  assert.match(source,/moving:true,preview:true,identity:'passport-live'/);
  assert.match(source,/await window\.EixoJumpExactArt\.ready/);
  assert.match(source,/cancelAnimationFrame\(characterFrame\)/);
- assert.match(source,/imageSmoothingEnabled=false/);
+ assert.match(source,/imageSmoothingEnabled=true/);
+ assert.match(source,/imageSmoothingQuality='high'/);
 });
 
 test('Global and national podium medals are distinct and contain no visible label text',()=>{

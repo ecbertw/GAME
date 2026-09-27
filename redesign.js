@@ -123,7 +123,7 @@ async function refreshProfile(){
 }
 function drawCharacter(outfit){
  cancelAnimationFrame(characterFrame);character.hidden=false;$('rxCharacterFallback').hidden=true;
- const render=()=>{if(route!=='passport'||character.hidden){characterFrame=0;return;}const now=performance.now()/1000,c=character.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,560,580);c.save();c.translate(280+Math.sin(now*1.9)*3,490+Math.sin(now*7.2)*1.4);c.scale(8.3,8.3);window.EixoJumpExactArt.runner(c,0,0,outfit,'',false,now,{facing:1,ground:true,vy:0,moving:true,preview:true,identity:'passport-live'});c.restore();characterFrame=requestAnimationFrame(render);};render();
+ const render=()=>{if(route!=='passport'||character.hidden){characterFrame=0;return;}const now=performance.now()/1000,c=character.getContext('2d');c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.clearRect(0,0,560,580);c.save();c.translate(280+Math.sin(now*1.9)*3,490+Math.sin(now*7.2)*1.4);c.scale(5.2,5.2);window.EixoJumpExactArt.runner(c,0,0,outfit,'',false,now,{facing:1,ground:true,vy:0,moving:true,preview:true,identity:'passport-live'});c.restore();characterFrame=requestAnimationFrame(render);};render();
 }
 async function action(type){
  if(['name','character','account','rooms','create-room'].includes(type)&&!player())return window.eixoOpenAuth?.('login');
