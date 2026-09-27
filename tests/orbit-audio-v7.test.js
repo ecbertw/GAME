@@ -27,7 +27,7 @@ test('orbit sound engine supports six separate persisted controls and initialize
  const audio=window.EixoAudio;
  assert.ok(audio);
  for(const fn of ['hit','perfect','miss','jumpJump','jumpLand','jumpLose','jumpBiome','jumpStop','orbitStart','orbitStop','orbitTick','pixel','ui','mountMenu','toggleMenu'])assert.equal(typeof audio[fn],'function',fn);
- assert.equal(audio.getSettings().orbit,.22);
+ assert.equal(audio.getSettings().orbit,.34);
  audio.setOrbitVolume(.34);audio.setGameVolume(2);audio.setSiteVolume(-5);
  assert.equal(audio.getSettings().orbit,.34);assert.equal(audio.getSettings().game,1);assert.equal(audio.getSettings().site,0);
  assert.ok(stored.get('eixo_audio_settings').includes('"orbit":0.34'));
@@ -42,7 +42,7 @@ test('orbit sound engine supports six separate persisted controls and initialize
 
 test('PULSE rotation plays on its live render loop and stops when the run ends',()=>{
  const game=read('game.js'),audio=read('audio-fix.js');
- assert.match(game,/EixoAudio\?\.orbitTick\?\.\(Orbit\.speed\(orbitState\.score\)\)/);
+ assert.match(game,/EixoAudio\?\.orbitTick\?\.\(running\?Orbit\.speed\(orbitState\.score\):1\.15\)/);
  assert.match(game,/EixoAudio\?\.orbitStart\?\.\(\)/);
  assert.match(game,/EixoAudio\?\.orbitStop\?\.\(\)/);
  assert.match(audio,/nextOrbit=now\+spacing/);
@@ -59,6 +59,6 @@ test('navigation owns the SOUND submenu and ranking names are larger in both con
  assert.match(css,/rx-ranking-mount \.board \.rank-player-name/);
  assert.match(css,/rx-social \.board \.rank-player-name/);
  const html=read('index.html');
- assert.match(html,/orbit-audio\.css\?v=20260927-v315/);
- assert.match(html,/audio-fix\.js\?v=20260927-v315/);
+ assert.match(html,/orbit-audio\.css\?v=20260927-v316/);
+ assert.match(html,/audio-fix\.js\?v=20260927-v316/);
 });

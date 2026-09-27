@@ -5,6 +5,7 @@ async function initDb(db){
  await db.query(`CREATE TABLE IF NOT EXISTS player_progress(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,total_exp INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
  await db.query(`CREATE TABLE IF NOT EXISTS progress_events(id UUID PRIMARY KEY,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,game VARCHAR(12) NOT NULL,run_id UUID NOT NULL,exp INTEGER NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),UNIQUE(game,run_id))`);
  await db.query(`CREATE TABLE IF NOT EXISTS player_badges(player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,badge VARCHAR(32) NOT NULL,awarded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(player_id,badge))`);
+ await db.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS featured_badge VARCHAR(32)`);
  await db.query(`INSERT INTO player_progress(player_id) SELECT id FROM players ON CONFLICT DO NOTHING`);
  await db.query(`INSERT INTO player_badges(player_id,badge) SELECT id,'first-100' FROM players ORDER BY created_at,id LIMIT 100 ON CONFLICT DO NOTHING`);
 }
@@ -27,12 +28,23 @@ async function award(db,playerId,game,runId,score){
 
 async function profile(db,player){
  await db.query(`INSERT INTO player_badges(player_id,badge) SELECT id,'first-100' FROM (SELECT id FROM players ORDER BY created_at,id LIMIT 100) pioneers WHERE id=$1 ON CONFLICT DO NOTHING`,[player.id]);
- const [progress,badges]=await Promise.all([
+ const [progress,badges,featured]=await Promise.all([
   db.query('SELECT total_exp AS "totalExp" FROM player_progress WHERE player_id=$1',[player.id]),
-  db.query('SELECT badge,awarded_at AS "awardedAt" FROM player_badges WHERE player_id=$1 ORDER BY awarded_at,badge',[player.id])
+  db.query('SELECT badge,awarded_at AS "awardedAt" FROM player_badges WHERE player_id=$1 ORDER BY awarded_at,badge',[player.id]),
+  db.query('SELECT featured_badge AS "featuredBadge" FROM players WHERE id=$1',[player.id])
  ]);
  const totalExp=Number(progress.rows[0]?.totalExp||0),level=levelFrom(totalExp),start=levelStart(level),end=levelEnd(level);
- return{ok:true,totalExp,level,levelExp:totalExp-start,nextLevelExp:end-start,badges:badges.rows};
+ return{ok:true,totalExp,level,levelExp:totalExp-start,nextLevelExp:end-start,badges:badges.rows,featuredBadge:featured.rows[0]?.featuredBadge||null};
 }
 
-module.exports={initDb,award,profile,levelFrom};
+async function equipBadge(db,playerId,badge){
+ const value=badge==null||badge===''?null:String(badge).slice(0,32);
+ if(value){
+  const earned=await db.query('SELECT 1 FROM player_badges WHERE player_id=$1 AND badge=$2',[playerId,value]);
+  if(!earned.rowCount)throw Object.assign(new Error('Só podes destacar uma conquista que já desbloqueaste.'),{status:403});
+ }
+ await db.query('UPDATE players SET featured_badge=$1,updated_at=NOW() WHERE id=$2',[value,playerId]);
+ return {ok:true,featuredBadge:value};
+}
+
+module.exports={initDb,award,profile,equipBadge,levelFrom};

@@ -2,7 +2,7 @@
 (function(){
  'use strict';
  const KEY='eixo_audio_settings';
- const defaults={master:.82,site:.20,map:.24,game:.48,orbit:.22,ui:.24};
+ const defaults={master:.82,site:.20,map:.24,game:.48,orbit:.34,ui:.24};
  let state={...defaults};
  try{const saved=JSON.parse(localStorage.getItem(KEY)||'{}');if(saved&&typeof saved==='object')for(const key of Object.keys(defaults))if(saved[key]!==undefined)state[key]=Math.max(0,Math.min(1,Number(saved[key])||0));}catch(_){}
  const clamp=v=>Math.max(0,Math.min(1,Number(v)||0));
@@ -77,7 +77,7 @@
   if(started)startBiomeTimer();
  }
  function jumpStop(){biome='';if(mapTimer){clearInterval(mapTimer);mapTimer=null;}if(ctx)setBus('site');}
- function orbitStart(){pulseActive=true;if(ctx)setBus('site');ui();}
+ function orbitStart(){if(pulseActive)return;pulseActive=true;nextOrbit=0;if(ctx)setBus('site');}
  function orbitStop(){pulseActive=false;if(ctx)setBus('site');}
  function gate(kind,wait=.11){const now=performance.now();if(kind===lastFx&&now-lastFxTime<wait)return false;lastFx=kind;lastFxTime=now;return true;}
  function ui(){if(!gate('ui',65))return;voice('ui',515,{duration:.09,volume:.025,attack:.009,to:650});}
@@ -91,10 +91,10 @@
  function pixelWind(power=.35){if(!ctx||ctx.currentTime<nextPixel)return;nextPixel=ctx.currentTime+.19;voice('game',290+clamp(power)*105,{duration:.082,volume:.010+clamp(power)*.011,to:215});}
  function orbitTick(speed=2){
   if(!audible('orbit')||!pulseActive)return;
-  const now=ctx.currentTime,spacing=Math.max(.39,.59-Math.min(4,Math.max(0,speed))*.028);
+  const now=ctx.currentTime,spacing=Math.max(.33,.52-Math.min(4,Math.max(0,speed))*.032);
   if(now<nextOrbit)return;nextOrbit=now+spacing;
-  voice('orbit',182+speed*12,{duration:.15,volume:.019,wave:'sine',to:120+speed*7,attack:.035});
-  voice('orbit',390+speed*18,{duration:.105,volume:.008,at:.025,to:352+speed*12,attack:.024});
+  voice('orbit',186+speed*13,{duration:.18,volume:.032,wave:'sine',to:128+speed*8,attack:.04});
+  voice('orbit',402+speed*20,{duration:.115,volume:.013,at:.025,to:360+speed*13,attack:.022});
  }
  const names={pt:{sound:'SOM',master:'GERAL',site:'MÚSICA DO SITE',map:'AMBIENTE JUMP',game:'EFEITOS DOS JOGOS',orbit:'ROTAÇÃO PULSE',ui:'INTERFACE',hint:'Cada canal pode ser ajustado separadamente.'},
  en:{sound:'SOUND',master:'MASTER',site:'SITE MUSIC',map:'JUMP AMBIENCE',game:'GAME EFFECTS',orbit:'PULSE ROTATION',ui:'INTERFACE',hint:'Each channel has its own volume.'},

@@ -274,7 +274,7 @@ const flags=c=>[...String(c||'PT')].map(x=>String.fromCodePoint(127397+x.charCod
 const rankLabels={pt:'O TEU RANK É:',en:'YOUR RANK IS:'};
 const rankLabel=()=>rankLabels[lang()]||rankLabels.en;
 const rankTag=(type,n,country,p)=>{const label=type==='country'?esc(country)+' #'+n:'GLOBAL #'+n;return '<span class="rank-tag medal-rank '+type+'-'+n+'" title="'+label+'" aria-label="'+label+'"><span class="rank-medal-icon" aria-hidden="true"><span class="rank-medal-number">'+n+'</span></span></span>';}
-const rankVip=n=>n>0?'<span class="vip-rank-tag vip-medal vip-rank-'+Math.min(n,6)+'" title="VIP '+(n>=6?'∞':n)+'" aria-label="VIP '+(n>=6?'∞':n)+'"><span class="vip-medal-mark" aria-hidden="true">'+['','◆','✧','✦','♛','★','∞'][Math.min(n,6)]+'</span></span>':'';
+const rankVip=n=>n>0?'<span class="vip-rank-tag vip-medal vip-rank-'+Math.min(n,6)+'" title="VIP '+(n>=6?'∞':n)+'" aria-label="VIP '+(n>=6?'∞':n)+'"><span class="vip-medal-mark" aria-hidden="true">'+['','◆','✧','✦','♛','★','∞'][Math.min(n,6)]+'</span></span>':'';const achievementGlyph=b=>({'first-100':'100','skybound':'↟','explorer':'✦','pulse-10':'◎'}[b]||'');const achievementTag=b=>achievementGlyph(b)?'<span class="achievement-tag achievement-'+esc(b)+'" title="'+esc(b)+'"><span aria-hidden="true">'+achievementGlyph(b)+'</span></span>':'';
 const rankLetters=(text,styles)=>{
  const arr=Array.isArray(styles)?styles:[];
  return [...String(text||'')].map((ch,i)=>{
@@ -294,7 +294,7 @@ function renderTopRank(players,target,isWorld){
   const color=String(p.nameColor||'#fff').toLowerCase(),effect=p.nameEffect&&p.nameEffect!=='none'?' effect-'+esc(p.nameEffect):'',vip=Number(p.vipLevel||0);
   const hasLetters=vip>0&&Array.isArray(p.letterStyles)&&p.letterStyles.length,rainbow=color==='rainbow'&&!hasLetters,colorStyle=rainbow?'':' style="color:'+esc(color)+';"';
   const name=hasLetters?rankLetters(p.visualName||p.name,p.letterStyles):[...String(p.visualName||p.name)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
-  return '<li><span class="rank-number">'+(i+1)+'</span><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(hasLetters?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span>'+tags+rankVip(vip)+'</span><span class="rank-score-wrap"><span class="rank-flag" title="'+esc(p.country)+'">'+flags(p.country)+'</span><span class="rank-score">'+Number(p.score||0)+'</span></span></li>';
+  return '<li><span class="rank-number">'+(i+1)+'</span><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(hasLetters?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span>'+tags+achievementTag(p.featuredBadge)+rankVip(vip)+'</span><span class="rank-score-wrap"><span class="rank-flag" title="'+esc(p.country)+'">'+flags(p.country)+'</span><span class="rank-score">'+Number(p.score||0)+'</span></span></li>';
  }).join('');
 }
 function setJumpMyRank(id,value){
@@ -326,7 +326,7 @@ function renderFullRows(players,start){
   const color=String(x.nameColor||'#fff').toLowerCase(),effect=x.nameEffect&&x.nameEffect!=='none'?' effect-'+esc(x.nameEffect):'',vip=Number(x.vipLevel||0);
   const hasLetters=vip>0&&Array.isArray(x.letterStyles)&&x.letterStyles.length,rainbow=color==='rainbow'&&!hasLetters,colorStyle=rainbow?'':' style="color:'+esc(color)+';"';
   const name=hasLetters?rankLetters(x.visualName||x.name,x.letterStyles):[...String(x.visualName||x.name)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
-  return '<li><span class="full-rank-number">'+(start+i+1)+'</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(hasLetters?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span>'+tags+rankVip(vip)+'</span></span><span class="full-score rank-score-wrap"><span class="rank-flag" title="'+esc(x.country)+'">'+flags(x.country)+'</span><span class="rank-score">'+Number(x.score||0)+'</span></span></li>';
+  return '<li><span class="full-rank-number">'+(start+i+1)+'</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name'+(rainbow?' name-rainbow':'')+effect+(hasLetters?' vip-letter-styled':'')+'"'+colorStyle+'>'+name+'</span>'+tags+achievementTag(p.featuredBadge)+rankVip(vip)+'</span></span><span class="full-score rank-score-wrap"><span class="rank-flag" title="'+esc(x.country)+'">'+flags(x.country)+'</span><span class="rank-score">'+Number(x.score||0)+'</span></span></li>';
  }).join(''):'<li class="empty-full">'+(window.eixoT?window.eixoT('emptyFull','THERE ARE NO PLAYERS YET'):'THERE ARE NO PLAYERS YET')+'</li>';
 }
 async function renderJumpFull(){
@@ -387,7 +387,7 @@ function renderJumpRoomMembers(players){
   let tags='';
   if(Number(p.worldRank)>=1&&Number(p.worldRank)<=3)tags+=rankTag('world',Number(p.worldRank),'',p);
   if(Number(p.countryRank)>=1&&Number(p.countryRank)<=3)tags+=rankTag('country',Number(p.countryRank),String(p.country||'').toUpperCase(),p);
-  return '<li><span class="rank-number">'+Number(p.roomRank||0)+'</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name'+(wholeRainbow?' name-rainbow':'')+(styles.length?' vip-letter-styled':'')+'">'+letters+'</span>'+tags+rankVip(Number(p.vipLevel||0))+'</span></span><span class="rank-score-wrap"><span class="rank-flag" title="'+esc(p.country)+'">'+flags(p.country)+'</span><span class="rank-score">'+Number(p.score||0)+'</span></span></li>';
+  return '<li><span class="rank-number">'+Number(p.roomRank||0)+'</span><span class="full-player"><span class="rank-name-wrap"><span class="rank-player-name'+(wholeRainbow?' name-rainbow':'')+(styles.length?' vip-letter-styled':'')+'">'+letters+'</span>'+tags+achievementTag(p.featuredBadge)+rankVip(Number(p.vipLevel||0))+'</span></span><span class="rank-score-wrap"><span class="rank-flag" title="'+esc(p.country)+'">'+flags(p.country)+'</span><span class="rank-score">'+Number(p.score||0)+'</span></span></li>';
  }).join('')||'<li class="empty-row">AINDA SEM JOGADORES</li>';
 }
 async function refreshRoomBoard(){

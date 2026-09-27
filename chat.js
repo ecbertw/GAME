@@ -18,6 +18,8 @@
   // Reuse the same compact podium/VIP medal markup used on the ranking pages.
   const tag=(type,n,country,p)=>{const kind=type==='global'?'world':'country',rank=Number(n);if(!Number.isInteger(rank)||rank<1||rank>3)return '';const label=(kind==='world'?'GLOBAL':String(country||'').toUpperCase())+' #'+rank;return '<span class="rank-tag medal-rank '+kind+'-'+rank+'" title="'+esc(label)+'" aria-label="'+esc(label)+'"><span class="rank-medal-icon" aria-hidden="true"><span class="rank-medal-number">'+rank+'</span></span></span>';};
   const vip=n=>{const level=Math.min(6,Math.max(0,Number(n)||0));return level?'<span class="vip-rank-tag vip-medal vip-rank-'+level+'" title="VIP '+(level===6?'∞':level)+'" aria-label="VIP '+(level===6?'∞':level)+'"><span class="vip-medal-mark" aria-hidden="true">'+['','◆','✧','✦','♛','★','∞'][level]+'</span></span>':'';};
+  const achievement=b=>({'first-100':'100','skybound':'↟','explorer':'✦','pulse-10':'◎'}[b]||'');
+  const achievementTag=b=>achievement(b)?'<span class="achievement-tag achievement-'+esc(b)+'" title="'+esc(b)+'"><span aria-hidden="true">'+achievement(b)+'</span></span>':'';
   const chatI18n={
     pt:{title:'CHAT',global:'GLOBAL',all:'TODOS OS JOGADORES',only:'APENAS',write:'ESCREVE UMA MENSAGEM...',writeN:'ESCREVE PARA O TEU PAÍS...',hint:'MÁX. 300 CARACTERES · EVITA SPAM',empty:'AINDA NÃO HÁ MENSAGENS.<br>SEJA O PRIMEIRO A FALAR.',need:'CRIA O TEU JOGADOR PARA ENTRAR NO CHAT.',sending:'A ENVIAR...'},
     en:{title:'CHAT',global:'GLOBAL',all:'ALL PLAYERS',only:'ONLY',write:'WRITE A MESSAGE...',writeN:'WRITE TO YOUR COUNTRY...',hint:'MAX. 300 CHARACTERS · AVOID SPAM',empty:'NO MESSAGES YET.<br>BE THE FIRST TO SPEAK.',need:'CREATE YOUR PLAYER TO USE THE CHAT.',sending:'SENDING...'},
@@ -88,11 +90,11 @@
       const effect=hasLetters?'none':safeEffect(m.nameEffect);
       const name=hasLetters?letters(visual,m.letterStyles):[...String(visual)].map(ch=>'<span class="name-letter">'+esc(ch)+'</span>').join('');
       const when=m.createdAt?new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
-      const role=m.role==='admin'?'<span class="role-tag admin">ADMIN</span>':m.role==='moderator'?'<span class="role-tag">MOD</span>':'';
+      const role=m.role==='moderator'?'<span class="role-tag">MOD</span>':'';
       const me=getPlayer(),canDelete=me?.role==='admin';
       const rawBorder=String(m.avatarBorder||'#46535f').toLowerCase(),border=safeColor(rawBorder)?' style="border-color:'+esc(rawBorder)+'"':'',borderClass=' avatar-border-'+rawBorder.replace(/[^a-z0-9-]/g,''),avatarClass=' avatar-'+String(m.avatar||'default').replace(/[^a-z0-9-]/g,'');
       const glyph={default:'◆',diamond:'◇',square:'■',circle:'●',star:'★',bolt:'⚡',shield:'⬢',hex:'⬡',crystal:'✦',spark:'✧',comet:'☄',crown:'♛',thunder:'ϟ',skull:'☠',phoenix:'♨',vortex:'◉',titan:'♜',plasma:'✺',infinity:'∞',cosmic:'✹',prism:'◈'}[m.avatar]||'◆';
-      return '<article class="chat-message" data-message-id="'+esc(m.id)+'"><div class="chat-avatar'+avatarClass+borderClass+'"'+border+' aria-hidden="true">'+glyph+'</div><div class="chat-content"><div class="chat-author"><span class="chat-name'+(rainbow?' name-rainbow':'')+(effect!=='none'?' effect-'+esc(effect):'')+(hasLetters?' vip-letter-styled':'')+'"'+style+'>'+name+'</span>'+role+top+vip(v)+'<span class="chat-time">'+esc(when)+'</span>'+(canDelete?'<button class="chat-delete" data-delete-message="'+esc(m.id)+'" title="Delete message">×</button>':'')+'</div><div class="chat-text">'+esc(m.message)+'</div></div></article>';
+      return '<article class="chat-message" data-message-id="'+esc(m.id)+'"><div class="chat-avatar'+avatarClass+borderClass+'"'+border+' aria-hidden="true">'+glyph+'</div><div class="chat-content"><div class="chat-author"><span class="chat-name'+(rainbow?' name-rainbow':'')+(effect!=='none'?' effect-'+esc(effect):'')+(hasLetters?' vip-letter-styled':'')+'"'+style+'>'+name+'</span>'+role+top+achievementTag(m.featuredBadge)+vip(v)+'<span class="chat-time">'+esc(when)+'</span>'+(canDelete?'<button class="chat-delete" data-delete-message="'+esc(m.id)+'" title="Delete message">×</button>':'')+'</div><div class="chat-text">'+esc(m.message)+'</div></div></article>';
     }).join('');
     if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
   }

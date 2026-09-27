@@ -62,12 +62,12 @@ function draw(){
   if(!orbitRenderer)orbitRenderer=Orbit.createRenderer(canvas);
   orbitRenderer.draw(orbitState,orbitTime(),{status:orbitStatus,reducedMotion:!!orbitMotion?.matches,feedback:orbitFeedback,feedbackAt:orbitFeedbackAt,best:orbitBest,pt:document.documentElement.lang.startsWith('pt')});
 }
-function loop(){orbitFrame=null;if(!pulseVisible())return;draw();if(running&&!orbitMotion?.matches)window.EixoAudio?.orbitTick?.(Orbit.speed(orbitState.score));if(running||!orbitMotion?.matches)orbitFrame=requestAnimationFrame(loop);}
+function loop(){orbitFrame=null;if(!pulseVisible())return;draw();if(!orbitMotion?.matches){window.EixoAudio?.orbitStart?.();window.EixoAudio?.orbitTick?.(running?Orbit.speed(orbitState.score):1.15);}if(running||!orbitMotion?.matches)orbitFrame=requestAnimationFrame(loop);}
 function scheduleOrbit(){if(!orbitFrame&&pulseVisible())orbitFrame=requestAnimationFrame(loop);}
 function resetGame(){
   stopGame();orbitActive=true;orbitState=Orbit.createState(19);orbitStatus='idle';score=0;scoreEl.textContent='0';orbitFeedback='';messageEl.textContent='';
   canvas.setAttribute('aria-label',document.documentElement.lang.startsWith('pt')?'PULSE Órbita. Espaço, Enter ou toque para acertar na zona dourada.':'PULSE Orbit. Space, Enter or tap to hit the golden zone.');
-  canvas.setAttribute('tabindex','0');resizeCanvas();scheduleOrbit();
+  canvas.setAttribute('tabindex','0');resizeCanvas();window.EixoAudio?.orbitStart?.();window.EixoAudio?.resume?.();scheduleOrbit();
 }
 function completedRun(){return {runId:roundRunId,score,telemetry:hitTelemetry.slice(),roomId:roundRoomId,playerId:player?.id};}
 function stopGame(){
@@ -134,7 +134,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.profile-area')){cou
 
 function resizeCanvas(){if(!orbitRenderer)orbitRenderer=Orbit.createRenderer(canvas);orbitRenderer.resize();draw();scheduleOrbit();}
 window.addEventListener('resize',resizeCanvas,{passive:true});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){if(running){const completed=completedRun();running=false;orbitState.ended=true;orbitStatus='ended';void submitScore(completed);}if(orbitFrame)cancelAnimationFrame(orbitFrame);orbitFrame=null;}else scheduleOrbit();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){window.EixoAudio?.orbitStop?.();if(running){const completed=completedRun();running=false;orbitState.ended=true;orbitStatus='ended';void submitScore(completed);}if(orbitFrame)cancelAnimationFrame(orbitFrame);orbitFrame=null;}else{if(pulseVisible())window.EixoAudio?.orbitStart?.();scheduleOrbit();}});
 orbitMotion?.addEventListener?.('change',()=>{if(orbitFrame)cancelAnimationFrame(orbitFrame);orbitFrame=null;draw();scheduleOrbit();});
 
 function buildPixelWall(){

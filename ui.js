@@ -32,7 +32,7 @@
   function render(){
     let p=null;try{p=JSON.parse(localStorage.getItem('eixo_player')||'null')}catch(_){}
     const x=t();
-    playerName.textContent=p?(p.name+(p.role==='admin'?' [ADMIN]':p.role==='moderator'?' [MOD]':'')):x.signIn;
+    playerName.textContent=p?(p.name+(p.role==='moderator'?' [MOD]':'')):x.signIn;
     playerMenu.innerHTML=(p?'<button type="button" class="player-option account-menu-option" data-action="settings">'+x.settings+'</button>':'')+
       '<button type="button" class="player-option" data-action="customize">'+x.customize+'</button>'+
       '<button type="button" class="player-option" data-action="bugs">'+x.bugs+'</button>'+

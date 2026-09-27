@@ -1,0 +1,35 @@
+/* EIXO v3.16 — featured achievements + JUMP motion/effects presentation. */
+body.eixo-modern .achievement-tag{
+ display:inline-grid;place-items:center;flex:0 0 auto;width:22px;height:22px;min-width:22px;
+ border:1px solid rgba(199,188,235,.45);border-radius:7px;
+ background:linear-gradient(145deg,#2b3049,#171f31);
+ box-shadow:inset 0 1px rgba(255,255,255,.12),0 3px 9px rgba(0,0,0,.28);
+ color:#ddd4ff;font:900 9px/1 Inter,Arial,sans-serif;vertical-align:middle;
+}
+body.eixo-modern .achievement-tag.achievement-first-100{color:#ffe19a;border-color:#d8a84f80;background:linear-gradient(145deg,#4c3b25,#201d22)}
+body.eixo-modern .achievement-tag.achievement-skybound{color:#bce7ff;border-color:#78bdeb80;background:linear-gradient(145deg,#243e59,#172334)}
+body.eixo-modern .achievement-tag.achievement-explorer{color:#d7c7ff;border-color:#a98ce780;background:linear-gradient(145deg,#382e55,#1d2035)}
+body.eixo-modern .achievement-tag.achievement-pulse-10{color:#aef8e8;border-color:#5fcdb880;background:linear-gradient(145deg,#204a49,#152a34)}
+body.eixo-modern .rx-social .achievement-tag{width:19px;height:19px;min-width:19px;border-radius:6px;font-size:8px}
+body.eixo-modern .full-ranking-list .achievement-tag{width:20px;height:20px;min-width:20px;font-size:8px}
+body.eixo-modern #rx-passport .rx-passport-tags .achievement-tag{width:25px;height:25px;min-width:25px;font-size:9px}
+body.eixo-modern #rx-passport .rx-achievement:not(.rx-locked){cursor:url('/eixo-cursor-action.svg?v=20260927-v314') 3 3,pointer!important}
+body.eixo-modern #rx-passport .rx-achievement:not(.rx-locked):hover{
+ transform:translateY(-2px);border-color:rgba(177,156,239,.72);box-shadow:0 17px 34px rgba(0,0,0,.26),inset 0 1px rgba(255,255,255,.08);
+}
+body.eixo-modern #rx-passport .rx-achievement.is-featured{
+ border-color:#b6a2f1!important;box-shadow:0 0 0 2px rgba(172,147,235,.16),0 17px 36px rgba(0,0,0,.3)!important;
+ background:linear-gradient(150deg,rgba(52,48,82,.98),rgba(20,29,45,.98))!important;
+}
+body.eixo-modern #rx-passport .rx-achievement.is-featured::after{
+ content:"EM DESTAQUE";position:absolute;right:10px;top:10px;padding:4px 6px;
+ border:1px solid rgba(190,171,245,.45);border-radius:999px;background:#2d2947;
+ color:#d9cdfb;font:800 7px/1 Inter,Arial,sans-serif;letter-spacing:.7px;
+}
+html[lang^="en"] body.eixo-modern #rx-passport .rx-achievement.is-featured::after{content:"FEATURED"}
+body.eixo-modern #rx-passport .rx-achievement.rx-locked{cursor:not-allowed!important}
+body.eixo-modern .chat-author .achievement-tag{margin:0 1px}
+@media(max-width:650px){
+ body.eixo-modern .achievement-tag{width:20px;height:20px;min-width:20px}
+ body.eixo-modern #rx-passport .rx-achievement.is-featured::after{font-size:6px}
+}

@@ -32,8 +32,9 @@ const WARDROBE={
   pants:[...baseColors,special('#ffd84d','DOURADO',1),special('#5b4bff','VIOLETA REAL',1),special('#00d9ff','AZUL CYBER',2),special('#da4cff','ROXO VOID',3),special('#68ff84','VERDE NEON',4),special('#ff425f','VERMELHO PLASMA',5),special('rainbow','ARCO-ÍRIS VIP',6)],
   shoes:[...baseColors,special('#ffe66d','SOLAS DOURADAS',1),special('#75f8ff','SOLAS DE GELO',2),special('#ff8be8','LUZ ROSA',3),special('#c8ff75','LUZ LIMA',4),special('#ff9a62','LUZ DE FOGO',5),special('rainbow','ARCO-ÍRIS VIP',6)],
   accessory:[special('cape','CAPA DO VIAJANTE',0),special('none','SEM ACESSÓRIO',0)],
-  effect:[special('none','NONE',0),special('glow','BRILHO SUAVE',1),special('pulse','AURA RESPIRANTE',2),special('shimmer','CINTILAÇÃO',2),special('spark','FAÍSCAS SUAVES',3),special('halo','HALO',3),special('frost','GELO',3),special('electric','ELETRICIDADE',4),special('ember','BRASAS',4),special('mist','NÉVOA',4),special('plasma','PLASMA SUAVE',5),special('comet','RASTO',5),special('cosmic','AURA CÓSMICA',6),special('prismatic','PRISMÁTICO',6)]
+  effect:[special('none','SEM EFEITO',0),special('orbit','ÓRBITA',1),special('ion','RASTO IÓNICO',1),special('stardust','POEIRA ESTELAR',2),special('resonance','RESSONÂNCIA',2),special('comet','COMETA',3),special('aurora','AURORA',3),special('quantum','QUANTUM',4),special('eclipse','ECLIPSE',4),special('supernova','SUPERNOVA',5),special('void','VOID',5),special('singularity','SINGULARIDADE',6),special('prism','PRISMA',6)]
 };
+const LEGACY_EFFECTS={glow:'orbit',pulse:'resonance',shimmer:'stardust',spark:'stardust',halo:'orbit',frost:'aurora',electric:'ion',ember:'supernova',mist:'void',plasma:'quantum',cosmic:'singularity',prismatic:'prism'};
 const DEFAULTS=OUTFIT_DEFAULTS;
 const instances=new Map(),sessions=new Map(),activeByPlayer=new Map();
 const lobbies=new Map(),lobbyByPlayer=new Map();
@@ -50,7 +51,7 @@ function normalizeOutfit(data){
     pants:String(raw.pants||OUTFIT_DEFAULTS.pants).toLowerCase(),
     shoes:String(raw.shoes||OUTFIT_DEFAULTS.shoes).toLowerCase(),
     accessory,
-    effect:String(raw.effect||OUTFIT_DEFAULTS.effect).toLowerCase()
+    effect:LEGACY_EFFECTS[String(raw.effect||'').toLowerCase()]||String(raw.effect||OUTFIT_DEFAULTS.effect).toLowerCase()
   };
 }
 function validOutfit(data,p){
@@ -321,7 +322,7 @@ async function rankings(db,country,page){
   const code=String(country||'').toUpperCase();
   if(code&&!/^[A-Z]{2}$/.test(code))throw error('País inválido.');
   const pg=Math.max(1,Math.min(10000,Math.floor(Number(page)||1))),offset=(pg-1)*25;
-  const cte="WITH ranked AS (SELECT p.id,p.name,p.visual_name AS \"visualName\",p.country,p.vip_level AS \"vipLevel\",p.letter_styles AS \"letterStyles\",p.name_color AS \"nameColor\",p.name_effect AS \"nameEffect\",p.tag_global_color AS \"tagGlobalColor\",p.tag_country_color AS \"tagCountryColor\",s.best_score AS score,ROW_NUMBER() OVER(ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS \"worldRank\",ROW_NUMBER() OVER(PARTITION BY p.country ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS \"countryRank\" FROM jump_scores s JOIN players p ON p.id=s.player_id WHERE s.best_score>0) ";
+  const cte="WITH ranked AS (SELECT p.id,p.name,p.visual_name AS \"visualName\",p.country,p.vip_level AS \"vipLevel\",p.letter_styles AS \"letterStyles\",p.name_color AS \"nameColor\",p.name_effect AS \"nameEffect\",p.featured_badge AS \"featuredBadge\",p.tag_global_color AS \"tagGlobalColor\",p.tag_country_color AS \"tagCountryColor\",s.best_score AS score,ROW_NUMBER() OVER(ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS \"worldRank\",ROW_NUMBER() OVER(PARTITION BY p.country ORDER BY s.best_score DESC,s.updated_at ASC,p.id) AS \"countryRank\" FROM jump_scores s JOIN players p ON p.id=s.player_id WHERE s.best_score>0) ";
   const filter=code?'WHERE country=$1':'';
   const args=code?[code]:[];
   const count=await db.query(cte+'SELECT COUNT(*)::int AS count FROM ranked '+filter,args);
