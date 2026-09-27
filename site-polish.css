@@ -1,0 +1,230 @@
+/* EIXO / Interface polish — ambient motion, arcade cards, Passport and podium medals. */
+body.eixo-modern {
+  --rx-bg:#080d17;
+  --rx-panel:#121c2c;
+  --rx-line:#2a3950;
+  --rx-muted:#9cacc3;
+  --rx-accent:#b6a1ff;
+  position:relative;
+  background:#080d17;
+  isolation:isolate;
+}
+body.eixo-modern::before,body.eixo-modern::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+}
+body.eixo-modern::before{
+  background:
+    radial-gradient(ellipse 46% 62% at 4% 18%,rgba(69,70,145,.22),transparent 70%),
+    radial-gradient(ellipse 41% 56% at 94% 55%,rgba(20,129,139,.14),transparent 70%),
+    radial-gradient(ellipse 45% 45% at 55% 110%,rgba(97,57,152,.18),transparent 72%),
+    linear-gradient(145deg,#090e18,#0d1420 48%,#090e18);
+  background-size:125% 125%;
+  animation:rxAmbient 32s ease-in-out infinite alternate;
+}
+body.eixo-modern::after{
+  opacity:.36;
+  background-image:radial-gradient(circle,rgba(156,181,219,.18) .7px,transparent 1px);
+  background-size:34px 34px;
+  mask-image:linear-gradient(115deg,transparent 6%,#000 34%,transparent 84%);
+}
+@keyframes rxAmbient {from{background-position:0 0}to{background-position:100% 70%}}
+body.eixo-modern .site-shell{position:relative;z-index:1;background:transparent}
+body.eixo-modern .topbar{background:rgba(9,15,26,.83);border-bottom:1px solid rgba(112,137,173,.18)}
+body.eixo-modern .footer{background:rgba(8,13,23,.40);border-top-color:rgba(112,137,173,.16)}
+.eixo-modern .rx-panel{background:linear-gradient(147deg,rgba(24,35,53,.93),rgba(15,23,36,.95));border-color:rgba(117,142,180,.23);box-shadow:0 18px 55px rgba(0,0,0,.16)}
+.eixo-modern .rx-button{transition:transform .22s ease,border-color .22s ease,background .22s ease,box-shadow .22s ease}
+.eixo-modern .rx-button:focus-visible,.eixo-modern .rx-game-card a:focus-visible{outline:2px solid #cdbdff;outline-offset:4px}
+
+/* Home: the illustration is an abstract climbing motif, not a stale JUMP screenshot. */
+.eixo-modern .rx-hero{
+  isolation:isolate;display:flex;align-items:center;min-height:470px;
+  padding:clamp(30px,5.4vw,76px);
+  border:1px solid rgba(160,176,229,.3);border-radius:26px;
+  background:linear-gradient(116deg,rgba(20,28,48,.98),rgba(21,30,52,.94) 55%,rgba(21,42,59,.92));
+  box-shadow:0 30px 85px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.055);
+}
+.eixo-modern .rx-hero::before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(circle at 80% 42%,rgba(116,106,233,.17),transparent 35%),radial-gradient(circle at 44% 118%,rgba(44,177,190,.08),transparent 42%);
+}
+.eixo-modern .rx-hero::after{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(110deg,transparent 49%,rgba(151,167,211,.07) 49.1%,transparent 49.2%),linear-gradient(110deg,transparent 73%,rgba(151,167,211,.055) 73.1%,transparent 73.2%);
+}
+.eixo-modern .rx-hero-copy{max-width:690px;width:58%;position:relative;z-index:2}
+.eixo-modern .rx-hero-copy .rx-eyebrow{display:inline-flex;align-items:center;gap:10px;color:#b2a2ff;margin-bottom:26px}
+.eixo-modern .rx-hero-copy .rx-eyebrow::before{content:"";display:block;width:24px;height:2px;background:#b2a2ff}
+.eixo-modern .rx-hero-copy h1{font-size:clamp(40px,4.8vw,69px);line-height:1.04;letter-spacing:-2.8px;margin-bottom:20px}
+.eixo-modern .rx-hero-copy p:not(.rx-eyebrow){font-size:clamp(13px,1.2vw,16px);line-height:1.75;color:#aebed5;margin-bottom:27px}
+.eixo-modern .rx-hero .rx-button.primary{padding:12px 22px}
+.rx-hero-visual{position:absolute;inset:0 0 0 auto;width:46%;overflow:hidden;pointer-events:none;z-index:1}
+.rx-hero-visual::before{content:"";position:absolute;width:490px;height:490px;right:-70px;top:0;border:1px solid rgba(180,170,255,.13);border-radius:50%;box-shadow:0 0 0 64px rgba(120,110,214,.028),0 0 0 130px rgba(120,110,214,.02)}
+.rx-hero-visual::after{content:"";position:absolute;width:410px;height:410px;right:2%;top:5%;background:radial-gradient(circle,rgba(94,107,224,.15),transparent 68%);filter:blur(16px)}
+.rx-jump-path{position:absolute;inset:0;opacity:.5;background:linear-gradient(135deg,transparent 49.88%,rgba(162,157,255,.55) 49.96%,rgba(162,157,255,.55) 50.05%,transparent 50.16%);transform:rotate(-7deg)}
+.rx-landing{position:absolute;display:block;height:13px;width:112px;border:1px solid rgba(185,174,255,.6);border-radius:8px;background:linear-gradient(90deg,rgba(117,113,230,.5),rgba(91,177,187,.2));box-shadow:0 6px 22px rgba(92,102,220,.17);transform:skew(-20deg);animation:rxFloat 6s ease-in-out infinite}
+.rx-landing::after{content:"";position:absolute;inset:3px 7px auto;height:1px;background:rgba(224,228,255,.5)}
+.rx-landing.one{bottom:21%;left:12%}.rx-landing.two{bottom:44%;right:20%;width:146px;animation-delay:-2s}.rx-landing.three{top:24%;left:24%;width:93px;animation-delay:-4s}
+.rx-hero-core{position:absolute;right:17%;top:37%;display:grid;place-items:center;width:170px;height:170px;border:1px solid rgba(173,174,253,.28);border-radius:36px;background:linear-gradient(145deg,rgba(100,94,193,.34),rgba(22,33,62,.95));box-shadow:0 28px 62px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.12);transform:rotate(-9deg);animation:rxCoreFloat 8s ease-in-out infinite}
+.rx-hero-core span{font:800 65px/1 Inter,Arial,sans-serif;letter-spacing:-5px;color:#e6e4ff;text-shadow:0 5px 27px rgba(166,154,255,.34);transform:rotate(9deg)}
+.rx-hero-core small{position:absolute;bottom:22px;font:700 9px Inter,Arial,sans-serif;letter-spacing:2px;color:#9eadd6;transform:rotate(9deg)}
+.rx-hero-visual-label{position:absolute;right:7%;bottom:10%;font:700 10px Inter,Arial,sans-serif;letter-spacing:2px;color:#8f9dc2}
+@keyframes rxFloat{50%{translate:0 -10px}}@keyframes rxCoreFloat{50%{translate:0 -13px;rotate:2deg}}
+
+/* Game selection — quiet glass cards with one accent per game. */
+.eixo-modern .rx-three{gap:18px}
+.eixo-modern .rx-game-card{
+  --game-accent:#b7a2ff;
+  isolation:isolate;position:relative;min-height:224px;padding:28px;
+  border:1px solid rgba(144,153,204,.23);border-radius:20px;
+  background:linear-gradient(145deg,rgba(27,36,57,.91),rgba(18,26,41,.95));
+  box-shadow:0 18px 48px rgba(0,0,0,.14),inset 0 1px rgba(255,255,255,.045);
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+.eixo-modern .rx-game-card:nth-child(2){--game-accent:#70ded0;background:linear-gradient(145deg,rgba(21,47,53,.91),rgba(15,30,40,.95))}
+.eixo-modern .rx-game-card:nth-child(3){--game-accent:#edbe8a;background:linear-gradient(145deg,rgba(48,37,41,.89),rgba(29,28,39,.95))}
+.eixo-modern .rx-game-card::before{content:"";position:absolute;right:-45px;top:-80px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--game-accent) 20%,transparent),transparent 68%);z-index:-1}
+.eixo-modern .rx-game-card::after{
+  content:"↗";right:25px;top:26px;bottom:auto;width:62px;height:62px;
+  display:grid;place-items:center;clip-path:none;transform:none;opacity:1;
+  border:1px solid color-mix(in srgb,var(--game-accent) 30%,transparent);border-radius:17px;
+  background:color-mix(in srgb,var(--game-accent) 9%,transparent);color:var(--game-accent);
+  font:700 35px/1 Inter,Arial,sans-serif;
+}
+.eixo-modern .rx-game-card:nth-child(2)::after{content:"◎";font-size:48px;background:color-mix(in srgb,var(--game-accent) 9%,transparent)}
+.eixo-modern .rx-game-card:nth-child(3)::after{content:"✧";font-size:45px;background:color-mix(in srgb,var(--game-accent) 9%,transparent)}
+.eixo-modern .rx-game-card h2{font-size:24px;letter-spacing:-.5px;margin-bottom:10px;color:#f0f4ff}
+.eixo-modern .rx-game-card h2::before{content:"01 / ARCADE";display:block;margin-bottom:19px;color:var(--game-accent);letter-spacing:1.8px;font:700 10px Inter,Arial,sans-serif}
+.eixo-modern .rx-game-card:nth-child(2) h2::before{content:"02 / ARCADE"}
+.eixo-modern .rx-game-card:nth-child(3) h2::before{content:"03 / EM BREVE"}
+.eixo-modern .rx-game-card p{max-width:245px;color:#a7b9d2;line-height:1.65;margin-bottom:24px}
+.eixo-modern .rx-game-card .rx-button{min-height:38px;padding:8px 14px;background:color-mix(in srgb,var(--game-accent) 10%,#172033);border-color:color-mix(in srgb,var(--game-accent) 24%,#34445e);color:#edf3ff}
+.eixo-modern .rx-game-card .rx-tag{margin-top:auto;background:rgba(237,190,138,.12);color:#edc897}
+.eixo-modern .rx-game-card:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--game-accent) 58%,transparent);box-shadow:0 24px 55px rgba(0,0,0,.25)}
+.eixo-modern .rx-game-card:focus-within{border-color:var(--game-accent)}
+
+/* Passport — actual JUMP sprite remains sourced from the current renderer. */
+.eixo-modern #rx-passport .rx-heading{margin:4px 0 30px}
+.eixo-modern #rx-passport .rx-heading h1{max-width:660px}
+.eixo-modern #rx-passport .rx-progress{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:24px;padding:24px 30px;margin-bottom:25px;border-radius:20px;background:linear-gradient(110deg,rgba(28,38,61,.96),rgba(18,28,43,.96))}
+.rx-level-disc{display:grid;place-items:center;flex:0 0 auto;width:84px;height:84px;border:1px solid rgba(187,169,255,.52);border-radius:22px;background:linear-gradient(150deg,#4c426f,#252c49);box-shadow:inset 0 1px 0 #ffffff35,0 13px 25px #05071150}
+.rx-level-disc strong{font:800 34px Inter,Arial,sans-serif;color:#f1eaff}
+.rx-progress-details{min-width:0}
+.rx-progress-details .rx-eyebrow{margin:0 0 10px}
+.rx-progress-topline{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:10px}
+.rx-progress-topline strong{font:700 16px Inter,Arial,sans-serif;color:#f2f4ff}
+.eixo-modern .rx-progress>span#rxExpText{color:#afc0da;font:600 12px Inter,Arial,sans-serif;white-space:nowrap}
+.eixo-modern .rx-progress-track{position:relative;height:12px;padding:2px;border:1px solid #53627f;border-radius:100px;background:#0a1221;overflow:hidden}
+.eixo-modern .rx-progress-track i{border-radius:100px;background:linear-gradient(90deg,#6ddbd1,#a98bf5,#e5bce4);box-shadow:0 0 14px rgba(169,139,245,.35);transition:width .55s ease}
+.rx-progress-pace{font:500 11px Inter,Arial,sans-serif;color:#8298b5;margin:9px 0 0!important}
+.eixo-modern .rx-passport{position:relative;grid-template-columns:minmax(250px,390px) minmax(0,1fr);gap:36px;padding:30px;border-radius:23px;overflow:hidden}
+.eixo-modern .rx-passport::after{content:"";position:absolute;right:-180px;top:-180px;width:410px;height:410px;border-radius:50%;background:radial-gradient(circle,rgba(149,130,222,.12),transparent 70%);pointer-events:none}
+.eixo-modern #rxCharacterSlot{position:relative;min-height:365px;border:1px solid rgba(118,140,193,.28);border-radius:18px;background:radial-gradient(ellipse at 50% 50%,#293b58,#101a2b 73%);overflow:hidden}
+.eixo-modern #rxCharacterSlot::before{content:"";position:absolute;inset:8% 12%;border:1px solid rgba(151,172,223,.12);border-radius:50%;box-shadow:0 0 0 40px rgba(123,137,212,.027)}
+.eixo-modern #rxCharacterSlot::after{content:"PERSONAGEM / JUMP";position:absolute;bottom:15px;left:18px;color:#8da0bd;font:700 9px Inter,Arial,sans-serif;letter-spacing:1.5px}
+.eixo-modern #rxCharacterSlot canvas{position:relative;z-index:1}
+.eixo-modern .rx-profile-copy{position:relative;z-index:1}
+.eixo-modern .rx-profile-copy h1{font-size:clamp(29px,3vw,46px);letter-spacing:-1.6px;margin:6px 0}
+.eixo-modern .rx-profile-copy .rx-muted{font-size:13px}
+.eixo-modern .rx-stat-row{gap:10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:24px 0}
+.eixo-modern .rx-stat-row span{min-width:0;display:flex;flex-direction:column;gap:2px;padding:17px 13px;border-radius:13px;background:rgba(9,17,29,.56);border:1px solid rgba(124,149,191,.2);font-weight:700;letter-spacing:.6px}
+.eixo-modern .rx-stat-row strong{font:800 clamp(19px,2vw,27px) Inter,Arial,sans-serif;color:#d8ceff;letter-spacing:-.5px}
+.eixo-modern .rx-profile-copy .rx-actions{gap:8px}.eixo-modern .rx-profile-copy .rx-button{font-size:12px}
+.eixo-modern .rx-row.rx-section{margin-top:36px;margin-bottom:16px}
+.eixo-modern .rx-row.rx-section h2{font-size:21px;margin:0}
+
+/* Real ornamental SVG icons sit inside layered enamel-and-metal medal frames. */
+.eixo-modern .rx-badge-grid{gap:18px}
+.eixo-modern .rx-achievement{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;flex-direction:column;min-height:296px;text-align:center;padding:29px 20px 24px;border-radius:20px;border:1px solid rgba(160,145,219,.36);background:linear-gradient(155deg,rgba(30,38,57,.96),rgba(18,27,42,.98));box-shadow:inset 0 1px 0 #ffffff0b,0 18px 35px #00000021}
+.eixo-modern .rx-achievement::before{content:"";position:absolute;inset:0;height:auto;z-index:-1;background:radial-gradient(circle at 50% 13%,rgba(170,145,238,.13),transparent 48%)}
+.eixo-modern .rx-achievement:nth-child(2)::before{background:radial-gradient(circle at 50% 13%,rgba(100,185,241,.14),transparent 48%)}
+.eixo-modern .rx-achievement:nth-child(3)::before{background:radial-gradient(circle at 50% 13%,rgba(137,202,178,.12),transparent 48%)}
+.eixo-modern .rx-medallion{--medal-light:#f9dfa4;--medal-mid:#ad7e3e;--medal-dark:#57432e;flex:0 0 auto;position:relative;isolation:isolate;display:grid;place-items:center;width:116px;height:116px;margin:0 auto 18px;border-radius:50%;clip-path:none;color:var(--medal-light);background:linear-gradient(140deg,var(--medal-light),var(--medal-mid) 34%,var(--medal-dark) 73%,var(--medal-light));box-shadow:0 14px 30px #0006,0 0 30px #e6b9691c}
+.eixo-modern .rx-medallion.blue{--medal-light:#caedff;--medal-mid:#6f9cbb;--medal-dark:#294765;box-shadow:0 14px 30px #0006,0 0 30px #7fbdeb1c}
+.eixo-modern .rx-medallion.violet{--medal-light:#dbd2ff;--medal-mid:#9786c5;--medal-dark:#45426e;box-shadow:0 14px 30px #0006,0 0 30px #b09ae91c}
+.eixo-modern .rx-medallion::before{content:"";position:absolute;inset:5px;border-radius:50%;border:1px dashed rgba(255,255,255,.5);background:linear-gradient(140deg,var(--medal-dark),var(--medal-mid) 65%,var(--medal-dark));box-shadow:inset 0 0 0 4px rgba(6,14,25,.26),inset 0 0 0 8px rgba(255,255,255,.1)}
+.eixo-modern .rx-medallion::after{content:"";position:absolute;inset:14px;border:1px solid rgba(255,255,255,.3);border-radius:50%;clip-path:none;opacity:1}
+.rx-medallion .rx-badge-symbol{position:relative;z-index:2;display:grid;place-items:center;width:67px;height:67px;border-radius:50%;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.14),transparent 65%)}
+.rx-medallion .rx-badge-symbol strong{font:900 24px Inter,Arial,sans-serif;letter-spacing:-1px}
+.rx-medallion svg{display:block;width:48px;height:48px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 2px 2px #0005)}
+.rx-badge-series{font:700 9px Inter,Arial,sans-serif;letter-spacing:2px;color:#9caecc;margin:0 0 10px}
+.eixo-modern .rx-achievement h3{font-size:16px;margin:0 0 6px}
+.eixo-modern .rx-achievement p{font-size:12px;line-height:1.6;max-width:235px;color:#a5b6cf;margin:0 auto 12px}
+.eixo-modern .rx-achievement small{margin-top:auto;padding:6px 12px;border:1px solid rgba(161,175,201,.19);border-radius:999px;background:#0f1928;font:700 10px Inter,Arial,sans-serif;color:#a5b4c9}
+.eixo-modern .rx-achievement:not(.rx-locked){border-color:rgba(125,219,178,.5);box-shadow:0 13px 42px #62bda11b,inset 0 1px #ffffff1c}
+.eixo-modern .rx-achievement:not(.rx-locked) small{color:#90e9c4;background:rgba(37,105,82,.2);border-color:rgba(107,216,165,.25)}
+.eixo-modern .rx-note{margin-top:20px;border-left:2px solid #a98bf5;background:rgba(27,37,56,.7);color:#9fb1c9}
+.eixo-modern .rx-achievement.rx-locked .rx-medallion{filter:saturate(.8);opacity:.8}
+
+/* VIP: own identity, no legacy runner or map illustration. */
+.eixo-modern .rx-vip-hero{min-height:380px;grid-template-columns:1.2fr .8fr;border-color:rgba(177,147,237,.32);background:radial-gradient(ellipse at 90% 12%,rgba(142,105,210,.19),transparent 50%),linear-gradient(125deg,#211b31,#141e30 70%)}
+.eixo-modern .rx-vip-hero h1{font-size:clamp(37px,4.6vw,66px)}
+.rx-vip-art{position:relative;display:grid;place-items:center;min-height:270px;overflow:hidden}
+.rx-vip-art::before,.rx-vip-art::after{content:"";position:absolute;width:280px;height:280px;border:1px solid rgba(193,167,255,.22);border-radius:50%;box-shadow:0 0 0 36px rgba(190,153,255,.032),0 0 0 73px rgba(190,153,255,.023)}
+.rx-vip-art::after{width:205px;height:205px;border-style:dashed;box-shadow:none;animation:rxVipSpin 35s linear infinite}
+.rx-vip-mark{position:relative;z-index:1;display:grid;place-items:center;width:154px;height:154px;border-radius:37px;border:1px solid rgba(210,181,255,.46);background:linear-gradient(140deg,rgba(152,116,225,.34),rgba(43,36,73,.82));box-shadow:0 22px 62px #080a1d8c,inset 0 1px #fff4}
+.rx-vip-mark strong{font:700 110px/.75 Georgia,serif;color:#e4d4ff;text-shadow:0 2px 24px #a06ff27d}
+.rx-vip-caption{position:absolute;bottom:0;font:700 10px Inter,Arial,sans-serif;letter-spacing:2.5px;color:#ad9ed1}
+@keyframes rxVipSpin{to{transform:rotate(360deg)}}
+
+/* Podium ranks: the rank is metal; the player's chosen color remains a fine accent. */
+.eixo-modern .rank-tag.medal-rank{
+  --metal-1:#ffe9b2;--metal-2:#c99649;--metal-3:#694920;
+  display:inline-flex!important;align-items:center!important;gap:5px!important;
+  padding:3px 7px 3px 3px!important;min-height:24px!important;
+  border:1px solid color-mix(in srgb,var(--metal-2) 65%,transparent)!important;
+  border-radius:100px!important;background:linear-gradient(110deg,rgba(33,33,42,.98),rgba(23,28,40,.98))!important;
+  color:#dfe8f7!important;box-shadow:none!important;
+  font:700 9px/1.1 Inter,Arial,sans-serif!important;letter-spacing:.15px!important;
+  vertical-align:middle;white-space:nowrap;animation:none!important;
+}
+.eixo-modern .rank-tag.medal-rank:is(.world-2,.country-2){--metal-1:#f3f6fd;--metal-2:#a2b4c8;--metal-3:#536477}
+.eixo-modern .rank-tag.medal-rank:is(.world-3,.country-3){--metal-1:#f5d0ad;--metal-2:#bf8057;--metal-3:#65412e}
+.eixo-modern .rank-tag.medal-rank .rank-medal-icon{
+  position:relative;flex:0 0 auto;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;
+  color:var(--metal-3);background:linear-gradient(140deg,var(--metal-1),var(--metal-2) 65%,var(--metal-3));
+  border:1px solid color-mix(in srgb,var(--metal-1) 70%,transparent);box-shadow:inset 0 0 0 2px #ffffff35;
+  font:700 12px/1 Inter,Arial,sans-serif;text-shadow:none;
+}
+.eixo-modern .rank-tag.medal-rank .rank-medal-label{display:inline-block;border-bottom:2px solid var(--rank-accent,var(--metal-2));padding:2px 0 1px}
+.eixo-modern .rank-tag.medal-rank.tag-rainbow .rank-medal-label{border-image:linear-gradient(90deg,#fd6b71,#f3c760,#75dba6,#7dbde9,#d0a4ee) 1}
+.eixo-modern .rx-social .rank-tag.medal-rank{font-size:8px!important}
+.eixo-modern .full-ranking-list .rank-tag.medal-rank{font-size:9px!important;min-height:24px!important;padding:3px 7px 3px 3px!important}
+.eixo-modern .rx-social .rank-medal-icon{width:16px;height:16px;font-size:10px}
+@media(max-width:1040px){
+ .rx-hero-visual{width:42%;opacity:.8}.rx-hero-core{right:12%;width:142px;height:142px}.rx-hero-core span{font-size:54px}
+ .eixo-modern .rx-passport{grid-template-columns:minmax(230px,330px) 1fr;gap:24px}
+}
+@media(max-width:820px){
+ .eixo-modern .rx-hero{min-height:405px}.eixo-modern .rx-hero-copy{width:70%}
+ .rx-hero-visual{width:47%;opacity:.48}.rx-hero-core{right:0}
+ .eixo-modern .rx-passport{grid-template-columns:1fr;padding:22px}
+ .eixo-modern #rxCharacterSlot{min-height:315px}
+ .eixo-modern #rx-passport .rx-progress{grid-template-columns:auto 1fr;gap:16px}
+ .eixo-modern #rx-passport #rxExpText{grid-column:2}
+ .eixo-modern .rx-vip-hero{grid-template-columns:1fr}
+ .rx-vip-art{min-height:230px}
+}
+@media(max-width:600px){
+ body.eixo-modern::after{opacity:.2}
+ .eixo-modern .rx-hero{min-height:375px;padding:30px 24px}
+ .eixo-modern .rx-hero-copy{width:100%;max-width:100%}
+ .eixo-modern .rx-hero-copy h1{font-size:clamp(34px,9vw,44px);letter-spacing:-1.5px}
+ .eixo-modern .rx-hero-copy p:not(.rx-eyebrow){max-width:250px}
+ .rx-hero-visual{width:74%;left:auto;right:-22%;opacity:.17}
+ .rx-hero-visual-label{display:none}
+ .eixo-modern .rx-game-card{min-height:206px}
+ .eixo-modern #rx-passport .rx-progress{grid-template-columns:64px 1fr;padding:18px}
+ .rx-level-disc{width:64px;height:64px;border-radius:17px}.rx-level-disc strong{font-size:26px}
+ .eixo-modern .rx-stat-row{gap:7px}
+ .eixo-modern .rx-stat-row span{padding:12px 7px;font-size:9px}
+ .eixo-modern .rx-profile-copy .rx-button{flex:1}
+ .eixo-modern .rx-achievement{min-height:275px}
+ .eixo-modern .rx-badge-grid{grid-template-columns:1fr;gap:12px}
+ .eixo-modern .rx-achievement{padding:23px 16px}
+ .rx-vip-art{min-height:210px}.rx-vip-art::before{width:190px;height:190px}.rx-vip-art::after{width:150px;height:150px}
+ .rx-vip-mark{width:110px;height:110px;border-radius:25px}.rx-vip-mark strong{font-size:83px}
+}
+@media(prefers-reduced-motion:reduce){
+ body.eixo-modern::before,.rx-landing,.rx-hero-core,.rx-vip-art::after{animation:none!important}
+ .eixo-modern .rx-button,.eixo-modern .rx-game-card,.eixo-modern .rx-progress-track i{transition:none!important}
+}

@@ -273,12 +273,7 @@ function bindControls(){
 const flags=c=>[...String(c||'PT')].map(x=>String.fromCodePoint(127397+x.charCodeAt())).join('');
 const rankLabels={pt:'O TEU RANK É:',en:'YOUR RANK IS:'};
 const rankLabel=()=>rankLabels[lang()]||rankLabels.en;
-const rankTag=(type,n,country,p)=>{
- const me=getPlayer();
- const raw=type==='country'?(p?.tagCountryColor||(me&&me.id===p?.id?me.tagCountryColor:'#ff7a2f')):(p?.tagGlobalColor||(me&&me.id===p?.id?me.tagGlobalColor:'#e53935'));
- const c=String(raw||'').toLowerCase(),rainbow=c==='rainbow';
- return '<span class="rank-tag '+type+'-'+n+(rainbow?' tag-rainbow':'')+'"'+(!rainbow&&/^#[0-9a-f]{6}$/.test(c)?' style="background:'+c+'!important;color:#fff!important"':'')+'>'+n+'# '+(type==='country'?esc(country):'GLOBAL')+'</span>';
-};
+const rankTag=(type,n,country,p)=>{const me=getPlayer();const raw=type==='country'?(p?.tagCountryColor||(me&&me.id===p?.id?me.tagCountryColor:'#ff7a2f')):(p?.tagGlobalColor||(me&&me.id===p?.id?me.tagGlobalColor:'#e53935'));const c=String(raw||'').toLowerCase(),rainbow=c==='rainbow';const accent=!rainbow&&/^#[0-9a-f]{6}$/.test(c)?' style="--rank-accent:'+c+'"':'';return '<span class="rank-tag medal-rank '+type+'-'+n+(rainbow?' tag-rainbow':'')+'"'+accent+'><span class="rank-medal-icon" aria-hidden="true">★</span><span class="rank-medal-label">'+(type==='country'?esc(country):'GLOBAL')+'</span></span>';};
 const rankVip=n=>n>0?'<span class="vip-rank-tag vip-rank-'+Math.min(n,6)+'">'+(n>=6?'VIP ∞':'VIP #'+n)+'</span>':'';
 const rankLetters=(text,styles)=>{
  const arr=Array.isArray(styles)?styles:[];
