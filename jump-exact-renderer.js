@@ -161,21 +161,48 @@ function arm(c,pose,tint){
  armSegment(c,'upperArm',pose.shoulder,pose.elbow,tint);
  armSegment(c,'forearm',pose.elbow,pose.wrist,tint);c.restore();
 }
-function cape(c,time,moving,vy,tint,accessory){
- if(accessory==='none')return;
- const sprite=accessory==='cape'||!accessory?pieceImage('cape',tint):null;
- if(sprite){
-  const lift=clamp(vy/360,-.5,1),h=18,w=moving?26:23;
-  // Short horizontal strips follow a travelling wave, anchored at the shoulder.
-  for(let i=0;i<12;i++){const f=i/12,sy=f*sprite.height,sh=Math.ceil(sprite.height/12),wave=Math.sin(time*(moving?4.8:2.2)-f*3)*f*1.5; c.drawImage(sprite,0,sy,sprite.width,sh,-w+3-f*lift*3+wave,-30+f*h-f*lift*5,w,h/12+.3)}
-  return;
+function cape(c,time,moving,ground,vy,tint){
+ const sprite=pieceImage('cape',tint);if(!sprite)return;
+ const airborne=!ground,lift=airborne&&Math.abs(vy)<8?.28:clamp(vy/340,-.65,1),active=moving||airborne;
+ // At rest the cloth drops from the shoulder. Motion and air resistance open
+ // it progressively; horizontal slices create a soft wave without detaching.
+ const w=active?23+Math.abs(lift)*3:13,h=active?19:24,tail=active?-w+3:-9;
+ for(let i=0;i<14;i++){
+  const f=i/14,sy=Math.floor(f*sprite.height),sh=Math.ceil(sprite.height/14);
+  const wave=active?Math.sin(time*(moving?5.2:3.2)-f*4.2)*f*1.25:Math.sin(time*1.35-f*2)*f*.18;
+  const drag=active?-f*lift*4:0;
+  c.drawImage(sprite,0,sy,sprite.width,sh,tail+wave,-30+f*h+drag,w,h/14+.35);
  }
- const sway=Math.sin(time*(moving?8:2.2)),lift=clamp(vy/240,-.8,1),length=accessory==='scarf'?20:18;
- const edge=[];for(let i=0;i<=6;i++){const t=i/6;edge.push([-3-t*(moving?12:5)+Math.sin(time*6-t*3)*t*1.8,-24+t*length-lift*t*8])}
- const width=accessory==='scarf'?2:8;
- polygon(c,[[-4,-25],[3,-24],...edge.slice().reverse().map(([x,y],i)=>[x+width*(1-i/7),y]),...edge],tint);
- c.strokeStyle='#ffffff45';c.lineWidth=.8;c.beginPath();edge.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.stroke();
- if(accessory==='satchel'){c.fillStyle='#785f4a';c.fillRect(-10,-21,7,10);c.strokeStyle='#d9b88a';c.strokeRect(-10,-21,7,10)}
+}
+function scarfTail(c,time,moving,ground,vy,tint){
+ const air=!ground,flow=moving||air,raise=flow?(air&&Math.abs(vy)<8?.2:clamp(vy/350,-.4,1)):0;
+ const length=flow?16:9,wave=flow?Math.sin(time*5.5)*1.1:Math.sin(time*1.4)*.15;
+ c.fillStyle='#1b222d';polygon(c,[[-3,-25],[-1,-25],[-length-2,-20-raise*4+wave],[-length,-17-raise*3+wave],[-2,-22]]);
+ c.fillStyle=tint;polygon(c,[[-3,-24.5],[-1.2,-24.5],[-length-1,-20-raise*4+wave],[-length+1,-18-raise*3+wave],[-2,-22]]);
+ c.fillStyle='#ffffff55';polygon(c,[[-3,-24.4],[-2.2,-24.4],[-length,-20-raise*4+wave],[-length+.8,-19.4-raise*4+wave]]);
+}
+function accessoryBack(c,time,moving,ground,vy,tint,accessory){
+ if(accessory==='cape'||!accessory)cape(c,time,moving,ground,vy,tint);
+ else if(accessory==='scarf')scarfTail(c,time,moving,ground,vy,tint);
+}
+function accessoryFront(c,time,moving,ground,vy,tint,accessory){
+ if(accessory==='scarf'){
+  // A wrapped collar, knot and tapered front tail stay readable at game size.
+  c.lineJoin='round';c.strokeStyle='#1b222d';c.lineWidth=3.8;c.beginPath();c.moveTo(-4,-25.5);c.quadraticCurveTo(0,-23.8,4,-25);c.stroke();
+  c.strokeStyle=tint;c.lineWidth=2.5;c.stroke();
+  c.fillStyle='#1b222d';polygon(c,[[1,-24],[4.5,-23.2],[3.2,-20],[.4,-21]]);c.fillStyle=tint;polygon(c,[[1.3,-23.5],[4,-22.9],[3,-20.6],[.9,-21.2]]);
+  c.fillStyle='#1b222d';polygon(c,[[1.5,-21.5],[3.4,-21],[2.8,-15.5],[.9,-17.2]]);c.fillStyle=tint;polygon(c,[[1.7,-21],[3,-20.7],[2.5,-16.4],[1.3,-17.4]]);
+  c.fillStyle='#ffffff66';polygon(c,[[1.8,-20.6],[2.2,-20.5],[1.9,-17.5],[1.5,-17.8]]);
+ }else if(accessory==='satchel'){
+  // Strap follows the torso; the structured bag rests at the rear hip.
+  const swing=(moving?Math.sin(time*7)*.55:0)+(!ground?clamp(vy/420,-.45,.45):0);
+  c.lineCap='round';c.strokeStyle='#202631';c.lineWidth=2.4;c.beginPath();c.moveTo(3,-27);c.lineTo(-5+swing,-12);c.stroke();
+  c.strokeStyle=tint;c.lineWidth=1.35;c.stroke();
+  c.save();c.translate(swing,0);c.fillStyle='#202631';polygon(c,[[-8.8,-13.5],[-3,-13],[-2.2,-7],[-8.7,-7],[-9.7,-9.2]]);
+  c.fillStyle=tint;polygon(c,[[-8.2,-12.8],[-3.5,-12.4],[-3,-7.7],[-8.1,-7.7],[-9,-9.3]]);
+  c.fillStyle='#11192366';polygon(c,[[-8.2,-10],[-3.2,-9.7],[-3,-7.7],[-8.1,-7.7]]);
+  c.strokeStyle='#f0d59a';c.lineWidth=.7;c.beginPath();c.moveTo(-7.8,-10.8);c.lineTo(-3.5,-10.5);c.stroke();c.fillStyle='#f0d59a';c.fillRect(-6,-11.1,1.1,1.2);c.restore();
+ }
 }
 function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  const O={hair:'#19222d',top:'#e7d8b5',pants:'#263c5c',shoes:'#76503c',accent:'#b76632',effect:'none',accessory:'cape',...(style||{})};
@@ -188,7 +215,7 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  const pose=Motion.runnerPose(movement.state.phase,{moving,ground,vy,time});
  c.save();c.translate(x,y);c.scale(dir,1);if(ghost)c.globalAlpha=.72;c.imageSmoothingEnabled=true;
  if(ground){c.save();c.globalAlpha*=.18;c.fillStyle='#17283a';c.beginPath();c.ellipse(0,.4,9,1.2,0,0,Math.PI*2);c.fill();c.restore()}
- c.save();c.translate(pose.lean*12,pose.bob);cape(c,time,moving,vy,accent,O.accessory);c.restore();
+ c.save();c.translate(pose.lean*12,pose.torsoY);accessoryBack(c,time,moving,ground,vy,accent,O.accessory);c.restore();
  for(const leg of pose.legs){
   const {foot,back}=leg,hip={x:leg.hip.x,y:leg.hip.y+(ground&&!moving?-2:0)},ankle={x:foot.x,y:foot.y-3.5},knee=Motion.knee(hip,ankle,8,7);
   c.save();if(back)c.globalAlpha*=.82;
@@ -197,7 +224,8 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  }
  const sy=pose.shoulderY,lean=pose.lean*12;
  arm(c,pose.arms[0],top);
- piece(c,'torso',lean,sy-1,11.5,17,0,top);
+ piece(c,'torso',lean,sy-1,11.5,17,pose.torsoAngle,top);
+ c.save();c.translate(lean,pose.torsoY);accessoryFront(c,time,moving,ground,vy,accent,O.accessory);c.restore();
  arm(c,pose.arms[1],top);
  piece(c,'head',1+lean,pose.headY,13,13,0,hair);c.restore();
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-49);c.fillText(String(name).slice(0,16),x,y-49);c.restore()}

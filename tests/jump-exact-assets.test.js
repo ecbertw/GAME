@@ -7,7 +7,7 @@ test('V3 JUMP loads its modular renderer before worlds and gameplay',()=>{
  const html=read('index.html'),names=['jump-motion.js','jump-art-layout.js','jump-scenery.js','jump-exact-renderer.js','jump-worlds.js','jump.js'];
  const order=names.map(n=>html.indexOf(n));assert.ok(order.every(x=>x>=0));
  for(let i=1;i<order.length;i++)assert.ok(order[i]>order[i-1]);
- assert.match(html,/jump-exact-renderer\.js\?v=20260927-v302/);
+ assert.match(html,/jump-exact-renderer\.js\?v=20260927-v303/);
 });
 
 test('arm atlas pivots join at the same elbow and preserve the hand beyond the wrist',()=>{
@@ -36,6 +36,7 @@ test('animated scenery props and character body parts are independent modules',(
  const renderer=read('jump-exact-renderer.js');
  assert.match(renderer,/function cloth\(/);assert.match(renderer,/function drawWorldProps\(/);
  assert.match(renderer,/function pieceImage\(/);assert.match(renderer,/function cape\(/);
+ assert.match(renderer,/function scarfTail\(/);assert.match(renderer,/function accessoryFront\(/);assert.match(renderer,/accessory==='satchel'/);
  for(const fx of ['glow','pulse','shimmer','spark','halo','frost','electric','ember','mist','plasma','comet','cosmic','prismatic'])assert.match(renderer,new RegExp(fx+':\\['));
 });
 

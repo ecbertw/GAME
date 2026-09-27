@@ -121,3 +121,15 @@ test('running arms counter-swing against the leg on the same side',()=>{
   }
  }
 });
+
+test('jump pose carries hips, torso, head and limbs through take-off and landing preparation',()=>{
+ const idle=M.runnerPose(0,{ground:true}),rise=M.runnerPose(0,{ground:false,vy:300}),apex=M.runnerPose(0,{ground:false,vy:0}),fall=M.runnerPose(0,{ground:false,vy:-420});
+ assert.ok(rise.airTuck>apex.airTuck&&apex.airTuck>fall.airTuck);
+ assert.ok(rise.hipY<idle.hipY&&rise.shoulderY<idle.shoulderY&&rise.headY<idle.headY,'take-off must lift the whole skeleton');
+ assert.ok(rise.torsoAngle<0&&fall.torsoAngle>0,'torso must lean into take-off and open before landing');
+ assert.ok(rise.legs.every(leg=>leg.foot.y<fall.legs.find(other=>other.back===leg.back).foot.y),'knees tuck on ascent and extend on descent');
+ for(const pose of [rise,apex,fall]){
+  assert.ok(Math.abs((pose.shoulderY-pose.headY)-13.1)<1e-9,'head must remain attached to the torso');
+  assert.ok(Math.abs((pose.hipY-13+pose.torsoY*.25)-pose.shoulderY)<1e-9,'shoulders must follow the hips');
+ }
+});

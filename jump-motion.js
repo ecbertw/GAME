@@ -33,15 +33,25 @@ function runnerPose(phase,{moving=false,ground=true,vy=0,time=0}={}){
  const walk=gait(phase),running=moving&&ground;
  const bob=running?walk.bob*.27:ground?Math.sin(time*2)*.12:0;
  const rise=clamp(vy/300,0,1),fall=clamp(-vy/420,0,1);
- const hipY=-16+bob;
+ // The whole body participates in a jump: it lengthens at take-off, curls in
+ // the air, then opens its legs before landing. All values remain relative to
+ // the physical sole so gameplay and collision stay untouched.
+ const airTuck=!ground?Math.max(rise*.72,(1-fall)*.34):0;
+ const hipY=-16+bob-airTuck*1.8+fall*.7;
  const legs=[0,1].map(i=>{
   const hip={x:i?2:-1.4,y:hipY};let foot;
   if(running){const f=walk.legs[i].foot;foot={x:(f.x-64)*.26,y:(f.y-132)*.26,contact:f.contact};}
   else if(ground)foot={x:i?4:-3,y:0,contact:true};
-  else foot={x:i?4-rise*2:-4-rise*2,y:i?-2-rise*3:-1-rise*7+fall,contact:false};
+  else {
+   const split=i?1:-1;
+   foot={x:split*(3.2+airTuck*2.2)-rise*1.3,y:-1.2-airTuck*(i?7.2:9.2)+fall*(i?1.1:2.1),contact:false};
+  }
   return {hip,knee:knee(hip,foot,9.5,8.5),foot,back:i===0};
  });
- const lean=running?.055:ground?0:rise*.025,shoulderY=-29+bob;
+ const crouch=!ground?rise*1.15-fall*.35:0;
+ const lean=running?.055:ground?0:.035*rise-.018*fall;
+ const torsoY=bob+crouch,shoulderY=hipY-13+torsoY*.25;
+ const torsoAngle=running?-.025:!ground?-.075*rise+.035*fall:0;
  const armSwing=running?Math.sin(phase*Math.PI*2)*3.3:ground?Math.sin(time*2)*.12:rise*3-fall*1.5;
  // The jacket is a right-facing profile: its visible socket is on the left.
  // Far arm is painted behind the torso; near arm covers that visible socket.
@@ -53,7 +63,7 @@ function runnerPose(phase,{moving=false,ground=true,vy=0,time=0}={}){
   const wrist={x:elbow.x+Math.sin(angle+bend)*4.3,y:elbow.y+Math.cos(angle+bend)*4.3};
   return {back,shoulder,elbow,wrist};
  });
- return {bob,lean,hipY,shoulderY,headY:-42+bob,armSwing,legs,arms};
+ return {bob,lean,hipY,shoulderY,headY:shoulderY-13.1,torsoY,torsoAngle,airTuck,rise,fall,legs,arms};
 }
 function createEmitter(){return {items:[],last:null,x:0,y:0,phase:0,distance:0,ground:true,serial:0,fx:'none',run:null};}
 function reset(s,now){s.items.length=0;s.last=now;s.distance=0;s.phase=0;}
