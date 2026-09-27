@@ -8,7 +8,7 @@ const themes={forest:{top:'#c0ddb0',rim:'#83aa73',stone:'#9eaa9a',shade:'#526960
 function load(src,done){const img=new Image();img.decoding='async';loads.push(new Promise(resolve=>{img.onload=()=>{done(img);resolve()};img.onerror=resolve;img.src=src}));}
 for(const biome of BIOMES){load('/assets/game-v300/jump-'+biome+'.webp',img=>images.backgrounds[biome]=img);load('/assets/game-v300/platform-'+biome+'.png',img=>images.platforms[biome]=img);load('/assets/game-v300/ground-'+biome+'.png',img=>images.grounds[biome]=img);}
 load('/assets/game-v300/hero-parts.png',img=>images.hero=img);
-loads.push(fetch('/assets/game-v300/hero-parts.json').then(r=>r.ok?r.json():{}).then(d=>{heroParts=d.parts||{}}).catch(()=>{}));
+loads.push(fetch('/assets/game-v300/hero-parts.json?v=20260927-v302').then(r=>r.ok?r.json():{}).then(d=>{heroParts=d.parts||{}}).catch(()=>{}));
 const ready=Promise.all(loads),has=img=>!!(img&&img.naturalWidth>0),clamp=(n,a=0,b=255)=>Math.max(a,Math.min(b,n));
 function color(value,time,offset=0){return value==='rainbow'?'hsl('+((time*90+offset)%360)+' 84% 66%)':/^#[a-f0-9]{6}$/i.test(value||'')?value:'#a6d5d5';}
 function background(c,name,W,H,cam=0,time=0){
@@ -146,6 +146,21 @@ function limb(c,a,b,width,tint,part){
  if(piece(c,part,a.x,a.y,width+2,length+1,angle,tint))return;
  c.lineCap='round';c.strokeStyle='#24313d';c.lineWidth=width+1.8;c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();c.strokeStyle=tint;c.lineWidth=width;c.stroke();c.strokeStyle='#ffffff38';c.lineWidth=.7;c.beginPath();c.moveTo(a.x-.8,a.y+1);c.lineTo(b.x-.8,b.y-1);c.stroke();
 }
+function armSegment(c,part,a,b,tint){
+ const sprite=pieceImage(part,tint),spec=heroParts[part];if(!sprite||!spec.pivot||!spec.tip)return;
+ const [px,py]=spec.pivot,[tx,ty]=spec.tip,sourceLength=Math.hypot(tx-px,ty-py);
+ const scale=Math.hypot(b.x-a.x,b.y-a.y)/sourceLength;
+ const angle=Math.atan2(b.y-a.y,b.x-a.x)-Math.atan2(ty-py,tx-px);
+ c.save();c.translate(a.x,a.y);c.rotate(angle);c.scale(scale,scale);
+ // The sleeve pivots at its anatomical joint. Fingers extend past the wrist;
+ // they are never compressed into the elbow-to-wrist bone.
+ c.drawImage(sprite,-px,-py);c.restore();
+}
+function arm(c,pose,tint){
+ c.save();if(pose.back)c.globalAlpha*=.78;
+ armSegment(c,'upperArm',pose.shoulder,pose.elbow,tint);
+ armSegment(c,'forearm',pose.elbow,pose.wrist,tint);c.restore();
+}
 function cape(c,time,moving,vy,tint,accessory){
  if(accessory==='none')return;
  const sprite=accessory==='cape'||!accessory?pieceImage('cape',tint):null;
@@ -180,12 +195,10 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
   limb(c,hip,knee,3.8,pants,'thigh');limb(c,knee,ankle,3.1,pants,'shin');
   piece(c,'boot',foot.x+1,foot.y-5.5,6.1,5.5,0,shoe);c.restore();
  }
- const sy=pose.shoulderY,swing=pose.armSwing,lean=pose.lean*12;
- limb(c,{x:-3+lean,y:sy+2},{x:-5-swing+lean,y:sy+8},3,top,'upperArm');
- limb(c,{x:-5-swing+lean,y:sy+8},{x:-3-swing+lean,y:sy+13},2.4,top,'forearm');
+ const sy=pose.shoulderY,lean=pose.lean*12;
+ arm(c,pose.arms[0],top);
  piece(c,'torso',lean,sy-1,11.5,17,0,top);
- limb(c,{x:4+lean,y:sy+2},{x:5+swing+lean,y:sy+8},3.2,top,'upperArm');
- limb(c,{x:5+swing+lean,y:sy+8},{x:6+swing+lean,y:sy+13},2.4,top,'forearm');
+ arm(c,pose.arms[1],top);
  piece(c,'head',1+lean,pose.headY,13,13,0,hair);c.restore();
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-49);c.fillText(String(name).slice(0,16),x,y-49);c.restore()}
  return true;

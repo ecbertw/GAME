@@ -2,6 +2,19 @@
 
 > Este documento mantém **apenas os dois relatórios de atualização mais recentes**. Em cada nova atualização, o relatório mais antigo deve ser removido e o novo relatório colocado no topo.
 
+# EIXO V3.0.2 — braços da personagem corrigidos
+
+**Data:** 27/09/2026
+**Estado:** validado localmente, pronto para deploy
+
+- Corrige a montagem dos braços: o braço visível encaixa no ombro da camisola; o braço distante passa atrás do tronco.
+- Ombro, cotovelo e pulso usam pontos de articulação próprios, preservando a forma e o comprimento das mãos. Corrida com braços e pernas em movimentos opostos.
+- Mantém a arte, as cores, a roupa, os acessórios, os efeitos e a física do jogo. Atualiza a versão dos recursos para o browser carregar a correção.
+- 93 testes aprovados e poses verificadas no browser: repouso, corrida e salto, virado para ambos os lados.
+- Deploy: `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.
+
+---
+
 # EIXO V3.0.1 — Astral, personagem e contacto corrigidos
 
 **Data:** 26/09/2026
@@ -18,22 +31,4 @@
 - PULSE começa a 1,65 rad/s e progride até 3,8 rad/s aos 100 pontos; iluminação, cascatas de luz e estrelas animadas. Pontuação acima do separador.
 - 90 testes aprovados, incluindo acesso real ao manifesto, correspondência entre desenho e colisão, matchmaking Astral e 76 800 saltos simulados. Páginas reais JUMP e PULSE verificadas no browser.
 - Corrige uma repetição infinita na tradução de rankings vazios que podia bloquear o carregamento da página.
-- Deploy: `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.
-
----
-
-# EIXO V3.0.0 — novos JUMP, PULSE e Passport
-
-**Data:** 26/09/2026
-**Estado:** validado localmente, pronto para deploy
-
-- JUMP passa a existir apenas online, com instâncias públicas até 20 jogadores.
-- Lobbies permitem juntar até cinco amigos e colocam o grupo inteiro na mesma instância sem exceder a capacidade.
-- O jogo usa uma área lógica 16:9 de 960 × 540 e um boneco articulado pequeno, com pernas, braços e capa reativos ao movimento.
-- Quatro mapas: Jardins do Céu, Aquedutos do Sol, Observatório de Gelo e Santuário Astral.
-- Fundos, chão, plataformas, bandeiras, luzes, vegetação, cristais, colecionáveis e partes do boneco são módulos independentes.
-- PULSE foi transformado num jogo orbital de precisão, com alvo dourado, inversão de direção, streak e validação de resultados no servidor.
-- Passport atribui EXP em partidas validadas, calcula níveis e mostra badges reais: Primeiros 100, Nas Alturas e Explorador.
-- Guarda-roupa mantém todas as cores e efeitos existentes e acrescenta acessórios independentes: capa, cachecol e bolsa.
-- Chat e ranking permanecem na lateral das páginas de jogo; a área central usa melhor o espaço disponível.
 - Deploy: `sudo bash /opt/eixo/ops/deploy/eixo-deploy.sh`.

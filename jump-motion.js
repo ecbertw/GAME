@@ -41,8 +41,19 @@ function runnerPose(phase,{moving=false,ground=true,vy=0,time=0}={}){
   else foot={x:i?4-rise*2:-4-rise*2,y:i?-2-rise*3:-1-rise*7+fall,contact:false};
   return {hip,knee:knee(hip,foot,9.5,8.5),foot,back:i===0};
  });
- return {bob,lean:running?.055:ground?0:rise*.025,hipY,shoulderY:-29+bob,headY:-42+bob,
-  armSwing:running?Math.sin(phase*Math.PI*2)*3.3:ground?Math.sin(time*2)*.12:rise*3-fall*1.5,legs};
+ const lean=running?.055:ground?0:rise*.025,shoulderY=-29+bob;
+ const armSwing=running?Math.sin(phase*Math.PI*2)*3.3:ground?Math.sin(time*2)*.12:rise*3-fall*1.5;
+ // The jacket is a right-facing profile: its visible socket is on the left.
+ // Far arm is painted behind the torso; near arm covers that visible socket.
+ const arms=[true,false].map(back=>{
+  const shoulder={x:(back?3:-3.4)+lean*12,y:shoulderY+3.6};
+  const angle=-.16+(running?-legs[back?0:1].foot.x*.085:(back?1:-1)*armSwing*.18);
+  const bend=running?.75:ground?.46:.85;
+  const elbow={x:shoulder.x+Math.sin(angle)*6.4,y:shoulder.y+Math.cos(angle)*6.4};
+  const wrist={x:elbow.x+Math.sin(angle+bend)*4.3,y:elbow.y+Math.cos(angle+bend)*4.3};
+  return {back,shoulder,elbow,wrist};
+ });
+ return {bob,lean,hipY,shoulderY,headY:-42+bob,armSwing,legs,arms};
 }
 function createEmitter(){return {items:[],last:null,x:0,y:0,phase:0,distance:0,ground:true,serial:0,fx:'none',run:null};}
 function reset(s,now){s.items.length=0;s.last=now;s.distance=0;s.phase=0;}

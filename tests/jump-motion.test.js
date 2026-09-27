@@ -93,3 +93,31 @@ test('new shoe particles emerge from the modular runner sole in either direction
   }
  }
 });
+
+test('arms stay attached and elbows bend forwards at rest, running and in the air',()=>{
+ for(const state of [{},{moving:true},{ground:false,vy:300},{ground:false,vy:-420}])for(let i=0;i<100;i++){
+  const pose=M.runnerPose(i/100,{...state,time:i/30});
+  const [far,near]=pose.arms;
+  assert.ok(far.back&&!near.back);
+  assert.ok(near.shoulder.x<pose.lean*12&&far.shoulder.x>pose.lean*12,'visible arm belongs on the rear shoulder socket of the right-facing jacket');
+  for(const {shoulder,elbow,wrist} of pose.arms){
+   const upper={x:elbow.x-shoulder.x,y:elbow.y-shoulder.y},lower={x:wrist.x-elbow.x,y:wrist.y-elbow.y};
+   assert.ok(Math.abs(Math.hypot(upper.x,upper.y)-6.4)<1e-9);
+   assert.ok(Math.abs(Math.hypot(lower.x,lower.y)-4.3)<1e-9);
+   for(const facing of [-1,1]){
+    const cross=(upper.x*facing)*lower.y-upper.y*(lower.x*facing);
+    assert.ok(cross*facing<0,'elbow must flex towards the facing direction');
+   }
+  }
+ }
+});
+
+test('running arms counter-swing against the leg on the same side',()=>{
+ for(let i=0;i<100;i++){
+  const pose=M.runnerPose(i/100,{moving:true});
+  for(let side=0;side<2;side++){
+   const {shoulder,elbow}=pose.arms[side],angle=Math.atan2(elbow.x-shoulder.x,elbow.y-shoulder.y);
+   assert.ok((angle+.16)*pose.legs[side].foot.x<=1e-9);
+  }
+ }
+});

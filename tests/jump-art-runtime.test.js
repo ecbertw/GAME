@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..');
 async function renderer(){
  const requests=[],window={EixoJumpMotion:require('../jump-motion')};
  class Image{set src(value){this.url=value;requests.push(value);this.naturalWidth=1920;this.naturalHeight=230;queueMicrotask(()=>this.onload());}}
- const context={window,Image,performance,fetch:async url=>{requests.push(url);return{ok:true,json:async()=>JSON.parse(fs.readFileSync(path.join(root,url),'utf8'))}}};
+ const context={window,Image,performance,fetch:async url=>{requests.push(url);return{ok:true,json:async()=>JSON.parse(fs.readFileSync(path.join(root,url.split('?')[0]),'utf8'))}}};
  vm.createContext(context);
  for(const file of ['jump-art-layout.js','jump-exact-renderer.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
  await window.EixoJumpExactArt.ready;return{art:window.EixoJumpExactArt,layout:window.EixoJumpArtLayout,requests};
@@ -14,7 +14,7 @@ test('JUMP requests only Astral scenery and the approved character, without obso
  assert.equal(requests.filter(x=>/jump-astral\.webp/.test(x)).length,1);
  assert.equal(requests.filter(x=>/platform-astral\.png/.test(x)).length,1);
  assert.equal(requests.filter(x=>/ground-astral\.png/.test(x)).length,1);
- assert.ok(requests.includes('/assets/game-v300/hero-parts.json'));
+ assert.ok(requests.some(url=>url.startsWith('/assets/game-v300/hero-parts.json?')));
  assert.equal(requests.length,5,'no inactive biomes or unused prop atlases should be downloaded');
  assert.doesNotMatch(fs.readFileSync(path.join(root,'index.html'),'utf8'),/<script src="(?:assets\/(?:jump15|jump-exact)\/|jump15-art\.js)/);
 });

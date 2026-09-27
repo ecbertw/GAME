@@ -7,7 +7,16 @@ test('V3 JUMP loads its modular renderer before worlds and gameplay',()=>{
  const html=read('index.html'),names=['jump-motion.js','jump-art-layout.js','jump-scenery.js','jump-exact-renderer.js','jump-worlds.js','jump.js'];
  const order=names.map(n=>html.indexOf(n));assert.ok(order.every(x=>x>=0));
  for(let i=1;i<order.length;i++)assert.ok(order[i]>order[i-1]);
- assert.match(html,/jump-exact-renderer\.js\?v=20260926-v301/);
+ assert.match(html,/jump-exact-renderer\.js\?v=20260927-v302/);
+});
+
+test('arm atlas pivots join at the same elbow and preserve the hand beyond the wrist',()=>{
+ const {upperArm,forearm}=JSON.parse(read('assets/game-v300/hero-parts.json')).parts;
+ for(const part of [upperArm,forearm])for(const [x,y] of [part.pivot,part.tip]){
+  assert.ok(x>=0&&x<part.rect[2]&&y>=0&&y<part.rect[3]);
+ }
+ assert.deepEqual(upperArm.tip.map((p,i)=>p+upperArm.rect[i]),forearm.pivot.map((p,i)=>p+forearm.rect[i]));
+ assert.ok(forearm.tip[1]<forearm.rect[3]-40,'the wrist cannot use the fingertip as its pivot');
 });
 test('each realm keeps background, platform and ground in separate editable assets',()=>{
  for(const biome of biomes)for(const prefix of ['jump','platform','ground']){
