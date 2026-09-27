@@ -7,8 +7,8 @@ const BIOMES=['astral'];
 const themes={forest:{top:'#c0ddb0',rim:'#83aa73',stone:'#9eaa9a',shade:'#526960',glow:'#e4d590'},city:{top:'#efd498',rim:'#cea55c',stone:'#bda781',shade:'#72584a',glow:'#ffd994'},snow:{top:'#f4fcff',rim:'#afdddf',stone:'#9ebbc6',shade:'#536f8c',glow:'#aff6f4'},astral:{top:'#dcd9f1',rim:'#a4a8d1',stone:'#9295b5',shade:'#535375',glow:'#e3baff'}};
 function load(src,done){const img=new Image();img.decoding='async';loads.push(new Promise(resolve=>{img.onload=()=>{done(img);resolve()};img.onerror=resolve;img.src=src}));}
 for(const biome of BIOMES){load('/assets/game-v300/jump-'+biome+'.webp',img=>images.backgrounds[biome]=img);load('/assets/game-v300/platform-'+biome+'.png',img=>images.platforms[biome]=img);load('/assets/game-v300/ground-'+biome+'.png',img=>images.grounds[biome]=img);}
-load('/assets/game-v300/hero-v7-run.png?v=20260927-v320',img=>images.heroRun=img);
-load('/assets/game-v300/hero-v7-air.png?v=20260927-v320',img=>images.heroAir=img);
+load('/assets/game-v300/hero-v10-run.png?v=20260927-v324',img=>images.heroRun=img);
+load('/assets/game-v300/hero-v10-air.png?v=20260927-v324',img=>images.heroAir=img);
 const ready=Promise.all(loads),has=img=>!!(img&&img.naturalWidth>0),clamp=(n,a=0,b=255)=>Math.max(a,Math.min(b,n));
 function color(value,time,offset=0){return value==='rainbow'?'hsl('+((time*90+offset)%360)+' 84% 66%)':/^#[a-f0-9]{6}$/i.test(value||'')?value:'#a6d5d5';}
 function background(c,name,W,H,cam=0,time=0){
@@ -196,5 +196,5 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-78);c.fillText(String(name).slice(0,16),x,y-78);c.restore();}
  return true;
 }
-root.EixoJumpExactArt={version:'eixo-runner-v10-restored',ready,background,platform,runner,images,themes,heroHeight:64,isReady:()=>has(images.heroRun)&&has(images.heroAir)};
+root.EixoJumpExactArt={version:'eixo-runner-v10-clean',ready,background,platform,runner,images,themes,heroHeight:64,isReady:()=>has(images.heroRun)&&has(images.heroAir)};
 })(window);
