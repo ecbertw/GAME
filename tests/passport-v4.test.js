@@ -10,9 +10,9 @@ test('Passport is a single digital document with four real achievement keys and 
  const line=source.split('\n').find(x=>x.trimStart().startsWith('views.passport.innerHTML='));
  assert.ok(line);
  const views={passport:{innerHTML:''}};
- new Function('views','t',line)(views,(pt,en)=>pt);
+ new Function('views','t','passportWord',line)(views,(pt,en)=>pt,()=> 'Passaporte');
  const html=views.passport.innerHTML;
- for(const id of ['rxCharacterSlot','rxCharacterFallback','rxProfileName','rxJumpBest','rxPulseBest','rxVipLevel','rxLevel','rxExpBar','rxExpText','rxPassportNumber','rxPassportCountry','rxPassportTotalXp','rxPassportRemaining','rxPassportBadgeCount','rxProfileStatus'])
+ for(const id of ['rxCharacterSlot','rxCharacterFallback','rxProfileName','rxJumpBest','rxPulseBest','rxVipLevel','rxLevel','rxExpBar','rxExpText','rxPassportNumber','rxPassportTags','rxPassportTotalXp','rxPassportRemaining','rxPassportBadgeCount','rxProfileStatus'])
   assert.match(html,new RegExp('id="'+id+'"'),id);
  assert.equal((html.match(/class="rx-achievement/g)||[]).length,4);
  for(const badge of ['first-100','skybound','explorer','pulse-10'])assert.match(html,new RegExp('data-badge="'+badge+'"'));
@@ -25,7 +25,7 @@ test('Passport character uses the wardrobe runner in moving preview mode and sto
  const source=read('redesign.js');
  const wardrobe=read('jump.js');
  assert.match(wardrobe,/moving:true,preview:true,identity:"wardrobe"/);
- assert.match(source,/moving:!reduced,preview:true,identity:'passport'/);
+ assert.match(source,/moving:true,preview:true,identity:'passport-live'/);
  assert.match(source,/await window\.EixoJumpExactArt\.ready/);
  assert.match(source,/cancelAnimationFrame\(characterFrame\)/);
  assert.match(source,/imageSmoothingEnabled=false/);
