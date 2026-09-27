@@ -7,13 +7,13 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'tmp/jump-qa');
  try{
   browser=await chromium.launch({headless:true,channel:'chrome'});const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/jump.js');await page.setContent('<body style="margin:0;background:#172339"><canvas width="1440" height="1000"></canvas></body>');
-  for(const src of ['jump-motion.js','jump-rig.js','jump-art-layout.js','jump-exact-renderer.js'])await page.addScriptTag({url:'/'+src});
+  for(const src of ['jump-motion.js','jump-art-layout.js','jump-exact-renderer.js'])await page.addScriptTag({url:'/'+src});
   const report=await page.evaluate(async()=>{
    const A=EixoJumpExactArt;await A.ready;if(!A.isReady())throw Error('Missing component');
    const c=document.querySelector('canvas').getContext('2d');c.fillStyle='#172339';c.fillRect(0,0,1440,1000);
    const alpha={};for(const [part,img] of Object.entries(A.images.parts)){const cv=document.createElement('canvas');cv.width=img.naturalWidth;cv.height=img.naturalHeight;const q=cv.getContext('2d');q.drawImage(img,0,0);alpha[part]=q.getImageData(0,0,1,1).data[3];}
    function draw(id,x,y,scale,frames,extra={},style={}){c.save();c.translate(x,y);c.scale(scale,scale);for(let n=0;n<=frames;n++){c.globalAlpha=n===frames?1:0;A.runner(c,0,0,style,'',false,n/120,{preview:true,moving:true,ground:true,identity:id,...extra});}c.restore();}
-   c.fillStyle='#c2eaff';c.font='20px sans-serif';c.fillText('RUN · eight moments from the actual continuous renderer',24,32);
+   c.fillStyle='#c2eaff';c.font='20px sans-serif';c.fillText('RUN · eight moments from the restored authored animation',24,32);
    for(let i=0;i<8;i++)draw('run'+i,90+i*178,260,2.9,120+Math.round(i*120*112/216/8));
    c.fillText('IDLE · RISE · APEX · FALL · LEFT · NO CAPE · CUSTOM COLOURS',24,324);
    const states=[{moving:false},{ground:false,vy:350},{ground:false,vy:0},{ground:false,vy:-350},{facing:-1},{},{}];
@@ -22,9 +22,9 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'tmp/jump-qa');
    window.animateRig=(t)=>{c.clearRect(0,0,1440,1000);c.fillStyle='#172339';c.fillRect(0,0,1440,1000);for(let i=0;i<4;i++){c.save();c.translate(200+i*350,650);c.scale(5,5);const flight=i===1,ground=!flight||t%3>1,vy=flight?400-(t%3)*800:0;A.runner(c,0,0,i===3?{accessory:'none'}:{},'',false,t,{preview:true,moving:i!==2,ground,vy,facing:i===3?-1:1,identity:'video'+i});c.restore();}};
    return{alpha};
   });
-  for(const [part,a] of Object.entries(report.alpha))assert.equal(a,0,part+' needs true transparency');fs.mkdirSync(out,{recursive:true});await page.screenshot({path:path.join(out,'rig-v8.png')});
+  for(const [part,a] of Object.entries(report.alpha))assert.equal(a,0,part+' needs true transparency');fs.mkdirSync(out,{recursive:true});await page.screenshot({path:path.join(out,'authored-v9.png')});
   const video=await page.evaluate(async()=>{const cv=document.querySelector('canvas'),stream=cv.captureStream(60),rec=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp9'}),chunks=[];rec.ondataavailable=e=>chunks.push(e.data);const done=new Promise(r=>rec.onstop=r);rec.start();const start=performance.now();await new Promise(resolve=>{function frame(now){animateRig((now-start)/1000);if(now-start<6000)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame)});rec.stop();await done;stream.getTracks().forEach(t=>t.stop());const bytes=new Uint8Array(await new Blob(chunks).arrayBuffer());let text='';for(let i=0;i<bytes.length;i+=8192)text+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(text);});
-  fs.writeFileSync(path.join(out,'rig-v8.webm'),Buffer.from(video,'base64'));
+  fs.writeFileSync(path.join(out,'authored-v9.webm'),Buffer.from(video,'base64'));
   const source=fs.readFileSync(path.join(root,'jump.js'),'utf8'),customize=source.slice(source.indexOf('async function customize(){'),source.indexOf('function renderJumpRoomMembers'));
   const service=require('../jump-server'),wardrobe=service.wardrobeFor({vipLevel:0});
   await page.evaluate(data=>{

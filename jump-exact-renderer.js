@@ -162,28 +162,30 @@ function drawCape(c,pose,state,dt,time,speed,vy,ground,tones){
  }
 }
 function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
- if(!root.EixoJumpRig||!PARTS.every(p=>has(images.parts[p])))return true;
+ if(!PARTS.every(p=>has(images.parts[p])))return true;
  const O={...defaults,accessory:'cape',effect:'none',...(style||{})},tones={};
  // Rainbow uses a bounded palette, avoiding full-sheet work on every frame.
  for(const key of Object.keys(defaults))tones[key]=color(O[key],Math.floor(time*8)/8);
  const ground=motion.ground!==false,vy=Number(motion.vy)||0,dir=motion.facing===-1?-1:1;
- const movement=motionState(x,y,time,motion,ghost,name,O.effect),state=movement.state;
- const discontinuity=!state.rig||movement.dt===0&&state.rig.time!==time;
- if(!state.rig||discontinuity)state.rig={};
- const pose=root.EixoJumpRig.pose(state.rig,state.phase,{ground,vy,time,speed:state.speedBlend,landing:movement.pose.landing},movement.dt,discontinuity);
- state.rig.time=time;
+ const movement=motionState(x,y,time,motion,ghost,name,O.effect),state=movement.state,pose=movement.pose;
  particlesFor(c,state,Number(motion.cameraY)||0,ghost);
- c.save();c.translate(x,y);c.scale(dir,1);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';if(ghost)c.globalAlpha=.72;
+ // Keep the approved, hand-authored v6 poses while drawing every anatomical
+ // piece from its own HD source. The extra presentation scale restores the
+ // intended in-game silhouette without downsampling any source texture.
+ const displayScale=1.34;
+ c.save();c.translate(x,y);c.scale(dir*displayScale*(pose.scaleX||1),displayScale*(pose.scaleY||1));c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';if(ghost)c.globalAlpha=.72;
  if(ground){c.save();c.globalAlpha*=.15;c.fillStyle='#07101d';c.beginPath();c.ellipse(0,.8,10,1.5,0,0,Math.PI*2);c.fill();c.restore();}
- if(O.accessory!=='none')drawCape(c,pose,state.rig,movement.dt,time,state.speedBlend,vy,ground,tones);
- function leg(l){c.save();if(l.back)c.filter='brightness(0.72)';segment(c,'thigh',tones,l.hip,l.knee,7);segment(c,'shin',tones,l.knee,l.ankle,5.6);drawPart(c,'boot',tones,l.sole.x,l.sole.y,9,5,0,.35,1);c.restore();}
- function arm(a){c.save();if(a.back)c.filter='brightness(0.72)';segment(c,'upperArm',tones,a.shoulder,a.elbow,6);segment(c,'forearm',tones,a.elbow,a.wrist,3.8);drawPart(c,'hand',tones,a.wrist.x,a.wrist.y,4,5,-a.b,.5,.1);c.restore();}
+ if(!state.authoredCloth)state.authoredCloth={};
+ if(O.accessory!=='none')drawCape(c,{shoulder:{x:pose.lean*12,y:pose.torsoY-30}},state.authoredCloth,movement.dt,time,state.speedBlend,vy,ground,tones);
+ function leg(l){const hip={x:l.hip.x,y:l.hip.y+(ground&&!motion.moving?-2:0)};c.save();if(l.back)c.filter='brightness(0.72)';segment(c,'thigh',tones,hip,l.knee,5.3);segment(c,'shin',tones,l.knee,l.ankle,4.2);drawPart(c,'boot',tones,l.foot.x+1,l.foot.y,7.2,5.8,l.footAngle||0,.36,1);c.restore();}
+ function arm(a){c.save();if(a.back)c.filter='brightness(0.72)';segment(c,'upperArm',tones,a.shoulder,a.elbow,4.8);segment(c,'forearm',tones,a.elbow,a.wrist,3.5);drawPart(c,'hand',tones,a.wrist.x,a.wrist.y,3.8,4.8,0,.5,.12);c.restore();}
  leg(pose.legs[0]);arm(pose.arms[0]);leg(pose.legs[1]);
- drawPart(c,'torso',tones,pose.shoulder.x,pose.shoulder.y-3,12,27,-pose.lean,.47,0);
- drawPart(c,'head',tones,pose.head.x,pose.head.y,15,17,0,.53,0);
+ const lean=pose.lean*12;
+ drawPart(c,'torso',tones,lean,pose.shoulderY-1,11.5,17,pose.torsoAngle,.47,0);
+ drawPart(c,'head',tones,1+lean,pose.headY,13,13,pose.headTilt||0,.53,0);
  arm(pose.arms[1]);c.restore();
- if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-65);c.fillText(String(name).slice(0,16),x,y-65);c.restore();}
+ if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-61);c.fillText(String(name).slice(0,16),x,y-61);c.restore();}
  return true;
 }
-root.EixoJumpExactArt={version:'eixo-runner-v8-rig',ready,background,platform,runner,images,themes,heroHeight:64,isReady:()=>PARTS.every(p=>has(images.parts[p]))};
+root.EixoJumpExactArt={version:'eixo-runner-v9-authored',ready,background,platform,runner,images,themes,heroHeight:58,isReady:()=>PARTS.every(p=>has(images.parts[p]))};
 })(window);
