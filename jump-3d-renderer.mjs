@@ -32,6 +32,7 @@ function prepareModel(model){
   const box=new THREE.Box3().setFromObject(model),size=new THREE.Vector3();box.getSize(size);
   const scale=MODEL_HEIGHT/Math.max(.001,size.y);model.scale.setScalar(scale);
   const scaled=new THREE.Box3().setFromObject(model);model.userData.groundOffset=-scaled.min.y;model.position.y=model.userData.groundOffset;
+  if(canvas){canvas.dataset.sourceBounds=[size.x,size.y,size.z].map(v=>v.toFixed(5)).join(',');canvas.dataset.modelScale=scale.toFixed(4);canvas.dataset.scaledBounds=[scaled.min.y,scaled.max.y].map(v=>v.toFixed(2)).join(',')}
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false}});
   return model;
 }
@@ -65,5 +66,5 @@ function endFrame(time){
 }
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260928-v331',gltf=>{source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready)},()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260928-v332',gltf=>{source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready)},()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 window.EixoJump3D={ready:readyPromise,isReady:()=>ready,beginFrame,actor,endFrame};

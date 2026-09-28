@@ -16,3 +16,14 @@ test('JUMP mounts the continuous 3D renderer and serves its model locally',()=>{
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.core.min.js')).size>100000,'Three.js core dependency must ship with the module');
  assert.doesNotMatch(game,/EixoJumpExactArt\?\.runner/,'the rejected sprite runner must never return as a fallback');
 });
+
+test('the exported 3D rig has normalized transforms for browser-sized rendering',()=>{
+ const glb=fs.readFileSync(path.join(root,'assets/hero-3d/eixo-hero.glb'));
+ assert.equal(glb.toString('ascii',0,4),'glTF');
+ const jsonLength=glb.readUInt32LE(12),json=JSON.parse(glb.toString('utf8',20,20+jsonLength).trim());
+ const rig=json.nodes.find(node=>node.name==='EIXO_Rig');
+ assert.ok(rig,'missing EIXO_Rig node');
+ assert.deepEqual(rig.scale||[1,1,1],[1,1,1],'the FBX centimetre scale must be baked before glTF export');
+ assert.ok((json.animations||[]).some(a=>a.name==='Run'));
+ assert.ok((json.animations||[]).some(a=>a.name==='Jump'));
+});
