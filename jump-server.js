@@ -8,7 +8,7 @@ const PUBLIC_CAPACITY=20;
 const LOBBY_CAPACITY=5,LOBBY_TIMEOUT=90000;
 const PALETTE=['#e7d8b5','#b76632','#76503c','#ffffff','#e83e45','#ff7a2f','#f1c438','#39b86a','#7bdc5a','#00e5ff','#2f9bd1','#3b82f6','#6f5cff','#a855f7','#ff4fd8','#ff6b9d','#94a3b8','#46535f','#172b3b','#263c5c','#111827'];
 const FIXED_APPEARANCE={skin:'#f0c7a2',skinShade:'#dba982',eyes:'#17202a'};
-const OUTFIT_DEFAULTS={hair:'#19222d',top:'#e7d8b5',accent:'#b76632',pants:'#263c5c',shoes:'#76503c',accessory:'cape',effect:'none'};
+const OUTFIT_DEFAULTS={hair:'#19222d',top:'#e7d8b5',accent:'#b76632',pants:'#263c5c',shoes:'#76503c',accessory:'none',effect:'none'};
 const PARTS=['hair','top','accent','pants','shoes','accessory','effect'];
 const special=(value,label,minVip)=>({value,label,minVip});
 const COLOR_LABELS={
@@ -72,7 +72,9 @@ async function initDb(db){
   await db.query('DROP TABLE IF EXISTS jump_teams');
   await db.query('CREATE TABLE IF NOT EXISTS jump_scores(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query("CREATE TABLE IF NOT EXISTS jump_cosmetics(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,colors JSONB NOT NULL DEFAULT '{}'::jsonb)");
-  await db.query(`UPDATE jump_cosmetics SET colors=jsonb_set(colors,'{accessory}','"cape"'::jsonb,true) WHERE colors->>'accessory' IN ('scarf','satchel')`);
+  await db.query('ALTER TABLE jump_cosmetics ADD COLUMN IF NOT EXISTS cape_optional_migrated BOOLEAN NOT NULL DEFAULT FALSE');
+  await db.query(`UPDATE jump_cosmetics SET colors=jsonb_set(colors,'{accessory}','"none"'::jsonb,true),cape_optional_migrated=TRUE WHERE cape_optional_migrated=FALSE`);
+  await db.query('ALTER TABLE jump_cosmetics ALTER COLUMN cape_optional_migrated SET DEFAULT TRUE');
   await db.query('CREATE TABLE IF NOT EXISTS jump_rooms(id UUID PRIMARY KEY,code VARCHAR(6) UNIQUE NOT NULL,name VARCHAR(24) NOT NULL,biome VARCHAR(12) NOT NULL,max_players INTEGER NOT NULL DEFAULT 5,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await db.query("UPDATE jump_rooms SET biome='astral' WHERE biome<>'astral'");
   await db.query('CREATE TABLE IF NOT EXISTS jump_room_members(room_id UUID NOT NULL REFERENCES jump_rooms(id) ON DELETE CASCADE,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,best_score INTEGER NOT NULL DEFAULT 0,joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(room_id,player_id))');

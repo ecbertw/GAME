@@ -5,6 +5,10 @@ import {clone as cloneSkeleton} from './vendor/three/addons/utils/SkeletonUtils.
 const WORLD_W=960,WORLD_H=540,MODEL_HEIGHT=82;
 const actors=new Map();
 let renderer,scene,camera,canvas,source,clips=[],ready=false,frame=0,lastTime=performance.now()/1000;
+function mark(state,detail=''){
+  const node=document.getElementById('jump3dCanvas');if(!node)return;
+  node.dataset.rendererState=state;if(detail)node.dataset.rendererDetail=String(detail).slice(0,160);else delete node.dataset.rendererDetail;
+}
 
 function colour(value,fallback){
   if(value==='rainbow')return new THREE.Color().setHSL((performance.now()/9000)%1,.82,.58);
@@ -15,6 +19,7 @@ function mount(){
   if(!root||!base||canvas)return;
   canvas=document.getElementById('jump3dCanvas');
   if(!canvas){canvas=document.createElement('canvas');canvas.id='jump3dCanvas';canvas.setAttribute('aria-hidden','true');base.after(canvas)}
+  mark('mounted');
   renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,premultipliedAlpha:true,powerPreference:'high-performance'});
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.setSize(WORLD_W,WORLD_H,false);renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -59,5 +64,6 @@ function endFrame(time){
   for(const [id,a] of actors){if(a.seen!==frame){a.root.visible=false}else a.mixer.update(dt)}renderer.render(scene,camera);
 }
 mount();
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260928-v330',gltf=>{source=gltf.scene;clips=gltf.animations||[];ready=!!source;resolve(ready)},()=>{},()=>resolve(false)));
+mark('loading');
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260928-v331',gltf=>{source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready)},()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 window.EixoJump3D={ready:readyPromise,isReady:()=>ready,beginFrame,actor,endFrame};

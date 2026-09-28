@@ -145,12 +145,13 @@ test('skin stays fixed, hair is editable and VIP wardrobe unlocks are enforced s
  const goldPants=J.WARDROBE.pants.find(x=>x.value==='#ffd84d');assert.equal(goldPants?.minVip,1,'gold pants should unlock at VIP 1');
  for(const fx of ['orbit','stardust','aurora','supernova','void','comet','prism'])assert.ok(J.WARDROBE.effect.some(x=>x.value===fx),'missing VIP effect '+fx);
 });
-test('retired accessories normalize to the cape and persistent outfits are migrated',async()=>{
+test('the cape is optional and persistent legacy accessories migrate to no accessory',async()=>{
  const queries=[];await J.initDb({query:async q=>{queries.push(String(q));return{rows:[],rowCount:0}}});
- assert.ok(queries.some(q=>q.includes("IN ('scarf','satchel')")&&q.includes('jsonb_set')));
+ assert.equal(J.DEFAULTS.accessory,'none');
+ assert.ok(queries.some(q=>q.includes('cape_optional_migrated')&&q.includes('jsonb_set')));
  const retired={id:'retired-accessory',vipLevel:6};
  const saved=await J.saveOutfit(db,retired,{outfit:{...J.DEFAULTS,accessory:'scarf'}});
- assert.equal(saved.outfit.accessory,'cape');
+ assert.equal(saved.outfit.accessory,'none');
 });
 test('multiplayer peers receive the equipped outfit and effect',async()=>{
  const a={id:'jump-outfit-a',name:'A',country:'PT',vipLevel:1};

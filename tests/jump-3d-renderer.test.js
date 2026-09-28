@@ -13,4 +13,6 @@ test('JUMP mounts the continuous 3D renderer and serves its model locally',()=>{
  assert.match(renderer,/Accessory_Cape/);assert.match(renderer,/style\?\.accessory\|\|'none'/);
  assert.match(css,/#jump3dCanvas/);assert.match(server,/'\.glb':'model\/gltf-binary'/);assert.match(server,/PUBLIC_STATIC_EXTS[^;]+\.mjs[^;]+\.glb/);
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.module.min.js')).size>100000);
+ assert.ok(fs.statSync(path.join(root,'vendor/three/three.core.min.js')).size>100000,'Three.js core dependency must ship with the module');
+ assert.doesNotMatch(game,/EixoJumpExactArt\?\.runner/,'the rejected sprite runner must never return as a fallback');
 });
