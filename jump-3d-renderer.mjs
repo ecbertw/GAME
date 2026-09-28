@@ -66,10 +66,25 @@ function materialSet(root,style,ghost=false){
   });
 }
 
+function findBone(root,side,kind){
+  let hit=null;const sideWords=side==='left'?['left','_l','.l','-l']:['right','_r','.r','-r'];
+  const kindWords=kind==='upper'?['upperarm','upper_arm','uparm','arm']:['forearm','lowerarm','lower_arm','fore_arm'];
+  root.traverse(o=>{
+    if(hit||!o.isBone)return;const n=String(o.name||'').toLowerCase().replace(/mixamorig/g,'');
+    const sideOk=sideWords.some(w=>n.includes(w)),kindOk=kindWords.some(w=>n.includes(w));
+    const wrong=kind==='upper'&&['forearm','lowerarm','lower_arm','fore_arm'].some(w=>n.includes(w));
+    if(sideOk&&kindOk&&!wrong)hit=o;
+  });
+  return hit;
+}
 function createActor(root,id,ghost){
   const mixer=new THREE.AnimationMixer(root),actions={};
   for(const clip of clips){const key=(clip.name||'').toLowerCase();actions[key]=mixer.clipAction(clip)}
-  return {id,root,mixer,actions,cape:root.getObjectByName('Accessory_Cape'),current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true};
+  const bones={
+    leftUpper:findBone(root,'left','upper'),rightUpper:findBone(root,'right','upper'),
+    leftFore:findBone(root,'left','fore'),rightFore:findBone(root,'right','fore')
+  };
+  return {id,root,mixer,actions,bones,cape:root.getObjectByName('Accessory_Cape'),current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true,runClock:0};
 }
 
 function makeActor(id,ghost){
@@ -88,6 +103,11 @@ function runTimeScale(motion){
   return clamp(speed/RUN_REFERENCE_SPEED,.72,1.38);
 }
 
+function jumpPhase(vy){
+  const v=Number(vy)||0;
+  if(v>=0)return clamp(.10+(1-clamp(v/414,0,1))*.40,.10,.50);
+  return clamp(.50+clamp((-v)/564,0,1)*.40,.50,.90);
+}
 function chooseAction(actor,motion,dt=.016){
   const ground=motion.ground!==false;
   const wanted=ground?(motion.moving?pickAction(actor.actions,'run'):(pickAction(actor.actions,'idle')||pickAction(actor.actions,'run'))):pickAction(actor.actions,'jump');
@@ -95,30 +115,56 @@ function chooseAction(actor,motion,dt=.016){
   const action=actor.actions[wanted];
   actor.runScale=damp(actor.runScale,runTimeScale(motion)||1,10,dt);
 
-  if(actor.current===wanted){
-    if(wanted.includes('run'))action.setEffectiveTimeScale(actor.runScale);
-    return;
+  if(actor.current!==wanted){
+    const previous=actor.current?actor.actions[actor.current]:null;
+    action.reset().enabled=true;action.setEffectiveWeight(1);
+    if(wanted.includes('jump')){
+      action.setLoop(THREE.LoopOnce,1);action.clampWhenFinished=true;action.setEffectiveTimeScale(1);action.play();action.paused=true;
+    }else{
+      action.paused=false;action.setLoop(THREE.LoopRepeat,Infinity);action.clampWhenFinished=false;action.setEffectiveTimeScale(wanted.includes('run')?actor.runScale:1);action.play();
+    }
+    if(previous&&previous!==action){previous.paused=false;previous.crossFadeTo(action,wanted.includes('jump')?0.08:(actor.current?.includes('jump')?0.10:0.16),true)}
+    actor.current=wanted;
   }
-
-  const previous=actor.current?actor.actions[actor.current]:null;
-  action.reset().enabled=true;action.setEffectiveWeight(1);
+  if(wanted.includes('run')){action.paused=false;action.setEffectiveTimeScale(actor.runScale)}
   if(wanted.includes('jump')){
-    action.setLoop(THREE.LoopOnce,1);action.clampWhenFinished=true;action.setEffectiveTimeScale(1);action.setDuration(.82);
-  }else{
-    action.setLoop(THREE.LoopRepeat,Infinity);action.clampWhenFinished=false;action.setEffectiveTimeScale(wanted.includes('run')?actor.runScale:1);
+    action.paused=true;
+    const clip=action.getClip?.();if(clip?.duration)action.time=clip.duration*jumpPhase(motion.vy);
   }
-  action.play();
-  if(previous&&previous!==action)previous.crossFadeTo(action,wanted.includes('jump')?0.10:(actor.current?.includes('jump')?0.12:0.18),true);
-  actor.current=wanted;
 }
 
 function updateActorPose(actor,motion,dt){
   const facing=motion.facing===-1?-1:1,ground=motion.ground!==false,vy=Number(motion.vy)||0;
-  const targetLean=!ground?(-facing*.026+clamp(-vy/4200,-.028,.028)):(motion.moving?-facing*.035:0);
-  actor.lean=damp(actor.lean,targetLean,12,dt);
+  // The imported neutral pose leans very slightly into travel. Counter it while
+  // idle, keep a restrained athletic lean while running, and avoid exaggerated
+  // pitch changes in the air.
+  const targetLean=!ground?(facing*.006+clamp(-vy/9000,-.012,.012)):(motion.moving?-facing*.022:facing*.024);
+  actor.lean=damp(actor.lean,targetLean,14,dt);
   actor.root.rotation.y=facing===1?Math.PI/2:-Math.PI/2;
   actor.root.rotation.z=actor.lean;
   actor.lastGround=ground;
+}
+function addBoneRotation(bone,axis,angle){
+  if(!bone||!Number.isFinite(angle)||Math.abs(angle)<1e-5)return;
+  const q=new THREE.Quaternion().setFromAxisAngle(axis,angle);bone.quaternion.multiply(q);
+}
+function proceduralArms(actor,motion,dt){
+  const ground=motion.ground!==false,moving=!!motion.moving,speed=clamp(Math.abs(Number(motion.vx)||0)/RUN_REFERENCE_SPEED,0,1.35);
+  if(ground&&moving){
+    actor.runClock+=dt*(8.6+speed*2.4);
+    const swing=Math.sin(actor.runClock)*(.34*clamp(speed,.55,1.15));
+    const bend=.10+.06*Math.max(0,Math.cos(actor.runClock));
+    addBoneRotation(actor.bones?.leftUpper,new THREE.Vector3(1,0,0),swing);
+    addBoneRotation(actor.bones?.rightUpper,new THREE.Vector3(1,0,0),-swing);
+    addBoneRotation(actor.bones?.leftFore,new THREE.Vector3(1,0,0),-bend);
+    addBoneRotation(actor.bones?.rightFore,new THREE.Vector3(1,0,0),-bend);
+  }else if(!ground){
+    const phase=jumpPhase(motion.vy),lift=Math.sin(phase*Math.PI)*.16;
+    addBoneRotation(actor.bones?.leftUpper,new THREE.Vector3(1,0,0),-.10-lift);
+    addBoneRotation(actor.bones?.rightUpper,new THREE.Vector3(1,0,0),-.10-lift);
+    addBoneRotation(actor.bones?.leftFore,new THREE.Vector3(1,0,0),-.08);
+    addBoneRotation(actor.bones?.rightFore,new THREE.Vector3(1,0,0),-.08);
+  }
 }
 
 function beginFrame(){mount();frame++;for(const a of actors.values())a.seen=-1}
@@ -136,9 +182,12 @@ function endFrame(time){
   mount();if(!ready||!renderer)return;
   const now=Number(time)||performance.now()/1000,dt=Math.min(.05,Math.max(0,now-lastTime));lastTime=now;
   for(const a of actors.values()){
-    if(a.seen!==frame)a.root.visible=false;
-    else{updateActorPose(a,a._motion||{},dt)}
+    if(a.seen!==frame){a.root.visible=false;continue}
+    updateActorPose(a,a._motion||{},dt);
     a.mixer.update(dt);
+    // Mixer writes the authored clip first; the arm layer is additive afterwards,
+    // so an exported run with static arms still looks alive without touching physics.
+    proceduralArms(a,a._motion||{},dt);
   }
   renderer.render(scene,camera);
 }
@@ -165,12 +214,12 @@ function preview(canvasNode,data={}){
   p.actor.root.position.y=p.actor.root.userData.groundOffset||0;
   materialSet(p.actor.root,data.style||{},false);updateActorPose(p.actor,motion,dt);chooseAction(p.actor,motion,dt);
   if(p.actor.cape){p.actor.cape.visible=String(data.style?.accessory||'none')==='cape';p.actor.cape.rotation.x=.16+Math.sin(performance.now()/170)*.035}
-  p.actor.mixer.update(dt);p.renderer.render(p.scene,p.camera);return true;
+  p.actor.mixer.update(dt);proceduralArms(p.actor,motion,dt);p.renderer.render(p.scene,p.camera);return true;
 }
 
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v343',gltf=>{
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v344',gltf=>{
   source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready);
 },()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 
