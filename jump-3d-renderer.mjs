@@ -49,14 +49,14 @@ function makeActor(id,ghost){
 function chooseAction(actor,motion){
   const names=Object.keys(actor.actions),pick=part=>names.find(n=>n.includes(part));
   const airborne=motion.ground===false||Math.abs(Number(motion.vy)||0)>12,wanted=airborne?pick('jump'):(motion.moving?pick('run'):(pick('idle')||pick('run')));
-  if(!wanted||actor.current===wanted)return;const next=actor.actions[wanted];next.reset().enabled=true;next.setEffectiveWeight(1);next.setLoop(airborne?THREE.LoopOnce:THREE.LoopRepeat,airborne?1:Infinity);next.clampWhenFinished=airborne;
+  if(!wanted||actor.current===wanted)return;const next=actor.actions[wanted];next.reset().enabled=true;next.setEffectiveWeight(1);next.setLoop(airborne?THREE.LoopOnce:THREE.LoopRepeat,airborne?1:Infinity);next.clampWhenFinished=airborne;if(airborne)next.setDuration(.85);
   if(actor.current)actor.actions[actor.current]?.crossFadeTo(next,.16,true);next.play();actor.current=wanted;
 }
 function beginFrame(){mount();frame++;for(const a of actors.values())a.seen=-1}
 function actor(data){
   mount();if(!ready||!renderer||!data)return false;const id=String(data.motion?.identity||data.name||'local'),a=actors.get(id)||makeActor(id,!!data.ghost);a.seen=frame;a.root.visible=true;
   const facing=data.motion?.facing===-1?-1:1;a.root.position.x=Number(data.x)||0;a.root.position.y=WORLD_H-(Number(data.y)||0)+(a.root.userData.groundOffset||0);a.root.position.z=a.ghost?-10:0;
-  const sx=Math.abs(a.root.scale.x);a.root.scale.x=sx*facing;materialSet(a.root,data.style||{});
+  a.root.rotation.y=facing===1?-Math.PI/2:Math.PI/2;materialSet(a.root,data.style||{});
   if(a.cape){a.cape.visible=String(data.style?.accessory||'none')==='cape';a.cape.rotation.x=.08+Math.min(.42,Math.abs(Number(data.motion?.vy)||0)/700)+Math.sin(performance.now()/170)*.035}
   chooseAction(a,data.motion||{});return true;
 }
@@ -66,5 +66,5 @@ function endFrame(time){
 }
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260928-v332',gltf=>{source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready)},()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260928-v341',gltf=>{source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready)},()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 window.EixoJump3D={ready:readyPromise,isReady:()=>ready,beginFrame,actor,endFrame};
