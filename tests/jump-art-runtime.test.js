@@ -14,9 +14,8 @@ test('JUMP requests only Astral scenery and the approved character, without obso
  assert.equal(requests.filter(x=>/jump-astral\.webp/.test(x)).length,1);
  assert.equal(requests.filter(x=>/platform-astral\.png/.test(x)).length,1);
  assert.equal(requests.filter(x=>/ground-astral\.png/.test(x)).length,1);
- assert.ok(requests.some(url=>url.startsWith('/assets/game-v300/hero-v15-run.png?')));
- assert.ok(requests.some(url=>url.startsWith('/assets/game-v300/hero-v10-air.png?')));
- assert.equal(requests.length,5,'only Astral and the restored run/air animation should download');
+ for(const part of ['head','torso','upperArm','forearm','hand','thigh','shin','boot','cape'])assert.ok(requests.some(url=>url.startsWith('/assets/hero-v8/'+part+'.png?')));
+ assert.equal(requests.length,12,'only Astral and the nine articulated HD components should download');
  assert.doesNotMatch(fs.readFileSync(path.join(root,'index.html'),'utf8'),/<script src="(?:assets\/(?:jump15|jump-exact)\/|jump15-art\.js)/);
 });
 test('Astral ground and platform art place their visible surface exactly at collision height',async()=>{
