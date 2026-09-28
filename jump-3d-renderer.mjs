@@ -144,26 +144,32 @@ function updateActorPose(actor,motion,dt){
   actor.root.rotation.z=actor.lean;
   actor.lastGround=ground;
 }
-function addBoneRotation(bone,axis,angle){
-  if(!bone||!Number.isFinite(angle)||Math.abs(angle)<1e-5)return;
-  const q=new THREE.Quaternion().setFromAxisAngle(axis,angle);bone.quaternion.multiply(q);
+const SCREEN_SWING_AXIS=new THREE.Vector3(0,0,1),scratchParentQ=new THREE.Quaternion(),scratchAxis=new THREE.Vector3(),scratchBoneQ=new THREE.Quaternion();
+function addScreenPlaneBoneRotation(bone,angle){
+  if(!bone?.parent||!Number.isFinite(angle)||Math.abs(angle)<1e-5)return;
+  bone.parent.getWorldQuaternion(scratchParentQ);
+  scratchAxis.copy(SCREEN_SWING_AXIS).applyQuaternion(scratchParentQ.invert()).normalize();
+  scratchBoneQ.setFromAxisAngle(scratchAxis,angle);
+  bone.quaternion.premultiply(scratchBoneQ);
 }
 function proceduralArms(actor,motion,dt){
   const ground=motion.ground!==false,moving=!!motion.moving,speed=clamp(Math.abs(Number(motion.vx)||0)/RUN_REFERENCE_SPEED,0,1.35);
   if(ground&&moving){
     actor.runClock+=dt*(8.6+speed*2.4);
-    const swing=Math.sin(actor.runClock)*(.34*clamp(speed,.55,1.15));
-    const bend=.10+.06*Math.max(0,Math.cos(actor.runClock));
-    addBoneRotation(actor.bones?.leftUpper,new THREE.Vector3(1,0,0),swing);
-    addBoneRotation(actor.bones?.rightUpper,new THREE.Vector3(1,0,0),-swing);
-    addBoneRotation(actor.bones?.leftFore,new THREE.Vector3(1,0,0),-bend);
-    addBoneRotation(actor.bones?.rightFore,new THREE.Vector3(1,0,0),-bend);
+    const runAction=actor.current?.includes('run')?actor.actions[actor.current]:null,clip=runAction?.getClip?.();
+    const phase=clip?.duration?((runAction.time/clip.duration)%1)*Math.PI*2:actor.runClock;
+    const swing=Math.sin(phase)*(.38*clamp(speed,.55,1.15));
+    const bend=.10+.07*Math.max(0,Math.cos(phase));
+    addScreenPlaneBoneRotation(actor.bones?.leftUpper,swing);
+    addScreenPlaneBoneRotation(actor.bones?.rightUpper,-swing);
+    addScreenPlaneBoneRotation(actor.bones?.leftFore,-bend);
+    addScreenPlaneBoneRotation(actor.bones?.rightFore,-bend);
   }else if(!ground){
-    const phase=jumpPhase(motion.vy),lift=Math.sin(phase*Math.PI)*.16;
-    addBoneRotation(actor.bones?.leftUpper,new THREE.Vector3(1,0,0),-.10-lift);
-    addBoneRotation(actor.bones?.rightUpper,new THREE.Vector3(1,0,0),-.10-lift);
-    addBoneRotation(actor.bones?.leftFore,new THREE.Vector3(1,0,0),-.08);
-    addBoneRotation(actor.bones?.rightFore,new THREE.Vector3(1,0,0),-.08);
+    const phase=jumpPhase(motion.vy),lift=Math.sin(phase*Math.PI)*.18;
+    addScreenPlaneBoneRotation(actor.bones?.leftUpper,-.10-lift);
+    addScreenPlaneBoneRotation(actor.bones?.rightUpper,-.10-lift);
+    addScreenPlaneBoneRotation(actor.bones?.leftFore,-.09);
+    addScreenPlaneBoneRotation(actor.bones?.rightFore,-.09);
   }
 }
 
@@ -187,7 +193,7 @@ function endFrame(time){
     a.mixer.update(dt);
     // Mixer writes the authored clip first; the arm layer is additive afterwards,
     // so an exported run with static arms still looks alive without touching physics.
-    proceduralArms(a,a._motion||{},dt);
+    a.root.updateMatrixWorld(true);proceduralArms(a,a._motion||{},dt);
   }
   renderer.render(scene,camera);
 }
