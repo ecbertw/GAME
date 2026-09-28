@@ -33,6 +33,7 @@ function mount(){
   mark('mounted');
   renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,premultipliedAlpha:true,powerPreference:'high-performance'});
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.setSize(WORLD_W,WORLD_H,false);renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.setClearColor(0x000000,0);
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   scene=new THREE.Scene();camera=new THREE.OrthographicCamera(0,WORLD_W,WORLD_H,0,.1,2000);camera.position.set(0,0,800);camera.lookAt(0,0,0);
   addLights(scene,false);
@@ -115,7 +116,7 @@ function updateActorPose(actor,motion,dt){
   const facing=motion.facing===-1?-1:1,ground=motion.ground!==false,vy=Number(motion.vy)||0;
   const targetLean=!ground?(-facing*.026+clamp(-vy/4200,-.028,.028)):(motion.moving?-facing*.035:0);
   actor.lean=damp(actor.lean,targetLean,12,dt);
-  actor.root.rotation.y=facing===1?-Math.PI/2:Math.PI/2;
+  actor.root.rotation.y=facing===1?Math.PI/2:-Math.PI/2;
   actor.root.rotation.z=actor.lean;
   actor.lastGround=ground;
 }
@@ -146,7 +147,7 @@ function createPreview(canvasNode){
   if(previewState?.renderer){try{previewState.renderer.dispose()}catch(_){}}
   const w=Math.max(2,Number(canvasNode.width)||720),h=Math.max(2,Number(canvasNode.height)||520),aspect=w/h;
   const r=new THREE.WebGLRenderer({canvas:canvasNode,alpha:true,antialias:true,premultipliedAlpha:true,powerPreference:'high-performance'});
-  r.setPixelRatio(Math.min(devicePixelRatio||1,2));r.setSize(w,h,false);r.outputColorSpace=THREE.SRGBColorSpace;
+  r.setPixelRatio(Math.min(devicePixelRatio||1,2));r.setSize(w,h,false);r.outputColorSpace=THREE.SRGBColorSpace;r.setClearColor(0x000000,0);
   const s=new THREE.Scene();addLights(s,true);
   const halfH=55,cam=new THREE.OrthographicCamera(-halfH*aspect,halfH*aspect,94,-16,.1,1500);cam.position.set(0,38,600);cam.lookAt(0,38,0);
   const root=prepareModel(cloneSkeleton(source));root.visible=true;root.renderOrder=2;s.add(root);
@@ -169,7 +170,7 @@ function preview(canvasNode,data={}){
 
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v342',gltf=>{
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v343',gltf=>{
   source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready);
 },()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 
