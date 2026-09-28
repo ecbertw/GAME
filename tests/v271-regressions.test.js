@@ -15,8 +15,11 @@ test('pixel claim menu has a translated close control',()=>{
  const js=read('background-claims.js');assert.match(js,/pt:\{close:'FECHAR'/);assert.match(js,/data-claim-close/);assert.match(js,/hideMenu\(\);return/);
 });
 
-test('wardrobe preview keeps the full runner inside its canvas',()=>{
- const js=read('jump.js');assert.match(js,/translate\(90,118\);c\.scale\(1\.65,1\.65\)/);
+test('wardrobe preview uses the current 3D renderer and keeps its own camera framing',()=>{
+ const js=read('jump.js'),renderer=read('jump-3d-renderer.mjs');
+ assert.match(js,/gl\.preview\(cv,\{style:outfit,time:now,motion\}\)/);
+ assert.match(renderer,/function createPreview\(canvasNode\)/);
+ assert.match(renderer,/new THREE\.OrthographicCamera/);
 });
 
 test('online peers use velocity-assisted snapshot smoothing',()=>{
