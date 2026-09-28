@@ -137,8 +137,9 @@ function outfitColor(value,time,offset=0){
 }
 function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
  const O={hair:'#19222d',top:'#e7d8b5',accent:'#b76632',pants:'#263c5c',shoes:'#76503c',effect:'none',...(style||outfit||{})};
- if(window.EixoJump3D?.actor?.({x,y,style:O,name,ghost,time,motion}))window.EixoJumpExactArt?.effects?.(c,x,y,O,name,ghost,time,motion);
- return;
+ const drawn3d=window.EixoJump3D?.actor?.({x,y,style:O,name,ghost,time,motion});
+ if(drawn3d){window.EixoJumpExactArt?.effects?.(c,x,y,O,name,ghost,time,motion);return}
+ if(window.EixoJumpExactArt?.isReady?.()&&window.EixoJumpExactArt?.runner?.(c,x,y,O,name,ghost,time,motion))return;
  const F={skin:'#f0c7a2',skinShade:'#cc8f69',eyes:'#07131f',...(fixedAppearance||{})};
  const dir=motion.facing===-1?-1:1,moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0),air=!ground||Math.abs(vy)>5;
  const phase=time*12,walk=moving&&ground?Math.sin(phase):0,bob=moving&&ground?Math.abs(Math.sin(phase))*1.1:0;
@@ -218,9 +219,9 @@ function draw(){
    window.EixoJumpWorlds.platform(c,biome,x,y,p.w,i,{moving:p.moving,fragile:p.fragile,progress:fragileProgress});
  }
  for(const peer of peers){
-   const px=Number(peer.renderX??peer.x),py=Number(peer.renderY??peer.y),y=screen(py);if(y>-12&&y<P.H+34)drawCharacter(c,px,y,peer.outfit,peer.name,true,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,moving:peer.moving,worldY:-py,cameraY:P.H-30+cam,identity:"peer:"+peer.id,runId:run?.runId});
+   const px=Number(peer.renderX??peer.x),py=Number(peer.renderY??peer.y),y=screen(py);if(y>-12&&y<P.H+34)drawCharacter(c,px,y,peer.outfit,peer.name,true,local.time,{facing:peer.facing,ground:peer.ground,vy:peer.vy,vx:Number(peer.velocityX??peer.vx)||0,moving:peer.moving,worldY:-py,cameraY:P.H-30+cam,identity:"peer:"+peer.id,runId:run?.runId});
  }
- drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time,{facing,ground:local.ground,vy:local.vy,moving:keys.left!==keys.right,worldY:-local.y,cameraY:P.H-30+cam,identity:"local",runId:run?.runId});
+ drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time,{facing,ground:local.ground,vy:local.vy,vx:((keys.right?1:0)-(keys.left?1:0))*P.SPEED,moving:keys.left!==keys.right,worldY:-local.y,cameraY:P.H-30+cam,identity:"local",runId:run?.runId});
  c.fillStyle='#ffffffaa';c.fillRect(0,0,P.W,1);
  window.EixoJump3D?.endFrame?.(local.time);
 }
@@ -372,7 +373,11 @@ async function customize(){
  modal(txt('character'),'<div class="jump-custom-note">'+(lang()==='pt'?'Cabelo e Roupa editáveis':'Hair and clothing editable')+'</div><div class="jump-custom-preview"><canvas id="jumpAvatarPreview" width="720" height="520"></canvas></div><div class="jump-color-list">'+Object.keys(labels).map(part=>'<label><span>'+labels[part]+(part==='effect'?' · VIP EFFECTS':'')+'</span><select data-jump-outfit="'+part+'">'+options(part)+'</select></label>').join('')+'</div><div class="jump-vip-wardrobe">VIP '+vip+' · CORES E EFEITOS EXCLUSIVOS DESBLOQUEIAM COM O VIP</div><button class="modal-button primary" id="jumpSave">'+txt('save')+'</button><p id="jumpSaveStatus"></p>');
  const resetButton=document.createElement('button');resetButton.type='button';resetButton.className='modal-button';resetButton.id='jumpResetOutfit';resetButton.textContent=lang()==='pt'?'Repor original':'Reset to original';$('jumpSave').before(resetButton);
  resetButton.onclick=()=>{outfit={...out.defaults};panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.value=outfit[sel.dataset.jumpOutfit]});$('jumpSaveStatus').textContent=lang()==='pt'?'Original reposto. Guarda para aplicar.':'Original restored. Save to apply.';preview()};
- const preview=()=>{const cv=$('jumpAvatarPreview');if(!cv)return;const c=cv.getContext('2d');c.setTransform(4,0,0,4,0,0);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.clearRect(0,0,180,130);c.save();c.translate(90,118);c.scale(1.65,1.65);drawCharacter(c,0,0,outfit,'',false,performance.now()/1000,{facing,ground:true,vy:0,moving:true,preview:true,identity:"wardrobe"});c.restore()};
+ const preview=()=>{
+  const cv=$('jumpAvatarPreview');if(!cv)return;const now=performance.now()/1000,motion={facing,ground:true,vy:0,vx:P.SPEED,moving:true,preview:true,identity:"wardrobe"},gl=window.EixoJump3D;
+  if(gl?.preview){if(!gl.isReady?.())return;if(gl.preview(cv,{style:outfit,time:now,motion}))return}
+  const c=cv.getContext('2d');if(!c)return;c.setTransform(4,0,0,4,0,0);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.clearRect(0,0,180,130);c.save();c.translate(90,118);c.scale(1.65,1.65);window.EixoJumpExactArt?.runner?.(c,0,0,outfit,'',false,now,motion);c.restore();
+ };
  panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.onchange=()=>{outfit[sel.dataset.jumpOutfit]=sel.value;preview()}});
  const previewPanel=panel;let previewTimer;const animatePreview=()=>{if(panel!==previewPanel||!$('jumpAvatarPreview'))return;preview();previewTimer=requestAnimationFrame(animatePreview)};animatePreview();
  $('jumpSave').onclick=async()=>{
