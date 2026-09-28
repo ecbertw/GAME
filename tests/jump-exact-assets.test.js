@@ -25,6 +25,8 @@ test('each realm keeps background, platform and ground in separate editable asse
  }
  const renderer=read('jump-exact-renderer.js');
  assert.match(renderer,/images=\{backgrounds:\{\},platforms:\{\},grounds:\{\},props:\{\},parts:\{\},heroRun:null,heroAir:null\}/);
+ assert.match(renderer,/ART_VERSION='20260929-v343'/);
+ assert.match(renderer,/has\(images\.backgrounds\.astral\).*has\(images\.platforms\.astral\).*has\(images\.grounds\.astral\)/);
  assert.match(renderer,/index===0\?images\.grounds\[name\]:images\.platforms\[name\]/);
 });
 
