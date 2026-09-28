@@ -66,25 +66,48 @@ function materialSet(root,style,ghost=false){
   });
 }
 
-function findBone(root,side,kind){
-  let hit=null;const sideWords=side==='left'?['left','_l','.l','-l']:['right','_r','.r','-r'];
-  const kindWords=kind==='upper'?['upperarm','upper_arm','uparm','arm']:['forearm','lowerarm','lower_arm','fore_arm'];
-  root.traverse(o=>{
-    if(hit||!o.isBone)return;const n=String(o.name||'').toLowerCase().replace(/mixamorig/g,'');
-    const sideOk=sideWords.some(w=>n.includes(w)),kindOk=kindWords.some(w=>n.includes(w));
-    const wrong=kind==='upper'&&['forearm','lowerarm','lower_arm','fore_arm'].some(w=>n.includes(w));
-    if(sideOk&&kindOk&&!wrong)hit=o;
-  });
-  return hit;
+function boneName(bone){return String(bone?.name||'').toLowerCase().replace(/mixamorig/g,'').replace(/[\s:]/g,'')}
+function sideMatch(name,side){
+  const words=side==='left'?['left','_l','.l','-l','l_']:['right','_r','.r','-r','r_'];
+  return words.some(w=>name.includes(w));
+}
+function descendants(bone,depth=3){
+  const out=[];function walk(node,d){if(!node||d>depth)return;for(const child of node.children||[]){if(child.isBone)out.push(child);walk(child,d+1)}}walk(bone,1);return out;
+}
+function findArmChain(root,side){
+  const all=[];root.traverse(o=>{if(o.isBone)all.push(o)});
+  const candidates=all.filter(b=>sideMatch(boneName(b),side));
+  const scoreUpper=b=>{
+    const n=boneName(b);let score=0;
+    if(/upperarm|upper_arm|uparm/.test(n))score+=30;
+    else if(/(^|[_\.\-])arm([_\.\-]|$)/.test(n)||n.endsWith('arm_l')||n.endsWith('arm_r'))score+=18;
+    else if(n.includes('arm'))score+=8;
+    if(/shoulder|clavicle|collar/.test(n))score-=40;
+    if(/forearm|lowerarm|lower_arm|hand|wrist/.test(n))score-=45;
+    if(descendants(b,2).some(x=>/forearm|lowerarm|lower_arm/.test(boneName(x))))score+=20;
+    return score;
+  };
+  const upper=candidates.map(b=>[b,scoreUpper(b)]).sort((a,b)=>b[1]-a[1])[0]?.[0]||null;
+  let fore=null;
+  if(upper){
+    const chain=descendants(upper,3);
+    fore=chain.find(b=>/forearm|lowerarm|lower_arm|fore_arm/.test(boneName(b)))||chain.find(b=>b.isBone)||null;
+  }
+  if(!fore)fore=candidates.find(b=>/forearm|lowerarm|lower_arm|fore_arm/.test(boneName(b)))||null;
+  const namedShoulder=candidates.find(b=>/shoulder|clavicle|collar/.test(boneName(b)))||null;
+  const shoulder=namedShoulder||(upper?.parent?.isBone?upper.parent:null);
+  return {upper,fore,shoulder};
 }
 function createActor(root,id,ghost){
   const mixer=new THREE.AnimationMixer(root),actions={};
   for(const clip of clips){const key=(clip.name||'').toLowerCase();actions[key]=mixer.clipAction(clip)}
-  const bones={
-    leftUpper:findBone(root,'left','upper'),rightUpper:findBone(root,'right','upper'),
-    leftFore:findBone(root,'left','fore'),rightFore:findBone(root,'right','fore')
+  const left=findArmChain(root,'left'),right=findArmChain(root,'right');
+  const bones={leftUpper:left.upper,rightUpper:right.upper,leftFore:left.fore,rightFore:right.fore,leftShoulder:left.shoulder,rightShoulder:right.shoulder};
+  const shoulderRest={
+    left:left.shoulder?.quaternion.clone()||null,
+    right:right.shoulder?.quaternion.clone()||null
   };
-  return {id,root,mixer,actions,bones,cape:root.getObjectByName('Accessory_Cape'),current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true,runClock:0};
+  return {id,root,mixer,actions,bones,shoulderRest,cape:root.getObjectByName('Accessory_Cape'),current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true,runClock:0};
 }
 
 function makeActor(id,ghost){
@@ -152,24 +175,38 @@ function addScreenPlaneBoneRotation(bone,angle){
   scratchBoneQ.setFromAxisAngle(scratchAxis,angle);
   bone.quaternion.premultiply(scratchBoneQ);
 }
+function settleShoulder(bone,rest,strength=.88){
+  if(!bone||!rest)return;
+  bone.quaternion.slerp(rest,clamp(strength,0,1));
+}
 function proceduralArms(actor,motion,dt){
   const ground=motion.ground!==false,moving=!!motion.moving,speed=clamp(Math.abs(Number(motion.vx)||0)/RUN_REFERENCE_SPEED,0,1.35);
   if(ground&&moving){
+    // Kill the imported shrug first. The visible running motion must come from
+    // upper-arm swing + a clearly bent elbow, not the clavicle/shoulder.
+    settleShoulder(actor.bones?.leftShoulder,actor.shoulderRest?.left,.94);
+    settleShoulder(actor.bones?.rightShoulder,actor.shoulderRest?.right,.94);
     actor.runClock+=dt*(8.6+speed*2.4);
     const runAction=actor.current?.includes('run')?actor.actions[actor.current]:null,clip=runAction?.getClip?.();
     const phase=clip?.duration?((runAction.time/clip.duration)%1)*Math.PI*2:actor.runClock;
-    const swing=Math.sin(phase)*(.38*clamp(speed,.55,1.15));
-    const bend=.10+.07*Math.max(0,Math.cos(phase));
+    const swing=Math.sin(phase)*(.31*clamp(speed,.65,1.15));
+    const elbowFlex=1.18+.20*(.5+.5*Math.cos(phase)); // ~68–79 degrees.
+    const elbowPulse=.10*Math.sin(phase);
     addScreenPlaneBoneRotation(actor.bones?.leftUpper,swing);
     addScreenPlaneBoneRotation(actor.bones?.rightUpper,-swing);
-    addScreenPlaneBoneRotation(actor.bones?.leftFore,-bend);
-    addScreenPlaneBoneRotation(actor.bones?.rightFore,-bend);
+    addScreenPlaneBoneRotation(actor.bones?.leftFore,-elbowFlex+elbowPulse);
+    addScreenPlaneBoneRotation(actor.bones?.rightFore,-elbowFlex-elbowPulse);
   }else if(!ground){
-    const phase=jumpPhase(motion.vy),lift=Math.sin(phase*Math.PI)*.18;
-    addScreenPlaneBoneRotation(actor.bones?.leftUpper,-.10-lift);
-    addScreenPlaneBoneRotation(actor.bones?.rightUpper,-.10-lift);
-    addScreenPlaneBoneRotation(actor.bones?.leftFore,-.09);
-    addScreenPlaneBoneRotation(actor.bones?.rightFore,-.09);
+    settleShoulder(actor.bones?.leftShoulder,actor.shoulderRest?.left,.82);
+    settleShoulder(actor.bones?.rightShoulder,actor.shoulderRest?.right,.82);
+    const phase=jumpPhase(motion.vy),lift=Math.sin(phase*Math.PI)*.14,elbow=.78+.12*Math.sin(phase*Math.PI);
+    addScreenPlaneBoneRotation(actor.bones?.leftUpper,-.08-lift);
+    addScreenPlaneBoneRotation(actor.bones?.rightUpper,-.08-lift);
+    addScreenPlaneBoneRotation(actor.bones?.leftFore,-elbow);
+    addScreenPlaneBoneRotation(actor.bones?.rightFore,-elbow);
+  }else{
+    settleShoulder(actor.bones?.leftShoulder,actor.shoulderRest?.left,.96);
+    settleShoulder(actor.bones?.rightShoulder,actor.shoulderRest?.right,.96);
   }
 }
 
@@ -225,7 +262,7 @@ function preview(canvasNode,data={}){
 
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v344',gltf=>{
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v346',gltf=>{
   source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready);
 },()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 
