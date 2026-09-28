@@ -212,5 +212,5 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-78);c.fillText(String(name).slice(0,16),x,y-78);c.restore();}
  return true;
 }
-root.EixoJumpExactArt={version:'eixo-runner-v17-3d-effects',ready,background,platform,runner,effects,images,themes,heroHeight:82,isReady:()=>has(images.heroRun)&&has(images.heroAir)&&has(images.backgrounds.astral)&&has(images.platforms.astral)&&has(images.grounds.astral)};
+root.EixoJumpExactArt={version:'eixo-runner-v16-3d-effects',ready,background,platform,runner,effects,images,themes,heroHeight:82,isReady:()=>has(images.heroRun)&&has(images.heroAir)&&has(images.backgrounds.astral)&&has(images.platforms.astral)&&has(images.grounds.astral)};
 })(window);
