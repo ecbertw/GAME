@@ -2,12 +2,13 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 
-test('JUMP restores the previous full-frame HD animation without touching gameplay physics',()=>{
- const motion=read('jump-motion.js'),renderer=read('jump-exact-renderer.js'),physics=read('jump-physics.js');
+test('JUMP uses a continuous skinned 3D animation without touching gameplay physics',()=>{
+ const motion=read('jump-motion.js'),renderer=read('jump-exact-renderer.js'),three=read('jump-3d-renderer.mjs'),physics=read('jump-physics.js');
  assert.match(motion,/const STRIDE_DISTANCE=112,PREVIEW_SPEED=216/);
  for(const key of ['RUN_LEG','RUN_ARM','AIR','sampleLeg','sampleArm','sampleAir','landing:land'])assert.ok(motion.includes(key),key);
- assert.match(renderer,/version:'eixo-runner-v15-tracked-gait'/);
- assert.match(renderer,/hero-v15-run/);assert.match(renderer,/hero-v10-air/);assert.match(renderer,/function heroFrame/);assert.doesNotMatch(renderer,/EixoJumpRig\.pose/);assert.match(renderer,/imageSmoothingQuality='high'/);
+ assert.match(renderer,/version:'eixo-runner-v16-3d-effects'/);
+ assert.match(three,/AnimationMixer/);assert.match(three,/crossFadeTo/);assert.match(three,/LoopOnce/);assert.match(three,/LoopRepeat/);
+ assert.doesNotMatch(three,/hero-v15-run|hero-v10-air|drawImage\(/);
  assert.doesNotMatch(physics,/RUN_LEG|RUN_ARM|sampleAir|footAngle/);
 });
 

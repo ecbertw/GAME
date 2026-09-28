@@ -137,6 +137,10 @@ function outfitColor(value,time,offset=0){
 }
 function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
  const O={hair:'#19222d',top:'#e7d8b5',accent:'#b76632',pants:'#263c5c',shoes:'#76503c',effect:'none',...(style||outfit||{})};
+ if(window.EixoJump3D?.actor?.({x,y,style:O,name,ghost,time,motion})){
+  window.EixoJumpExactArt?.effects?.(c,x,y,O,name,ghost,time,motion);
+  return;
+ }
  if(window.EixoJumpExactArt?.runner?.(c,x,y,O,name,ghost,time,motion))return;
  const F={skin:'#f0c7a2',skinShade:'#cc8f69',eyes:'#07131f',...(fixedAppearance||{})};
  const dir=motion.facing===-1?-1:1,moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0),air=!ground||Math.abs(vy)>5;
@@ -204,6 +208,7 @@ function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
 }
 function draw(){
  if(!ctx||current!=='jump')return;const c=ctx;drawBackground();
+ window.EixoJump3D?.beginFrame?.();
  if(!local)return;
  const cam=local.cam,screen=y=>P.H-30-(y-cam),activeMin=Math.max(0,Number(local.activeMinPlatform)||0);
  for(let i=activeMin;i<local.platforms.length;i++){
@@ -220,6 +225,7 @@ function draw(){
  }
  drawCharacter(c,local.x,screen(local.y),outfit,'',false,local.time,{facing,ground:local.ground,vy:local.vy,moving:keys.left!==keys.right,worldY:-local.y,cameraY:P.H-30+cam,identity:"local",runId:run?.runId});
  c.fillStyle='#ffffffaa';c.fillRect(0,0,P.W,1);
+ window.EixoJump3D?.endFrame?.(local.time);
 }
 function stepLocalWithAudio(dt){
  const wasGround=!!local.ground;
@@ -474,7 +480,7 @@ function init(){
  main.insertBefore(switcher,$('gameIntro'));
  switcher.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>switchGame(b.dataset.game));
  const root=document.createElement('div');root.id='jumpRoot';root.className='jump-root hidden';
- root.innerHTML='<canvas id="jumpCanvas" width="1920" height="1080" aria-label="JUMP online platformer"></canvas>'+
+ root.innerHTML='<canvas id="jumpCanvas" width="1920" height="1080" aria-label="JUMP online platformer"></canvas><canvas id="jump3dCanvas" width="960" height="540" aria-hidden="true"></canvas>'+
  '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">ASTRAL · ONLINE</div></div>'+
  '<div class="jump-tools"><button id="jumpSoloButton">ONLINE</button><button id="jumpJoinButton">FRIEND LOBBY</button><button id="jumpCustomizeButton">CHARACTER</button></div>'+
  '<div class="jump-status" id="jumpStatus" role="status"></div>'+

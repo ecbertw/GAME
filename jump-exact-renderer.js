@@ -182,6 +182,13 @@ function heroFrame(c,state,ground,moving,vy,tones){
  let img,count,index;if(ground&&state.landTime<.20){img=images.heroAir;count=6;index=5;}else if(!ground){img=images.heroAir;count=6;index=vy>150?2:vy>-90?3:4;}else if(moving||state.speedBlend>.08){img=images.heroRun;count=8;index=Math.floor((((state.phase%1)+1)%1)*count)%count;}else{img=images.heroAir;count=6;index=0;}
  const sheet=recolorSheet(img,tones),sw=sheet.width/count,sh=sheet.height,dh=84,dw=dh*sw/sh;c.drawImage(sheet,index*sw,0,sw,sh,-dw/2,-dh*.895,dw,dh);
 }
+function effects(c,x,y,style,name,ghost=false,time=0,motion={}){
+ const O={...defaults,accessory:'none',effect:'none',...(style||{})},movement=motionState(x,y,time,motion,ghost,name,O.effect),state=movement.state;
+ particlesFor(c,state,Number(motion.cameraY)||0,ghost);
+ if(motion.ground!==false){c.save();c.globalAlpha=ghost?.11:.2;c.fillStyle='#07101d';c.beginPath();c.ellipse(x,y+.5,15,2,0,0,Math.PI*2);c.fill();c.restore()}
+ if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-78);c.fillText(String(name).slice(0,16),x,y-78);c.restore()}
+ return true;
+}
 function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  if(!has(images.heroRun)||!has(images.heroAir))return true;
  const O={...defaults,accessory:'cape',effect:'none',...(style||{})},tones={};
@@ -196,5 +203,5 @@ function runner(c,x,y,style,name,ghost=false,time=0,motion={}){
  if(name){c.save();c.globalAlpha=ghost?.8:1;c.fillStyle='#f5fbff';c.strokeStyle='#19333fbb';c.lineWidth=3;c.textAlign='center';c.font='600 10px system-ui';c.strokeText(String(name).slice(0,16),x,y-78);c.fillText(String(name).slice(0,16),x,y-78);c.restore();}
  return true;
 }
-root.EixoJumpExactArt={version:'eixo-runner-v15-tracked-gait',ready,background,platform,runner,images,themes,heroHeight:64,isReady:()=>has(images.heroRun)&&has(images.heroAir)};
+root.EixoJumpExactArt={version:'eixo-runner-v16-3d-effects',ready,background,platform,runner,effects,images,themes,heroHeight:82,isReady:()=>has(images.heroRun)&&has(images.heroAir)};
 })(window);

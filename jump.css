@@ -8,6 +8,7 @@
 .game-frame.jump-mode:before,.game-frame.jump-mode #gameCanvas,.game-frame.jump-mode .score,.game-frame.jump-mode .game-message,.game-frame.jump-mode .game-feedback{display:none!important}
 .jump-root{position:absolute;inset:0;overflow:hidden;background:#244a62;color:#fff;z-index:5}
 #jumpCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:auto}
+#jump3dCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:3}
 .jump-hud{position:absolute;left:10px;right:10px;top:8px;z-index:8;display:flex;justify-content:space-between;align-items:start;gap:12px;pointer-events:none;text-shadow:1px 2px #1b2732}
 .jump-hud>div:first-child{display:flex;flex-direction:column;gap:6px;background:#101b2bba;border:1px solid #eaf3ff55;padding:8px 10px}
 .jump-hud small{font-size:6px;color:#e2e9ee}

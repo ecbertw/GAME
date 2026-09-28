@@ -40,9 +40,9 @@ test('animated scenery props and character body parts are independent modules',(
  for(const fx of ['orbit','ion','stardust','resonance','comet','aurora','quantum','eclipse','supernova','void','singularity','prism'])assert.match(renderer,new RegExp(fx+':\\['));
 });
 
-test('the 16:9 world uses a 2x backing canvas and a small articulated runner',()=>{
- const game=read('jump.js'),renderer=read('jump-exact-renderer.js'),css=read('redesign.css');
+test('the 16:9 world uses a 2x backing canvas and a continuous 3D runner',()=>{
+ const game=read('jump.js'),renderer=read('jump-exact-renderer.js'),three=read('jump-3d-renderer.mjs'),css=read('redesign.css');
  assert.match(game,/id="jumpCanvas" width="1920" height="1080"/);
  assert.match(game,/ctx\.setTransform\(2,0,0,2,0,0\)/);assert.match(css,/aspect-ratio:16\/9/);
- assert.match(renderer,/heroHeight:64/);assert.match(renderer,/function drawPart/);assert.match(renderer,/function material/);assert.match(renderer,/particlesFor\(c,state/);
+ assert.match(renderer,/heroHeight:82/);assert.match(renderer,/particlesFor\(c,state/);assert.match(three,/MODEL_HEIGHT=82/);assert.match(three,/cloneSkeleton/);
 });
