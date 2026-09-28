@@ -107,7 +107,7 @@ function chooseAction(actor,motion,dt=.016){
     action.setLoop(THREE.LoopRepeat,Infinity);action.clampWhenFinished=false;action.setEffectiveTimeScale(wanted.includes('run')?actor.runScale:1);
   }
   action.play();
-  if(previous&&previous!==action)previous.crossFadeTo(action,wanted.includes('jump')?.10:(actor.current?.includes('jump')?.12:.18),true);
+  if(previous&&previous!==action)previous.crossFadeTo(action,wanted.includes('jump')?0.10:(actor.current?.includes('jump')?0.12:0.18),true);
   actor.current=wanted;
 }
 
