@@ -138,8 +138,8 @@ function outfitColor(value,time,offset=0){
 function drawCharacter(c,x,y,style,name,ghost=false,time=0,motion={}){
  const O={hair:'#19222d',top:'#e7d8b5',accent:'#b76632',pants:'#263c5c',shoes:'#76503c',effect:'none',...(style||outfit||{})};
  const drawn3d=window.EixoJump3D?.actor?.({x,y,style:O,name,ghost,time,motion});
- if(drawn3d){window.EixoJumpExactArt?.effects?.(c,x,y,O,name,ghost,time,motion);return}
- if(window.EixoJumpExactArt?.isReady?.()&&window.EixoJumpExactArt?.runner?.(c,x,y,O,name,ghost,time,motion))return;
+ if(drawn3d)window.EixoJumpExactArt?.effects?.(c,x,y,O,name,ghost,time,motion);
+ return;
  const F={skin:'#f0c7a2',skinShade:'#cc8f69',eyes:'#07131f',...(fixedAppearance||{})};
  const dir=motion.facing===-1?-1:1,moving=!!motion.moving,ground=motion.ground!==false,vy=Number(motion.vy||0),air=!ground||Math.abs(vy)>5;
  const phase=time*12,walk=moving&&ground?Math.sin(phase):0,bob=moving&&ground?Math.abs(Math.sin(phase))*1.1:0;
@@ -375,8 +375,8 @@ async function customize(){
  resetButton.onclick=()=>{outfit={...out.defaults};panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.value=outfit[sel.dataset.jumpOutfit]});$('jumpSaveStatus').textContent=lang()==='pt'?'Original reposto. Guarda para aplicar.':'Original restored. Save to apply.';preview()};
  const preview=()=>{
   const cv=$('jumpAvatarPreview');if(!cv)return;const now=performance.now()/1000,motion={facing,ground:true,vy:0,vx:P.SPEED,moving:true,preview:true,identity:"wardrobe"},gl=window.EixoJump3D;
-  if(gl?.preview){if(!gl.isReady?.())return;if(gl.preview(cv,{style:outfit,time:now,motion}))return}
-  const c=cv.getContext('2d');if(!c)return;c.setTransform(4,0,0,4,0,0);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.clearRect(0,0,180,130);c.save();c.translate(90,118);c.scale(1.65,1.65);window.EixoJumpExactArt?.runner?.(c,0,0,outfit,'',false,now,motion);c.restore();
+  if(!gl?.preview||!gl.isReady?.())return;
+  gl.preview(cv,{style:outfit,time:now,motion});
  };
  panel.querySelectorAll('[data-jump-outfit]').forEach(sel=>{sel.onchange=()=>{outfit[sel.dataset.jumpOutfit]=sel.value;preview()}});
  const previewPanel=panel;let previewTimer;const animatePreview=()=>{if(panel!==previewPanel||!$('jumpAvatarPreview'))return;preview();previewTimer=requestAnimationFrame(animatePreview)};animatePreview();
