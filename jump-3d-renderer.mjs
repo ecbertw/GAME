@@ -167,11 +167,14 @@ function updateActorPose(actor,motion,dt){
   actor.root.rotation.z=actor.lean;
   actor.lastGround=ground;
 }
-const SCREEN_SWING_AXIS=new THREE.Vector3(0,0,1),scratchParentQ=new THREE.Quaternion(),scratchAxis=new THREE.Vector3(),scratchBoneQ=new THREE.Quaternion();
-function addScreenPlaneBoneRotation(bone,angle){
+// The character is turned ±90deg around Y to play in profile. Shoulder flexion
+// therefore has to rotate around world-up (Y): that moves the arms forward/back
+// along the screen, instead of abducting them away from the torso.
+const RUN_SWING_AXIS=new THREE.Vector3(0,1,0),scratchParentQ=new THREE.Quaternion(),scratchAxis=new THREE.Vector3(),scratchBoneQ=new THREE.Quaternion();
+function addRunPlaneBoneRotation(bone,angle){
   if(!bone?.parent||!Number.isFinite(angle)||Math.abs(angle)<1e-5)return;
   bone.parent.getWorldQuaternion(scratchParentQ);
-  scratchAxis.copy(SCREEN_SWING_AXIS).applyQuaternion(scratchParentQ.invert()).normalize();
+  scratchAxis.copy(RUN_SWING_AXIS).applyQuaternion(scratchParentQ.invert()).normalize();
   scratchBoneQ.setFromAxisAngle(scratchAxis,angle);
   bone.quaternion.premultiply(scratchBoneQ);
 }
@@ -189,21 +192,22 @@ function proceduralArms(actor,motion,dt){
     actor.runClock+=dt*(8.6+speed*2.4);
     const runAction=actor.current?.includes('run')?actor.actions[actor.current]:null,clip=runAction?.getClip?.();
     const phase=clip?.duration?((runAction.time/clip.duration)%1)*Math.PI*2:actor.runClock;
-    const swing=Math.sin(phase)*(.31*clamp(speed,.65,1.15));
-    const elbowFlex=1.18+.20*(.5+.5*Math.cos(phase)); // ~68–79 degrees.
-    const elbowPulse=.10*Math.sin(phase);
-    addScreenPlaneBoneRotation(actor.bones?.leftUpper,swing);
-    addScreenPlaneBoneRotation(actor.bones?.rightUpper,-swing);
-    addScreenPlaneBoneRotation(actor.bones?.leftFore,-elbowFlex+elbowPulse);
-    addScreenPlaneBoneRotation(actor.bones?.rightFore,-elbowFlex-elbowPulse);
+    const facing=motion.facing===-1?-1:1;
+    const swing=Math.sin(phase)*(.38*clamp(speed,.65,1.15))*facing;
+    const elbowFlex=1.15+.22*(.5+.5*Math.cos(phase)); // ~66–79 degrees.
+    const elbowPulse=.11*Math.sin(phase);
+    addRunPlaneBoneRotation(actor.bones?.leftUpper,swing);
+    addRunPlaneBoneRotation(actor.bones?.rightUpper,-swing);
+    addRunPlaneBoneRotation(actor.bones?.leftFore,(-elbowFlex+elbowPulse)*facing);
+    addRunPlaneBoneRotation(actor.bones?.rightFore,(-elbowFlex-elbowPulse)*facing);
   }else if(!ground){
     settleShoulder(actor.bones?.leftShoulder,actor.shoulderRest?.left,.82);
     settleShoulder(actor.bones?.rightShoulder,actor.shoulderRest?.right,.82);
-    const phase=jumpPhase(motion.vy),lift=Math.sin(phase*Math.PI)*.14,elbow=.78+.12*Math.sin(phase*Math.PI);
-    addScreenPlaneBoneRotation(actor.bones?.leftUpper,-.08-lift);
-    addScreenPlaneBoneRotation(actor.bones?.rightUpper,-.08-lift);
-    addScreenPlaneBoneRotation(actor.bones?.leftFore,-elbow);
-    addScreenPlaneBoneRotation(actor.bones?.rightFore,-elbow);
+    const facing=motion.facing===-1?-1:1,phase=jumpPhase(motion.vy),lift=Math.sin(phase*Math.PI)*.14,elbow=.78+.12*Math.sin(phase*Math.PI);
+    addRunPlaneBoneRotation(actor.bones?.leftUpper,(-.08-lift)*facing);
+    addRunPlaneBoneRotation(actor.bones?.rightUpper,(-.08-lift)*facing);
+    addRunPlaneBoneRotation(actor.bones?.leftFore,-elbow*facing);
+    addRunPlaneBoneRotation(actor.bones?.rightFore,-elbow*facing);
   }else{
     settleShoulder(actor.bones?.leftShoulder,actor.shoulderRest?.left,.96);
     settleShoulder(actor.bones?.rightShoulder,actor.shoulderRest?.right,.96);
@@ -262,7 +266,7 @@ function preview(canvasNode,data={}){
 
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v346',gltf=>{
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v347',gltf=>{
   source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready);
 },()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 
