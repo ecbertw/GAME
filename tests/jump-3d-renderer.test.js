@@ -13,8 +13,7 @@ test('JUMP mounts the continuous 3D renderer and serves its model locally',()=>{
  assert.match(renderer,/Accessory_Cape/);assert.match(renderer,/style\?\.accessory\|\|'none'/);
  assert.match(renderer,/rotation\.y=facing===1\?Math\.PI\/2:-Math\.PI\/2/,'right-facing movement must not render the character backwards');
  assert.match(renderer,/setClearColor\(0x000000,0\)/,'the 3D overlay must remain transparent over the 2D world art');
- assert.match(renderer,/function proceduralArms\(actor,motion,dt\)/,'running arms need a procedural layer over the imported clip');
- assert.match(renderer,/RUN_SWING_AXIS=new THREE\.Vector3\(0,1,0\)/,'arm swing must stay in the forward-back running plane, not open sideways');
+ assert.doesNotMatch(renderer,/proceduralArms|RUN_SWING_AXIS|addRunPlaneBoneRotation/,'authored GLB arm rotations must not be overwritten by a procedural layer');
  assert.match(renderer,/function jumpPhase\(vy\)/,'jump pose must be driven by vertical physics instead of a fixed playback timer');
  assert.match(renderer,/motion\.moving\?\-facing\*\.022:facing\*\.024/,'idle posture should counter the imported forward lean');
  assert.match(css,/#jump3dCanvas/);assert.match(server,/'\.glb':'model\/gltf-binary'/);assert.match(server,/PUBLIC_STATIC_EXTS[^;]+\.mjs[^;]+\.glb/);
@@ -30,6 +29,10 @@ test('the exported 3D rig has normalized transforms for browser-sized rendering'
  const rig=json.nodes.find(node=>node.name==='EIXO_Rig');
  assert.ok(rig,'missing EIXO_Rig node');
  assert.deepEqual(rig.scale||[1,1,1],[1,1,1],'the FBX centimetre scale must be baked before glTF export');
- assert.ok((json.animations||[]).some(a=>a.name==='Run'));
+ const run=(json.animations||[]).find(a=>a.name==='Run');
+ assert.ok(run);
  assert.ok((json.animations||[]).some(a=>a.name==='Jump'));
+ const animatedRunNodes=new Set((run.channels||[]).filter(ch=>ch.target?.path==='rotation').map(ch=>json.nodes[ch.target.node]?.name));
+ for(const bone of ['mixamorig:LeftArm','mixamorig:LeftForeArm','mixamorig:RightArm','mixamorig:RightForeArm'])
+  assert.ok(animatedRunNodes.has(bone),'Run clip must animate '+bone);
 });
