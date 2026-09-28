@@ -7,7 +7,7 @@ test('V3 JUMP loads its modular renderer before worlds and gameplay',()=>{
  const html=read('index.html'),names=['jump-motion.js','jump-art-layout.js','jump-scenery.js','jump-exact-renderer.js','jump-worlds.js','jump.js'];
  const order=names.map(n=>html.indexOf(n));assert.ok(order.every(x=>x>=0));
  for(let i=1;i<order.length;i++)assert.ok(order[i]>order[i-1]);
- assert.match(html,/jump-exact-renderer\.js\?v=20260928-v327/);assert.doesNotMatch(html,/jump-rig\.js/);
+ assert.match(html,/jump-exact-renderer\.js\?v=20260928-v328/);assert.doesNotMatch(html,/jump-rig\.js/);
 });
 
 test('arm atlas pivots join at the same elbow and preserve the hand beyond the wrist',()=>{
