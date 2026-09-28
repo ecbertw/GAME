@@ -126,9 +126,9 @@ function actor(data){
   mount();if(!ready||!renderer||!data)return false;
   const id=String(data.motion?.identity||data.name||'local'),a=actors.get(id)||makeActor(id,!!data.ghost);a.seen=frame;a.root.visible=true;
   a.root.position.x=Number(data.x)||0;a.root.position.y=WORLD_H-(Number(data.y)||0)+(a.root.userData.groundOffset||0);a.root.position.z=a.ghost?-10:0;
-  materialSet(a.root,data.style||{},a.ghost);updateActorPose(a,data.motion||{},1/60);
-  if(a.cape){a.cape.visible=String(data.style?.accessory||'none')==='cape';a.cape.rotation.x=.08+Math.min(.42,Math.abs(Number(data.motion?.vy)||0)/700)+Math.sin(performance.now()/170)*.035}
-  chooseAction(a,data.motion||{},1/60);return true;
+  const motion=data.motion||{};a._motion=motion;materialSet(a.root,data.style||{},a.ghost);
+  if(a.cape){a.cape.visible=String(data.style?.accessory||'none')==='cape';a.cape.rotation.x=.08+Math.min(.42,Math.abs(Number(motion.vy)||0)/700)+Math.sin(performance.now()/170)*.035}
+  chooseAction(a,motion,1/60);return true;
 }
 
 function endFrame(time){
@@ -148,7 +148,7 @@ function createPreview(canvasNode){
   const r=new THREE.WebGLRenderer({canvas:canvasNode,alpha:true,antialias:true,premultipliedAlpha:true,powerPreference:'high-performance'});
   r.setPixelRatio(Math.min(devicePixelRatio||1,2));r.setSize(w,h,false);r.outputColorSpace=THREE.SRGBColorSpace;
   const s=new THREE.Scene();addLights(s,true);
-  const halfH=55,cam=new THREE.OrthographicCamera(-halfH*aspect,halfH*aspect,94,-16,.1,1500);cam.position.set(0,0,600);cam.lookAt(0,38,0);
+  const halfH=55,cam=new THREE.OrthographicCamera(-halfH*aspect,halfH*aspect,94,-16,.1,1500);cam.position.set(0,38,600);cam.lookAt(0,38,0);
   const root=prepareModel(cloneSkeleton(source));root.visible=true;root.renderOrder=2;s.add(root);
   const a=createActor(root,'preview',false);a.root.position.x=0;a.root.position.z=0;
   previewState={canvas:canvasNode,renderer:r,scene:s,camera:cam,actor:a,last:performance.now()/1000};
