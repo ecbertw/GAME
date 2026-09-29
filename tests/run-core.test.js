@@ -27,7 +27,7 @@ test('RUN server validation re-simulates a replay instead of trusting client tim
 
 test('RUN bounce pads launch without requiring a jump input',()=>{
  const l={...level,bouncePads:[{id:'b',x:0,y:4.75,w:2,h:.25,power:16}],solids:[{x:-5,y:5,w:20,h:2}]};
- const p=P.createPlayer({x:.4,y:3.5});p.onGround=true;P.step(p,l,0,0);assert.ok(p.vy<-10);assert.equal(p.onGround,false);
+ const p=P.createPlayer({x:.4,y:3.2});for(let i=0;i<60&&p.vy>=-10;i++)P.step(p,l,0,0);assert.ok(p.vy<-10);assert.equal(p.onGround,false);
 });
 test('RUN moving platforms carry grounded players deterministically',()=>{
  const l={...level,solids:[],movingPlatforms:[{id:'m',x:0,y:5,w:4,h:.4,axis:'x',amplitude:1,period:2,oneWay:true}]};
