@@ -8,6 +8,7 @@ export class RunnerController {
     this.enabled = true;
     this.coyoteMs = 0;
     this.jumpBufferMs = 0;
+    this.jumpStartMs = 0;
     this.skidMs = 0;
     this.landingMs = 0;
     this.hardLandingMs = 0;
@@ -16,18 +17,14 @@ export class RunnerController {
     this.lastAirDownSpeed = 0;
 
     this.cursors = scene.input.keyboard.createCursorKeys();
-    this.keys = scene.input.keyboard.addKeys({
-      left: 'A',
-      right: 'D',
-      jump: 'W',
-      reset: 'R',
-    });
+    this.keys = scene.input.keyboard.addKeys({ left: 'A', right: 'D', jump: 'W', reset: 'R' });
   }
 
   reset() {
     this.enabled = true;
     this.coyoteMs = 0;
     this.jumpBufferMs = 0;
+    this.jumpStartMs = 0;
     this.skidMs = 0;
     this.landingMs = 0;
     this.hardLandingMs = 0;
@@ -69,29 +66,34 @@ export class RunnerController {
     if (jumpPressed) this.jumpBufferMs = MOVEMENT.jumpBufferMs;
     else this.jumpBufferMs = Math.max(0, this.jumpBufferMs - deltaMs);
 
+    this.jumpStartMs = Math.max(0, this.jumpStartMs - deltaMs);
     this.skidMs = Math.max(0, this.skidMs - deltaMs);
     this.landingMs = Math.max(0, this.landingMs - deltaMs);
     this.hardLandingMs = Math.max(0, this.hardLandingMs - deltaMs);
 
     const dir = this.horizontalDirection();
-    if (dir) this.runner.setFacing(dir);
 
     if (grounded) {
       if (dir) {
-        const reversing = Math.sign(body.velocity.x) && Math.sign(body.velocity.x) !== dir;
-        if (reversing && Math.abs(body.velocity.x) >= MOVEMENT.skidThreshold) {
+        const speed = Math.abs(body.velocity.x);
+        const speedSign = Math.sign(body.velocity.x);
+        const reversing = speedSign !== 0 && speedSign !== dir;
+
+        if (reversing && speed > MOVEMENT.reverseFacingSpeed) {
           body.setVelocityX(moveToward(body.velocity.x, 0, MOVEMENT.reverseBrake * dt));
-          if (this.skidMs <= 0) {
+          if (speed >= MOVEMENT.skidThreshold && this.skidMs <= 0) {
             this.skidMs = MOVEMENT.skidHoldMs;
             this.onEvent({ type: 'skid' });
           }
         } else {
+          this.runner.setFacing(dir);
           body.setVelocityX(moveToward(body.velocity.x, dir * MOVEMENT.maxRunSpeed, MOVEMENT.groundAcceleration * dt));
         }
       } else {
         body.setVelocityX(moveToward(body.velocity.x, 0, MOVEMENT.groundBrake * dt));
       }
     } else if (dir) {
+      this.runner.setFacing(dir);
       body.setVelocityX(moveToward(body.velocity.x, dir * MOVEMENT.maxRunSpeed, MOVEMENT.airAcceleration * dt));
     }
 
@@ -99,12 +101,11 @@ export class RunnerController {
       body.setVelocityY(-MOVEMENT.jumpVelocity);
       this.jumpBufferMs = 0;
       this.coyoteMs = 0;
+      this.jumpStartMs = MOVEMENT.jumpStartMs;
       this.onEvent({ type: 'jump' });
     }
 
-    if (jumpReleased && body.velocity.y < 0) {
-      body.setVelocityY(body.velocity.y * MOVEMENT.jumpCut);
-    }
+    if (jumpReleased && body.velocity.y < 0) body.setVelocityY(body.velocity.y * MOVEMENT.jumpCut);
 
     body.setGravityY(body.velocity.y < 0 ? MOVEMENT.gravityRise : MOVEMENT.gravityFall);
     body.setVelocityY(clamp(body.velocity.y, -MOVEMENT.jumpVelocity * 1.2, MOVEMENT.maxFallSpeed));
@@ -128,18 +129,20 @@ export class RunnerController {
 
   getState() {
     if (this.runner.dead) return 'death';
-    if (this.hardLandingMs > 0) return 'hardLand';
-    if (this.landingMs > 0) return 'land';
-    if (this.skidMs > 0) return 'skid';
 
     const body = this.runner.body;
     const grounded = body.blocked.down || body.touching.down;
-    if (!grounded) {
-      if (body.velocity.y < -520) return 'jumpStart';
-      if (body.velocity.y < -110) return 'jump';
-      if (Math.abs(body.velocity.y) <= 110) return 'apex';
-      return 'fall';
+
+    if (grounded) {
+      if (this.hardLandingMs > 0) return 'hardLand';
+      if (this.landingMs > 0) return 'land';
+      if (this.skidMs > 0) return 'skid';
+      return Math.abs(body.velocity.x) > 45 ? 'run' : 'idle';
     }
-    return Math.abs(body.velocity.x) > 45 ? 'run' : 'idle';
+
+    if (this.jumpStartMs > 0) return 'jumpStart';
+    if (body.velocity.y < -100) return 'jump';
+    if (Math.abs(body.velocity.y) <= 110) return 'apex';
+    return 'fall';
   }
 }
