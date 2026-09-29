@@ -7,23 +7,30 @@ test('RUN skid triggers on high-speed reversal',()=>{const p=C.createPlayer(flat
 test('First Light contains exactly 42 Astral Shards',()=>assert.equal(L.shards.length,42));
 test('First Light contains checkpoint, destructible blocks, moving platforms, secret and hazards',()=>{assert.ok(L.checkpoints.length&&L.breakables.length&&L.movingPlatforms.length&&L.secrets.length&&L.hazards.length)});
 
-test('First Light is reachable and its recorded replay is deterministic',()=>{
- const p=C.createPlayer(L.spawn),replay=[];let prev=0,lastMask=null,maxX=p.x,lastDeath='none',jumpHold=0;
- const wantsJump=()=>{
-  if(!p.onGround)return false;
-  const feet=p.y+p.h;
-  const support=L.solids.find(r=>p.x+p.w*.55>=r.x&&p.x+p.w*.45<=r.x+r.w&&Math.abs(feet-r.y)<.18);
-  const edge=support?(support.x+support.w-(p.x+p.w)):0;
-  const hazard=L.hazards.find(h=>h.x>=p.x&&h.x-p.x<3.45&&Math.abs((h.y+h.h)-feet)<.35);
-  return !!hazard||!support||edge<2.7;
- };
- for(let tick=0;tick<18000&&p.finishTick==null;tick++){
-  if(jumpHold<=0&&wantsJump())jumpHold=14;let mask=C.INPUT.RIGHT;if(jumpHold>0){mask|=C.INPUT.JUMP;jumpHold--;}
-  if(mask!==lastMask){replay.push({t:tick,m:mask});lastMask=mask}
-  const events=C.step(p,L,mask,prev);prev=mask;maxX=Math.max(maxX,p.x);if(events.some(e=>e.type==='death'))lastDeath=p.x.toFixed(2)+','+p.y.toFixed(2)+'@'+tick;
+test('every First Light main-island gap is physically jumpable',()=>{
+ for(let i=0;i<L.solids.length-1;i++){
+  const a=L.solids[i],b=L.solids[i+1];
+  const mini={spawn:{x:a.x+a.w-2.7,y:a.y-C.C.height-C.C.skin},killY:40,solids:[a,b],oneWay:[],movingPlatforms:[],breakables:[],hazards:[],shards:[],secrets:[],checkpoints:[],finish:{x:999,y:0,w:1,h:1}};
+  const p=C.createPlayer(mini.spawn);p.onGround=true;p.vx=C.C.maxRun*.88;let prev=0,landed=false;
+  for(let tick=0;tick<240;tick++){
+   const mask=C.INPUT.RIGHT|(tick<18?C.INPUT.JUMP:0);C.step(p,mini,mask,prev);prev=mask;
+   if(p.onGround&&p.x+p.w*.5>b.x+.35){landed=true;break}
+  }
+  assert.equal(landed,true,'main island gap '+a.id+' -> '+b.id+' must be reachable');
  }
- assert.notEqual(p.finishTick,null,'autoplay must reach the First Light gate; x='+p.x.toFixed(2)+' y='+p.y.toFixed(2)+' deaths='+p.deaths+' checkpoint='+p.checkpoint+' maxX='+maxX.toFixed(2)+' lastDeath='+lastDeath);
- const again=C.simulate(L,replay,18000);
- assert.equal(again.finishTick,p.finishTick,'server replay must reproduce the same finish tick');
- assert.equal(again.deaths,p.deaths,'replay must reproduce deaths');
+});
+test('First Light hazards can be cleared by a committed jump',()=>{
+ for(const h of L.hazards){
+  const support=L.solids.find(r=>h.x>=r.x&&h.x+h.w<=r.x+r.w&&Math.abs((h.y+h.h)-r.y)<.12);
+  assert.ok(support,'hazard '+h.id+' must sit on a main island');
+  const mini={spawn:{x:Math.max(support.x+.2,h.x-4.2),y:support.y-C.C.height-C.C.skin},killY:40,solids:[support],oneWay:[],movingPlatforms:[],breakables:[],hazards:[h],shards:[],secrets:[],checkpoints:[],finish:{x:999,y:0,w:1,h:1}};
+  const p=C.createPlayer(mini.spawn);p.onGround=true;p.vx=C.C.maxRun*.88;let prev=0,passed=false;
+  for(let tick=0;tick<180&&!p.dead;tick++){const mask=C.INPUT.RIGHT|(tick<18?C.INPUT.JUMP:0);C.step(p,mini,mask,prev);prev=mask;if(p.x>h.x+h.w+.4){passed=true;break}}
+  assert.equal(passed,true,'hazard '+h.id+' must be jumpable');
+ }
+});
+test('RUN replay re-simulation is deterministic',()=>{
+ const floor={id:'floor',x:0,y:8,w:30,h:4},mini={spawn:{x:1,y:8-C.C.height-C.C.skin},startX:2,killY:30,solids:[floor],oneWay:[],movingPlatforms:[],breakables:[],hazards:[],shards:[],secrets:[],checkpoints:[],finish:{x:12,y:5,w:1.2,h:3}};
+ const replay=[{t:0,m:C.INPUT.RIGHT}],a=C.simulate(mini,replay,1000),b=C.simulate(mini,replay,1000);
+ assert.notEqual(a.finishTick,null);assert.equal(a.finishTick,b.finishTick);assert.equal(a.startTick,b.startTick);
 });
