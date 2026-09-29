@@ -17,7 +17,7 @@ const approach=(v,target,delta)=>v<target?Math.min(target,v+delta):Math.max(targ
 function createPlayer(spawn={x:1.5,y:3}){
   return {x:+spawn.x||0,y:+spawn.y||0,vx:0,vy:0,w:C.width,h:C.height,onGround:false,
     coyote:0,jumpBuffer:0,jumpHeld:false,dead:false,finished:false,deaths:0,checkpoint:{x:+spawn.x||0,y:+spawn.y||0},
-    shards:new Set(),secrets:new Set(),skid:false,hardLanding:false,lastGroundVy:0,tick:0};
+    shards:new Set(),secrets:new Set(),skid:false,hardLanding:false,lastGroundVy:0,deathTicks:0,tick:0};
 }
 function aabb(p,r){return p.x+p.w>r.x&&p.x<r.x+r.w&&p.y+p.h>r.y&&p.y<r.y+r.h}
 function movingRect(m,tick){
@@ -53,10 +53,10 @@ function resolveY(p,rects,dy,oldBottom){
 }
 function respawn(p){
   p.x=p.checkpoint.x;p.y=p.checkpoint.y;p.vx=0;p.vy=0;p.dead=false;p.finished=false;
-  p.coyote=0;p.jumpBuffer=0;p.onGround=false;p.skid=false;p.hardLanding=false;
+  p.coyote=0;p.jumpBuffer=0;p.onGround=false;p.skid=false;p.hardLanding=false;p.deathTicks=0;
 }
 function step(p,level,inputMask,prevMask=0){
-  if(p.dead||p.finished){p.tick++;return p}
+  if(p.finished){p.tick++;return p}\n  if(p.dead){p.deathTicks--;if(p.deathTicks<=0)respawn(p);p.tick++;return p}
   const left=!!(inputMask&INPUT.LEFT),right=!!(inputMask&INPUT.RIGHT),jump=!!(inputMask&INPUT.JUMP);
   const jumpPressed=jump&&!(prevMask&INPUT.JUMP),jumpReleased=!jump&&(prevMask&INPUT.JUMP);
   if(jumpPressed)p.jumpBuffer=C.jumpBuffer; else p.jumpBuffer=Math.max(0,p.jumpBuffer-DT);
@@ -84,8 +84,8 @@ function step(p,level,inputMask,prevMask=0){
   resolveY(p,rects,p.vy*DT,oldBottom);
   p.hardLanding=p.onGround&&preVy>12;
 
-  for(const h of level.hazards||[])if(aabb(p,h)){p.dead=true;p.deaths++;break}
-  if(p.y>(level.killY||30)){p.dead=true;p.deaths++}
+  for(const h of level.hazards||[])if(aabb(p,h)){p.dead=true;p.deathTicks=54;p.deaths++;break}
+  if(p.y>(level.killY||30)){p.dead=true;p.deathTicks=54;p.deaths++}
   for(const cp of level.checkpoints||[])if(aabb(p,cp)){p.checkpoint={x:cp.spawnX??cp.x,y:cp.spawnY??(cp.y-p.h-.1)}}
   for(const s of level.shards||[])if(!p.shards.has(s.id)&&aabb(p,{x:s.x-.3,y:s.y-.3,w:.6,h:.6}))p.shards.add(s.id);
   for(const s of level.secrets||[])if(!p.secrets.has(s.id)&&aabb(p,s))p.secrets.add(s.id);
@@ -96,7 +96,7 @@ function step(p,level,inputMask,prevMask=0){
 function simulate(level,replay,maxTicks=120*180){
   const p=createPlayer(level.spawn),changes=[...(replay||[])].sort((a,b)=>a.tick-b.tick);
   let idx=0,mask=0,prev=0;
-  for(let tick=0;tick<maxTicks&&!p.finished&&!p.dead;tick++){
+  for(let tick=0;tick<maxTicks&&!p.finished;tick++){
     while(idx<changes.length&&changes[idx].tick===tick){mask=changes[idx].mask|0;idx++}
     step(p,level,mask,prev);prev=mask;
   }
