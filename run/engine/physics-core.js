@@ -16,7 +16,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const approach=(v,target,delta)=>v<target?Math.min(target,v+delta):Math.max(target,v-delta);
 function createPlayer(spawn={x:1.5,y:3}){
   return {x:+spawn.x||0,y:+spawn.y||0,vx:0,vy:0,w:C.width,h:C.height,onGround:false,
-    coyote:0,jumpBuffer:0,jumpHeld:false,dead:false,finished:false,deaths:0,checkpoint:{x:+spawn.x||0,y:+spawn.y||0},
+    coyote:0,jumpBuffer:0,jumpHeld:false,facing:1,dead:false,finished:false,deaths:0,checkpoint:{x:+spawn.x||0,y:+spawn.y||0},
     shards:new Set(),secrets:new Set(),broken:new Set(),falling:Object.create(null),skid:false,hardLanding:false,lastGroundVy:0,deathTicks:0,tick:0};
 }
 function aabb(p,r){return p.x+p.w>r.x&&p.x<r.x+r.w&&p.y+p.h>r.y&&p.y<r.y+r.h}
@@ -70,7 +70,7 @@ function step(p,level,inputMask,prevMask=0){
   if(jumpPressed)p.jumpBuffer=C.jumpBuffer; else p.jumpBuffer=Math.max(0,p.jumpBuffer-DT);
   if(p.onGround)p.coyote=C.coyote; else p.coyote=Math.max(0,p.coyote-DT);
 
-  let dir=(right?1:0)-(left?1:0);
+  let dir=(right?1:0)-(left?1:0);if(dir)p.facing=dir;
   p.skid=false;
   if(p.onGround){
     if(dir){
