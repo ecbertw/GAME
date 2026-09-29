@@ -1,0 +1,31 @@
+name: Patch JUMP Hero Run
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/patch-jump-run.cjs'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-run:
+    if: github.event.head_commit.message == 'Patch JUMP GLB source animation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Rewrite Run arm keyframes in GLB
+        run: node tools/patch-jump-run.cjs
+      - name: Commit patched GLB
+        run: |
+          git config user.name "EIXO Build"
+          git config user.email "actions@users.noreply.github.com"
+          git add assets/hero-3d/eixo-hero.glb
+          git diff --cached --quiet && { echo "No GLB changes"; exit 1; }
+          git commit -m "Rebuild JUMP Run arm keyframes [hero-run-patched]"
+          git push origin HEAD:main
