@@ -2,7 +2,7 @@ import * as THREE from './vendor/three/three.module.min.js';
 import {GLTFLoader} from './vendor/three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from './vendor/three/addons/utils/SkeletonUtils.js';
 
-const WORLD_W=960,WORLD_H=540,MODEL_HEIGHT=82,RUN_REFERENCE_SPEED=216;
+const WORLD_W=960,WORLD_H=540,MODEL_HEIGHT=82,RUN_REFERENCE_SPEED=216,PROFILE_YAW=Math.PI/2-.10;
 const actors=new Map();
 let renderer,scene,camera,canvas,source,clips=[],ready=false,frame=0,lastTime=performance.now()/1000,previewState=null;
 
@@ -69,7 +69,14 @@ function materialSet(root,style,ghost=false){
 function createActor(root,id,ghost){
   const mixer=new THREE.AnimationMixer(root),actions={};
   for(const clip of clips){const key=(clip.name||'').toLowerCase();actions[key]=mixer.clipAction(clip)}
-  return {id,root,mixer,actions,cape:root.getObjectByName('Accessory_Cape'),current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true};
+  return {
+    id,root,mixer,actions,cape:root.getObjectByName('Accessory_Cape'),
+    leftArm:root.getObjectByName('mixamorig:LeftArm'),
+    rightArm:root.getObjectByName('mixamorig:RightArm'),
+    leftFore:root.getObjectByName('mixamorig:LeftForeArm'),
+    rightFore:root.getObjectByName('mixamorig:RightForeArm'),
+    current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true
+  };
 }
 function makeActor(id,ghost){
   const root=prepareModel(cloneSkeleton(source));root.visible=false;root.renderOrder=ghost?1:2;scene.add(root);
@@ -119,18 +126,29 @@ function chooseAction(actor,motion,dt=.016){
 
 function updateActorPose(actor,motion,dt){
   const facing=motion.facing===-1?-1:1,ground=motion.ground!==false,vy=Number(motion.vy)||0;
-  // The imported neutral pose leans very slightly into travel. Counter it while
-  // idle, keep a restrained athletic lean while running, and avoid exaggerated
-  // pitch changes in the air.
-  const targetLean=!ground?(facing*.006+clamp(-vy/9000,-.012,.012)):(motion.moving?-facing*.022:facing*.024);
+  // Idle is neutral. Running only gets a very small athletic lean; the previous
+  // positive idle tilt was visibly pitching the whole character forwards.
+  const targetLean=!ground?clamp(-vy/11000,-.008,.008):(motion.moving?-facing*.012:0);
   actor.lean=damp(actor.lean,targetLean,14,dt);
-  actor.root.rotation.y=facing===1?Math.PI/2:-Math.PI/2;
+  // Keep the runner essentially in profile, but open the angle a few degrees so
+  // the near arm/forearm does not disappear into the torso silhouette.
+  actor.root.rotation.y=facing===1?PROFILE_YAW:-PROFILE_YAW;
   actor.root.rotation.z=actor.lean;
   actor.lastGround=ground;
 }
-// The character is turned ±90deg around Y to play in profile. Shoulder flexion
-// therefore has to rotate around world-up (Y): that moves the arms forward/back
-// along the screen, instead of abducting them away from the torso.
+
+const ELBOW_AXIS=new THREE.Vector3(0,0,1),leftElbowCorrection=new THREE.Quaternion(),rightElbowCorrection=new THREE.Quaternion();
+leftElbowCorrection.setFromAxisAngle(ELBOW_AXIS,.16);
+rightElbowCorrection.setFromAxisAngle(ELBOW_AXIS,-.16);
+
+function refineRunSilhouette(actor,motion){
+  if(motion.ground===false||!motion.moving)return;
+  // The authored Run clip already owns shoulder/upper-arm motion. We only add
+  // a small symmetric elbow flex so the forearm reads clearly in side view,
+  // matching the classic bent running-arm silhouette without touching shoulders.
+  actor.leftFore?.quaternion.multiply(leftElbowCorrection);
+  actor.rightFore?.quaternion.multiply(rightElbowCorrection);
+}
 function beginFrame(){mount();frame++;for(const a of actors.values())a.seen=-1}
 
 function actor(data){
@@ -148,9 +166,10 @@ function endFrame(time){
   for(const a of actors.values()){
     if(a.seen!==frame){a.root.visible=false;continue}
     updateActorPose(a,a._motion||{},dt);
-    // The GLB Run clip already contains the proper opposing upper-arm and
-    // forearm motion. Do not overwrite those authored bone rotations here.
+    // Let the GLB own the run cycle, then apply only the small elbow readability
+    // correction. No shoulder animation is overridden.
     a.mixer.update(dt);
+    refineRunSilhouette(a,a._motion||{});
   }
   renderer.render(scene,camera);
 }
@@ -177,12 +196,12 @@ function preview(canvasNode,data={}){
   p.actor.root.position.y=p.actor.root.userData.groundOffset||0;
   materialSet(p.actor.root,data.style||{},false);updateActorPose(p.actor,motion,dt);chooseAction(p.actor,motion,dt);
   if(p.actor.cape){p.actor.cape.visible=String(data.style?.accessory||'none')==='cape';p.actor.cape.rotation.x=.16+Math.sin(performance.now()/170)*.035}
-  p.actor.mixer.update(dt);p.renderer.render(p.scene,p.camera);return true;
+  p.actor.mixer.update(dt);refineRunSilhouette(p.actor,motion);p.renderer.render(p.scene,p.camera);return true;
 }
 
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v348',gltf=>{
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v349',gltf=>{
   source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready);
 },()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 
