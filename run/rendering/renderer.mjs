@@ -1,4 +1,4 @@
-import{animationState,FRAME}from'../player/animation-state.mjs';
+import{animationState,frameFor}from'../player/animation-state.mjs';
 export class Renderer{
  constructor(canvas,level){
   this.c=canvas;this.ctx=canvas.getContext('2d',{alpha:false});this.level=level;this.dpr=1;this.assets={};this.ready=this.load();
@@ -44,8 +44,8 @@ export class Renderer{
   layer(this.assets.near,1.08,h*.78,h*.28);
  }
  platform(r,ctx,oneWay=false){if(this.assets.platform)ctx.drawImage(this.assets.platform,r.x,r.y,r.w,r.h);else{ctx.fillStyle=oneWay?'#7ccfff':'#283b68';ctx.fillRect(r.x,r.y,r.w,r.h)}}
- runner(p,ctx,alpha=1,tint){ctx.save();ctx.globalAlpha=alpha;const frame=FRAME[animationState(p)]??0,fw=128,fh=160;
-  const x=p.x-.43,y=p.y-.25,w=1.6,h=2.0;const flip=p.vx<-.15;
+ runner(p,ctx,alpha=1,tint){ctx.save();ctx.globalAlpha=alpha;const frame=frameFor(animationState(p),p.tick||0),fw=128,fh=160;
+  const x=p.x-.43,y=p.y-.25,w=1.6,h=2.0;const flip=(p.facing||1)<0;
   if(flip){ctx.translate(x+w,y);ctx.scale(-1,1);this.drawRunnerFrame(ctx,frame,0,w,h)}else this.drawRunnerFrame(ctx,frame,x,y,w,h);
   if(tint){ctx.globalCompositeOperation='source-atop';ctx.fillStyle=tint;ctx.globalAlpha*=.25;ctx.fillRect(flip?0:x,y,w,h)}
   ctx.restore()}
