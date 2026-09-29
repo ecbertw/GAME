@@ -8,7 +8,7 @@ test('First Light contains exactly 42 Astral Shards',()=>assert.equal(L.shards.l
 test('First Light contains checkpoint, destructible blocks, moving platforms, secret and hazards',()=>{assert.ok(L.checkpoints.length&&L.breakables.length&&L.movingPlatforms.length&&L.secrets.length&&L.hazards.length)});
 
 test('First Light is reachable and its recorded replay is deterministic',()=>{
- const p=C.createPlayer(L.spawn),replay=[];let prev=0,lastMask=null;
+ const p=C.createPlayer(L.spawn),replay=[];let prev=0,lastMask=null,maxX=p.x,lastDeath='none';
  const wantsJump=()=>{
   if(!p.onGround)return false;
   const feet=p.y+p.h;
@@ -20,9 +20,9 @@ test('First Light is reachable and its recorded replay is deterministic',()=>{
  for(let tick=0;tick<18000&&p.finishTick==null;tick++){
   let mask=C.INPUT.RIGHT;if(wantsJump())mask|=C.INPUT.JUMP;
   if(mask!==lastMask){replay.push({t:tick,m:mask});lastMask=mask}
-  C.step(p,L,mask,prev);prev=mask;
+  const events=C.step(p,L,mask,prev);prev=mask;maxX=Math.max(maxX,p.x);if(events.some(e=>e.type==='death'))lastDeath=p.x.toFixed(2)+','+p.y.toFixed(2)+'@'+tick;
  }
- assert.notEqual(p.finishTick,null,'autoplay must reach the First Light gate; x='+p.x.toFixed(2)+' y='+p.y.toFixed(2)+' deaths='+p.deaths+' checkpoint='+p.checkpoint);
+ assert.notEqual(p.finishTick,null,'autoplay must reach the First Light gate; x='+p.x.toFixed(2)+' y='+p.y.toFixed(2)+' deaths='+p.deaths+' checkpoint='+p.checkpoint+' maxX='+maxX.toFixed(2)+' lastDeath='+lastDeath);
  const again=C.simulate(L,replay,18000);
  assert.equal(again.finishTick,p.finishTick,'server replay must reproduce the same finish tick');
  assert.equal(again.deaths,p.deaths,'replay must reproduce deaths');
