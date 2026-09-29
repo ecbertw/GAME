@@ -1,0 +1,7 @@
+export class RunAudio{
+ constructor(){this.ctx=null;this.enabled=true;this.unlocked=false;this.unlock=()=>this.ensure();window.addEventListener('pointerdown',this.unlock,{once:true});window.addEventListener('keydown',this.unlock,{once:true});}
+ ensure(){if(!this.enabled)return null;if(!this.ctx)this.ctx=new (window.AudioContext||window.webkitAudioContext)();if(this.ctx.state==='suspended')this.ctx.resume();this.unlocked=true;return this.ctx;}
+ tone(freq,duration=.08,type='sine',gain=.035,slide=0){const c=this.ensure();if(!c)return;const o=c.createOscillator(),g=c.createGain(),t=c.currentTime;o.type=type;o.frequency.setValueAtTime(freq,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),t+duration);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g).connect(c.destination);o.start(t);o.stop(t+duration+.02);}
+ event(e){if(!e)return;switch(e.type){case'jump':this.tone(430,.09,'square',.025,180);break;case'land':this.tone(130,.05,'triangle',.02,-30);break;case'hardLanding':this.tone(90,.12,'sawtooth',.03,-45);break;case'skid':this.tone(180,.04,'square',.012,-50);break;case'shard':this.tone(760,.08,'sine',.03,280);break;case'checkpoint':this.tone(520,.16,'triangle',.03,300);break;case'secret':this.tone(620,.3,'sine',.035,520);break;case'death':this.tone(210,.25,'sawtooth',.03,-150);break;case'finish':this.tone(660,.35,'triangle',.04,620);break;}}
+ destroy(){window.removeEventListener('pointerdown',this.unlock);window.removeEventListener('keydown',this.unlock);this.ctx?.close?.();}
+}

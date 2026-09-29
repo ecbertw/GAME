@@ -26,6 +26,22 @@ async function award(db,playerId,game,runId,score){
  return profile(db,{id:playerId});
 }
 
+
+const RUN_EVENT_XP=Object.freeze({RUN_COMPLETE:12,FIRST_CLEAR:18,PB_BEATEN:8,DAILY_COMPLETE:14,ALL_SHARDS:16,ALL_SECRETS:14,NO_DEATH:10,TIME_TARGET:14,WORLD_COMPLETE:25,DAILY_TOP_100:8});
+async function awardRunEvents(db,playerId,runId,events=[]){
+ const unique=[...new Set((Array.isArray(events)?events:[]).map(x=>String(x).toUpperCase()))].filter(x=>Object.hasOwn(RUN_EVENT_XP,x));
+ const points=Math.max(5,Math.min(120,unique.reduce((sum,key)=>sum+RUN_EVENT_XP[key],0)));
+ const event=await db.query(`INSERT INTO progress_events(id,player_id,game,run_id,exp) VALUES($1,$2,'run',$3,$4) ON CONFLICT(game,run_id) DO NOTHING RETURNING exp`,[crypto.randomUUID(),playerId,runId,points]);
+ if(!event.rowCount)return profile(db,{id:playerId});
+ await db.query(`INSERT INTO player_progress(player_id,total_exp) VALUES($1,$2) ON CONFLICT(player_id) DO UPDATE SET total_exp=player_progress.total_exp+EXCLUDED.total_exp,updated_at=NOW()`,[playerId,points]);
+ const badgeMap=[['FIRST_CLEAR','run-first'],['ALL_SHARDS','run-shards'],['ALL_SECRETS','run-secret'],['DAILY_COMPLETE','run-daily'],['TIME_TARGET','run-fast']];
+ for(const [eventName,badge] of badgeMap)if(unique.includes(eventName))await db.query('INSERT INTO player_badges(player_id,badge) VALUES($1,$2) ON CONFLICT DO NOTHING',[playerId,badge]);
+ if(unique.includes('ALL_SHARDS')&&unique.includes('ALL_SECRETS')&&unique.includes('NO_DEATH'))await db.query(`INSERT INTO player_badges(player_id,badge) VALUES($1,'run-perfect') ON CONFLICT DO NOTHING`,[playerId]);
+ const games=await db.query('SELECT COUNT(DISTINCT game)::int AS count FROM progress_events WHERE player_id=$1',[playerId]);
+ if(Number(games.rows[0]?.count)>=2)await db.query(`INSERT INTO player_badges(player_id,badge) VALUES($1,'explorer') ON CONFLICT DO NOTHING`,[playerId]);
+ return profile(db,{id:playerId});
+}
+
 async function profile(db,player){
  await db.query(`INSERT INTO player_badges(player_id,badge) SELECT id,'first-100' FROM (SELECT id FROM players ORDER BY created_at,id LIMIT 100) pioneers WHERE id=$1 ON CONFLICT DO NOTHING`,[player.id]);
  const [progress,badges,featured]=await Promise.all([
@@ -47,4 +63,4 @@ async function equipBadge(db,playerId,badge){
  return {ok:true,featuredBadge:value};
 }
 
-module.exports={initDb,award,profile,equipBadge,levelFrom};
+module.exports={initDb,award,awardRunEvents,profile,equipBadge,levelFrom};
