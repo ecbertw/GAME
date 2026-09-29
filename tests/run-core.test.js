@@ -24,3 +24,14 @@ test('RUN server validation re-simulates a replay instead of trusting client tim
  const out=service.validateReplay(l,[{tick:0,mask:P.INPUT.RIGHT}]);
  assert.ok(out.timeMs>3500&&out.timeMs<10000);assert.equal(out.p.finished,true);
 });
+
+test('RUN bounce pads launch without requiring a jump input',()=>{
+ const l={...level,bouncePads:[{id:'b',x:0,y:4.75,w:2,h:.25,power:16}],solids:[{x:-5,y:5,w:20,h:2}]};
+ const p=P.createPlayer({x:.4,y:3.5});p.onGround=true;P.step(p,l,0,0);assert.ok(p.vy<-10);assert.equal(p.onGround,false);
+});
+test('RUN moving platforms carry grounded players deterministically',()=>{
+ const l={...level,solids:[],movingPlatforms:[{id:'m',x:0,y:5,w:4,h:.4,axis:'x',amplitude:1,period:2,oneWay:true}]};
+ const p=P.createPlayer({x:.8,y:3.579});p.onGround=true;p.groundPlatform={id:'m'};const x=p.x;
+ for(let i=0;i<8;i++)P.step(p,l,0,0);
+ assert.notEqual(p.x,x);assert.ok(Number.isFinite(p.x));
+});
