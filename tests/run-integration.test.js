@@ -13,7 +13,7 @@ test('ASTRAL 01 main route is deterministically traversable with authored hazard
    const support=ASTRAL01.solids.find(r=>center>=r.x&&center<=r.x+r.w&&Math.abs(bottom-r.y)<.16);
    const edge=support?support.x+support.w-(p.x+p.w):99;
    const hazard=ASTRAL01.hazards.find(h=>h.type!=='void'&&h.x>p.x&&h.x-p.x<2.1&&Math.abs((h.y+h.h)-bottom)<.9);
-   if(edge<.38||hazard)jumpHold=44;
+   if(edge<1.05||hazard)jumpHold=46;
   }
   const mask=P.INPUT.RIGHT|(jumpHold>0?P.INPUT.JUMP:0);P.step(p,ASTRAL01,mask,prev);prev=mask;if(jumpHold>0)jumpHold--;
  }
@@ -25,4 +25,13 @@ test('RUN final art pipeline uses layered Astral rendering and the 14-frame runn
  const renderer=read('run/rendering/renderer.mjs'),atlas=JSON.parse(read('assets/run/character/runner-atlas.json'));
  assert.match(renderer,/drawParallaxRuins/);assert.match(renderer,/waterfall/);assert.match(renderer,/foreground/);assert.match(renderer,/drawFinish/);
  assert.equal(atlas.frames,14);assert.equal(atlas.frameWidth,160);assert.equal(atlas.states.victory,13);
+});
+
+test('First Light main islands stay within the authored jump envelope',async()=>{
+ const {ASTRAL01}=await import('../run/levels/astral/astral-01.mjs');
+ for(let i=0;i<ASTRAL01.solids.length-1;i++){
+  const a=ASTRAL01.solids[i],b=ASTRAL01.solids[i+1],gap=b.x-(a.x+a.w),rise=a.y-b.y;
+  assert.ok(gap<=4.2,`gap ${a.id}->${b.id} is ${gap}`);
+  assert.ok(rise<=1.65,`rise ${a.id}->${b.id} is ${rise}`);
+ }
 });
