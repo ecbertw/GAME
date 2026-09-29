@@ -6,3 +6,17 @@ test('RUN has variable jump',()=>{const a=C.createPlayer(flat.spawn),b=C.createP
 test('RUN skid triggers on high-speed reversal',()=>{const p=C.createPlayer(flat.spawn);p.onGround=true;p.vx=7;C.step(p,flat,C.INPUT.LEFT,0);assert.equal(p.skid,true)});
 test('First Light contains exactly 42 Astral Shards',()=>assert.equal(L.shards.length,42));
 test('First Light contains checkpoint, destructible blocks, moving platforms, secret and hazards',()=>{assert.ok(L.checkpoints.length&&L.breakables.length&&L.movingPlatforms.length&&L.secrets.length&&L.hazards.length)});
+
+test('First Light is reachable and its recorded replay is deterministic',()=>{
+ const p=C.createPlayer(L.spawn),replay=[];let prev=0,lastMask=null;
+ for(let tick=0;tick<18000&&p.finishTick==null;tick++){
+  let mask=C.INPUT.RIGHT;
+  if(p.onGround)mask|=C.INPUT.JUMP;
+  if(mask!==lastMask){replay.push({t:tick,m:mask});lastMask=mask}
+  C.step(p,L,mask,prev);prev=mask;
+ }
+ assert.notEqual(p.finishTick,null,'autoplay must reach the First Light gate');
+ const again=C.simulate(L,replay,18000);
+ assert.equal(again.finishTick,p.finishTick,'server replay must reproduce the same finish tick');
+ assert.equal(again.deaths,p.deaths,'replay must reproduce deaths');
+});
