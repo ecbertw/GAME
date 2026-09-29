@@ -1,0 +1,4 @@
+'use strict';const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+test('RUN is isolated from JUMP renderer and multiplayer',()=>{const c=read('run/run-client.mjs')+read('run-server.js');assert.doesNotMatch(c,/EixoJumpExactArt|jump-rig|WebSocket|LIVE ECHO|FRIEND ECHO/);assert.match(c,/PB|pb/);assert.match(c,/world/);});
+test('RUN page exposes First Light, echoes and deterministic physics',()=>{const h=read('run.html'),p=read('run/engine/physics-core.js');assert.match(h,/ASTRAL 01/);assert.match(h,/PB ECHO/);assert.match(h,/WORLD ECHO/);assert.match(p,/1\/120/);});
+test('RUN has 42 persistent shard ids and one secret',async()=>{const m=await import('../run/levels/astral/astral-01.mjs');assert.equal(m.ASTRAL01.shards.length,42);assert.equal(new Set(m.ASTRAL01.shards.map(x=>x.id)).size,42);assert.ok(m.ASTRAL01.secrets.length>=1);});

@@ -1,0 +1,23 @@
+import{RunInput}from'./input/input.mjs';import{FollowCamera}from'./camera/follow-camera.mjs';import{ReplayRecorder}from'./echoes/recorder.mjs';import{RunTimer,fmt}from'./gameplay/timer.mjs';import{ASTRAL01 as level}from'./levels/astral/astral-01.mjs';import{Renderer}from'./rendering/renderer.mjs';
+const P=window.EixoRunPhysics,$=id=>document.getElementById(id),canvas=$('runCanvas'),renderer=new Renderer(canvas,level),input=new RunInput(),camera=new FollowCamera(),recorder=new ReplayRecorder(),timer=new RunTimer();
+const ui={time:$('runTime'),delta:$('runDelta'),shards:$('runShards'),start:$('startCard'),results:$('results'),rt:$('resultTime'),rp:$('resultPb'),rs:$('resultShards'),rx:$('resultSecrets'),title:$('resultTitle')};
+let player=P.createPlayer(level.spawn),attempt=null,running=false,submitting=false,acc=0,last=performance.now(),prevMask=0,pbTime=null,echoData={pb:null,world:null},echoStates={};
+const account=()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch{return null}};
+const api=async(path,opts={})=>{const p=account();const body=opts.body?JSON.parse(opts.body):{};if(p){body.id=p.id;body.token=p.token||'session'}const r=await fetch(path,{...opts,credentials:'same-origin',headers:{'Content-Type':'application/json',...(opts.headers||{})},body:opts.method&&opts.method!=='GET'?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||'RUN request failed');return d};
+function resetEchoes(){echoStates={};for(const k of ['pb','world']){const e=echoData[k];if(e?.replay)echoStates[k]={player:P.createPlayer(level.spawn),i:0,mask:0,prev:0,replay:e.replay}}}
+function resetLocal(){player=P.createPlayer(level.spawn);camera.reset(player.x,player.y);recorder.reset(0);timer.reset();prevMask=0;acc=0;submitting=false;resetEchoes();ui.results.classList.add('hidden');ui.time.textContent='00:00.000';ui.delta.textContent='—';ui.shards.textContent='0 / '+level.shards.length}
+async function begin(){const p=account();if(!p){location.href='/?signin=1';return}ui.start.classList.add('hidden');resetLocal();const daily=new URLSearchParams(location.search).get('daily')==='1';try{attempt=await api('/api/run/start',{method:'POST',body:JSON.stringify({levelId:level.id,daily})});echoData=attempt.echoes||{};pbTime=echoData.pb?.timeMs??null;resetEchoes();running=true}catch(e){ui.start.classList.remove('hidden');alert(e.message)}}
+function stepEcho(e){while(e.i<e.replay.length&&e.replay[e.i].tick===e.player.tick){e.mask=e.replay[e.i].mask;e.i++}P.step(e.player,level,e.mask,e.prev);e.prev=e.mask}
+function fixed(){
+ const beforeX=player.x+player.w*.5;if(input.consumeChanged())recorder.sample(player.tick,input.mask);
+ P.step(player,level,input.mask,prevMask);prevMask=input.mask;
+ const afterX=player.x+player.w*.5;if(!timer.started&&beforeX<level.startLine.x&&afterX>=level.startLine.x)timer.start(player.tick);
+ if(player.finished&&!timer.finished){timer.finish(player.tick);finish()}
+ for(const e of Object.values(echoStates))stepEcho(e);
+}
+async function finish(){if(submitting||!attempt)return;submitting=true;running=false;try{const d=await api('/api/run/finish',{method:'POST',body:JSON.stringify({attemptId:attempt.attemptId,replay:recorder.data()})});echoData=d.echoes||echoData;pbTime=echoData.pb?.timeMs??d.timeMs;ui.rt.textContent=fmt(d.timeMs);ui.rp.textContent=d.newPb?'NEW PB':(d.previousPb?fmt(d.previousPb):'—');ui.rs.textContent=d.shards+' / '+d.totalShards;ui.rx.textContent=d.secrets+' / '+d.totalSecrets;ui.title.textContent=d.complete100?'100% COMPLETE':'RUN COMPLETE';ui.results.classList.remove('hidden')}catch(e){ui.title.textContent='RUN NOT SAVED';ui.rp.textContent=e.message;ui.results.classList.remove('hidden')}}
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(running){acc+=dt;let n=0;while(acc>=P.DT&&n<8){fixed();acc-=P.DT;n++}camera.update(player,dt)}
+ ui.time.textContent=fmt(timer.ms(player.tick));if(pbTime&&timer.started)ui.delta.textContent=(timer.ms(player.tick)-pbTime>=0?'+':'')+((timer.ms(player.tick)-pbTime)/1000).toFixed(3);ui.shards.textContent=player.shards.size+' / '+level.shards.length;
+ const echoes=[];if($('pbEcho').checked&&echoStates.pb)echoes.push({player:echoStates.pb.player,alpha:.28,tint:'#4fe3ff'});if($('wrEcho').checked&&echoStates.world)echoes.push({player:echoStates.world.player,alpha:.26,tint:'#ffd75a'});
+ renderer.draw(player,camera,echoes);requestAnimationFrame(frame)}
+$('startButton').onclick=begin;$('retryButton').onclick=begin;$('retryTop').onclick=()=>running?begin():begin();window.addEventListener('blur',()=>{input.down.clear();input.rebuild()});renderer.ready.then(()=>requestAnimationFrame(frame));
