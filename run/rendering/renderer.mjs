@@ -177,7 +177,7 @@ export class Renderer{
 
   platform(r,ctx,kind='solid'){
     const thin=kind!=='solid';
-    const depth=thin?Math.min(.95,Math.max(.55,r.h*2.2)):Math.min(3.0,Math.max(1.35,r.h*.6));
+    const depth=thin?Math.min(.95,Math.max(.55,r.h*2.2)):Math.max(1.35,r.h*.88);
     ctx.save();
     const rock=ctx.createLinearGradient(r.x,r.y,r.x,r.y+depth);
     rock.addColorStop(0,kind==='break'?'#65759c':'#53678f');
