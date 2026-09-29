@@ -4,73 +4,154 @@
   if(root)root.EixoRunPhysics=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
-const VERSION='run-physics-1';
+
+const VERSION='run-physics-2';
 const DT=1/120;
 const C=Object.freeze({
-  maxRun:8.2,groundAccel:52,groundBrake:60,reverseBrake:76,airAccel:27,
-  jumpVelocity:13,gravityUp:33,gravityDown:45,maxFall:22,coyote:0.10,jumpBuffer:0.12,
-  jumpCut:0.52,width:0.74,height:1.42,skin:0.001
+  maxRun:8.7,
+  groundAccel:58,
+  groundBrake:68,
+  reverseBrake:82,
+  airAccel:30,
+  jumpVelocity:13.5,
+  gravityUp:34,
+  gravityDown:47,
+  maxFall:22,
+  coyote:0.11,
+  jumpBuffer:0.12,
+  jumpCut:0.50,
+  width:0.74,
+  height:1.42,
+  skin:0.001
 });
 const INPUT={LEFT:1,RIGHT:2,JUMP:4};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const approach=(v,target,delta)=>v<target?Math.min(target,v+delta):Math.max(target,v-delta);
+
 function createPlayer(spawn={x:1.5,y:3}){
-  return {x:+spawn.x||0,y:+spawn.y||0,vx:0,vy:0,w:C.width,h:C.height,onGround:false,
-    coyote:0,jumpBuffer:0,jumpHeld:false,facing:1,dead:false,finished:false,deaths:0,checkpoint:{x:+spawn.x||0,y:+spawn.y||0},
-    shards:new Set(),secrets:new Set(),broken:new Set(),falling:Object.create(null),skid:false,hardLanding:false,lastGroundVy:0,deathTicks:0,tick:0};
+  return {
+    x:+spawn.x||0,y:+spawn.y||0,vx:0,vy:0,w:C.width,h:C.height,
+    onGround:false,coyote:0,jumpBuffer:0,jumpHeld:false,facing:1,
+    dead:false,finished:false,deaths:0,checkpoint:{x:+spawn.x||0,y:+spawn.y||0},
+    shards:new Set(),secrets:new Set(),broken:new Set(),falling:Object.create(null),
+    skid:false,hardLanding:false,lastGroundVy:0,deathTicks:0,tick:0,
+    groundPlatform:null,boostCooldown:0
+  };
 }
 function aabb(p,r){return p.x+p.w>r.x&&p.x<r.x+r.w&&p.y+p.h>r.y&&p.y<r.y+r.h}
+function overlapX(p,r){return p.x+p.w>r.x&&p.x<r.x+r.w}
+
 function movingRect(m,tick){
   const phase=(tick*DT+(m.phase||0))*Math.PI*2/Math.max(.001,m.period||2);
   const s=Math.sin(phase);
-  return {x:(m.x||0)+(m.axis==='x'?(m.amplitude||0)*s:0),y:(m.y||0)+(m.axis==='y'?(m.amplitude||0)*s:0),w:m.w,h:m.h,id:m.id||''};
+  return {
+    x:(m.x||0)+(m.axis==='x'?(m.amplitude||0)*s:0),
+    y:(m.y||0)+(m.axis==='y'?(m.amplitude||0)*s:0),
+    w:m.w,h:m.h,id:m.id||'',moving:true,oneWay:!!m.oneWay
+  };
 }
 function allSolids(level,tick,p){
-  const arr=[...(level.solids||[]),...(level.oneWayPlatforms||[]).map(x=>({...x,oneWay:true}))];
-  for(const m of level.movingPlatforms||[])arr.push({...movingRect(m,tick),oneWay:!!m.oneWay,moving:true});
+  const arr=[
+    ...(level.solids||[]).map((r,i)=>({...r,id:r.id||'solid-'+i})),
+    ...(level.oneWayPlatforms||[]).map((r,i)=>({...r,id:r.id||'oneway-'+i,oneWay:true}))
+  ];
+  for(const m of level.movingPlatforms||[])arr.push(movingRect(m,tick));
   for(const b of level.breakableBlocks||[])if(!p?.broken?.has(b.id))arr.push({...b,breakable:true});
   for(const f of level.fallingPlatforms||[]){
     const trigger=p?.falling?.[f.id],delay=Math.max(0,Number(f.delay??.32));
     let y=f.y;
-    if(trigger!=null){const elapsed=Math.max(0,(tick-trigger)*DT-delay);if(elapsed>0)y+=.5*18*elapsed*elapsed}
+    if(trigger!=null){
+      const elapsed=Math.max(0,(tick-trigger)*DT-delay);
+      if(elapsed>0)y+=.5*18*elapsed*elapsed;
+    }
     if(y<(level.killY||30)+5)arr.push({...f,y,oneWay:true,falling:true});
   }
   return arr;
+}
+function carryByMovingPlatform(p,level){
+  if(!p.onGround||!p.groundPlatform?.id)return;
+  const m=(level.movingPlatforms||[]).find(x=>x.id===p.groundPlatform.id);
+  if(!m){p.groundPlatform=null;return}
+  const now=movingRect(m,p.tick),before=movingRect(m,Math.max(0,p.tick-1));
+  p.x+=now.x-before.x;
+  p.y+=now.y-before.y;
 }
 function resolveX(p,rects,dx){
   p.x+=dx;
   for(const r of rects){
     if(r.oneWay||!aabb(p,r))continue;
-    if(dx>0)p.x=r.x-p.w-C.skin; else if(dx<0)p.x=r.x+r.w+C.skin;
+    if(dx>0)p.x=r.x-p.w-C.skin;
+    else if(dx<0)p.x=r.x+r.w+C.skin;
     p.vx=0;
   }
 }
 function resolveY(p,rects,dy,oldBottom){
   p.y+=dy;p.onGround=false;
+  let landed=null;
   for(const r of rects){
     if(!aabb(p,r))continue;
     if(r.oneWay){
       if(dy<0)continue;
-      const top=r.y;
-      if(oldBottom>top+0.08)continue;
+      if(oldBottom>r.y+0.08)continue;
     }
-    if(dy>0){p.y=r.y-p.h-C.skin;p.onGround=true;p.lastGroundVy=p.vy;p.vy=0;if(r.falling&&p.falling[r.id]==null)p.falling[r.id]=p.tick;}
-    else if(dy<0){if(r.breakable&&r.id){p.broken.add(r.id);continue}p.y=r.y+r.h+C.skin;p.vy=0;}
+    if(dy>0){
+      p.y=r.y-p.h-C.skin;p.onGround=true;p.lastGroundVy=p.vy;p.vy=0;landed=r;
+      if(r.falling&&p.falling[r.id]==null)p.falling[r.id]=p.tick;
+    }else if(dy<0){
+      if(r.breakable&&r.id){p.broken.add(r.id);continue}
+      p.y=r.y+r.h+C.skin;p.vy=0;
+    }
   }
+  p.groundPlatform=landed?.moving?{id:landed.id}:null;
+  return landed;
 }
 function respawn(p){
   p.x=p.checkpoint.x;p.y=p.checkpoint.y;p.vx=0;p.vy=0;p.dead=false;p.finished=false;
-  p.coyote=0;p.jumpBuffer=0;p.onGround=false;p.skid=false;p.hardLanding=false;p.deathTicks=0;p.broken.clear();p.falling=Object.create(null);
+  p.coyote=0;p.jumpBuffer=0;p.onGround=false;p.skid=false;p.hardLanding=false;p.deathTicks=0;
+  p.broken.clear();p.falling=Object.create(null);p.groundPlatform=null;p.boostCooldown=0;
+}
+function applyPads(p,level){
+  if(p.boostCooldown>0)p.boostCooldown--;
+  if(!p.onGround)return;
+  const feet={x:p.x+.08,y:p.y+p.h-.08,w:p.w-.16,h:.18};
+  for(const pad of level.bouncePads||[]){
+    if(aabb(feet,pad)){
+      p.vy=-Math.max(10,Number(pad.power)||15.4);
+      p.onGround=false;p.coyote=0;p.jumpBuffer=0;p.groundPlatform=null;
+      return;
+    }
+  }
+  if(p.boostCooldown<=0){
+    for(const pad of level.speedPads||[]){
+      if(aabb(feet,pad)){
+        const dir=Number(pad.dir)||p.facing||1;
+        p.vx=dir*Math.max(Math.abs(p.vx),Number(pad.speed)||11.2);
+        p.facing=dir<0?-1:1;p.boostCooldown=18;
+        break;
+      }
+    }
+  }
+}
+function applyWind(p,level){
+  for(const zone of level.windZones||[]){
+    if(aabb(p,zone)){
+      p.vx=clamp(p.vx+(Number(zone.forceX)||0)*DT,-13,13);
+      p.vy=clamp(p.vy+(Number(zone.forceY)||0)*DT,-24,C.maxFall);
+    }
+  }
 }
 function step(p,level,inputMask,prevMask=0){
   if(p.finished){p.tick++;return p}
   if(p.dead){p.deathTicks--;if(p.deathTicks<=0)respawn(p);p.tick++;return p}
+
+  carryByMovingPlatform(p,level);
+
   const left=!!(inputMask&INPUT.LEFT),right=!!(inputMask&INPUT.RIGHT),jump=!!(inputMask&INPUT.JUMP);
   const jumpPressed=jump&&!(prevMask&INPUT.JUMP),jumpReleased=!jump&&(prevMask&INPUT.JUMP);
   if(jumpPressed)p.jumpBuffer=C.jumpBuffer; else p.jumpBuffer=Math.max(0,p.jumpBuffer-DT);
   if(p.onGround)p.coyote=C.coyote; else p.coyote=Math.max(0,p.coyote-DT);
 
-  let dir=(right?1:0)-(left?1:0);if(dir)p.facing=dir;
+  const dir=(right?1:0)-(left?1:0);if(dir)p.facing=dir;
   p.skid=false;
   if(p.onGround){
     if(dir){
@@ -80,21 +161,27 @@ function step(p,level,inputMask,prevMask=0){
   }else if(dir)p.vx=approach(p.vx,dir*C.maxRun,C.airAccel*DT);
 
   if(p.jumpBuffer>0&&p.coyote>0){
-    p.vy=-C.jumpVelocity;p.onGround=false;p.coyote=0;p.jumpBuffer=0;p.jumpHeld=true;
+    p.vy=-C.jumpVelocity;p.onGround=false;p.coyote=0;p.jumpBuffer=0;p.jumpHeld=true;p.groundPlatform=null;
   }
   if(jumpReleased&&p.vy<0)p.vy*=C.jumpCut;
   if(!jump)p.jumpHeld=false;
+
   p.vy=clamp(p.vy+(p.vy<0?C.gravityUp:C.gravityDown)*DT,-50,C.maxFall);
+  applyWind(p,level);
 
   const rects=allSolids(level,p.tick,p);
   resolveX(p,rects,p.vx*DT);
   const oldBottom=p.y+p.h,preVy=p.vy;
   resolveY(p,rects,p.vy*DT,oldBottom);
   p.hardLanding=p.onGround&&preVy>12;
+  applyPads(p,level);
 
-  for(const h of level.hazards||[])if(aabb(p,h)){p.dead=true;p.deathTicks=54;p.deaths++;break}
-  if(p.y>(level.killY||30)){p.dead=true;p.deathTicks=54;p.deaths++}
-  for(const cp of level.checkpoints||[])if(aabb(p,cp)){p.checkpoint={x:cp.spawnX??cp.x,y:cp.spawnY??(cp.y-p.h-.1)}}
+  for(const h of level.hazards||[])if(aabb(p,h)){p.dead=true;p.deathTicks=48;p.deaths++;p.groundPlatform=null;break}
+  if(p.y>(level.killY||30)){p.dead=true;p.deathTicks=48;p.deaths++;p.groundPlatform=null}
+
+  for(const cp of level.checkpoints||[])if(aabb(p,cp)){
+    p.checkpoint={x:cp.spawnX??cp.x,y:cp.spawnY??(cp.y-p.h-.1)};
+  }
   for(const s of level.shards||[])if(!p.shards.has(s.id)&&aabb(p,{x:s.x-.3,y:s.y-.3,w:.6,h:.6}))p.shards.add(s.id);
   for(const s of level.secrets||[])if(!p.secrets.has(s.id)&&aabb(p,s))p.secrets.add(s.id);
   if(level.finish&&aabb(p,level.finish))p.finished=true;

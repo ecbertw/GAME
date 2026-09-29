@@ -1,1 +1,31 @@
-{"frameWidth":128,"frameHeight":160,"frames":12,"states":{"idle":0,"run":[1,2,3,4],"skid":5,"jump":6,"apex":7,"fall":8,"hard-land":9,"death":10,"victory":11}}
+{
+  "frameWidth": 160,
+  "frameHeight": 180,
+  "frames": 14,
+  "states": {
+    "idle": [
+      0,
+      1
+    ],
+    "run": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "fastRun": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "skid": 6,
+    "jumpStart": 7,
+    "jump": 8,
+    "apex": 9,
+    "fall": 10,
+    "landing": 11,
+    "death": 12,
+    "victory": 13
+  }
+}

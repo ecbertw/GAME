@@ -1,6 +1,6 @@
 import{RunInput}from'./input/input.mjs';import{FollowCamera}from'./camera/follow-camera.mjs';import{ReplayRecorder}from'./echoes/recorder.mjs';import{RunTimer,fmt}from'./gameplay/timer.mjs';import{ASTRAL01 as level}from'./levels/astral/astral-01.mjs';import{Renderer}from'./rendering/renderer.mjs';import{SFX}from'./audio/audio.mjs';
 const P=window.EixoRunPhysics,$=id=>document.getElementById(id),canvas=$('runCanvas'),renderer=new Renderer(canvas,level),input=new RunInput(),camera=new FollowCamera(),recorder=new ReplayRecorder(),timer=new RunTimer();
-const ui={time:$('runTime'),delta:$('runDelta'),shards:$('runShards'),start:$('startCard'),results:$('results'),rt:$('resultTime'),rp:$('resultPb'),rs:$('resultShards'),rx:$('resultSecrets'),rw:$('resultWorldRank'),rc:$('resultCountryRank'),title:$('resultTitle'),ranking:$('rankingPanel'),rankList:$('runRanking')};
+const ui={time:$('runTime'),delta:$('runDelta'),shards:$('runShards'),start:$('startCard'),results:$('results'),rt:$('resultTime'),rp:$('resultPb'),rs:$('resultShards'),rx:$('resultSecrets'),rw:$('resultWorldRank'),rc:$('resultCountryRank'),title:$('resultTitle'),ranking:$('rankingPanel'),rankList:$('runRanking'),zone:$('zoneName')};
 let player=P.createPlayer(level.spawn),attempt=null,running=false,submitting=false,acc=0,last=performance.now(),prevMask=0,pbTime=null,echoData={pb:null,world:null},echoStates={};
 const dailyMode=new URLSearchParams(location.search).get('daily')==='1';if(dailyMode)$('runStartTitle').textContent='DAILY RUN — FIRST LIGHT';
 const account=()=>{try{return JSON.parse(localStorage.getItem('eixo_player')||'null')}catch{return null}};
@@ -10,11 +10,11 @@ function resetLocal(){player=P.createPlayer(level.spawn);camera.reset(player.x,p
 async function begin(){const p=account();if(!p){location.href='/?signin=1';return}ui.start.classList.add('hidden');resetLocal();try{attempt=await api('/api/run/start',{method:'POST',body:JSON.stringify({levelId:level.id,daily:dailyMode})});echoData=attempt.echoes||{};pbTime=echoData.pb?.timeMs??null;resetEchoes();running=true}catch(e){ui.start.classList.remove('hidden');alert(e.message)}}
 function stepEcho(e){while(e.i<e.replay.length&&e.replay[e.i].tick===e.player.tick){e.mask=e.replay[e.i].mask;e.i++}P.step(e.player,level,e.mask,e.prev);e.prev=e.mask}
 function fixed(){
- const beforeX=player.x+player.w*.5,wasGround=player.onGround,wasDead=player.dead,wasSkid=player.skid,shards=player.shards.size,secrets=player.secrets.size,oldVy=player.vy;
+ const beforeX=player.x+player.w*.5,wasGround=player.onGround,wasDead=player.dead,wasSkid=player.skid,shards=player.shards.size,secrets=player.secrets.size,oldVy=player.vy,oldVx=player.vx,oldCheckpoint=player.checkpoint.x;
  if(input.consumeChanged())recorder.sample(player.tick,input.mask);
  P.step(player,level,input.mask,prevMask);const pressedJump=(input.mask&P.INPUT.JUMP)&&!(prevMask&P.INPUT.JUMP);prevMask=input.mask;
  const afterX=player.x+player.w*.5;if(!timer.started&&beforeX<level.startLine.x&&afterX>=level.startLine.x)timer.start(player.tick);
- if(pressedJump&&player.vy<0)SFX.jump();if(!wasGround&&player.onGround)(player.hardLanding||oldVy>12?SFX.hard:SFX.land)();if(!wasSkid&&player.skid)SFX.skid();if(player.shards.size>shards)SFX.shard();if(player.secrets.size>secrets)SFX.secret();if(!wasDead&&player.dead)SFX.death();
+ if(pressedJump&&player.vy<0)SFX.jump();if(wasGround&&!pressedJump&&!player.onGround&&player.vy<-10)SFX.bounce();if(Math.abs(oldVx)<9.4&&Math.abs(player.vx)>10)SFX.boost();if(!wasGround&&player.onGround)(player.hardLanding||oldVy>12?SFX.hard:SFX.land)();if(!wasSkid&&player.skid)SFX.skid();if(player.checkpoint.x!==oldCheckpoint)SFX.checkpoint();if(player.shards.size>shards)SFX.shard();if(player.secrets.size>secrets)SFX.secret();if(!wasDead&&player.dead)SFX.death();
  if(player.finished&&!timer.finished){timer.finish(player.tick);SFX.victory();finish()}
  for(const e of Object.values(echoStates))stepEcho(e);
 }
@@ -24,8 +24,15 @@ async function showRanking(scope='world',category='best'){
  const p=account(),country=scope==='country'?(p?.country||''):'',q=new URLSearchParams({levelId:level.id,category,country,page:'1'});if(dailyMode)q.set('daily','1');
  try{const d=await api('/api/run/rankings?'+q);ui.rankList.innerHTML=(d.players||[]).map((x,i)=>'<li><b>#'+(i+1)+'</b><span>'+String(x.name||'PLAYER').replace(/[<>&]/g,'')+' <small>'+String(x.country||'')+'</small></span><strong>'+fmt(Number(x.timeMs)||0)+'</strong></li>').join('')||'<li>NO TIMES YET</li>'}catch(e){ui.rankList.innerHTML='<li>'+e.message+'</li>'}
 }
+function updateZone(){
+ const z=(level.zones||[]).find(x=>player.x>=x.fromX&&player.x<x.toX);
+ let label=z?.name||level.name;
+ if(player.x>=73&&player.x<126&&player.y<5.5)label='UPPER ROUTE — '+label;
+ if(player.x>=104&&player.x<121&&player.y<2.9)label='SECRET ROUTE — MOON CACHE';
+ if(ui.zone&&ui.zone.textContent!==label)ui.zone.textContent=label;
+}
 function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(running){acc+=dt;let n=0;while(acc>=P.DT&&n<8){fixed();acc-=P.DT;n++}camera.update(player,dt)}
- ui.time.textContent=fmt(timer.ms(player.tick));if(pbTime&&timer.started){const d=timer.ms(player.tick)-pbTime;ui.delta.textContent=(d>=0?'+':'')+(d/1000).toFixed(3)}ui.shards.textContent=player.shards.size+' / '+level.shards.length;
+ updateZone();ui.time.textContent=fmt(timer.ms(player.tick));if(pbTime&&timer.started){const d=timer.ms(player.tick)-pbTime;ui.delta.textContent=(d>=0?'+':'')+(d/1000).toFixed(3)}ui.shards.textContent=player.shards.size+' / '+level.shards.length;
  const echoes=[];if($('pbEcho').checked&&echoStates.pb)echoes.push({player:echoStates.pb.player,alpha:.28,tint:'#4fe3ff'});if($('wrEcho').checked&&echoStates.world)echoes.push({player:echoStates.world.player,alpha:.26,tint:'#ffd75a'});
  renderer.draw(player,camera,echoes);requestAnimationFrame(frame)}
 $('startButton').onclick=begin;$('retryButton').onclick=begin;$('nextRunButton').onclick=begin;$('retryTop').onclick=begin;$('rankingTop').onclick=()=>showRanking('world','best');$('rankingButton').onclick=()=>showRanking('world','best');$('rankWorld').onclick=()=>showRanking('world','best');$('rankCountry').onclick=()=>showRanking('country','best');$('rank100').onclick=()=>showRanking('world','100');$('rankClose').onclick=()=>{ui.ranking.classList.add('hidden');if(!running)ui.results.classList.remove('hidden')};
