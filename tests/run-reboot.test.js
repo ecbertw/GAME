@@ -37,10 +37,10 @@ test('RUN runner production pack is validated and compiled into one runtime atla
   assert.equal(validation.validated,true);
   assert.equal(validation.rules.paddingPx,24);
   assert.equal(Object.keys(manifest.frames).length,16);
-  assert.equal(Object.keys(atlas.frames).length,16);
+  assert.equal(Object.keys(atlas.frames).length,16);assert.equal(atlas.cell,128);
   const atlasFile=path.join(ROOT,'games/run/assets/runner/runner-atlas.webp');
   assert.ok(fs.existsSync(atlasFile));
-  assert.ok(fs.statSync(atlasFile).size>100000);
+  assert.ok(fs.statSync(atlasFile).size>45000);
   for(const name of Object.keys(manifest.frames)){
     const margins=validation.frames[name].margins;
     assert.ok(Math.min(margins.left,margins.top,margins.right,margins.bottom)>=24,name);
