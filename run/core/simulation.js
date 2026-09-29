@@ -35,14 +35,14 @@ function resolveX(p,solids,dx){
  if(!dx)return;p.x+=dx;
  for(const r of solids){if(r.oneWay||!overlap(p,r))continue;if(dx>0)p.x=r.x-p.w-C.skin;else p.x=r.x+r.w+C.skin;p.vx=0;}
 }
-function resolveY(p,solids,dy){
+function resolveY(p,solids,dy,events){
  const oldBottom=p.y+p.h,oldTop=p.y;p.y+=dy;p.onGround=false;let landing=0;
  for(const r of solids){
   if(!overlap(p,r))continue;
   if(r.oneWay&&(dy<0||oldBottom>r.y+.08))continue;
   if(dy>0&&oldBottom<=r.y+.10){landing=Math.max(landing,p.vy);p.y=r.y-p.h-C.skin;p.vy=0;p.onGround=true;}
   else if(dy<0&&oldTop>=r.y+r.h-.08&&!r.oneWay){
-   if(r.breakable){p.broken.add(r.id);p.vy=Math.max(1.4,p.vy*.12);continue;}
+   if(r.breakable){if(!p.broken.has(r.id)){p.broken.add(r.id);events?.push({type:'break',id:r.id,x:r.x,y:r.y,w:r.w,h:r.h});}p.vy=Math.max(1.4,p.vy*.12);continue;}
    p.y=r.y+r.h+C.skin;p.vy=0;
   }
  }
@@ -73,7 +73,7 @@ function step(p,level,mask,prevMask=0){
  if(p.jumpBuffer>0&&p.coyote>0){p.vy=-C.jumpVelocity;p.onGround=false;p.coyote=0;p.jumpBuffer=0;events.push({type:'jump'});}
  if(released&&p.vy<0)p.vy*=C.jumpCut;
  p.vy=clamp(p.vy+(p.vy<0?C.gravityRise:C.gravityFall)*DT,-40,C.maxFall);
- const solids=staticSolids(level,p);resolveX(p,solids,p.vx*DT);const landed=resolveY(p,solids,p.vy*DT);
+ const solids=staticSolids(level,p);resolveX(p,solids,p.vx*DT);const landed=resolveY(p,solids,p.vy*DT,events);
  if(p.onGround&&landed>2){const hard=landed>C.hardLandSpeed;events.push({type:hard?'hard-land':'land',speed:landed});p.landingTicks=hard?11:6;if(hard)p.hardLanding=11;}
  if(p.startTick==null&&Number.isFinite(level.startX)&&p.x+p.w*.5>=level.startX)p.startTick=p.tick;
  interactions(p,level,events);if(p.y>(level.killY||28)&&kill(p))events.push({type:'death'});
