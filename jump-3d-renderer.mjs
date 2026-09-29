@@ -69,16 +69,7 @@ function materialSet(root,style,ghost=false){
 function createActor(root,id,ghost){
   const mixer=new THREE.AnimationMixer(root),actions={};
   for(const clip of clips){const key=(clip.name||'').toLowerCase();actions[key]=mixer.clipAction(clip)}
-  const leftShoulder=root.getObjectByName('mixamorig:LeftShoulder'),rightShoulder=root.getObjectByName('mixamorig:RightShoulder');
-  const leftArm=root.getObjectByName('mixamorig:LeftArm'),rightArm=root.getObjectByName('mixamorig:RightArm');
-  const leftFore=root.getObjectByName('mixamorig:LeftForeArm'),rightFore=root.getObjectByName('mixamorig:RightForeArm');
-  const leftHand=root.getObjectByName('mixamorig:LeftHand'),rightHand=root.getObjectByName('mixamorig:RightHand');
-  return {
-    id,root,mixer,actions,cape:root.getObjectByName('Accessory_Cape'),
-    leftShoulder,rightShoulder,leftArm,rightArm,leftFore,rightFore,leftHand,rightHand,
-    shoulderRest:{left:leftShoulder?.quaternion.clone(),right:rightShoulder?.quaternion.clone()},
-    current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true
-  };
+  return {id,root,mixer,actions,cape:root.getObjectByName('Accessory_Cape'),current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true};
 }
 function makeActor(id,ghost){
   const root=prepareModel(cloneSkeleton(source));root.visible=false;root.renderOrder=ghost?1:2;scene.add(root);
@@ -142,61 +133,6 @@ function updateActorPose(actor,motion,dt){
   actor.lastGround=ground;
 }
 
-const armBonePos=new THREE.Vector3(),armChildPos=new THREE.Vector3(),currentArmDir=new THREE.Vector3();
-const armWorldQ=new THREE.Quaternion(),armDeltaQ=new THREE.Quaternion(),armTargetWorldQ=new THREE.Quaternion(),armParentWorldQ=new THREE.Quaternion(),armLocalQ=new THREE.Quaternion();
-const nearUpperDir=new THREE.Vector3(),nearForeDir=new THREE.Vector3(),farUpperDir=new THREE.Vector3(),farForeDir=new THREE.Vector3();
-
-function alignBoneToWorldDirection(bone,child,desired){
-  if(!bone||!child||!bone.parent)return;
-  bone.getWorldPosition(armBonePos);child.getWorldPosition(armChildPos);
-  currentArmDir.copy(armChildPos).sub(armBonePos);
-  if(currentArmDir.lengthSq()<1e-10||desired.lengthSq()<1e-10)return;
-  currentArmDir.normalize();desired.normalize();
-  armDeltaQ.setFromUnitVectors(currentArmDir,desired);
-  bone.getWorldQuaternion(armWorldQ);
-  armTargetWorldQ.copy(armDeltaQ).multiply(armWorldQ);
-  bone.parent.getWorldQuaternion(armParentWorldQ).invert();
-  armLocalQ.copy(armParentWorldQ).multiply(armTargetWorldQ);
-  bone.quaternion.copy(armLocalQ);
-  bone.updateWorldMatrix(false,true);
-}
-
-function refineRunSilhouette(actor,motion){
-  if(motion.ground===false||!motion.moving)return;
-  const runAction=actor.current?.includes('run')?actor.actions[actor.current]:null,clip=runAction?.getClip?.();
-  const phase=clip?.duration?((runAction.time/clip.duration)%1)*Math.PI*2:0;
-  const facing=motion.facing===-1?-1:1;
-  const swing=Math.sin(phase)*.42;
-
-  // Quiet clavicles first. From here down the target is defined in world/screen
-  // space, so mirrored/local rig axes can no longer make the arms open sideways.
-  if(actor.leftShoulder&&actor.shoulderRest.left)actor.leftShoulder.quaternion.slerp(actor.shoulderRest.left,.90);
-  if(actor.rightShoulder&&actor.shoulderRest.right)actor.rightShoulder.quaternion.slerp(actor.shoulderRest.right,.90);
-  actor.root.updateMatrixWorld(true);
-
-  // Whichever arm is nearer the camera gets the readable runner silhouette:
-  // upper arm mostly down, forearm roughly horizontal in front (the red-line pose).
-  const near=facing===1
-    ?{upper:actor.rightArm,fore:actor.rightFore,hand:actor.rightHand}
-    :{upper:actor.leftArm,fore:actor.leftFore,hand:actor.leftHand};
-  const far=facing===1
-    ?{upper:actor.leftArm,fore:actor.leftFore,hand:actor.leftHand}
-    :{upper:actor.rightArm,fore:actor.rightFore,hand:actor.rightHand};
-
-  nearUpperDir.set(facing*Math.sin(swing),-Math.cos(swing),0);
-  nearForeDir.set(facing*Math.cos(swing),Math.sin(swing)*.55,0);
-  farUpperDir.set(-facing*Math.sin(swing),-Math.cos(swing),0);
-  farForeDir.set(-facing*Math.cos(swing),-Math.sin(swing)*.40,0);
-
-  alignBoneToWorldDirection(near.upper,near.fore,nearUpperDir);
-  actor.root.updateMatrixWorld(true);
-  alignBoneToWorldDirection(near.fore,near.hand,nearForeDir);
-
-  actor.root.updateMatrixWorld(true);
-  alignBoneToWorldDirection(far.upper,far.fore,farUpperDir);
-  actor.root.updateMatrixWorld(true);
-  alignBoneToWorldDirection(far.fore,far.hand,farForeDir);
-}
 function beginFrame(){mount();frame++;for(const a of actors.values())a.seen=-1}
 
 function actor(data){
@@ -214,10 +150,9 @@ function endFrame(time){
   for(const a of actors.values()){
     if(a.seen!==frame){a.root.visible=false;continue}
     updateActorPose(a,a._motion||{},dt);
-    // Let the GLB own the run cycle, then apply only the small elbow readability
-    // correction. No shoulder animation is overridden.
+    // Run/idle/jump skeletal motion is authored in the GLB. Do not overwrite
+    // shoulder, upper-arm or forearm rotations at runtime.
     a.mixer.update(dt);
-    refineRunSilhouette(a,a._motion||{});
   }
   renderer.render(scene,camera);
 }
@@ -244,12 +179,12 @@ function preview(canvasNode,data={}){
   p.actor.root.position.y=p.actor.root.userData.groundOffset||0;
   materialSet(p.actor.root,data.style||{},false);updateActorPose(p.actor,motion,dt);chooseAction(p.actor,motion,dt);
   if(p.actor.cape){p.actor.cape.visible=String(data.style?.accessory||'none')==='cape';p.actor.cape.rotation.x=.16+Math.sin(performance.now()/170)*.035}
-  p.actor.mixer.update(dt);refineRunSilhouette(p.actor,motion);p.renderer.render(p.scene,p.camera);return true;
+  p.actor.mixer.update(dt);p.renderer.render(p.scene,p.camera);return true;
 }
 
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v352',gltf=>{
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v353',gltf=>{
   source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready);
 },()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 
