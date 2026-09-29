@@ -1,6 +1,6 @@
 export const RUNNER_ATLAS = Object.freeze({
   key: 'runnerAtlas',
-  file: '/games/run/assets/runner/runner-atlas.webp',
+  file: '/games/run/assets/runner/runner-atlas.webp?v=runner-20260930-01',
   frameWidth: 56,
   frameHeight: 56,
   originX: 0.5,
