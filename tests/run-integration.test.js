@@ -6,7 +6,14 @@ test('RUN has 42 persistent shard ids and one secret',async()=>{const m=await im
 test('RUN source modules parse under Node',()=>{const cp=require('node:child_process');for(const file of ['run/run-client.mjs','run/rendering/renderer.mjs','run/audio/audio.mjs','run/camera/follow-camera.mjs','run/input/input.mjs']){const out=cp.spawnSync(process.execPath,['--check',require('node:path').join(__dirname,'..',file)],{encoding:'utf8'});assert.equal(out.status,0,file+' '+out.stderr)}});
 
 test('ASTRAL 01 graybox has a deterministic traversable main route',async()=>{
- const {ASTRAL01}=await import('../run/levels/astral/astral-01.mjs');const P=require('../run/engine/physics-core.js'),p=P.createPlayer(ASTRAL01.spawn);let prev=0;
- for(let tick=0;tick<120*100&&!p.finished;tick++){const phase=tick%95,mask=P.INPUT.RIGHT|(phase<32?P.INPUT.JUMP:0);P.step(p,ASTRAL01,mask,prev);prev=mask}
- assert.equal(p.finished,true,'scripted runner should be able to reach the finish');assert.ok(p.deaths<12,'main route should not require excessive deaths');
+ const {ASTRAL01}=await import('../run/levels/astral/astral-01.mjs');const P=require('../run/engine/physics-core.js'),p=P.createPlayer(ASTRAL01.spawn);let prev=0,jumpHold=0;
+ for(let tick=0;tick<120*100&&!p.finished;tick++){
+  if(p.onGround&&jumpHold===0){
+   const bottom=p.y+p.h,center=p.x+p.w*.5;
+   const support=ASTRAL01.solids.find(r=>center>=r.x&&center<=r.x+r.w&&Math.abs(bottom-r.y)<.12);
+   if(support&&support.x+support.w-(p.x+p.w)<3.25)jumpHold=46;
+  }
+  const mask=P.INPUT.RIGHT|(jumpHold>0?P.INPUT.JUMP:0);P.step(p,ASTRAL01,mask,prev);prev=mask;if(jumpHold>0)jumpHold--;
+ }
+ assert.equal(p.finished,true,`scripted runner stopped at x=${p.x.toFixed(2)}, deaths=${p.deaths}`);assert.ok(p.deaths<12,'main route should not require excessive deaths');
 });
