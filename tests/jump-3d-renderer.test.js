@@ -17,11 +17,7 @@ test('JUMP mounts the continuous 3D renderer and serves its model locally',()=>{
  assert.match(renderer,/function jumpPhase\(vy\)/,'jump pose must be driven by vertical physics instead of a fixed playback timer');
  assert.match(renderer,/motion\.moving\?\-\.038:\-\.085/,'idle posture must counter the imported forward lean on local X');
  assert.match(renderer,/ROOT_LEAN_AXIS=new THREE\.Vector3\(1,0,0\)/,'posture correction must use the model forward-back axis');
- assert.match(renderer,/function alignBoneToWorldDirection\(bone,child,desired\)/,'arm control must target the visible world-space direction instead of guessing local rig axes');
- assert.match(renderer,/nearUpperDir\.set\(facing\*Math\.sin\(swing\),-Math\.cos\(swing\),0\)/,'near upper arm must stay mostly down while swinging front/back');
- assert.match(renderer,/nearForeDir\.set\(facing\*Math\.cos\(swing\),Math\.sin\(swing\)\*\.55,0\)/,'near forearm must form the readable forward running bend');
- assert.match(renderer,/setFromUnitVectors\(currentArmDir,desired\)/,'screen-space IK must align the actual bone chain');
- assert.match(renderer,/leftShoulder\.quaternion\.slerp/,'shoulder shrug must be damped while the arm chain drives the run');
+ assert.doesNotMatch(renderer,/alignBoneToWorldDirection|nearUpperDir|nearForeDir|leftShoulder|rightShoulder|leftFore|rightFore/,'the rebuilt GLB must own the complete running arm animation');
  assert.match(css,/#jump3dCanvas/);assert.match(server,/'\.glb':'model\/gltf-binary'/);assert.match(server,/PUBLIC_STATIC_EXTS[^;]+\.mjs[^;]+\.glb/);
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.module.min.js')).size>100000);
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.core.min.js')).size>100000,'Three.js core dependency must ship with the module');
@@ -41,4 +37,24 @@ test('the exported 3D rig has normalized transforms for browser-sized rendering'
  const animatedRunNodes=new Set((run.channels||[]).filter(ch=>ch.target?.path==='rotation').map(ch=>json.nodes[ch.target.node]?.name));
  for(const bone of ['mixamorig:LeftArm','mixamorig:LeftForeArm','mixamorig:RightArm','mixamorig:RightForeArm'])
   assert.ok(animatedRunNodes.has(bone),'Run clip must animate '+bone);
+
+ const binHeader=20+jsonLength,binOffset=binHeader+8;
+ function rotationRows(name){
+  const node=json.nodes.findIndex(n=>n.name===name);
+  const ch=run.channels.find(c=>c.target?.node===node&&c.target?.path==='rotation');
+  assert.ok(ch,'missing rotation channel '+name);
+  const acc=json.accessors[run.samplers[ch.sampler].output],view=json.bufferViews[acc.bufferView];
+  const start=binOffset+(view.byteOffset||0)+(acc.byteOffset||0),stride=view.byteStride||16,rows=[];
+  for(let i=0;i<acc.count;i++)rows.push([0,1,2,3].map(c=>glb.readFloatLE(start+i*stride+c*4)));
+  return rows;
+ }
+ function variation(rows){
+  const first=rows[0];let max=0;
+  for(const row of rows)max=Math.max(max,Math.hypot(...row.map((v,i)=>v-first[i])));
+  return max;
+ }
+ assert.ok(variation(rotationRows('mixamorig:LeftShoulder'))<1e-5,'Run left shoulder should no longer shrug');
+ assert.ok(variation(rotationRows('mixamorig:RightShoulder'))<1e-5,'Run right shoulder should no longer shrug');
+ assert.ok(variation(rotationRows('mixamorig:LeftArm'))>.15,'Run left upper-arm swing must be clearly visible');
+ assert.ok(variation(rotationRows('mixamorig:RightArm'))>.15,'Run right upper-arm swing must be clearly visible');
 });
