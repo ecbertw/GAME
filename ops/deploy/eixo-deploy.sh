@@ -31,7 +31,8 @@ cd "$APP"
 sudo -u eixo npm install --omit=dev --ignore-scripts --package-lock=false
 
 echo "[3/5] Syntax"
-for f in server.js auth-server.js server-start.js paypal-server.js paypal-checkout.js ui.js vip-fix.js jump-server.js jump-physics.js jump-worlds.js jump-motion.js jump-rig.js jump-art-layout.js jump-scenery.js jump-exact-renderer.js jump.js pulse-orbit.js pulse-orbit-server.js progression-server.js redesign.js; do node --check "$APP/$f"; done
+for f in server.js auth-server.js server-start.js paypal-server.js paypal-checkout.js ui.js vip-fix.js jump-server.js run-server.js jump-physics.js jump-worlds.js jump-motion.js jump-rig.js jump-art-layout.js jump-scenery.js jump-exact-renderer.js jump.js pulse-orbit.js pulse-orbit-server.js progression-server.js redesign.js; do node --check "$APP/$f"; done
+find "$APP/run" -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
 for f in "$APP"/assets/jump-exact/*.js; do node --check "$f"; done
 node --test "$APP"/tests/*.test.js
 
@@ -50,7 +51,7 @@ if ! curl -fsS -H "Host: eixo.at" http://127.0.0.1:3000/health >/tmp/eixo-health
 fi
 cat /tmp/eixo-health; echo
 
-for p in server.js auth-server.js server-start.js paypal-server.js jump-server.js package.json .git/HEAD .env; do
+for p in server.js auth-server.js server-start.js paypal-server.js jump-server.js run-server.js package.json .git/HEAD .env; do
   code="$(curl -sS -o /dev/null -w "%{http_code}" -H "Host: eixo.at" "http://127.0.0.1:3000/$p")"
   if [ "$code" != "404" ]; then
     echo "SECURITY CHECK FAILED: /$p returned $code" >&2
