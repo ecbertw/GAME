@@ -1,4 +1,5 @@
 'use strict';
+// one-shot trigger: source-animation-v1
 const fs=require('fs'),crypto=require('crypto');
 const file='assets/hero-3d/eixo-hero.glb';
 const buf=fs.readFileSync(file);
