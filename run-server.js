@@ -34,18 +34,25 @@ async function initDb(db){
 }
 async function levelById(id){const l=await levelPromise;if(id!==l.id)throw Object.assign(new Error('RUN level not found.'),{status:404});return l}
 function publicEcho(row){return row?{timeMs:Number(row.best_ms),replay:row.replay,player:{name:row.name||'',country:row.country||''}}:null}
-async function echoes(db,p,level){
+async function echoes(db,p,level,dailyDay=null){
+ if(dailyDay){
+  const [pb,wr]=await Promise.all([
+   db.query(`SELECT best_ms,replay FROM run_daily_scores WHERE daily_date=$1 AND player_id=$2`,[dailyDay,p.id]),
+   db.query(`SELECT d.best_ms,d.replay,p.name,p.country FROM run_daily_scores d JOIN players p ON p.id=d.player_id WHERE d.daily_date=$1 ORDER BY d.best_ms,d.updated_at LIMIT 1`,[dailyDay])
+  ]);
+  return{pb:publicEcho(pb.rows[0]),world:publicEcho(wr.rows[0]),scope:'daily'};
+ }
  const [pb,wr]=await Promise.all([
   db.query(`SELECT best_ms,replay FROM run_best_times WHERE player_id=$1 AND level_id=$2 AND level_version=$3 AND category='best'`,[p.id,level.id,level.version]),
   db.query(`SELECT r.best_ms,r.replay,p.name,p.country FROM run_best_times r JOIN players p ON p.id=r.player_id WHERE r.level_id=$1 AND r.level_version=$2 AND r.category='best' ORDER BY r.best_ms,r.updated_at LIMIT 1`,[level.id,level.version])
  ]);
- return{pb:publicEcho(pb.rows[0]),world:publicEcho(wr.rows[0])};
+ return{pb:publicEcho(pb.rows[0]),world:publicEcho(wr.rows[0]),scope:'level'};
 }
 async function start(db,p,data={}){
  const level=await levelById(data.levelId||'astral-01'),daily=!!data.daily,attemptId=crypto.randomUUID(),day=daily?utcDay():null;
  await db.query(`INSERT INTO run_attempts(id,player_id,level_id,level_version,engine_version,daily_date) VALUES($1,$2,$3,$4,$5,$6)`,
   [attemptId,p.id,level.id,level.version,ENGINE_VERSION,day]);
- const e=await echoes(db,p,level);
+ const e=await echoes(db,p,level,day);
  return{ok:true,attemptId,levelId:level.id,levelVersion:level.version,engineVersion:ENGINE_VERSION,dailyId:day,echoes:e};
 }
 function validateReplay(level,replay){
@@ -106,11 +113,23 @@ async function finish(db,p,data={}){
   WHERE EXCLUDED.best_ms<run_daily_scores.best_ms`,[a.daily_date,p.id,level.id,level.version,v.timeMs,JSON.stringify(v.replay),v.p.shards.size,v.p.secrets.size]);
   daily=await updateDailyStreak(db,p.id,a.daily_date);
  }
- const badges=[];if(firstClear)badges.push('run-first-clear','run-astral-01');if(v.complete100)badges.push('run-astral-100');if(v.p.deaths===0)badges.push('run-no-death');if(a.daily_date)badges.push('run-daily');
- const xp=20+(firstClear?25:0)+(isPb&&!firstClear?10:0)+(v.complete100?25:0)+(a.daily_date?15:0)+(v.p.deaths===0?10:0);
+ let rankWorld=null,rankCountry=null;
+ if(a.daily_date){
+  const [rw,rc]=await Promise.all([
+   db.query('SELECT 1+COUNT(*)::int AS rank FROM run_daily_scores WHERE daily_date=$1 AND best_ms<$2',[a.daily_date,v.timeMs]),
+   db.query('SELECT 1+COUNT(*)::int AS rank FROM run_daily_scores d JOIN players q ON q.id=d.player_id WHERE d.daily_date=$1 AND q.country=$2 AND d.best_ms<$3',[a.daily_date,p.country,v.timeMs])
+  ]);rankWorld=Number(rw.rows[0]?.rank||1);rankCountry=Number(rc.rows[0]?.rank||1);
+ }else{
+  const [rw,rc]=await Promise.all([
+   db.query(`SELECT 1+COUNT(*)::int AS rank FROM run_best_times WHERE level_id=$1 AND level_version=$2 AND category='best' AND best_ms<$3`,[level.id,level.version,v.timeMs]),
+   db.query(`SELECT 1+COUNT(*)::int AS rank FROM run_best_times b JOIN players q ON q.id=b.player_id WHERE b.level_id=$1 AND b.level_version=$2 AND b.category='best' AND q.country=$3 AND b.best_ms<$4`,[level.id,level.version,p.country,v.timeMs])
+  ]);rankWorld=Number(rw.rows[0]?.rank||1);rankCountry=Number(rc.rows[0]?.rank||1);
+ }
+ const badges=[];if(firstClear)badges.push('run-first-clear','run-astral-01');if(v.complete100)badges.push('run-astral-100');if(v.p.deaths===0)badges.push('run-no-death');if(a.daily_date)badges.push('run-daily');if(a.daily_date&&rankWorld<=100)badges.push('run-daily-top-100');
+ const xp=20+(firstClear?25:0)+(isPb&&!firstClear?10:0)+(v.complete100?25:0)+(a.daily_date?15:0)+(a.daily_date&&rankWorld<=100?10:0)+(v.p.deaths===0?10:0);
  const progress=await progression.awardFixed(db,p.id,'run',attemptId,xp,badges);
- const e=await echoes(db,p,level);
- return{ok:true,timeMs:v.timeMs,newPb:isPb,previousPb:old?Number(old.best_ms):null,shards:v.p.shards.size,totalShards:level.shards.length,secrets:v.p.secrets.size,totalSecrets:level.secrets.length,deaths:v.p.deaths,complete100:v.complete100,daily,progress,echoes:e};
+ const e=await echoes(db,p,level,a.daily_date||null);
+ return{ok:true,timeMs:v.timeMs,newPb:isPb,previousPb:old?Number(old.best_ms):null,shards:v.p.shards.size,totalShards:level.shards.length,secrets:v.p.secrets.size,totalSecrets:level.secrets.length,deaths:v.p.deaths,complete100:v.complete100,rankWorld,rankCountry,daily,progress,echoes:e};
 }
 async function rankings(db,{levelId='astral-01',category='best',country='',page=1,daily=false}={}){
  const level=await levelById(levelId),limit=100,offset=(Math.max(1,Number(page)||1)-1)*limit;
