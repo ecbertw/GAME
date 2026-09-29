@@ -51,7 +51,7 @@ return{
  shards,shardTotal:shards.length,
  visual:{
    palette:{skyTop:'#2c79e8',skyMid:'#73b7ff',skyHaze:'#f2b9ea',moon:'#fff8ef',stone:'#e5edf8',stoneShadow:'#50618d',grass:'#50a462',cyan:'#5cf0ff',violet:'#8c79e9',pink:'#ef98d8',accent:'#ef294f'},
-   moonX:.72,moonY:.20,moonRadius:.165,waterfalls:[18.9,36.6,65.3,99.8,131.8,163.8]
+   moonX:.72,moonY:.20,moonRadius:.165,waterfalls:[18.9,36.6,65.3,99.8,131.8,163.8],routeArches:[{x:84.1,y:5.4},{x:131.8,y:4.7}]
  }
 };
 });
