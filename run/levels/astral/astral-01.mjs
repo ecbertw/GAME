@@ -1,31 +1,35 @@
 export const ASTRAL01={
  id:'astral-01',version:1,world:'astral',name:'FIRST LIGHT',killY:24,
- spawn:{x:1.2,y:7.3},startLine:{x:3.2,y:0,w:.2,h:20},finish:{x:116.2,y:3.3,w:1.4,h:6},
+ spawn:{x:1.2,y:7.3},startLine:{x:3.2,y:0,w:.2,h:20},finish:{x:268.2,y:3.3,w:1.4,h:6},
  solids:[
-  {x:0,y:9,w:18,h:3},{x:20,y:8,w:10,h:4},{x:32,y:9,w:12,h:3},{x:48,y:7.5,w:11,h:4.5},
-  {x:62,y:9,w:12,h:3},{x:77,y:7,w:10,h:5},{x:91,y:9,w:12,h:3},{x:106,y:7.8,w:14,h:4.2},
-  {x:35,y:5.4,w:4,h:.7},{x:41,y:3.9,w:4.5,h:.7},{x:67,y:5.3,w:4.2,h:.7},{x:84,y:3.8,w:4.8,h:.7},
-  {x:97,y:5.2,w:4.2,h:.7}
+  {x:0,y:9,w:24,h:3},{x:28,y:8,w:26,h:4},{x:58,y:9,w:25,h:3},{x:87,y:7.5,w:25,h:4.5},
+  {x:116,y:9,w:26,h:3},{x:146,y:7,w:27,h:5},{x:177,y:9,w:27,h:3},{x:208,y:7.8,w:28,h:4.2},{x:240,y:9,w:32,h:3},
+  {x:68,y:5.4,w:4,h:.7},{x:75,y:3.9,w:5,h:.7},{x:129,y:5.3,w:4.5,h:.7},{x:157,y:3.8,w:5.2,h:.7},
+  {x:187,y:5.2,w:4.5,h:.7},{x:220,y:4.2,w:5.4,h:.7}
  ],
  oneWayPlatforms:[
-  {x:15.5,y:6.4,w:3.2,h:.35},{x:27.3,y:5.4,w:3.4,h:.35},{x:44,y:6.0,w:3.2,h:.35},
-  {x:58.4,y:5.3,w:3.1,h:.35},{x:73.2,y:5.0,w:3.3,h:.35},{x:87.5,y:6.0,w:3.1,h:.35},{x:102,y:4.2,w:3.5,h:.35}
+  {x:21,y:6.4,w:3.2,h:.35},{x:48,y:5.4,w:3.4,h:.35},{x:81,y:6.0,w:3.2,h:.35},
+  {x:108,y:5.3,w:3.1,h:.35},{x:139,y:5.0,w:3.3,h:.35},{x:170,y:6.0,w:3.1,h:.35},
+  {x:201,y:4.9,w:3.5,h:.35},{x:233,y:5.2,w:3.5,h:.35}
  ],
  movingPlatforms:[
-  {id:'mp-1',x:22,y:5.3,w:3.1,h:.42,axis:'y',amplitude:1.5,period:2.8,oneWay:true},
-  {id:'mp-2',x:52,y:4.5,w:3.2,h:.42,axis:'x',amplitude:2.0,period:3.4,phase:.4,oneWay:true},
-  {id:'mp-3',x:79,y:4.3,w:3.0,h:.42,axis:'y',amplitude:1.2,period:2.5,phase:.8,oneWay:true}
+  {id:'mp-1',x:24.8,y:5.3,w:3.1,h:.42,axis:'y',amplitude:1.5,period:2.8,oneWay:true},
+  {id:'mp-2',x:54.8,y:5.0,w:3.1,h:.42,axis:'y',amplitude:1.2,period:3.1,phase:.4,oneWay:true},
+  {id:'mp-3',x:83.7,y:4.5,w:3.2,h:.42,axis:'x',amplitude:1.5,period:3.4,phase:.4,oneWay:true},
+  {id:'mp-4',x:112.7,y:5.1,w:3.0,h:.42,axis:'y',amplitude:1.2,period:2.5,phase:.8,oneWay:true},
+  {id:'mp-5',x:142.7,y:4.5,w:3.0,h:.42,axis:'x',amplitude:1.3,period:2.9,phase:.1,oneWay:true},
+  {id:'mp-6',x:173.8,y:5.2,w:3.0,h:.42,axis:'y',amplitude:1.4,period:3.2,phase:.7,oneWay:true},
+  {id:'mp-7',x:204.8,y:5.0,w:3.0,h:.42,axis:'x',amplitude:1.2,period:2.7,phase:.3,oneWay:true},
+  {id:'mp-8',x:236.8,y:5.1,w:3.0,h:.42,axis:'y',amplitude:1.25,period:3.0,phase:.55,oneWay:true}
  ],
  hazards:[
-  {x:18,y:11.2,w:2,h:1.8},{x:30,y:11.2,w:2,h:1.8},{x:44,y:11.2,w:4,h:1.8},
-  {x:59,y:11.2,w:3,h:1.8},{x:74,y:11.2,w:3,h:1.8},{x:87,y:11.2,w:4,h:1.8},{x:103,y:11.2,w:3,h:1.8}
+  {x:24,y:11.2,w:4,h:1.8},{x:54,y:11.2,w:4,h:1.8},{x:83,y:11.2,w:4,h:1.8},{x:112,y:11.2,w:4,h:1.8},
+  {x:142,y:11.2,w:4,h:1.8},{x:173,y:11.2,w:4,h:1.8},{x:204,y:11.2,w:4,h:1.8},{x:236,y:11.2,w:4,h:1.8}
  ],
- checkpoints:[{id:'cp-mid',x:61.7,y:6.3,w:.8,h:2.7,spawnX:62.5,spawnY:7.2}],
- secrets:[{id:'moon-cache',x:39.5,y:2.6,w:6.2,h:2.0}],
+ checkpoints:[{id:'cp-mid',x:144.5,y:4.2,w:.8,h:3,spawnX:147.0,spawnY:5.4}],
+ secrets:[{id:'moon-cache',x:72.5,y:2.55,w:9.0,h:2.2}],
  shards:Array.from({length:42},(_,i)=>{
-   const special=i>=39;
-   const x=special?40.2+(i-39)*1.6:5+i*2.7;
-   const upper=(i%7===0||i%11===0);
-   return{id:'a01-s'+String(i+1).padStart(2,'0'),x,y:special?3.25:(upper?4.4:7.15)};
+   const special=i>=39,x=special?74+(i-39)*2.2:5+i*6.55,upper=!special&&(i%7===0||i%11===0);
+   return{id:'a01-s'+String(i+1).padStart(2,'0'),x,y:special?3.1:(upper?4.4:7.15)};
  })
 };
