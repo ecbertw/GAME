@@ -4,6 +4,10 @@ test('RUN uses 120Hz deterministic physics',()=>assert.equal(C.DT,1/120));
 test('RUN accelerates smoothly and caps speed',()=>{const p=C.createPlayer(flat.spawn);p.onGround=true;let prev=0;for(let i=0;i<240;i++){C.step(p,flat,C.INPUT.RIGHT,prev);prev=C.INPUT.RIGHT}assert.ok(p.vx>8&&p.vx<=C.C.maxRun+.001)});
 test('RUN has variable jump',()=>{const a=C.createPlayer(flat.spawn),b=C.createPlayer(flat.spawn);a.onGround=b.onGround=true;C.step(a,flat,C.INPUT.JUMP,0);C.step(b,flat,C.INPUT.JUMP,0);C.step(a,flat,0,C.INPUT.JUMP);C.step(b,flat,C.INPUT.JUMP,C.INPUT.JUMP);assert.ok(a.vy>b.vy)});
 test('RUN skid triggers on high-speed reversal',()=>{const p=C.createPlayer(flat.spawn);p.onGround=true;p.vx=7;const events=C.step(p,flat,C.INPUT.LEFT,0);assert.equal(p.skid,true);assert.ok(events.some(e=>e.type==='skid'))});
+test('RUN breakable blocks emit feedback events',()=>{
+ const level={spawn:{x:0,y:5},killY:30,solids:[{x:-5,y:8,w:20,h:4}],oneWay:[],movingPlatforms:[],breakables:[{id:'box',x:1.4,y:3.0,w:1.2,h:1.2}],hazards:[],shards:[],secrets:[],checkpoints:[],finish:{x:999,y:0,w:1,h:1}};
+ const p=C.createPlayer(level.spawn);p.y=4.25;p.vy=-12;const events=C.step(p,level,0,0);assert.ok(p.broken.has('box'));assert.ok(events.some(e=>e.type==='break'&&e.id==='box'));
+});
 test('First Light contains exactly 42 Astral Shards',()=>assert.equal(L.shards.length,42));
 test('First Light contains checkpoint, destructible blocks, moving platforms, secret and hazards',()=>{assert.ok(L.checkpoints.length&&L.breakables.length&&L.movingPlatforms.length&&L.secrets.length&&L.hazards.length)});
 
