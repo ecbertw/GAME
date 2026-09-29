@@ -17,7 +17,7 @@ const approach=(v,target,delta)=>v<target?Math.min(target,v+delta):Math.max(targ
 function createPlayer(spawn={x:1.5,y:3}){
   return {x:+spawn.x||0,y:+spawn.y||0,vx:0,vy:0,w:C.width,h:C.height,onGround:false,
     coyote:0,jumpBuffer:0,jumpHeld:false,dead:false,finished:false,deaths:0,checkpoint:{x:+spawn.x||0,y:+spawn.y||0},
-    shards:new Set(),secrets:new Set(),skid:false,hardLanding:false,lastGroundVy:0,deathTicks:0,tick:0};
+    shards:new Set(),secrets:new Set(),broken:new Set(),falling:Object.create(null),skid:false,hardLanding:false,lastGroundVy:0,deathTicks:0,tick:0};
 }
 function aabb(p,r){return p.x+p.w>r.x&&p.x<r.x+r.w&&p.y+p.h>r.y&&p.y<r.y+r.h}
 function movingRect(m,tick){
@@ -25,9 +25,16 @@ function movingRect(m,tick){
   const s=Math.sin(phase);
   return {x:(m.x||0)+(m.axis==='x'?(m.amplitude||0)*s:0),y:(m.y||0)+(m.axis==='y'?(m.amplitude||0)*s:0),w:m.w,h:m.h,id:m.id||''};
 }
-function allSolids(level,tick){
+function allSolids(level,tick,p){
   const arr=[...(level.solids||[]),...(level.oneWayPlatforms||[]).map(x=>({...x,oneWay:true}))];
   for(const m of level.movingPlatforms||[])arr.push({...movingRect(m,tick),oneWay:!!m.oneWay,moving:true});
+  for(const b of level.breakableBlocks||[])if(!p?.broken?.has(b.id))arr.push({...b,breakable:true});
+  for(const f of level.fallingPlatforms||[]){
+    const trigger=p?.falling?.[f.id],delay=Math.max(0,Number(f.delay??.32));
+    let y=f.y;
+    if(trigger!=null){const elapsed=Math.max(0,(tick-trigger)*DT-delay);if(elapsed>0)y+=.5*18*elapsed*elapsed}
+    if(y<(level.killY||30)+5)arr.push({...f,y,oneWay:true,falling:true});
+  }
   return arr;
 }
 function resolveX(p,rects,dx){
@@ -47,13 +54,13 @@ function resolveY(p,rects,dy,oldBottom){
       const top=r.y;
       if(oldBottom>top+0.08)continue;
     }
-    if(dy>0){p.y=r.y-p.h-C.skin;p.onGround=true;p.lastGroundVy=p.vy;p.vy=0;}
-    else if(dy<0){p.y=r.y+r.h+C.skin;p.vy=0;}
+    if(dy>0){p.y=r.y-p.h-C.skin;p.onGround=true;p.lastGroundVy=p.vy;p.vy=0;if(r.falling&&p.falling[r.id]==null)p.falling[r.id]=p.tick;}
+    else if(dy<0){if(r.breakable&&r.id){p.broken.add(r.id);continue}p.y=r.y+r.h+C.skin;p.vy=0;}
   }
 }
 function respawn(p){
   p.x=p.checkpoint.x;p.y=p.checkpoint.y;p.vx=0;p.vy=0;p.dead=false;p.finished=false;
-  p.coyote=0;p.jumpBuffer=0;p.onGround=false;p.skid=false;p.hardLanding=false;p.deathTicks=0;
+  p.coyote=0;p.jumpBuffer=0;p.onGround=false;p.skid=false;p.hardLanding=false;p.deathTicks=0;p.broken.clear();p.falling=Object.create(null);
 }
 function step(p,level,inputMask,prevMask=0){
   if(p.finished){p.tick++;return p}
@@ -79,7 +86,7 @@ function step(p,level,inputMask,prevMask=0){
   if(!jump)p.jumpHeld=false;
   p.vy=clamp(p.vy+(p.vy<0?C.gravityUp:C.gravityDown)*DT,-50,C.maxFall);
 
-  const rects=allSolids(level,p.tick);
+  const rects=allSolids(level,p.tick,p);
   resolveX(p,rects,p.vx*DT);
   const oldBottom=p.y+p.h,preVy=p.vy;
   resolveY(p,rects,p.vy*DT,oldBottom);
