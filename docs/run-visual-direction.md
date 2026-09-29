@@ -1,34 +1,30 @@
-# EIXO RUN — Visual production rules
+# EIXO RUN — production direction
 
-This file locks the production direction approved for RUN. It exists to stop the project drifting back toward the JUMP character pipeline.
+RUN is a new game. The previous RUN implementation is not a codebase to patch.
 
-## Character
+## Locked visual direction
 
-- The EIXO Runner is a **2D animated sprite**, not a runtime 3D rig.
-- Outfit is fixed: white, dark navy/black and EIXO red.
-- No runtime skeleton, IK, weight painting, bone corrections or cloth simulation.
-- Character art may look cel-shaded / pre-rendered, but gameplay consumes a sprite atlas through `SpritePlayer`.
-- New visual atlases must preserve the manifest contract in `assets/run/character/runner-atlas.json`.
-- Cosmetic expansion is limited to lightweight overlays such as aura, glow, trail or VIP FX. Cosmetics never alter collision or physics.
+- 2D animated EIXO Runner inside a stylized 2.5D Astral world.
+- Runner outfit is fixed: white, dark navy/black and EIXO red.
+- The character is deliberately simplified: large head, compact body, mitten-like hands and oversized shoes.
+- No runtime 3D character, GLB, skeleton, IK, weight painting, cloth or JavaScript bone corrections.
+- Optional cosmetics are lightweight visual overlays only: trail, glow, aura or VIP FX.
 
-## Animation readability
+## Locked world direction
 
-The production states are idle, run, fast-run, skid, jump-start, jump, apex, fall, landing, death and victory.
+ASTRAL is vibrant rather than dark-realistic: deep blue sky, violet/cyan atmosphere, giant moon, floating ruins, clouds, crystals and chunky readable gameplay surfaces.
 
-Animation is designed for side-view readability at roughly 80–100 px on screen. Big shoes, compact proportions and a clear silhouette take priority over anatomical realism.
+The governing rule is **simple character + rich world**.
 
-## World
+## Architecture
 
-ASTRAL is a stylized 2.5D world: vibrant celestial sky, large moon, floating ruins, chunky readable platforms, crystals, clouds, waterfalls, cyan/violet light and restrained EIXO red accents.
+- run/core/simulation.js — deterministic 120 Hz gameplay.
+- run/levels/astral-first-light.js — hand-authored level data.
+- run/player/sprite-runner.mjs — character presentation.
+- run/rendering/astral-renderer.mjs — world presentation.
+- run/camera/camera.mjs — camera only.
+- run/input/input.mjs — keyboard/touch input only.
+- run/replay/recorder.mjs — replay recording only.
+- run-server.js — validation, rankings, PB/World Echo, Daily and progression.
 
-The rule is **simple character + rich world**.
-
-Gameplay surfaces must remain immediately readable. Decoration, parallax and foreground art must never obscure platforms, hazards, Shards or the Runner.
-
-## Technical boundary
-
-`physics-core.js` owns gameplay simulation.
-`SpritePlayer` owns character presentation.
-`Renderer` owns world presentation.
-
-None of these layers should need JUMP rendering, JUMP rigging or the old GLB character to function.
+RUN must not depend on JUMP physics, JUMP rendering, JUMP multiplayer or the old JUMP 3D character.

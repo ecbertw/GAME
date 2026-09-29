@@ -1,6 +1,68 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#071326"><title>EIXO RUN — First Light</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/run/run.css"></head><body><div class="run-shell">
-<header class="run-top"><a href="/" class="run-logo" style="color:white;text-decoration:none">EIXO <b>RUN</b></a><span class="run-world">ASTRAL 01 — FIRST LIGHT</span><div class="run-actions"><label class="echo"><input id="pbEcho" type="checkbox" checked> PB ECHO</label><label class="echo"><input id="wrEcho" type="checkbox"> WORLD ECHO</label><a href="/" class="label">EIXO HOME</a><button id="rankingTop">RANKING</button><button id="retryTop">RETRY</button></div></header>
-<main class="run-stage"><canvas id="runCanvas"></canvas><div class="zone-name" id="zoneName">AWAKENING</div><div class="hud"><div class="hud-box"><small>TIME</small><strong id="runTime">00:00.000</strong></div><div class="hud-box"><small>PB</small><strong id="runDelta">—</strong></div><div class="hud-box shards"><small>SHARDS</small><strong id="runShards">0 / 42</strong></div></div>
-<div class="start-card" id="startCard"><p class="start-kicker">ASTRAL 01</p><h1 id="runStartTitle">FIRST LIGHT</h1><p class="start-sub">THE SKY REMEMBERS</p><p>Run, read the ruins and choose your route. The lower path is safer; the upper path is faster and more technical.</p><div class="control-row"><span><b>A / D</b> MOVE</span><span><b>SPACE</b> JUMP</span><span><b>HOLD</b> HIGHER JUMP</span></div><button class="primary" id="startButton">START RUN</button></div>
-<div class="results hidden" id="results"><h2 id="resultTitle">RUN COMPLETE</h2><p>ASTRAL 01 — FIRST LIGHT</p><div class="results-grid"><div class="metric"><small>TIME</small><b id="resultTime">—</b></div><div class="metric"><small>PB</small><b id="resultPb">—</b></div><div class="metric"><small>SHARDS</small><b id="resultShards">—</b></div><div class="metric"><small>SECRETS</small><b id="resultSecrets">—</b></div><div class="metric"><small>WORLD RANK</small><b id="resultWorldRank">—</b></div><div class="metric"><small>COUNTRY RANK</small><b id="resultCountryRank">—</b></div></div><button class="primary" id="retryButton">RETRY</button> <button id="nextRunButton">NEXT RUN</button> <button id="rankingButton">RANKING</button></div><div class="results hidden" id="rankingPanel"><h2>FIRST LIGHT RANKING</h2><div class="ranking-tabs"><button id="rankWorld">WORLD</button><button id="rankCountry">COUNTRY</button><button id="rank100">100%</button></div><ol id="runRanking"></ol><button id="rankClose">CLOSE</button></div>
-</main></div><script src="/run/engine/physics-core.js"></script><script type="module" src="/run/run-client.mjs"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#102e78">
+<title>EIXO RUN — Astral 01 · First Light</title>
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/run/run.css">
+</head>
+<body>
+<div class="run-app">
+<header class="run-bar">
+  <a class="brand" href="/">EIXO <b>RUN</b></a>
+  <div class="level-id"><span id="modeBadge">ASTRAL 01</span><strong>FIRST LIGHT</strong></div>
+  <div class="bar-actions">
+    <label><input id="pbEcho" type="checkbox" checked> PB ECHO</label>
+    <label><input id="worldEcho" type="checkbox"> WORLD ECHO</label>
+    <button id="rankTop">RANKING</button><button id="retryTop">RETRY</button><a href="/">EIXO HOME</a>
+  </div>
+</header>
+<main class="stage">
+  <canvas id="runCanvas"></canvas>
+  <div class="hud">
+    <div class="hud-card"><small>TIME</small><strong id="runTime">00:00.000</strong></div>
+    <div class="hud-card"><small>PB</small><strong id="runDelta">—</strong></div>
+    <div class="hud-card"><small>SHARDS</small><strong id="runShards">0 / 42</strong></div>
+  </div>
+  <div class="zone" id="runZone">AWAKENING</div>
+
+  <section class="panel intro" id="startPanel">
+    <p class="eyebrow">ASTRAL 01</p>
+    <h1>FIRST LIGHT</h1>
+    <p class="subtitle">THE SKY REMEMBERS</p>
+    <p class="copy">A fast hand-authored run through the first Astral ruins. Read the platforms, choose your route and chase a cleaner time.</p>
+    <div class="controls"><span><b>A / D</b>MOVE</span><span><b>SPACE</b>JUMP · HOLD HIGHER</span><span><b>← / →</b>ALSO MOVE</span></div>
+    <button class="primary" id="startRun">START RUN</button>
+  </section>
+
+  <section class="panel hidden" id="resultsPanel">
+    <p class="eyebrow">ASTRAL 01</p><h2>RUN COMPLETE</h2>
+    <div class="metrics">
+      <div><small>TIME</small><b id="resultTime">—</b></div><div><small>PB</small><b id="resultPb">—</b></div>
+      <div><small>SHARDS</small><b id="resultShards">—</b></div><div><small>SECRETS</small><b id="resultSecrets">—</b></div>
+      <div><small>DEATHS</small><b id="resultDeaths">—</b></div><div><small>WORLD</small><b id="resultWorld">—</b></div>
+      <div><small>COUNTRY</small><b id="resultCountry">—</b></div>
+    </div>
+    <div class="panel-actions"><button class="primary" id="retryRun">RETRY</button><button id="nextRun">NEXT RUN</button><button id="rankResults">RANKING</button></div>
+  </section>
+
+  <section class="panel hidden" id="rankingPanel">
+    <p class="eyebrow">FIRST LIGHT</p><h2>RANKING</h2>
+    <div class="rank-tabs"><button id="rankWorld">WORLD</button><button id="rankCountry">COUNTRY</button><button id="rank100">100%</button></div>
+    <ol id="runRanking"></ol><button id="rankClose">CLOSE</button>
+  </section>
+
+  <div class="touch">
+    <button id="touchLeft" aria-label="Move left">◀</button>
+    <button id="touchRight" aria-label="Move right">▶</button>
+    <button id="touchJump" class="jump" aria-label="Jump">JUMP</button>
+  </div>
+</main>
+</div>
+<script src="/run/core/simulation.js"></script>
+<script src="/run/levels/astral-first-light.js"></script>
+<script type="module" src="/run/run-client.mjs"></script>
+</body>
+</html>

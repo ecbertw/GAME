@@ -1,9 +1,9 @@
 'use strict';
 const crypto=require('node:crypto');
-const Physics=require('./run/engine/physics-core.js');
+const Core=require('./run/core/simulation.js');
 const progression=require('./progression-server.js');
-const levelPromise=import('./run/levels/astral/astral-01.mjs').then(m=>m.ASTRAL01);
-const ENGINE_VERSION=Physics.VERSION;
+const levelPromise=Promise.resolve(require('./run/levels/astral-first-light.js'));
+const ENGINE_VERSION=Core.VERSION;
 const utcDay=()=>new Date().toISOString().slice(0,10);
 async function initDb(db){
  await db.query(`CREATE TABLE IF NOT EXISTS run_attempts(
@@ -37,8 +37,8 @@ function publicEcho(row){return row?{timeMs:Number(row.best_ms),replay:row.repla
 async function echoes(db,p,level,dailyDay=null){
  if(dailyDay){
   const [pb,wr]=await Promise.all([
-   db.query(`SELECT best_ms,replay FROM run_daily_scores WHERE daily_date=$1 AND player_id=$2`,[dailyDay,p.id]),
-   db.query(`SELECT d.best_ms,d.replay,p.name,p.country FROM run_daily_scores d JOIN players p ON p.id=d.player_id WHERE d.daily_date=$1 ORDER BY d.best_ms,d.updated_at LIMIT 1`,[dailyDay])
+   db.query(`SELECT best_ms,replay FROM run_daily_scores WHERE daily_date=$1 AND player_id=$2 AND level_version=$3`,[dailyDay,p.id,level.version]),
+   db.query(`SELECT d.best_ms,d.replay,p.name,p.country FROM run_daily_scores d JOIN players p ON p.id=d.player_id WHERE d.daily_date=$1 AND d.level_version=$2 ORDER BY d.best_ms,d.updated_at LIMIT 1`,[dailyDay,level.version])
   ]);
   return{pb:publicEcho(pb.rows[0]),world:publicEcho(wr.rows[0]),scope:'daily'};
  }
@@ -56,14 +56,14 @@ async function start(db,p,data={}){
  return{ok:true,attemptId,levelId:level.id,levelVersion:level.version,engineVersion:ENGINE_VERSION,dailyId:day,echoes:e};
 }
 function validateReplay(level,replay){
- const rows=Physics.canonicalReplay(replay);
+ const rows=Core.canonicalReplay(replay);
  if(!rows.length||rows[0].tick!==0)throw Object.assign(new Error('Invalid RUN replay.'),{status:400});
  if(rows.length>5000||rows.at(-1).tick>120*180)throw Object.assign(new Error('RUN replay outside limits.'),{status:400});
- const p=Physics.createPlayer(level.spawn);let idx=0,mask=0,prev=0,startTick=null,finishTick=null;
+ const p=Core.createPlayer(level.spawn);let idx=0,mask=0,prev=0,startTick=null,finishTick=null;
  const max=120*180;
  for(let tick=0;tick<max&&!p.finished;tick++){
   while(idx<rows.length&&rows[idx].tick===tick){mask=rows[idx].mask;idx++}
-  Physics.step(p,level,mask,prev);prev=mask;
+  Core.step(p,level,mask,prev);prev=mask;
   if(startTick==null&&p.x+p.w*.5>=level.startLine.x)startTick=tick;
   if(p.finished){finishTick=tick;break}
  }
@@ -110,14 +110,14 @@ async function finish(db,p,data={}){
  if(a.daily_date){
   await db.query(`INSERT INTO run_daily_scores(daily_date,player_id,level_id,level_version,best_ms,replay,shards,secrets) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8)
   ON CONFLICT(daily_date,player_id) DO UPDATE SET best_ms=EXCLUDED.best_ms,replay=EXCLUDED.replay,shards=EXCLUDED.shards,secrets=EXCLUDED.secrets,updated_at=NOW()
-  WHERE EXCLUDED.best_ms<run_daily_scores.best_ms`,[a.daily_date,p.id,level.id,level.version,v.timeMs,JSON.stringify(v.replay),v.p.shards.size,v.p.secrets.size]);
+  WHERE EXCLUDED.best_ms<run_daily_scores.best_ms OR run_daily_scores.level_version<>EXCLUDED.level_version`,[a.daily_date,p.id,level.id,level.version,v.timeMs,JSON.stringify(v.replay),v.p.shards.size,v.p.secrets.size]);
   daily=await updateDailyStreak(db,p.id,a.daily_date);
  }
  let rankWorld=null,rankCountry=null;
  if(a.daily_date){
   const [rw,rc]=await Promise.all([
-   db.query('SELECT 1+COUNT(*)::int AS rank FROM run_daily_scores WHERE daily_date=$1 AND best_ms<$2',[a.daily_date,v.timeMs]),
-   db.query('SELECT 1+COUNT(*)::int AS rank FROM run_daily_scores d JOIN players q ON q.id=d.player_id WHERE d.daily_date=$1 AND q.country=$2 AND d.best_ms<$3',[a.daily_date,p.country,v.timeMs])
+   db.query('SELECT 1+COUNT(*)::int AS rank FROM run_daily_scores WHERE daily_date=$1 AND level_version=$2 AND best_ms<$3',[a.daily_date,level.version,v.timeMs]),
+   db.query('SELECT 1+COUNT(*)::int AS rank FROM run_daily_scores d JOIN players q ON q.id=d.player_id WHERE d.daily_date=$1 AND d.level_version=$2 AND q.country=$3 AND d.best_ms<$4',[a.daily_date,level.version,p.country,v.timeMs])
   ]);rankWorld=Number(rw.rows[0]?.rank||1);rankCountry=Number(rc.rows[0]?.rank||1);
  }else{
   const [rw,rc]=await Promise.all([
@@ -134,10 +134,10 @@ async function finish(db,p,data={}){
 async function rankings(db,{levelId='astral-01',category='best',country='',page=1,daily=false}={}){
  const level=await levelById(levelId),limit=100,offset=(Math.max(1,Number(page)||1)-1)*limit;
  if(daily){
-  const vals=[utcDay()],where=country?' AND p.country=$2':'';
+  const vals=[utcDay(),level.version],where=country?' AND p.country=$3':'';
   if(country)vals.push(String(country).toUpperCase());
-  vals.push(limit,offset);const li=country?3:2,oi=country?4:3;
-  const r=await db.query(`SELECT p.id,p.name,p.country,d.best_ms AS "timeMs",d.shards,d.secrets FROM run_daily_scores d JOIN players p ON p.id=d.player_id WHERE d.daily_date=$1${where} ORDER BY d.best_ms,d.updated_at LIMIT $${li} OFFSET $${oi}`,vals);
+  vals.push(limit,offset);const li=country?4:3,oi=country?5:4;
+  const r=await db.query(`SELECT p.id,p.name,p.country,d.best_ms AS "timeMs",d.shards,d.secrets FROM run_daily_scores d JOIN players p ON p.id=d.player_id WHERE d.daily_date=$1 AND d.level_version=$2${where} ORDER BY d.best_ms,d.updated_at LIMIT ${li} OFFSET ${oi}`,vals);
   return{ok:true,dailyId:utcDay(),players:r.rows};
  }
  if(!['best','100'].includes(category))throw Object.assign(new Error('Invalid RUN ranking category.'),{status:400});
