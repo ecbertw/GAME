@@ -2,7 +2,7 @@ import{animationState,FRAME}from'../player/animation-state.mjs';
 export class Renderer{
  constructor(canvas,level){
   this.c=canvas;this.ctx=canvas.getContext('2d',{alpha:false});this.level=level;this.dpr=1;this.assets={};this.ready=this.load();
-  this.particles=[];
+  this.particles=[];this.trail=[];this.lastState='idle';
  }
  async load(){
   const load=(k,src)=>new Promise(res=>{const i=new Image();i.onload=()=>{this.assets[k]=i;res()};i.onerror=()=>res();i.src=src});
@@ -16,7 +16,14 @@ export class Renderer{
  world(ctx,cam,scale,ox,oy){ctx.setTransform(this.dpr*scale,0,0,this.dpr*scale,this.dpr*(ox-cam.x*scale),this.dpr*(oy-cam.y*scale))}
  drawLayer(img,cam,factor,y=0){const x=-((cam.x*factor)%40);for(let i=-1;i<5;i++)this.ctx.drawImage(img,(x+i*40)*this.dpr,(y-cam.y*factor)*this.dpr,40*this.dpr,18*this.dpr)}
  draw(player,cam,echoes=[]){
-  this.resize();const ctx=this.ctx,w=this.c.width/this.dpr,h=this.c.height/this.dpr;ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+  this.resize();
+  const state=animationState(player);
+  if(Math.abs(player.vx)>6&&!player.dead){this.trail.unshift({x:player.x,y:player.y,life:1});if(this.trail.length>7)this.trail.length=7}
+  for(const t of this.trail)t.life-=.085;this.trail=this.trail.filter(t=>t.life>0);
+  if((state==='skid'&&this.lastState!=='skid')||(state==='hard-land'&&this.lastState!=='hard-land')){
+    for(let i=0;i<7;i++)this.particles.push({x:player.x+player.w*.5,y:player.y+player.h,vx:(i-3)*.025,vy:-.02-(i%3)*.015,life:1});
+  }
+  this.lastState=state;for(const q of this.particles){q.x+=q.vx;q.y+=q.vy;q.vy+=.004;q.life-=.055}this.particles=this.particles.filter(q=>q.life>0);const ctx=this.ctx,w=this.c.width/this.dpr,h=this.c.height/this.dpr;ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
   ctx.clearRect(0,0,w,h);ctx.fillStyle='#071326';ctx.fillRect(0,0,w,h);
   if(this.assets.sky)ctx.drawImage(this.assets.sky,0,0,w,h);
   const scale=Math.min(72,Math.max(45,w/18)),ox=w*.38,oy=h*.56;
@@ -29,6 +36,8 @@ export class Renderer{
   ctx.fillStyle='#ff3657';for(const z of this.level.hazards||[]){ctx.beginPath();for(let x=z.x;x<z.x+z.w;x+=.45){ctx.moveTo(x,z.y+z.h);ctx.lineTo(x+.225,z.y);ctx.lineTo(x+.45,z.y+z.h)}ctx.fill()}
   for(const s of this.level.shards||[])if(!player.shards.has(s.id)){if(this.assets.shard)ctx.drawImage(this.assets.shard,s.x-.36,s.y-.55,.72,1.1);else{ctx.fillStyle='#37e7ff';ctx.fillRect(s.x-.15,s.y-.3,.3,.6)}}
   ctx.strokeStyle='#ff2f4f';ctx.lineWidth=.05;ctx.strokeRect(this.level.finish.x,this.level.finish.y,this.level.finish.w,this.level.finish.h);
+  for(let i=this.trail.length-1;i>=0;i--){const t=this.trail[i];this.runner({...player,x:t.x,y:t.y},ctx,.035*t.life,'#52e6ff')}
+  for(const q of this.particles){ctx.globalAlpha=Math.max(0,q.life)*.5;ctx.fillStyle='#c9e4ff';ctx.beginPath();ctx.arc(q.x,q.y,.05+.08*q.life,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
   for(const e of echoes)this.runner(e.player,ctx,e.alpha||.24,e.tint);
   this.runner(player,ctx,1);
   ctx.restore();
