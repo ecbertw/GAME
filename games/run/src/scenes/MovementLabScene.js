@@ -14,6 +14,10 @@ export class MovementLabScene extends Phaser.Scene {
   }
 
   preload() {
+    this.runnerAssetFailed = false;
+    this.load.on('loaderror', file => {
+      if (file && file.key === RUNNER_ATLAS.key) this.runnerAssetFailed = true;
+    });
     this.load.spritesheet(RUNNER_ATLAS.key, RUNNER_ATLAS.file, {
       frameWidth: RUNNER_ATLAS.frameWidth,
       frameHeight: RUNNER_ATLAS.frameHeight,
@@ -40,6 +44,13 @@ export class MovementLabScene extends Phaser.Scene {
     this.addHazard(930, 582, 110, 20);
     this.addHazard(2215, 582, 90, 20);
     this.addHazard(2910, 582, 120, 20);
+
+    if (this.runnerAssetFailed || !this.textures.exists(RUNNER_ATLAS.key)) {
+      this.add.text(640, 230, 'RUNNER ASSET FAILED\nThe sprite atlas did not load.', {
+        align: 'center', fontFamily: 'monospace', fontSize: '22px', color: '#ff6d8a',
+        backgroundColor: '#220914dd', padding: { x: 18, y: 14 },
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(2000);
+    }
 
     this.fx = new MovementFx(this);
     this.runner = new Runner(this, this.spawn.x, this.spawn.y);
