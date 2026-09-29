@@ -7,9 +7,11 @@ export class AstralRenderer{
   this.fx=[];this.trail=[];this.stars=Array.from({length:120},(_,i)=>({x:(i*97.113)%1,y:(i*61.71)%1,r:.45+(i%4)*.26,a:.20+((i*37)%70)/100}));
  }
  event(e,p){
-  if(e.type==='land'||e.type==='hard-land')for(let i=0;i<(e.type==='hard-land'?16:8);i++)this.fx.push({type:'dust',x:p.x+.35,y:p.y+p.h,vx:(Math.random()-.5)*3.4,vy:-.7-Math.random()*1.7,life:1});
+  if(e.type==='land'||e.type==='hard-land')for(let i=0;i<(e.type==='hard-land'?18:8);i++)this.fx.push({type:e.type==='hard-land'?'impact':'dust',x:p.x+.35,y:p.y+p.h,vx:(Math.random()-.5)*(e.type==='hard-land'?4.4:3.4),vy:-.7-Math.random()*(e.type==='hard-land'?2.4:1.7),life:1});
+  if(e.type==='skid')for(let i=0;i<12;i++)this.fx.push({type:'skid',x:p.x+.35,y:p.y+p.h-.04,vx:-p.facing*(1.5+Math.random()*2.8)+(Math.random()-.5),vy:-.25-Math.random()*1.1,life:1});
   if(e.type==='shard')for(let i=0;i<10;i++)this.fx.push({type:'spark',x:p.x+.35,y:p.y+.55,vx:(Math.random()-.5)*3.8,vy:(Math.random()-.5)*3.8,life:1});
-  if(['checkpoint','secret','finish'].includes(e.type))for(let i=0;i<24;i++)this.fx.push({type:'spark',x:p.x+.35,y:p.y+.5,vx:(Math.random()-.5)*5.0,vy:(Math.random()-.5)*5.0,life:1});
+  if(e.type==='death')for(let i=0;i<16;i++)this.fx.push({type:'death',x:p.x+.35,y:p.y+.55,vx:(Math.random()-.5)*4.8,vy:-1.0-Math.random()*3.6,life:1});
+  if(['checkpoint','secret','finish'].includes(e.type))for(let i=0;i<(e.type==='finish'?34:24);i++)this.fx.push({type:e.type==='finish'?'victory':'spark',x:p.x+.35,y:p.y+.5,vx:(Math.random()-.5)*(e.type==='finish'?6.0:5.0),vy:(Math.random()-.5)*(e.type==='finish'?6.0:5.0),life:1});
  }
  resize(){const r=this.canvas.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1),w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h}this.dpr=d}
  roundRect(ctx,x,y,w,h,r){const q=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+q,y);ctx.arcTo(x+w,y,x+w,y+h,q);ctx.arcTo(x+w,y+h,x,y+h,q);ctx.arcTo(x,y+h,x,y,q);ctx.arcTo(x,y,x+w,y,q);ctx.closePath()}
