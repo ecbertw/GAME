@@ -1,4 +1,5 @@
-import{animationState,frameFor}from'../player/animation-state.mjs';
+import{animationState}from'../player/animation-state.mjs';
+import{SpritePlayer}from'../player/sprite-player.mjs';
 
 const TAU=Math.PI*2;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -10,6 +11,7 @@ export class Renderer{
     this.level=level;
     this.dpr=1;
     this.assets={};
+    this.spritePlayer=new SpritePlayer();
     this.particles=[];
     this.trail=[];
     this.lastState='idle';
@@ -29,7 +31,7 @@ export class Renderer{
       img.onerror=()=>res();
       img.src=src;
     });
-    await Promise.all([load('runner','/assets/run/character/runner-atlas.svg'),load('farArt','/assets/run/astral/ruins-far-v2.svg'),load('nearArt','/assets/run/astral/ruins-near-v2.svg'),load('fgArt','/assets/run/astral/foreground-v2.svg')]);
+    await Promise.all([this.spritePlayer.ready,load('farArt','/assets/run/astral/ruins-far-v2.svg'),load('nearArt','/assets/run/astral/ruins-near-v2.svg'),load('fgArt','/assets/run/astral/foreground-v2.svg')]);
   }
 
   resize(){
@@ -283,21 +285,7 @@ export class Renderer{
   }
 
   runner(p,ctx,alpha=1,tint){
-    ctx.save();ctx.globalAlpha=alpha;
-    const frame=frameFor(animationState(p),p.tick||0);
-    const x=p.x-.52,y=p.y-.36,w=1.86,h=2.12,flip=(p.facing||1)<0;
-    if(flip){ctx.translate(x+w,y);ctx.scale(-1,1);this.drawRunnerFrame(ctx,frame,0,w,h)}
-    else this.drawRunnerFrame(ctx,frame,x,y,w,h);
-    if(tint){
-      ctx.globalCompositeOperation='source-atop';ctx.fillStyle=tint;ctx.globalAlpha*=.33;
-      ctx.fillRect(flip?0:x,y,w,h);
-    }
-    ctx.restore();
-  }
-
-  drawRunnerFrame(ctx,frame,x,y,w,h){
-    if(this.assets.runner)ctx.drawImage(this.assets.runner,frame*160,0,160,180,x,y,w,h);
-    else{ctx.fillStyle='#fff';ctx.fillRect(x+w*.3,y,w*.4,h)}
+    this.spritePlayer.draw(ctx,p,{alpha,tint});
   }
 
   foreground(ctx,w,h,cam){

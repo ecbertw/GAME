@@ -3,14 +3,17 @@ test('RUN is isolated from JUMP renderer and multiplayer',()=>{const c=read('run
 test('RUN page exposes First Light, echoes and deterministic physics',()=>{const h=read('run.html'),p=read('run/engine/physics-core.js');assert.match(h,/ASTRAL 01/);assert.match(h,/PB ECHO/);assert.match(h,/WORLD ECHO/);assert.match(p,/1\/120/);});
 test('RUN has 42 persistent shard ids, routes and a versioned First Light',async()=>{const m=await import('../run/levels/astral/astral-01.mjs');assert.equal(m.ASTRAL01.version,2);assert.equal(m.ASTRAL01.shards.length,42);assert.equal(new Set(m.ASTRAL01.shards.map(x=>x.id)).size,42);assert.ok(m.ASTRAL01.secrets.length>=1);const groups=Object.fromEntries(['main','challenge','alternate','secret'].map(g=>[g,m.ASTRAL01.shards.filter(x=>x.group===g).length]));assert.deepEqual(groups,{main:25,challenge:10,alternate:4,secret:3});assert.ok(m.ASTRAL01.routes.upper&&m.ASTRAL01.routes.lower&&m.ASTRAL01.routes.secret);assert.ok(m.ASTRAL01.bouncePads.length&&m.ASTRAL01.speedPads.length&&m.ASTRAL01.fallingPlatforms.length);});
 
-test('RUN source modules parse under Node',()=>{const cp=require('node:child_process');for(const file of ['run/run-client.mjs','run/rendering/renderer.mjs','run/audio/audio.mjs','run/camera/follow-camera.mjs','run/input/input.mjs']){const out=cp.spawnSync(process.execPath,['--check',require('node:path').join(__dirname,'..',file)],{encoding:'utf8'});assert.equal(out.status,0,file+' '+out.stderr)}});
+test('RUN source modules parse under Node',()=>{const cp=require('node:child_process');for(const file of ['run/run-client.mjs','run/rendering/renderer.mjs','run/player/sprite-player.mjs','run/audio/audio.mjs','run/camera/follow-camera.mjs','run/input/input.mjs']){const out=cp.spawnSync(process.execPath,['--check',require('node:path').join(__dirname,'..',file)],{encoding:'utf8'});assert.equal(out.status,0,file+' '+out.stderr)}});
 
 
 
-test('RUN final art pipeline uses layered Astral rendering and the 14-frame runner',()=>{
- const renderer=read('run/rendering/renderer.mjs'),atlas=JSON.parse(read('assets/run/character/runner-atlas.json'));
+test('RUN final art pipeline uses layered Astral rendering and a manifest-driven fixed-outfit sprite runner',()=>{
+ const renderer=read('run/rendering/renderer.mjs'),sprite=read('run/player/sprite-player.mjs'),atlas=JSON.parse(read('assets/run/character/runner-atlas.json'));
  assert.match(renderer,/drawParallaxRuins/);assert.match(renderer,/waterfall/);assert.match(renderer,/foreground/);assert.match(renderer,/drawFinish/);
- assert.equal(atlas.frames,14);assert.equal(atlas.frameWidth,160);assert.equal(atlas.states.victory,13);
+ assert.match(renderer,/SpritePlayer/);assert.doesNotMatch(renderer,/frame\*160/);
+ assert.equal(atlas.version,3);assert.equal(atlas.frames,14);assert.equal(atlas.frameWidth,160);assert.equal(atlas.fixedOutfit,true);assert.match(atlas.image,/runner-atlas\.svg$/);
+ assert.ok(atlas.states['fast-run']&&atlas.states['jump-start']&&atlas.states.victory);
+ assert.match(sprite,/manifest/);assert.match(sprite,/animationState/);assert.doesNotMatch(sprite,/EixoJumpExactArt|jump-rig|AnimationMixer/);
 });
 
 test('First Light main islands stay within the authored jump envelope',async()=>{
