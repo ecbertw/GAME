@@ -27,6 +27,7 @@ return{
  movingPlatforms:[
   {id:'m0',x:14.7,y:6.4,w:3.2,h:.28,dy:1.3,period:2.8,phase:0},
   {id:'m1',x:75.6,y:5.4,w:3.3,h:.28,dy:1.5,period:3.2,phase:1.1},
+  {id:'m1b',x:93.1,y:6.6,w:2.8,h:.28,dy:.8,period:2.9,phase:.7},
   {id:'m2',x:108.7,y:5.0,w:3.2,h:.28,dx:1.8,period:3.4,phase:.4},
   {id:'m3',x:141.2,y:5.2,w:3.0,h:.28,dy:1.6,period:2.6,phase:2.0},
   {id:'secret-lift',x:95.8,y:10.2,w:1.5,h:.28,dy:1.8,period:3.0,phase:0}
