@@ -17,9 +17,12 @@ test('JUMP mounts the continuous 3D renderer and serves its model locally',()=>{
  assert.match(renderer,/function jumpPhase\(vy\)/,'jump pose must be driven by vertical physics instead of a fixed playback timer');
  assert.match(renderer,/motion\.moving\?\-\.038:\-\.085/,'idle posture must counter the imported forward lean on local X');
  assert.match(renderer,/ROOT_LEAN_AXIS=new THREE\.Vector3\(1,0,0\)/,'posture correction must use the model forward-back axis');
- assert.match(renderer,/RUN_ELBOW_AXIS=new THREE\.Vector3\(1,0,0\)/,'elbow flex must stay in the side-view running plane');
- assert.match(renderer,/const flex=\.58\+\.10/,'run elbow bend must be strong enough to read in the silhouette');
- assert.doesNotMatch(renderer,/leftShoulder|rightShoulder/,'run readability correction must not drive the shoulders');
+ assert.match(renderer,/RUN_ARM_AXIS=new THREE\.Vector3\(1,0,0\)/,'upper arm swing must use the rig forward-back axis');
+ assert.match(renderer,/RUN_ELBOW_AXIS=new THREE\.Vector3\(0,0,1\)/,'elbow flex must use the actual GLB forearm hinge axis');
+ assert.match(renderer,/const swing=Math\.sin\(phase\)\*\.48/,'run arm swing must be visible and alternate front/back');
+ assert.match(renderer,/const elbow=1\.18\+\.16/,'run elbow bend must stay clearly flexed');
+ assert.match(renderer,/leftShoulder\.quaternion\.slerp/,'shoulder shrug must be damped while the arm chain drives the run');
+ assert.match(renderer,/leftFore\.quaternion\.copy\(actor\.armRest\.leftFore\)\.multiply\(leftElbowQuat\)/);
  assert.match(css,/#jump3dCanvas/);assert.match(server,/'\.glb':'model\/gltf-binary'/);assert.match(server,/PUBLIC_STATIC_EXTS[^;]+\.mjs[^;]+\.glb/);
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.module.min.js')).size>100000);
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.core.min.js')).size>100000,'Three.js core dependency must ship with the module');
