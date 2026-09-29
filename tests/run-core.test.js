@@ -9,3 +9,20 @@ test('coyote time remains available after leaving ground',()=>{const p=Core.crea
 test('replay canonicalization rejects non-monotonic ticks',()=>{assert.throws(()=>Core.canonicalReplay([{tick:1,mask:1},{tick:1,mask:0}]));assert.deepEqual(Core.canonicalReplay([{tick:0,mask:0},{tick:1,mask:0},{tick:2,mask:2}]),[{tick:0,mask:0},{tick:2,mask:2}])});
 test('First Light is a new level version with 42 persistent shards',()=>{assert.equal(level.version,10);assert.equal(level.shards.length,42);assert.equal(new Set(level.shards.map(s=>s.id)).size,42);assert.ok(level.routes.upper&&level.routes.lower&&level.routes.secret)});
 test('main islands stay inside the authored jump envelope',()=>{for(let i=0;i<level.solids.length-1;i++){const a=level.solids[i],b=level.solids[i+1],gap=b.x-(a.x+a.w),rise=a.y-b.y;assert.ok(gap<=4.3,'gap '+a.id+'->'+b.id+' = '+gap);assert.ok(rise<=1.7,'rise '+a.id+'->'+b.id+' = '+rise)}});
+test('First Light main route is deterministically finishable with ordinary jump timing',()=>{
+ const p=Core.createPlayer(level.spawn);let prev=0,hold=0;
+ for(let tick=0;tick<120*120&&!p.finished;tick++){
+   let jump=false;
+   if(hold>0){jump=true;hold--}
+   if(p.onGround&&hold===0){
+     const bottom=p.y+p.h,center=p.x+p.w*.5;
+     const support=level.solids.find(s=>center>=s.x&&center<=s.x+s.w&&Math.abs(bottom-s.y)<.14);
+     const hazard=level.hazards.find(h=>h.x>p.x&&h.x-p.x<2.6&&Math.abs((h.y+h.h)-bottom)<.8);
+     if((support&&support.x+support.w-(p.x+p.w)<2.15)||hazard){hold=42;jump=true}
+   }
+   const mask=Core.INPUT.RIGHT|(jump?Core.INPUT.JUMP:0);
+   Core.step(p,level,mask,prev);prev=mask;
+ }
+ assert.equal(p.finished,true,'scripted route stopped at x='+p.x.toFixed(2)+' deaths='+p.deaths);
+ assert.ok(p.deaths<10,'main route should not require repeated blind deaths');
+});
