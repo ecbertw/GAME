@@ -38,4 +38,13 @@ async function rankings(db,{country='',limit=50}={}){
  return{players:(await db.query(q,params)).rows};
 }
 async function profile(db,id){if(!db||!id)return{bestMs:null};const r=await db.query('SELECT time_ms AS "bestMs",shards,secrets,deaths FROM run_scores WHERE player_id=$1 AND level_id=$2 AND level_version=$3',[id,Level.id,Level.version]);return r.rows[0]||{bestMs:null}}
-module.exports={initDb,start,finish,rankings,profile};
+async function echo(db,{type='world',id=''}={}){
+ if(!db)return{replay:[],timeMs:null};
+ if(type==='pb'&&id){
+  const r=await db.query('SELECT time_ms AS "timeMs",replay FROM run_scores WHERE player_id=$1 AND level_id=$2 AND level_version=$3',[id,Level.id,Level.version]);
+  return r.rows[0]||{replay:[],timeMs:null};
+ }
+ const r=await db.query('SELECT time_ms AS "timeMs",replay FROM run_scores WHERE level_id=$1 AND level_version=$2 ORDER BY time_ms ASC,updated_at ASC LIMIT 1',[Level.id,Level.version]);
+ return r.rows[0]||{replay:[],timeMs:null};
+}
+module.exports={initDb,start,finish,rankings,profile,echo};
