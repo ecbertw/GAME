@@ -17,12 +17,11 @@ test('JUMP mounts the continuous 3D renderer and serves its model locally',()=>{
  assert.match(renderer,/function jumpPhase\(vy\)/,'jump pose must be driven by vertical physics instead of a fixed playback timer');
  assert.match(renderer,/motion\.moving\?\-\.038:\-\.085/,'idle posture must counter the imported forward lean on local X');
  assert.match(renderer,/ROOT_LEAN_AXIS=new THREE\.Vector3\(1,0,0\)/,'posture correction must use the model forward-back axis');
- assert.match(renderer,/RUN_ARM_AXIS=new THREE\.Vector3\(1,0,0\)/,'upper arm swing must use the rig forward-back axis');
- assert.match(renderer,/RUN_ELBOW_AXIS=new THREE\.Vector3\(0,0,1\)/,'elbow flex must use the actual GLB forearm hinge axis');
- assert.match(renderer,/const swing=Math\.sin\(phase\)\*\.48/,'run arm swing must be visible and alternate front/back');
- assert.match(renderer,/const elbow=1\.18\+\.16/,'run elbow bend must stay clearly flexed');
+ assert.match(renderer,/function alignBoneToWorldDirection\(bone,child,desired\)/,'arm control must target the visible world-space direction instead of guessing local rig axes');
+ assert.match(renderer,/nearUpperDir\.set\(facing\*Math\.sin\(swing\),-Math\.cos\(swing\),0\)/,'near upper arm must stay mostly down while swinging front/back');
+ assert.match(renderer,/nearForeDir\.set\(facing\*Math\.cos\(swing\),Math\.sin\(swing\)\*\.55,0\)/,'near forearm must form the readable forward running bend');
+ assert.match(renderer,/setFromUnitVectors\(currentArmDir,desired\)/,'screen-space IK must align the actual bone chain');
  assert.match(renderer,/leftShoulder\.quaternion\.slerp/,'shoulder shrug must be damped while the arm chain drives the run');
- assert.match(renderer,/leftFore\.quaternion\.copy\(actor\.armRest\.leftFore\)\.multiply\(leftElbowQuat\)/);
  assert.match(css,/#jump3dCanvas/);assert.match(server,/'\.glb':'model\/gltf-binary'/);assert.match(server,/PUBLIC_STATIC_EXTS[^;]+\.mjs[^;]+\.glb/);
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.module.min.js')).size>100000);
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.core.min.js')).size>100000,'Three.js core dependency must ship with the module');
