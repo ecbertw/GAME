@@ -72,14 +72,11 @@ function createActor(root,id,ghost){
   const leftShoulder=root.getObjectByName('mixamorig:LeftShoulder'),rightShoulder=root.getObjectByName('mixamorig:RightShoulder');
   const leftArm=root.getObjectByName('mixamorig:LeftArm'),rightArm=root.getObjectByName('mixamorig:RightArm');
   const leftFore=root.getObjectByName('mixamorig:LeftForeArm'),rightFore=root.getObjectByName('mixamorig:RightForeArm');
+  const leftHand=root.getObjectByName('mixamorig:LeftHand'),rightHand=root.getObjectByName('mixamorig:RightHand');
   return {
     id,root,mixer,actions,cape:root.getObjectByName('Accessory_Cape'),
-    leftShoulder,rightShoulder,leftArm,rightArm,leftFore,rightFore,
-    armRest:{
-      leftShoulder:leftShoulder?.quaternion.clone(),rightShoulder:rightShoulder?.quaternion.clone(),
-      leftArm:leftArm?.quaternion.clone(),rightArm:rightArm?.quaternion.clone(),
-      leftFore:leftFore?.quaternion.clone(),rightFore:rightFore?.quaternion.clone()
-    },
+    leftShoulder,rightShoulder,leftArm,rightArm,leftFore,rightFore,leftHand,rightHand,
+    shoulderRest:{left:leftShoulder?.quaternion.clone(),right:rightShoulder?.quaternion.clone()},
     current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true
   };
 }
@@ -145,35 +142,60 @@ function updateActorPose(actor,motion,dt){
   actor.lastGround=ground;
 }
 
-const RUN_ARM_AXIS=new THREE.Vector3(1,0,0),RUN_ELBOW_AXIS=new THREE.Vector3(0,0,1);
-const leftArmQuat=new THREE.Quaternion(),rightArmQuat=new THREE.Quaternion(),leftElbowQuat=new THREE.Quaternion(),rightElbowQuat=new THREE.Quaternion();
+const armBonePos=new THREE.Vector3(),armChildPos=new THREE.Vector3(),currentArmDir=new THREE.Vector3();
+const armWorldQ=new THREE.Quaternion(),armDeltaQ=new THREE.Quaternion(),armTargetWorldQ=new THREE.Quaternion(),armParentWorldQ=new THREE.Quaternion(),armLocalQ=new THREE.Quaternion();
+const nearUpperDir=new THREE.Vector3(),nearForeDir=new THREE.Vector3(),farUpperDir=new THREE.Vector3(),farForeDir=new THREE.Vector3();
+
+function alignBoneToWorldDirection(bone,child,desired){
+  if(!bone||!child||!bone.parent)return;
+  bone.getWorldPosition(armBonePos);child.getWorldPosition(armChildPos);
+  currentArmDir.copy(armChildPos).sub(armBonePos);
+  if(currentArmDir.lengthSq()<1e-10||desired.lengthSq()<1e-10)return;
+  currentArmDir.normalize();desired.normalize();
+  armDeltaQ.setFromUnitVectors(currentArmDir,desired);
+  bone.getWorldQuaternion(armWorldQ);
+  armTargetWorldQ.copy(armDeltaQ).multiply(armWorldQ);
+  bone.parent.getWorldQuaternion(armParentWorldQ).invert();
+  armLocalQ.copy(armParentWorldQ).multiply(armTargetWorldQ);
+  bone.quaternion.copy(armLocalQ);
+  bone.updateWorldMatrix(false,true);
+}
 
 function refineRunSilhouette(actor,motion){
   if(motion.ground===false||!motion.moving)return;
   const runAction=actor.current?.includes('run')?actor.actions[actor.current]:null,clip=runAction?.getClip?.();
   const phase=clip?.duration?((runAction.time/clip.duration)%1)*Math.PI*2:0;
-  const swing=Math.sin(phase)*.48;
-  const elbow=1.18+.16*(.5+.5*Math.cos(phase));
+  const facing=motion.facing===-1?-1:1;
+  const swing=Math.sin(phase)*.42;
 
-  // Remove most of the authored clavicle shrug: the shoulder should stay quiet
-  // while the actual upper arm performs the running swing.
-  if(actor.leftShoulder&&actor.armRest.leftShoulder)actor.leftShoulder.quaternion.slerp(actor.armRest.leftShoulder,.88);
-  if(actor.rightShoulder&&actor.armRest.rightShoulder)actor.rightShoulder.quaternion.slerp(actor.armRest.rightShoulder,.88);
+  // Quiet clavicles first. From here down the target is defined in world/screen
+  // space, so mirrored/local rig axes can no longer make the arms open sideways.
+  if(actor.leftShoulder&&actor.shoulderRest.left)actor.leftShoulder.quaternion.slerp(actor.shoulderRest.left,.90);
+  if(actor.rightShoulder&&actor.shoulderRest.right)actor.rightShoulder.quaternion.slerp(actor.shoulderRest.right,.90);
+  actor.root.updateMatrixWorld(true);
 
-  // Upper arm swings front/back around local X. This is the model axis that
-  // projects into horizontal travel once the character is turned into profile.
-  leftArmQuat.setFromAxisAngle(RUN_ARM_AXIS,swing-.06);
-  rightArmQuat.setFromAxisAngle(RUN_ARM_AXIS,-swing-.06);
-  if(actor.leftArm&&actor.armRest.leftArm)actor.leftArm.quaternion.copy(actor.armRest.leftArm).multiply(leftArmQuat);
-  if(actor.rightArm&&actor.armRest.rightArm)actor.rightArm.quaternion.copy(actor.armRest.rightArm).multiply(rightArmQuat);
+  // Whichever arm is nearer the camera gets the readable runner silhouette:
+  // upper arm mostly down, forearm roughly horizontal in front (the red-line pose).
+  const near=facing===1
+    ?{upper:actor.rightArm,fore:actor.rightFore,hand:actor.rightHand}
+    :{upper:actor.leftArm,fore:actor.leftFore,hand:actor.leftHand};
+  const far=facing===1
+    ?{upper:actor.leftArm,fore:actor.leftFore,hand:actor.leftHand}
+    :{upper:actor.rightArm,fore:actor.rightFore,hand:actor.rightHand};
 
-  // The exported GLB proves the elbow hinge is local Z: LeftForeArm uses +Z and
-  // RightForeArm uses -Z. Drive that hinge explicitly to get a readable 70–77°
-  // running bend instead of the previous shoulder-led motion.
-  leftElbowQuat.setFromAxisAngle(RUN_ELBOW_AXIS,elbow);
-  rightElbowQuat.setFromAxisAngle(RUN_ELBOW_AXIS,-elbow);
-  if(actor.leftFore&&actor.armRest.leftFore)actor.leftFore.quaternion.copy(actor.armRest.leftFore).multiply(leftElbowQuat);
-  if(actor.rightFore&&actor.armRest.rightFore)actor.rightFore.quaternion.copy(actor.armRest.rightFore).multiply(rightElbowQuat);
+  nearUpperDir.set(facing*Math.sin(swing),-Math.cos(swing),0);
+  nearForeDir.set(facing*Math.cos(swing),Math.sin(swing)*.55,0);
+  farUpperDir.set(-facing*Math.sin(swing),-Math.cos(swing),0);
+  farForeDir.set(-facing*Math.cos(swing),-Math.sin(swing)*.40,0);
+
+  alignBoneToWorldDirection(near.upper,near.fore,nearUpperDir);
+  actor.root.updateMatrixWorld(true);
+  alignBoneToWorldDirection(near.fore,near.hand,nearForeDir);
+
+  actor.root.updateMatrixWorld(true);
+  alignBoneToWorldDirection(far.upper,far.fore,farUpperDir);
+  actor.root.updateMatrixWorld(true);
+  alignBoneToWorldDirection(far.fore,far.hand,farForeDir);
 }
 function beginFrame(){mount();frame++;for(const a of actors.values())a.seen=-1}
 
@@ -227,7 +249,7 @@ function preview(canvasNode,data={}){
 
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v351',gltf=>{
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v352',gltf=>{
   source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready);
 },()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 
