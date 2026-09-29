@@ -19,7 +19,7 @@ function platformAt(m,tick){const q=(tick||0)*DT*Math.PI*2/(m.period||3),s=Math.
 function createPlayer(spawn={x:2,y:7}){
  return{x:+spawn.x||0,y:+spawn.y||0,vx:0,vy:0,w:C.width,h:C.height,facing:1,onGround:false,
  coyote:0,jumpBuffer:0,skid:false,hardLanding:0,dead:false,respawnTicks:0,deaths:0,tick:0,
- spawn:{x:+spawn.x||0,y:+spawn.y||0},checkpoint:null,collected:new Set(),secrets:new Set(),broken:new Set(),finishTick:null};
+ spawn:{x:+spawn.x||0,y:+spawn.y||0},checkpoint:null,collected:new Set(),secrets:new Set(),broken:new Set(),startTick:null,finishTick:null};
 }
 function resetAfterDeath(p){p.x=p.spawn.x;p.y=p.spawn.y;p.vx=p.vy=0;p.onGround=false;p.coyote=p.jumpBuffer=0;p.skid=false;p.hardLanding=0;p.dead=false;p.respawnTicks=0;}
 function kill(p){if(p.dead||p.finishTick!=null)return false;p.dead=true;p.respawnTicks=C.respawnTicks;p.vx=p.vy=0;p.deaths++;return true;}
@@ -74,6 +74,7 @@ function step(p,level,mask,prevMask=0){
  p.vy=clamp(p.vy+(p.vy<0?C.gravityRise:C.gravityFall)*DT,-40,C.maxFall);
  const solids=staticSolids(level,p);resolveX(p,solids,p.vx*DT);const landed=resolveY(p,solids,p.vy*DT);
  if(p.onGround&&landed>2){events.push({type:landed>C.hardLandSpeed?'hard-land':'land',speed:landed});if(landed>C.hardLandSpeed)p.hardLanding=11;}
+ if(p.startTick==null&&Number.isFinite(level.startX)&&p.x+p.w*.5>=level.startX)p.startTick=p.tick;
  interactions(p,level,events);if(p.y>(level.killY||28)&&kill(p))events.push({type:'death'});
  p.tick++;return events;
 }
