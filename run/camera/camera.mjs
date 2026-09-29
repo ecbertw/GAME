@@ -1,18 +1,15 @@
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export class RunCamera{
-  constructor(){this.x=0;this.y=0;this.look=0;this.ready=false}
-  reset(player){this.x=player.x;this.y=player.y;this.look=0;this.ready=true}
-  update(player,dt){
-    if(!this.ready)this.reset(player);
-    const speedRatio=clamp(Math.abs(player.vx)/8.35,0,1);
-    const desiredLook=(player.facing||1)*(0.55+1.9*speedRatio);
-    this.look+=(desiredLook-this.look)*(1-Math.exp(-5.2*dt));
-    const targetX=player.x+player.w*.5+this.look;
-    this.x+=(targetX-this.x)*(1-Math.exp(-7.4*dt));
-    const playerY=player.y+player.h*.55,delta=playerY-this.y,dead=.9;
-    if(Math.abs(delta)>dead){
-      const targetY=playerY-Math.sign(delta)*dead;
-      this.y+=(targetY-this.y)*(1-Math.exp(-4.5*dt));
-    }
+  constructor(){this.x=0;this.y=0;this.look=0;this.vx=0;this.vy=0}
+  reset(p){this.x=p.x;this.y=p.y;this.look=0;this.vx=this.vy=0}
+  update(p,dt){
+    const targetLook=clamp(p.vx*.24,-2.2,2.2);
+    this.look+=(targetLook-this.look)*(1-Math.exp(-5.5*dt));
+    const tx=p.x+this.look;
+    const verticalDelta=p.y-this.y,deadZone=.8;
+    const ty=Math.abs(verticalDelta)>deadZone?p.y-Math.sign(verticalDelta)*deadZone:this.y;
+    this.vx+=(tx-this.x)*18*dt;this.vy+=(ty-this.y)*10*dt;
+    this.vx*=Math.exp(-8.5*dt);this.vy*=Math.exp(-7.0*dt);
+    this.x+=this.vx*dt;this.y+=this.vy*dt;
   }
 }
