@@ -29,7 +29,7 @@ export class Renderer{
       img.onerror=()=>res();
       img.src=src;
     });
-    await Promise.all([load('runner','/assets/run/character/runner-atlas.svg')]);
+    await Promise.all([load('runner','/assets/run/character/runner-atlas.svg'),load('farArt','/assets/run/astral/ruins-far-v2.svg'),load('nearArt','/assets/run/astral/ruins-near-v2.svg'),load('fgArt','/assets/run/astral/foreground-v2.svg')]);
   }
 
   resize(){
@@ -84,6 +84,14 @@ export class Renderer{
       }
     }
     ctx.globalAlpha=1;
+  }
+
+  imageParallax(ctx,img,w,h,cam,factor,y,sizeH,alpha=1){
+    if(!img)return;
+    const tileW=w*1.35,shift=-((cam.x*34*factor)%tileW);
+    ctx.save();ctx.globalAlpha=alpha;
+    for(let i=-1;i<3;i++)ctx.drawImage(img,shift+i*tileW,y-cam.y*factor*6,tileW,sizeH);
+    ctx.restore();
   }
 
   drawParallaxRuins(ctx,w,h,cam,factor,baseY,scaleY,alpha,near=false){
@@ -333,9 +341,11 @@ export class Renderer{
     const ctx=this.ctx,w=this.c.width/this.dpr,h=this.c.height/this.dpr;
     ctx.setTransform(this.dpr,0,0,this.dpr,0,0);ctx.clearRect(0,0,w,h);
     this.drawSky(ctx,w,h,cam);
-    this.drawParallaxRuins(ctx,w,h,cam,.08,h*.76,.72,.34,false);
+    this.imageParallax(ctx,this.assets.farArt,w,h,cam,.07,h*.02,h*.83,.72);
+    this.drawParallaxRuins(ctx,w,h,cam,.08,h*.76,.72,.22,false);
     this.drawFloatingIslands(ctx,w,h,cam);
-    this.drawParallaxRuins(ctx,w,h,cam,.22,h*.84,1.0,.46,true);
+    this.imageParallax(ctx,this.assets.nearArt,w,h,cam,.24,h*.18,h*.78,.72);
+    this.drawParallaxRuins(ctx,w,h,cam,.22,h*.84,1.0,.26,true);
 
     const scale=Math.min(76,Math.max(48,w/18)),ox=w*.34,oy=h*.56;
     ctx.save();this.world(ctx,cam,scale,ox,oy);
@@ -367,6 +377,7 @@ export class Renderer{
     this.runner(player,ctx,1);
     ctx.restore();
 
+    this.imageParallax(ctx,this.assets.fgArt,w,h,cam,1.08,h*.58,h*.42,.78);
     this.foreground(ctx,w,h,cam);
     this.speedOverlay(ctx,w,h,player);
   }
