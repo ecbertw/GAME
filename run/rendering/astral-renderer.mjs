@@ -102,7 +102,7 @@ export class AstralRenderer{
   for(const g of ghosts||[])if(g?.player&&!g.player.dead&&g.player.finishTick==null)this.runner.draw(ctx,g.player,{alpha:.28,tint:g.tint||'#72eaff'});
   if(!player.dead&&Number(player.vipLevel)>0){const radius=.72+.08*Math.sin(time*.006);ctx.save();ctx.globalAlpha=.15+.03*Math.min(6,Number(player.vipLevel));ctx.fillStyle=Number(player.vipLevel)>=6?'#ffd45e':'#66eaff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=.45;ctx.beginPath();ctx.ellipse(player.x+.36,player.y+.7,radius,radius*1.35,0,0,TAU);ctx.fill();ctx.restore()}
   this.runner.draw(ctx,player,{alpha:player.dead?Math.max(.18,Math.min(1,player.respawnTicks/18)):1});
-  for(const f of this.fx){f.x+=f.vx*.016;f.y+=f.vy*.016;f.vy+=1.8*.016;f.life-=.028;ctx.globalAlpha=Math.max(0,f.life);ctx.fillStyle=f.type==='dust'?'#eadcec':'#82f7ff';ctx.beginPath();ctx.arc(f.x,f.y,.04+.08*f.life,0,TAU);ctx.fill()}ctx.globalAlpha=1;this.fx=this.fx.filter(f=>f.life>0);ctx.restore();
+  for(const f of this.fx){f.x+=f.vx*.016;f.y+=f.vy*.016;f.vy+=1.8*.016;f.life-=.028;ctx.globalAlpha=Math.max(0,f.life);ctx.fillStyle=f.type==='dust'||f.type==='skid'?'#eadcec':f.type==='impact'?'#ffffff':f.type==='death'?'#ffcf5d':f.type==='victory'?(f.life>.55?'#ffd45f':'#ff5fd7'):'#82f7ff';ctx.beginPath();ctx.arc(f.x,f.y,.04+.08*f.life,0,TAU);ctx.fill()}ctx.globalAlpha=1;this.fx=this.fx.filter(f=>f.life>0);ctx.restore();
   this.foreground(ctx,w,h,cam);
  }
 }
