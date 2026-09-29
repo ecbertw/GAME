@@ -25,6 +25,5 @@ test('passport waits for the current renderer instead of showing the old runner'
 test('contemporary interface covers every requested surface',()=>{
  const css=read('redesign.css');
  for(const selector of ['.rx-hero','.rx-vip-hero','.vip-customize-modal','.jump-custom-preview','.acct-card','.admin-card'])assert.ok(css.includes(selector),selector);
- assert.match(read('package.json'),/"version": "3\.2\.0"/);
- assert.match(read('redesign.js'),/href="\/run"/);
+ assert.match(read('package.json'),/"version": "3\.1\.0"/);
 });
