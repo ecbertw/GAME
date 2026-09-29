@@ -18,7 +18,8 @@ async function finish(db,p,d){
  const replay=Array.isArray(d.replay)?d.replay.slice(0,5000):[];let last=-1;
  for(const row of replay){if(!Number.isInteger(row.t)||row.t<0||row.t>24000||row.t<last||!Number.isInteger(row.m)||row.m<0||row.m>7)throw Object.assign(new Error('Invalid RUN replay.'),{status:400});last=row.t}
  const out=Core.simulate(Level,replay);if(out.finishTick==null)throw Object.assign(new Error('RUN validation failed.'),{status:422});
- const timeMs=Math.round(Math.max(0,(out.finishTick)*Core.DT*1000));
+ if(out.startTick==null)throw Object.assign(new Error('RUN start line was not crossed.'),{status:422});
+ const timeMs=Math.round(Math.max(0,(out.finishTick-out.startTick)*Core.DT*1000));
  if(timeMs<12000||timeMs>240000)throw Object.assign(new Error('RUN time outside valid bounds.'),{status:422});
  if(db)await db.query(`INSERT INTO run_scores(player_id,level_id,level_version,engine_version,time_ms,shards,secrets,deaths,replay)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)
