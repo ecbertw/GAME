@@ -15,7 +15,7 @@ test('First Light is reachable and its recorded replay is deterministic',()=>{
   if(mask!==lastMask){replay.push({t:tick,m:mask});lastMask=mask}
   C.step(p,L,mask,prev);prev=mask;
  }
- assert.notEqual(p.finishTick,null,'autoplay must reach the First Light gate');
+ assert.notEqual(p.finishTick,null,'autoplay must reach the First Light gate; x='+p.x.toFixed(2)+' y='+p.y.toFixed(2)+' deaths='+p.deaths+' checkpoint='+p.checkpoint);
  const again=C.simulate(L,replay,18000);
  assert.equal(again.finishTick,p.finishTick,'server replay must reproduce the same finish tick');
  assert.equal(again.deaths,p.deaths,'replay must reproduce deaths');
