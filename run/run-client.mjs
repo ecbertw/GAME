@@ -10,11 +10,11 @@ function resetLocal(){player=P.createPlayer(level.spawn);camera.reset(player.x,p
 async function begin(){const p=account();if(!p){location.href='/?signin=1';return}ui.start.classList.add('hidden');resetLocal();try{attempt=await api('/api/run/start',{method:'POST',body:JSON.stringify({levelId:level.id,daily:dailyMode})});echoData=attempt.echoes||{};pbTime=echoData.pb?.timeMs??null;resetEchoes();running=true}catch(e){ui.start.classList.remove('hidden');alert(e.message)}}
 function stepEcho(e){while(e.i<e.replay.length&&e.replay[e.i].tick===e.player.tick){e.mask=e.replay[e.i].mask;e.i++}P.step(e.player,level,e.mask,e.prev);e.prev=e.mask}
 function fixed(){
- const beforeX=player.x+player.w*.5,wasGround=player.onGround,wasDead=player.dead,wasSkid=player.skid,shards=player.shards.size,secrets=player.secrets.size,oldVy=player.vy;
+ const beforeX=player.x+player.w*.5,wasGround=player.onGround,wasDead=player.dead,wasSkid=player.skid,shards=player.shards.size,secrets=player.secrets.size,oldVy=player.vy,oldVx=player.vx,oldCheckpoint=player.checkpoint.x;
  if(input.consumeChanged())recorder.sample(player.tick,input.mask);
  P.step(player,level,input.mask,prevMask);const pressedJump=(input.mask&P.INPUT.JUMP)&&!(prevMask&P.INPUT.JUMP);prevMask=input.mask;
  const afterX=player.x+player.w*.5;if(!timer.started&&beforeX<level.startLine.x&&afterX>=level.startLine.x)timer.start(player.tick);
- if(pressedJump&&player.vy<0)SFX.jump();if(!wasGround&&player.onGround)(player.hardLanding||oldVy>12?SFX.hard:SFX.land)();if(!wasSkid&&player.skid)SFX.skid();if(player.shards.size>shards)SFX.shard();if(player.secrets.size>secrets)SFX.secret();if(!wasDead&&player.dead)SFX.death();
+ if(pressedJump&&player.vy<0)SFX.jump();if(wasGround&&!pressedJump&&!player.onGround&&player.vy<-10)SFX.bounce();if(Math.abs(oldVx)<9.4&&Math.abs(player.vx)>10)SFX.boost();if(!wasGround&&player.onGround)(player.hardLanding||oldVy>12?SFX.hard:SFX.land)();if(!wasSkid&&player.skid)SFX.skid();if(player.checkpoint.x!==oldCheckpoint)SFX.checkpoint();if(player.shards.size>shards)SFX.shard();if(player.secrets.size>secrets)SFX.secret();if(!wasDead&&player.dead)SFX.death();
  if(player.finished&&!timer.finished){timer.finish(player.tick);SFX.victory();finish()}
  for(const e of Object.values(echoStates))stepEcho(e);
 }
