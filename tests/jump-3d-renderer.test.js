@@ -15,10 +15,11 @@ test('JUMP mounts the continuous 3D renderer and serves its model locally',()=>{
  assert.match(renderer,/setClearColor\(0x000000,0\)/,'the 3D overlay must remain transparent over the 2D world art');
  assert.doesNotMatch(renderer,/proceduralArms|RUN_SWING_AXIS|addRunPlaneBoneRotation/,'authored GLB arm rotations must not be overwritten by a procedural layer');
  assert.match(renderer,/function jumpPhase\(vy\)/,'jump pose must be driven by vertical physics instead of a fixed playback timer');
- assert.match(renderer,/motion\.moving\?\-facing\*\.012:0/,'idle posture must be neutral instead of leaning forwards');
- assert.match(renderer,/function refineRunSilhouette\(actor,motion\)/,'run silhouette needs the small elbow-only readability correction');
- assert.match(renderer,/leftFore\?\.quaternion\.multiply\(leftElbowCorrection\)/);
- assert.match(renderer,/rightFore\?\.quaternion\.multiply\(rightElbowCorrection\)/);
+ assert.match(renderer,/motion\.moving\?\-\.038:\-\.085/,'idle posture must counter the imported forward lean on local X');
+ assert.match(renderer,/ROOT_LEAN_AXIS=new THREE\.Vector3\(1,0,0\)/,'posture correction must use the model forward-back axis');
+ assert.match(renderer,/RUN_ELBOW_AXIS=new THREE\.Vector3\(1,0,0\)/,'elbow flex must stay in the side-view running plane');
+ assert.match(renderer,/const flex=\.58\+\.10/,'run elbow bend must be strong enough to read in the silhouette');
+ assert.doesNotMatch(renderer,/leftShoulder|rightShoulder/,'run readability correction must not drive the shoulders');
  assert.match(css,/#jump3dCanvas/);assert.match(server,/'\.glb':'model\/gltf-binary'/);assert.match(server,/PUBLIC_STATIC_EXTS[^;]+\.mjs[^;]+\.glb/);
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.module.min.js')).size>100000);
  assert.ok(fs.statSync(path.join(root,'vendor/three/three.core.min.js')).size>100000,'Three.js core dependency must ship with the module');
