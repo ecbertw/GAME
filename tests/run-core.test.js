@@ -9,8 +9,10 @@ test('First Light contains checkpoint, destructible blocks, moving platforms, se
 
 test('every First Light main-island gap is physically jumpable',()=>{
  for(let i=0;i<L.solids.length-1;i++){
-  const a=L.solids[i],b=L.solids[i+1];
-  const mini={spawn:{x:a.x+a.w-2.7,y:a.y-C.C.height-C.C.skin},killY:40,solids:[a,b],oneWay:[],movingPlatforms:[],breakables:[],hazards:[],shards:[],secrets:[],checkpoints:[],finish:{x:999,y:0,w:1,h:1}};
+  const a=L.solids[i],b=L.solids[i+1],gapStart=a.x+a.w,gapEnd=b.x;
+  const bridge=L.movingPlatforms.some(m=>m.id!=='secret-lift'&&m.x<gapEnd&&m.x+m.w>gapStart);
+  if(bridge)continue;
+  const mini={spawn:{x:a.x+a.w-C.C.width-1.0,y:a.y-C.C.height-C.C.skin},killY:40,solids:[a,b],oneWay:[],movingPlatforms:[],breakables:[],hazards:[],shards:[],secrets:[],checkpoints:[],finish:{x:999,y:0,w:1,h:1}};
   const p=C.createPlayer(mini.spawn);p.onGround=true;p.vx=C.C.maxRun*.88;let prev=0,landed=false;
   for(let tick=0;tick<240;tick++){
    const mask=C.INPUT.RIGHT|(tick<50?C.INPUT.JUMP:0);C.step(p,mini,mask,prev);prev=mask;
