@@ -53,7 +53,7 @@ function validateReplay(level,replay){
  if(!rows.length||rows[0].tick!==0)throw Object.assign(new Error('Invalid RUN replay.'),{status:400});
  if(rows.length>5000||rows.at(-1).tick>120*180)throw Object.assign(new Error('RUN replay outside limits.'),{status:400});
  const p=Physics.createPlayer(level.spawn);let idx=0,mask=0,prev=0,startTick=null,finishTick=null;
- const max=Math.min(120*180,(rows.at(-1)?.tick||0)+120*20);
+ const max=120*180;
  for(let tick=0;tick<max&&!p.finished;tick++){
   while(idx<rows.length&&rows[idx].tick===tick){mask=rows[idx].mask;idx++}
   Physics.step(p,level,mask,prev);prev=mask;
@@ -78,14 +78,12 @@ async function updateDailyStreak(db,playerId,day){
 }
 async function finish(db,p,data={}){
  const attemptId=String(data.attemptId||'');
- const a=(await db.query(`SELECT * FROM run_attempts WHERE id=$1 AND player_id=$2 FOR UPDATE`,[attemptId,p.id])).rows[0];
- if(!a)throw Object.assign(new Error('RUN attempt not found.'),{status:404});
- if(a.used_at)throw Object.assign(new Error('RUN attempt already submitted.'),{status:409});
+ const a=(await db.query(`UPDATE run_attempts SET used_at=NOW() WHERE id=$1 AND player_id=$2 AND used_at IS NULL RETURNING *`,[attemptId,p.id])).rows[0];
+ if(!a){const exists=await db.query('SELECT 1 FROM run_attempts WHERE id=$1 AND player_id=$2',[attemptId,p.id]);throw Object.assign(new Error(exists.rowCount?'RUN attempt already submitted.':'RUN attempt not found.'),{status:exists.rowCount?409:404})}
  if(a.engine_version!==ENGINE_VERSION)throw Object.assign(new Error('RUN engine version mismatch.'),{status:409});
  const level=await levelById(a.level_id);
  if(Number(a.level_version)!==level.version)throw Object.assign(new Error('RUN level version mismatch.'),{status:409});
  const v=validateReplay(level,data.replay);
- await db.query('UPDATE run_attempts SET used_at=NOW() WHERE id=$1',[attemptId]);
  const old=(await db.query(`SELECT best_ms FROM run_best_times WHERE player_id=$1 AND level_id=$2 AND level_version=$3 AND category='best'`,[p.id,level.id,level.version])).rows[0];
  const isPb=!old||v.timeMs<Number(old.best_ms),firstClear=!old;
  await db.query(`INSERT INTO run_best_times(player_id,level_id,level_version,category,best_ms,replay,shards,secrets,deaths)
