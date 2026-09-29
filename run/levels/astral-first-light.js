@@ -29,7 +29,7 @@ const hazards=[
  {id:'crystal-7',x:149.4,y:6.98,w:1.45,h:.52,type:'crystal'},{id:'crystal-8',x:166.9,y:6.38,w:1.45,h:.52,type:'crystal'},
  {id:'crystal-9',x:183.8,y:7.68,w:1.45,h:.52,type:'crystal'},{id:'crystal-10',x:200.2,y:6.58,w:1.4,h:.52,type:'crystal'},
  {id:'crystal-11',x:216.0,y:7.58,w:1.45,h:.52,type:'crystal'},{id:'crystal-12',x:234.4,y:6.48,w:1.45,h:.52,type:'crystal'},
- {id:'crystal-13',x:252.0,y:7.88,w:1.55,h:.52,type:'crystal'},{id:'crystal-14',x:269.0,y:6.68,w:1.45,h:.52,type:'crystal'},
+ {id:'crystal-13',x:255.6,y:7.88,w:1.35,h:.52,type:'crystal'},{id:'crystal-14',x:269.0,y:6.68,w:1.45,h:.52,type:'crystal'},
  {id:'crystal-15',x:285.5,y:5.88,w:1.45,h:.52,type:'crystal'},{id:'crystal-16',x:302.0,y:7.28,w:1.45,h:.52,type:'crystal'},
  {id:'crystal-17',x:319.0,y:6.08,w:1.45,h:.52,type:'crystal'}
 ];
