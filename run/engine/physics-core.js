@@ -56,7 +56,8 @@ function respawn(p){
   p.coyote=0;p.jumpBuffer=0;p.onGround=false;p.skid=false;p.hardLanding=false;p.deathTicks=0;
 }
 function step(p,level,inputMask,prevMask=0){
-  if(p.finished){p.tick++;return p}\n  if(p.dead){p.deathTicks--;if(p.deathTicks<=0)respawn(p);p.tick++;return p}
+  if(p.finished){p.tick++;return p}
+  if(p.dead){p.deathTicks--;if(p.deathTicks<=0)respawn(p);p.tick++;return p}
   const left=!!(inputMask&INPUT.LEFT),right=!!(inputMask&INPUT.RIGHT),jump=!!(inputMask&INPUT.JUMP);
   const jumpPressed=jump&&!(prevMask&INPUT.JUMP),jumpReleased=!jump&&(prevMask&INPUT.JUMP);
   if(jumpPressed)p.jumpBuffer=C.jumpBuffer; else p.jumpBuffer=Math.max(0,p.jumpBuffer-DT);
