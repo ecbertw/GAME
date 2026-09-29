@@ -11,7 +11,7 @@ test('ASTRAL 01 graybox has a deterministic traversable main route',async()=>{
   if(p.onGround&&jumpHold===0){
    const bottom=p.y+p.h,center=p.x+p.w*.5;
    const support=ASTRAL01.solids.find(r=>center>=r.x&&center<=r.x+r.w&&Math.abs(bottom-r.y)<.12);
-   if(support&&support.x+support.w-(p.x+p.w)<0.9)jumpHold=46;
+   if(support&&support.x+support.w-(p.x+p.w)<0.22)jumpHold=46;
   }
   const mask=P.INPUT.RIGHT|(jumpHold>0?P.INPUT.JUMP:0);P.step(p,ASTRAL01,mask,prev);prev=mask;if(jumpHold>0)jumpHold--;
  }
