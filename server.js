@@ -437,6 +437,7 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/run/start'){const d=await body(req),p=await roomAuth(d.id,d.token);return json(res,201,await runService.start(global.db,p,d));}
   if(req.method==='POST'&&url.pathname==='/api/run/finish'){const d=await body(req),p=await roomAuth(d.id,d.token);return json(res,200,await runService.finish(global.db,p,d));}
   if(req.method==='GET'&&url.pathname==='/api/run/rankings'){return json(res,200,await runService.rankings(global.db,{levelId:url.searchParams.get('levelId')||'astral-01',category:url.searchParams.get('category')||'best',country:url.searchParams.get('country')||'',page:url.searchParams.get('page')||1,daily:url.searchParams.get('daily')==='1'}));}
+  if(req.method==='GET'&&url.pathname==='/api/run/profile'){return json(res,200,await runService.profile(global.db,url.searchParams.get('id')||''));}
   if(req.method==='GET'&&url.pathname==='/api/run/daily'){return json(res,200,await runService.daily());}
   if(req.method==='POST'&&url.pathname==='/api/pulse/orbit/start'){const d=await body(req),p=await roomAuth(d.id,d.token);return json(res,201,await pulseOrbitService.start(global.db,p));}
   if(req.method==='POST'&&url.pathname==='/api/pulse/orbit/scores'){const d=await body(req),p=await roomAuth(d.id,d.token),out=await pulseOrbitService.finish(global.db,p,d);out.progress=await progressionService.award(global.db,p.id,'pulse',d.runId,out.score);return json(res,200,out);}
