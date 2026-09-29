@@ -1,8 +1,8 @@
 export const RUNNER_ATLAS = Object.freeze({
   key: 'runnerAtlas',
   file: '/games/run/assets/runner/runner-atlas.webp',
-  frameWidth: 128,
-  frameHeight: 128,
+  frameWidth: 64,
+  frameHeight: 64,
   originX: 0.5,
   originY: 0.875,
 });
