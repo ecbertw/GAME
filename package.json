@@ -2,7 +2,7 @@
   "name": "eixo-game",
   "version": "3.1.0",
   "private": true,
-  "description": "EIXO \u00e2\u20ac\u201d online reflex game with secure accounts and sessions",
+  "description": "EIXO â€” online reflex game with secure accounts and sessions",
   "main": "server.js",
   "scripts": {
     "test": "node --test tests/*.test.js",
@@ -12,6 +12,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "phaser": "^3.90.0"
   }
 }
