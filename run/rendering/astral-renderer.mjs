@@ -30,6 +30,7 @@ export class AstralRenderer{
   for(const cp of this.level.checkpoints)this.checkpoint(ctx,cp,time);this.finish(ctx,this.level.finish,time);
   if(Math.abs(player.vx)>6.3&&!player.dead){this.trail.unshift({x:player.x,y:player.y,facing:player.facing,tick:player.tick,life:1});if(this.trail.length>6)this.trail.length=6}
   for(const t of this.trail)t.life-=.14;this.trail=this.trail.filter(t=>t.life>0);for(let i=this.trail.length-1;i>=0;i--){const t=this.trail[i];this.runner.draw(ctx,{...player,...t},{alpha:.07*t.life,tint:'#56e8ff'})}
+  if(!player.dead&&Number(player.vipLevel)>0){const radius=.72+.08*Math.sin(time*.006);ctx.save();ctx.globalAlpha=.16+.035*Math.min(6,Number(player.vipLevel));ctx.fillStyle=Number(player.vipLevel)>=6?'#ffd45e':'#66eaff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=.45;ctx.beginPath();ctx.ellipse(player.x+.36,player.y+.7,radius,radius*1.35,0,0,TAU);ctx.fill();ctx.restore();}
   if(!player.dead)this.runner.draw(ctx,player);
   for(const f of this.fx){f.x+=f.vx*.016;f.y+=f.vy*.016;f.vy+=1.8*.016;f.life-=.028;ctx.globalAlpha=Math.max(0,f.life);ctx.fillStyle=f.type==='dust'?'#d9d7eb':'#7df6ff';ctx.beginPath();ctx.arc(f.x,f.y,.04+.08*f.life,0,TAU);ctx.fill()}ctx.globalAlpha=1;this.fx=this.fx.filter(f=>f.life>0);
   ctx.restore();
