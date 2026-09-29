@@ -9,9 +9,16 @@ test('First Light contains checkpoint, destructible blocks, moving platforms, se
 
 test('First Light is reachable and its recorded replay is deterministic',()=>{
  const p=C.createPlayer(L.spawn),replay=[];let prev=0,lastMask=null;
+ const wantsJump=()=>{
+  if(!p.onGround)return false;
+  const feet=p.y+p.h;
+  const support=L.solids.find(r=>p.x+p.w*.55>=r.x&&p.x+p.w*.45<=r.x+r.w&&Math.abs(feet-r.y)<.18);
+  const edge=support?(support.x+support.w-(p.x+p.w)):0;
+  const hazard=L.hazards.find(h=>h.x>=p.x&&h.x-p.x<2.65&&Math.abs((h.y+h.h)-feet)<.35);
+  return !!hazard||!support||edge<2.7;
+ };
  for(let tick=0;tick<18000&&p.finishTick==null;tick++){
-  let mask=C.INPUT.RIGHT;
-  if(p.onGround)mask|=C.INPUT.JUMP;
+  let mask=C.INPUT.RIGHT;if(wantsJump())mask|=C.INPUT.JUMP;
   if(mask!==lastMask){replay.push({t:tick,m:mask});lastMask=mask}
   C.step(p,L,mask,prev);prev=mask;
  }
