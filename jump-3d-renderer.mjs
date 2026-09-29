@@ -2,7 +2,7 @@ import * as THREE from './vendor/three/three.module.min.js';
 import {GLTFLoader} from './vendor/three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from './vendor/three/addons/utils/SkeletonUtils.js';
 
-const WORLD_W=960,WORLD_H=540,MODEL_HEIGHT=82,RUN_REFERENCE_SPEED=216,PROFILE_YAW=Math.PI/2-.10;
+const WORLD_W=960,WORLD_H=540,MODEL_HEIGHT=82,RUN_REFERENCE_SPEED=216,PROFILE_YAW=Math.PI/2-.18;
 const actors=new Map();
 let renderer,scene,camera,canvas,source,clips=[],ready=false,frame=0,lastTime=performance.now()/1000,previewState=null;
 
@@ -124,30 +124,36 @@ function chooseAction(actor,motion,dt=.016){
   }
 }
 
+const ROOT_UP_AXIS=new THREE.Vector3(0,1,0),ROOT_LEAN_AXIS=new THREE.Vector3(1,0,0);
+const facingQuat=new THREE.Quaternion(),leanQuat=new THREE.Quaternion();
+
 function updateActorPose(actor,motion,dt){
   const facing=motion.facing===-1?-1:1,ground=motion.ground!==false,vy=Number(motion.vy)||0;
-  // Idle is neutral. Running only gets a very small athletic lean; the previous
-  // positive idle tilt was visibly pitching the whole character forwards.
-  const targetLean=!ground?clamp(-vy/11000,-.008,.008):(motion.moving?-facing*.012:0);
-  actor.lean=damp(actor.lean,targetLean,14,dt);
-  // Keep the runner essentially in profile, but open the angle a few degrees so
-  // the near arm/forearm does not disappear into the torso silhouette.
-  actor.root.rotation.y=facing===1?PROFILE_YAW:-PROFILE_YAW;
-  actor.root.rotation.z=actor.lean;
+  // The forward pitch visible in the imported clips lives in the model's local
+  // Y/Z plane. Counter it around local X (not screen Z). Idle gets the strongest
+  // correction; running keeps only a small athletic forward pitch.
+  const targetLean=!ground?(-.035+clamp(-vy/9000,-.018,.018)):(motion.moving?-.038:-.085);
+  actor.lean=damp(actor.lean,targetLean,16,dt);
+  facingQuat.setFromAxisAngle(ROOT_UP_AXIS,facing===1?PROFILE_YAW:-PROFILE_YAW);
+  leanQuat.setFromAxisAngle(ROOT_LEAN_AXIS,actor.lean);
+  actor.root.quaternion.copy(facingQuat).multiply(leanQuat);
   actor.lastGround=ground;
 }
 
-const ELBOW_AXIS=new THREE.Vector3(0,0,1),leftElbowCorrection=new THREE.Quaternion(),rightElbowCorrection=new THREE.Quaternion();
-leftElbowCorrection.setFromAxisAngle(ELBOW_AXIS,.16);
-rightElbowCorrection.setFromAxisAngle(ELBOW_AXIS,-.16);
+const RUN_ELBOW_AXIS=new THREE.Vector3(1,0,0),elbowQuat=new THREE.Quaternion();
 
 function refineRunSilhouette(actor,motion){
   if(motion.ground===false||!motion.moving)return;
-  // The authored Run clip already owns shoulder/upper-arm motion. We only add
-  // a small symmetric elbow flex so the forearm reads clearly in side view,
-  // matching the classic bent running-arm silhouette without touching shoulders.
-  actor.leftFore?.quaternion.multiply(leftElbowCorrection);
-  actor.rightFore?.quaternion.multiply(rightElbowCorrection);
+  const runAction=actor.current?.includes('run')?actor.actions[actor.current]:null;
+  const clip=runAction?.getClip?.();
+  const phase=clip?.duration?((runAction.time/clip.duration)%1)*Math.PI*2:0;
+  // Child bones extend along local Y. Rotating the forearm around local X bends
+  // the hand along local Z, which becomes screen-horizontal after the profile yaw.
+  // This gives an actual elbow bend in the running plane without touching the shoulder.
+  const flex=.58+.10*(.5+.5*Math.cos(phase));
+  elbowQuat.setFromAxisAngle(RUN_ELBOW_AXIS,flex);
+  actor.leftFore?.quaternion.multiply(elbowQuat);
+  actor.rightFore?.quaternion.multiply(elbowQuat);
 }
 function beginFrame(){mount();frame++;for(const a of actors.values())a.seen=-1}
 
@@ -201,7 +207,7 @@ function preview(canvasNode,data={}){
 
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v349',gltf=>{
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v350',gltf=>{
   source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready);
 },()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 
