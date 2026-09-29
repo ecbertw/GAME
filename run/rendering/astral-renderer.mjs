@@ -17,7 +17,7 @@ export class AstralRenderer{
  hazard(ctx,h){const n=Math.max(2,Math.round(h.w/.34));ctx.shadowColor='#ff244d';ctx.shadowBlur=.22;ctx.fillStyle='#ff244d';for(let i=0;i<n;i++){const x=h.x+i*h.w/n,w=h.w/n;ctx.beginPath();ctx.moveTo(x,h.y+h.h);ctx.lineTo(x+w*.5,h.y);ctx.lineTo(x+w,h.y+h.h);ctx.closePath();ctx.fill()}ctx.shadowBlur=0}
  checkpoint(ctx,cp,t){ctx.save();ctx.translate(cp.x+cp.w/2,cp.y+cp.h/2);ctx.fillStyle='#473657';ctx.fillRect(-.22,-cp.h/2,.44,cp.h);ctx.fillStyle='#ef294f';ctx.fillRect(-.22,-cp.h/2,.44,.16);ctx.strokeStyle='#6fefff';ctx.lineWidth=.07;ctx.globalAlpha=.72+.2*Math.sin(t*.004);ctx.beginPath();ctx.ellipse(0,0,.5,1.15,0,0,TAU);ctx.stroke();ctx.restore()}
  finish(ctx,f,t){ctx.save();ctx.translate(f.x+f.w/2,f.y+f.h/2);ctx.strokeStyle='#ff3155';ctx.lineWidth=.14;ctx.shadowColor='#ff3155';ctx.shadowBlur=.45;ctx.beginPath();ctx.ellipse(0,0,f.w*.42,f.h*.42,0,0,TAU);ctx.stroke();ctx.strokeStyle='#7af2ff';ctx.globalAlpha=.62+.24*Math.sin(t*.004);ctx.lineWidth=.05;ctx.beginPath();ctx.ellipse(0,0,f.w*.28,f.h*.31,0,0,TAU);ctx.stroke();ctx.restore()}
- draw(player,cam,time){
+ draw(player,cam,time,ghosts=[]){
   this.resize();const ctx=this.ctx,w=this.canvas.width/this.dpr,h=this.canvas.height/this.dpr;ctx.setTransform(this.dpr,0,0,this.dpr,0,0);ctx.clearRect(0,0,w,h);
   this.sky(ctx,w,h,cam);this.ruins(ctx,w,h,cam,.08,h*.72,.32);this.ruins(ctx,w,h,cam,.22,h*.84,.44);
   const scale=Math.min(76,Math.max(48,w/18)),ox=w*.31,oy=h*.55;ctx.save();ctx.setTransform(this.dpr*scale,0,0,this.dpr*scale,this.dpr*(ox-cam.x*scale),this.dpr*(oy-cam.y*scale));
@@ -30,7 +30,8 @@ export class AstralRenderer{
   for(const cp of this.level.checkpoints)this.checkpoint(ctx,cp,time);this.finish(ctx,this.level.finish,time);
   if(Math.abs(player.vx)>6.3&&!player.dead){this.trail.unshift({x:player.x,y:player.y,facing:player.facing,tick:player.tick,life:1});if(this.trail.length>6)this.trail.length=6}
   for(const t of this.trail)t.life-=.14;this.trail=this.trail.filter(t=>t.life>0);for(let i=this.trail.length-1;i>=0;i--){const t=this.trail[i];this.runner.draw(ctx,{...player,...t},{alpha:.07*t.life,tint:'#56e8ff'})}
-  if(!player.dead&&Number(player.vipLevel)>0){const radius=.72+.08*Math.sin(time*.006);ctx.save();ctx.globalAlpha=.16+.035*Math.min(6,Number(player.vipLevel));ctx.fillStyle=Number(player.vipLevel)>=6?'#ffd45e':'#66eaff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=.45;ctx.beginPath();ctx.ellipse(player.x+.36,player.y+.7,radius,radius*1.35,0,0,TAU);ctx.fill();ctx.restore();}
+  for(const g of ghosts||[])if(g?.player&&!g.player.dead&&g.player.finishTick==null)this.runner.draw(ctx,g.player,{alpha:.28,tint:g.tint||'#72eaff'});
+    if(!player.dead&&Number(player.vipLevel)>0){const radius=.72+.08*Math.sin(time*.006);ctx.save();ctx.globalAlpha=.16+.035*Math.min(6,Number(player.vipLevel));ctx.fillStyle=Number(player.vipLevel)>=6?'#ffd45e':'#66eaff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=.45;ctx.beginPath();ctx.ellipse(player.x+.36,player.y+.7,radius,radius*1.35,0,0,TAU);ctx.fill();ctx.restore();}
   if(!player.dead)this.runner.draw(ctx,player);
   for(const f of this.fx){f.x+=f.vx*.016;f.y+=f.vy*.016;f.vy+=1.8*.016;f.life-=.028;ctx.globalAlpha=Math.max(0,f.life);ctx.fillStyle=f.type==='dust'?'#d9d7eb':'#7df6ff';ctx.beginPath();ctx.arc(f.x,f.y,.04+.08*f.life,0,TAU);ctx.fill()}ctx.globalAlpha=1;this.fx=this.fx.filter(f=>f.life>0);
   ctx.restore();
