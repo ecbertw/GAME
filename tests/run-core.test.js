@@ -17,3 +17,10 @@ test('RUN breakable blocks break from a rising underside hit',()=>{
  const p=P.createPlayer({x:.8,y:3.2});p.vy=-10;for(let i=0;i<20&&!p.broken.has('break-a');i++)P.step(p,l,0,0);
  assert.ok(p.broken.has('break-a'));
 });
+
+test('RUN server validation re-simulates a replay instead of trusting client time',()=>{
+ const service=require('../run-server.js');
+ const l={id:'test',version:1,spawn:{x:0,y:3.5},startLine:{x:2},finish:{x:40,y:2,w:2,h:3},killY:20,solids:[{x:-5,y:5,w:60,h:2}],oneWayPlatforms:[],movingPlatforms:[],hazards:[],shards:[],secrets:[]};
+ const out=service.validateReplay(l,[{tick:0,mask:P.INPUT.RIGHT}]);
+ assert.ok(out.timeMs>3500&&out.timeMs<10000);assert.equal(out.p.finished,true);
+});
