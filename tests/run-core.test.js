@@ -5,3 +5,15 @@ test('RUN jump has coyote time, variable cut and gravity',()=>{const p=P.createP
 test('RUN skid engages on high-speed reverse',()=>{const p=P.createPlayer({x:0,y:3.5});p.onGround=true;p.vx=7;P.step(p,level,P.INPUT.LEFT,0);assert.equal(p.skid,true);assert.ok(p.vx<7)});
 test('RUN replay canonicalization rejects non-monotonic data',()=>{assert.throws(()=>P.canonicalReplay([{tick:2,mask:1},{tick:2,mask:0}]));assert.deepEqual(P.canonicalReplay([{tick:0,mask:0},{tick:1,mask:0},{tick:2,mask:2}]),[{tick:0,mask:0},{tick:2,mask:2}])});
 test('RUN death auto-respawns after deterministic delay',()=>{const l={...level,hazards:[{x:0,y:0,w:2,h:5}]};const p=P.createPlayer(l.spawn);P.step(p,l,0,0);assert.equal(p.dead,true);l.hazards=[];for(let i=0;i<54;i++)P.step(p,l,0,0);assert.equal(p.dead,false)});
+
+test('RUN falling platforms trigger on landing and drop deterministically',()=>{
+ const l={...level,solids:[{x:-5,y:9,w:20,h:2}],fallingPlatforms:[{id:'fall-a',x:0,y:4.8,w:3,h:.3,delay:.05}]};
+ const p=P.createPlayer({x:.5,y:3});p.vy=5;for(let i=0;i<30;i++)P.step(p,l,0,0);
+ assert.ok(p.falling['fall-a']!=null);
+ const trigger=p.falling['fall-a'];for(let i=0;i<90;i++)P.step(p,l,0,0);assert.ok(p.tick>trigger);
+});
+test('RUN breakable blocks break from a rising underside hit',()=>{
+ const l={...level,solids:[{x:-5,y:9,w:20,h:2}],breakableBlocks:[{id:'break-a',x:0,y:2,w:3,h:.5}]};
+ const p=P.createPlayer({x:.8,y:3.2});p.vy=-10;for(let i=0;i<20&&!p.broken.has('break-a');i++)P.step(p,l,0,0);
+ assert.ok(p.broken.has('break-a'));
+});
