@@ -7,17 +7,18 @@ const paypalService=require('./paypal-server');
 const jumpService=require('./jump-server');
 const pulseOrbitService=require('./pulse-orbit-server');
 const progressionService=require('./progression-server');
+const runService=require('./run-server');
 const PORT=Number(process.env.PORT)||3000;
 const HOST=String(process.env.HOST||'127.0.0.1');
 const ALLOWED_HOSTS=new Set(String(process.env.PUBLIC_HOSTS||'eixo.at,www.eixo.at,127.0.0.1,localhost').split(',').map(v=>v.trim().toLowerCase()).filter(Boolean));
 function requestHost(req){return String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim().toLowerCase().replace(/:\d+$/,'')}
 function allowedRequestHost(req){return ALLOWED_HOSTS.has(requestHost(req))}
 const ROOT=__dirname;
-const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','jump-server.js','pulse-orbit-server.js','progression-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
+const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','jump-server.js','pulse-orbit-server.js','progression-server.js','run-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
 const PUBLIC_STATIC_EXTS=new Set(['.html','.css','.js','.mjs','.glb','.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.woff','.woff2']);
 function isPublicStaticRequestPath(pathname){
   if(pathname==='/assets/game-v300/hero-parts.json')return true;
-  if(['/jump','/pulse','/passport','/rankings','/rooms','/vip'].includes(pathname))return true;
+  if(['/jump','/pulse','/run','/passport','/rankings','/rooms','/vip'].includes(pathname))return true;
   const clean=String(pathname||'').replace(/^\/+/,''),parts=clean.split('/');
   if(!clean)return true;
   if(parts.some(part=>!part||part.startsWith('.')))return false;
@@ -124,6 +125,7 @@ async function initDb(){
   await jumpService.initDb(pool);
   await pulseOrbitService.initDb(pool);
   await progressionService.initDb(pool);
+  await runService.initDb(pool);
   await pool.query(`CREATE TABLE IF NOT EXISTS background_claims(x INTEGER NOT NULL,y INTEGER NOT NULL,owner_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,color VARCHAR(7) NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(x,y))`);
   await pool.query(`ALTER TABLE background_claims ALTER COLUMN color TYPE VARCHAR(16)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS background_claims_owner_idx ON background_claims(owner_id)`);
@@ -432,6 +434,10 @@ async function handleApi(req,res,url){
   if(req.method==='POST'&&url.pathname==='/api/players'){return json(res,410,{error:'Este endpoint foi substituído pelo sistema de contas EIXO.'});}
   if(req.method==='POST'&&url.pathname==='/api/game/start'){const d=await body(req);return json(res,201,await startGameRun(d.id,d.token,clientIp(req)));}
   if(req.method==='POST'&&url.pathname==='/api/scores'){const d=await body(req);return json(res,200,await submitScore(d.id,d.token,d.score,d.telemetry,d.runId,d.roomId||null));}
+  if(req.method==='POST'&&url.pathname==='/api/run/start'){const d=await body(req),p=await roomAuth(d.id,d.token);return json(res,201,runService.start(global.db,p,d));}
+  if(req.method==='POST'&&url.pathname==='/api/run/finish'){const d=await body(req),p=await roomAuth(d.id,d.token);return json(res,200,await runService.finish(global.db,p,d));}
+  if(req.method==='GET'&&url.pathname==='/api/run/rankings'){return json(res,200,await runService.rankings(global.db,{country:url.searchParams.get('country')||'',limit:url.searchParams.get('limit')||50}));}
+  if(req.method==='GET'&&url.pathname==='/api/run/profile'){return json(res,200,await runService.profile(global.db,url.searchParams.get('id')||''));}
   if(req.method==='POST'&&url.pathname==='/api/pulse/orbit/start'){const d=await body(req),p=await roomAuth(d.id,d.token);return json(res,201,await pulseOrbitService.start(global.db,p));}
   if(req.method==='POST'&&url.pathname==='/api/pulse/orbit/scores'){const d=await body(req),p=await roomAuth(d.id,d.token),out=await pulseOrbitService.finish(global.db,p,d);out.progress=await progressionService.award(global.db,p.id,'pulse',d.runId,out.score);return json(res,200,out);}
   if(req.method==='GET'&&url.pathname==='/api/auth/me'){const p=await authenticateSession(url.searchParams.get('token'));if(p&&(p.bannedPermanent||(p.bannedUntil&&new Date(p.bannedUntil)>new Date())))return json(res,423,{error:'Conta bloqueada.',ban:{permanent:!!p.bannedPermanent,until:p.bannedUntil||null,reason:p.banReason||null}});return json(res,p?200:401,p?{player:publicPlayer(p)}:{error:'Sessão inválida.'});}
@@ -474,7 +480,7 @@ async function handleApi(req,res,url){
  }catch(e){const status=Number(e.status)||500;if(status>=500){console.error('EIXO API error:',e&&e.stack?e.stack:e);return json(res,500,{error:'Internal server error.'});}return json(res,status,{error:e.message||'Request failed.'});}
 }
 function serveFile(res,filePath){fs.stat(filePath,(err,st)=>{if(err||!st.isFile())return json(res,404,{error:'Not found'});const ext=path.extname(filePath).toLowerCase(),sourceAsset=['.js','.mjs','.css'].includes(ext);res.writeHead(200,{...securityHeaders(),'Content-Type':MIME_TYPES[ext]||'application/octet-stream','Cache-Control':['.html','.js','.mjs','.css'].includes(ext)?'no-store, no-cache, must-revalidate':'public, max-age=3600',...(sourceAsset?{'X-Robots-Tag':'noindex, nofollow, noarchive'}:{})});fs.createReadStream(filePath).pipe(res);});}
-const server=http.createServer(async(req,res)=>{try{if(!allowedRequestHost(req))return json(res,421,{error:'Misdirected Request'});const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);if(url.pathname==='/health'||url.pathname==='/healthz')return json(res,200,{ok:true,database:dbReady?'postgresql':'memory'});if(url.pathname.startsWith('/api/'))return handleApi(req,res,url);if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'Method Not Allowed'});let pathname=decodeURIComponent(url.pathname);if(/^\/(jump|pulse|passport|rankings|rooms|vip)\/$/.test(pathname)){res.writeHead(308,{...securityHeaders(),Location:pathname.slice(0,-1)+url.search});return res.end();}if(pathname==='/')pathname='/index.html';if(!isPublicStaticRequestPath(pathname))return json(res,404,{error:'Not found'});const fp=path.resolve(ROOT,pathname.replace(/^\/+/,''));if(fp!==ROOT&&!fp.startsWith(ROOT+path.sep))return json(res,404,{error:'Not found'});fs.stat(fp,(e,s)=>{if(!e&&s.isFile())return serveFile(res,fp);const hasExt=Boolean(path.extname(pathname));if(hasExt)return json(res,404,{error:'Not found'});return serveFile(res,path.join(ROOT,'index.html'));});}catch(e){console.error(e);json(res,500,{error:'Internal server error'});}});
+const server=http.createServer(async(req,res)=>{try{if(!allowedRequestHost(req))return json(res,421,{error:'Misdirected Request'});const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);if(url.pathname==='/health'||url.pathname==='/healthz')return json(res,200,{ok:true,database:dbReady?'postgresql':'memory'});if(url.pathname.startsWith('/api/'))return handleApi(req,res,url);if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'Method Not Allowed'});let pathname=decodeURIComponent(url.pathname);if(/^\/(jump|pulse|run|passport|rankings|rooms|vip)\/$/.test(pathname)){res.writeHead(308,{...securityHeaders(),Location:pathname.slice(0,-1)+url.search});return res.end();}if(pathname==='/')pathname='/index.html';if(pathname==='/run')pathname='/run/index.html';if(!isPublicStaticRequestPath(pathname))return json(res,404,{error:'Not found'});const fp=path.resolve(ROOT,pathname.replace(/^\/+/,''));if(fp!==ROOT&&!fp.startsWith(ROOT+path.sep))return json(res,404,{error:'Not found'});fs.stat(fp,(e,s)=>{if(!e&&s.isFile())return serveFile(res,fp);const hasExt=Boolean(path.extname(pathname));if(hasExt)return json(res,404,{error:'Not found'});return serveFile(res,path.join(ROOT,'index.html'));});}catch(e){console.error(e);json(res,500,{error:'Internal server error'});}});
 server.requestTimeout=15000;
 server.headersTimeout=10000;
 server.keepAliveTimeout=5000;
