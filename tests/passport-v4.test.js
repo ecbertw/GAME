@@ -5,17 +5,17 @@ const fs=require('node:fs');
 const path=require('node:path');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 
-test('Passport is a single digital document with live RUN, JUMP and PULSE achievement keys and score fields',()=>{
+test('Passport is a single digital document with four real achievement keys and live score fields',()=>{
  const source=read('redesign.js');
  const line=source.split('\n').find(x=>x.trimStart().startsWith('views.passport.innerHTML='));
  assert.ok(line);
  const views={passport:{innerHTML:''}};
  new Function('views','t','passportWord',line)(views,(pt,en)=>pt,()=> 'Passaporte');
  const html=views.passport.innerHTML;
- for(const id of ['rxCharacterSlot','rxCharacterFallback','rxProfileName','rxRunBest','rxJumpBest','rxPulseBest','rxVipLevel','rxLevel','rxExpBar','rxExpText','rxPassportNumber','rxPassportTags','rxPassportTotalXp','rxPassportRemaining','rxPassportBadgeCount','rxProfileStatus'])
+ for(const id of ['rxCharacterSlot','rxCharacterFallback','rxProfileName','rxJumpBest','rxPulseBest','rxVipLevel','rxLevel','rxExpBar','rxExpText','rxPassportNumber','rxPassportTags','rxPassportTotalXp','rxPassportRemaining','rxPassportBadgeCount','rxProfileStatus'])
   assert.match(html,new RegExp('id="'+id+'"'),id);
- assert.equal((html.match(/class="rx-achievement/g)||[]).length,8);
- for(const badge of ['first-100','skybound','explorer','pulse-10','run-first-clear','run-astral-100','run-no-death','run-daily'])assert.match(html,new RegExp('data-badge="'+badge+'"'));
+ assert.equal((html.match(/class="rx-achievement/g)||[]).length,4);
+ for(const badge of ['first-100','skybound','explorer','pulse-10'])assert.match(html,new RegExp('data-badge="'+badge+'"'));
  assert.match(html,/rx-passport-document/);
  assert.match(source,/data\.totalExp/);
  assert.match(source,/rxPassportBadgeCount/);
