@@ -14,7 +14,7 @@ test('every First Light main-island gap is physically jumpable',()=>{
   const p=C.createPlayer(mini.spawn);p.onGround=true;p.vx=C.C.maxRun*.88;let prev=0,landed=false;
   for(let tick=0;tick<240;tick++){
    const mask=C.INPUT.RIGHT|(tick<50?C.INPUT.JUMP:0);C.step(p,mini,mask,prev);prev=mask;
-   if(p.onGround&&p.x+p.w*.5>b.x+.35){landed=true;break}
+   if(p.onGround&&p.x+p.w>b.x+.05&&p.x<b.x+b.w&&Math.abs((p.y+p.h)-b.y)<.15){landed=true;break}
   }
   assert.equal(landed,true,'main island gap '+a.id+' -> '+b.id+' must be reachable');
  }
@@ -26,7 +26,7 @@ test('First Light hazards can be cleared by a committed jump',()=>{
   const mini={spawn:{x:Math.max(support.x+.2,h.x-4.2),y:support.y-C.C.height-C.C.skin},killY:40,solids:[support],oneWay:[],movingPlatforms:[],breakables:[],hazards:[h],shards:[],secrets:[],checkpoints:[],finish:{x:999,y:0,w:1,h:1}};
   const p=C.createPlayer(mini.spawn);p.onGround=true;p.vx=C.C.maxRun*.88;let prev=0,passed=false;
   for(let tick=0;tick<180&&!p.dead;tick++){const mask=C.INPUT.RIGHT|(tick<50?C.INPUT.JUMP:0);C.step(p,mini,mask,prev);prev=mask;if(p.x>h.x+h.w+.4){passed=true;break}}
-  assert.equal(passed,true,'hazard '+h.id+' must be jumpable');
+  assert.equal(passed,true,'hazard '+h.id+' must be jumpable; x='+p.x.toFixed(2)+' y='+p.y.toFixed(2)+' dead='+p.dead);
  }
 });
 test('RUN replay re-simulation is deterministic',()=>{
