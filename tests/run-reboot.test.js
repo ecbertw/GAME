@@ -15,7 +15,8 @@ test('RUN reboot uses Phaser and is isolated from JUMP',()=>{
     'games/run/src/player/Runner.js',
     'games/run/src/player/RunnerController.js',
     'games/run/src/player/RunnerAnimator.js',
-    'games/run/src/camera/RunCamera.js'
+    'games/run/src/camera/RunCamera.js',
+    'games/run/src/effects/MovementFx.js'
   ];
   for(const f of files){
     const body=read(f);
@@ -46,4 +47,14 @@ test('RUN runner production pack is validated and compiled into one runtime atla
     assert.ok(Math.min(margins.left,margins.top,margins.right,margins.bottom)>=24,name);
     assert.ok(Number.isInteger(atlas.frames[name].index),name);
   }
+});
+
+test('RUN Movement Lab exposes movement feedback without coupling particles to physics',()=>{
+  const scene=read('games/run/src/scenes/MovementLabScene.js');
+  const fx=read('games/run/src/effects/MovementFx.js');
+  assert.match(scene,/event\.type === 'skid'/);
+  assert.match(scene,/event\.type === 'hardLand'/);
+  assert.match(scene,/keydown-H/);
+  assert.match(fx,/class MovementFx/);
+  assert.doesNotMatch(fx,/body\.setVelocity|setGravityY|setAcceleration/);
 });

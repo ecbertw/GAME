@@ -4,6 +4,7 @@ import { RunnerAnimator } from '../player/RunnerAnimator.js';
 import { RunCamera } from '../camera/RunCamera.js';
 import { RUNNER_ATLAS } from '../assets/runner-manifest.js';
 import { MOVEMENT } from '../config/movement.js';
+import { MovementFx } from '../effects/MovementFx.js';
 
 export class MovementLabScene extends Phaser.Scene {
   constructor() {
@@ -40,6 +41,7 @@ export class MovementLabScene extends Phaser.Scene {
     this.addHazard(2215, 582, 90, 20);
     this.addHazard(2910, 582, 120, 20);
 
+    this.fx = new MovementFx(this);
     this.runner = new Runner(this, this.spawn.x, this.spawn.y);
     this.controller = new RunnerController(this, this.runner, event => this.handleMovementEvent(event));
     this.animator = new RunnerAnimator(this.runner);
@@ -57,13 +59,19 @@ export class MovementLabScene extends Phaser.Scene {
       lineSpacing: 5,
     }).setScrollFactor(0).setDepth(1000);
 
-    this.add.text(18, 665, 'A/D or ←/→  MOVE   •   SPACE/W/↑  JUMP   •   R  RESET', {
+    this.add.text(18, 665, 'A/D or ←/→  MOVE   •   SPACE/W/↑  JUMP   •   R  RESET   •   H  HITBOX', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '15px',
       color: '#91a8c8',
     }).setScrollFactor(0).setDepth(1000);
 
     this.input.keyboard.on('keydown-R', () => this.respawn(true));
+    this.hitboxVisible = false;
+    this.input.keyboard.on('keydown-H', () => {
+      this.hitboxVisible = !this.hitboxVisible;
+      this.runner.collider.setFillStyle(this.hitboxVisible ? 0x62e6ff : 0xffffff, this.hitboxVisible ? 0.18 : 0);
+      this.runner.collider.setStrokeStyle(this.hitboxVisible ? 1 : 0, 0x62e6ff, this.hitboxVisible ? 0.9 : 0);
+    });
     this.runCamera.reset();
   }
 
@@ -99,7 +107,13 @@ export class MovementLabScene extends Phaser.Scene {
   }
 
   handleMovementEvent(event) {
-    if (event.type === 'hardLand') this.cameras.main.shake(70, 0.0025);
+    if (event.type === 'jump') this.fx.jump(this.runner);
+    if (event.type === 'skid') this.fx.skid(this.runner);
+    if (event.type === 'land') this.fx.land(this.runner, false);
+    if (event.type === 'hardLand') {
+      this.fx.land(this.runner, true);
+      this.cameras.main.shake(70, 0.0025);
+    }
   }
 
   killRunner() {
@@ -110,6 +124,7 @@ export class MovementLabScene extends Phaser.Scene {
     this.runner.body.setVelocity(0, 0);
     this.runner.body.enable = false;
     this.animator.update('death', 0);
+    this.fx.death(this.runner);
     this.tweens.add({ targets: this.runner.visual, alpha: 0.18, duration: 280, ease: 'Quad.easeOut' });
     this.time.delayedCall(MOVEMENT.respawnMs, () => this.respawn(false));
   }
@@ -121,7 +136,10 @@ export class MovementLabScene extends Phaser.Scene {
     this.runner.setPosition(this.spawn.x, this.spawn.y);
     this.controller.reset();
     this.animator.reset();
-    if (manual) this.runCamera.reset();
+    if (manual) {
+      this.fx.clear();
+      this.runCamera.reset();
+    }
   }
 
   update(_time, delta) {
@@ -132,6 +150,7 @@ export class MovementLabScene extends Phaser.Scene {
     this.animator.update(this.controller.getState(), delta);
     this.runner.syncVisual();
     this.runCamera.update(delta);
+    this.fx.update(delta);
 
     const velocity = this.runner.body.velocity;
     const grounded = this.runner.body.blocked.down || this.runner.body.touching.down;
@@ -143,6 +162,7 @@ export class MovementLabScene extends Phaser.Scene {
       `GROUNDED   ${grounded ? 'YES' : 'NO'}`,
       `COYOTE     ${Math.round(this.controller.coyoteMs)} ms`,
       `BUFFER     ${Math.round(this.controller.jumpBufferMs)} ms`,
+      `HITBOX     ${this.hitboxVisible ? 'ON' : 'OFF'}`,
     ]);
   }
 }
