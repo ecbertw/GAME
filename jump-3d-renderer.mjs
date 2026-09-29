@@ -69,12 +69,17 @@ function materialSet(root,style,ghost=false){
 function createActor(root,id,ghost){
   const mixer=new THREE.AnimationMixer(root),actions={};
   for(const clip of clips){const key=(clip.name||'').toLowerCase();actions[key]=mixer.clipAction(clip)}
+  const leftShoulder=root.getObjectByName('mixamorig:LeftShoulder'),rightShoulder=root.getObjectByName('mixamorig:RightShoulder');
+  const leftArm=root.getObjectByName('mixamorig:LeftArm'),rightArm=root.getObjectByName('mixamorig:RightArm');
+  const leftFore=root.getObjectByName('mixamorig:LeftForeArm'),rightFore=root.getObjectByName('mixamorig:RightForeArm');
   return {
     id,root,mixer,actions,cape:root.getObjectByName('Accessory_Cape'),
-    leftArm:root.getObjectByName('mixamorig:LeftArm'),
-    rightArm:root.getObjectByName('mixamorig:RightArm'),
-    leftFore:root.getObjectByName('mixamorig:LeftForeArm'),
-    rightFore:root.getObjectByName('mixamorig:RightForeArm'),
+    leftShoulder,rightShoulder,leftArm,rightArm,leftFore,rightFore,
+    armRest:{
+      leftShoulder:leftShoulder?.quaternion.clone(),rightShoulder:rightShoulder?.quaternion.clone(),
+      leftArm:leftArm?.quaternion.clone(),rightArm:rightArm?.quaternion.clone(),
+      leftFore:leftFore?.quaternion.clone(),rightFore:rightFore?.quaternion.clone()
+    },
     current:null,seen:frame,ghost,lean:0,runScale:1,lastGround:true
   };
 }
@@ -140,20 +145,35 @@ function updateActorPose(actor,motion,dt){
   actor.lastGround=ground;
 }
 
-const RUN_ELBOW_AXIS=new THREE.Vector3(1,0,0),elbowQuat=new THREE.Quaternion();
+const RUN_ARM_AXIS=new THREE.Vector3(1,0,0),RUN_ELBOW_AXIS=new THREE.Vector3(0,0,1);
+const leftArmQuat=new THREE.Quaternion(),rightArmQuat=new THREE.Quaternion(),leftElbowQuat=new THREE.Quaternion(),rightElbowQuat=new THREE.Quaternion();
 
 function refineRunSilhouette(actor,motion){
   if(motion.ground===false||!motion.moving)return;
-  const runAction=actor.current?.includes('run')?actor.actions[actor.current]:null;
-  const clip=runAction?.getClip?.();
+  const runAction=actor.current?.includes('run')?actor.actions[actor.current]:null,clip=runAction?.getClip?.();
   const phase=clip?.duration?((runAction.time/clip.duration)%1)*Math.PI*2:0;
-  // Child bones extend along local Y. Rotating the forearm around local X bends
-  // the hand along local Z, which becomes screen-horizontal after the profile yaw.
-  // This gives an actual elbow bend in the running plane without touching the shoulder.
-  const flex=.58+.10*(.5+.5*Math.cos(phase));
-  elbowQuat.setFromAxisAngle(RUN_ELBOW_AXIS,flex);
-  actor.leftFore?.quaternion.multiply(elbowQuat);
-  actor.rightFore?.quaternion.multiply(elbowQuat);
+  const swing=Math.sin(phase)*.48;
+  const elbow=1.18+.16*(.5+.5*Math.cos(phase));
+
+  // Remove most of the authored clavicle shrug: the shoulder should stay quiet
+  // while the actual upper arm performs the running swing.
+  if(actor.leftShoulder&&actor.armRest.leftShoulder)actor.leftShoulder.quaternion.slerp(actor.armRest.leftShoulder,.88);
+  if(actor.rightShoulder&&actor.armRest.rightShoulder)actor.rightShoulder.quaternion.slerp(actor.armRest.rightShoulder,.88);
+
+  // Upper arm swings front/back around local X. This is the model axis that
+  // projects into horizontal travel once the character is turned into profile.
+  leftArmQuat.setFromAxisAngle(RUN_ARM_AXIS,swing-.06);
+  rightArmQuat.setFromAxisAngle(RUN_ARM_AXIS,-swing-.06);
+  if(actor.leftArm&&actor.armRest.leftArm)actor.leftArm.quaternion.copy(actor.armRest.leftArm).multiply(leftArmQuat);
+  if(actor.rightArm&&actor.armRest.rightArm)actor.rightArm.quaternion.copy(actor.armRest.rightArm).multiply(rightArmQuat);
+
+  // The exported GLB proves the elbow hinge is local Z: LeftForeArm uses +Z and
+  // RightForeArm uses -Z. Drive that hinge explicitly to get a readable 70–77°
+  // running bend instead of the previous shoulder-led motion.
+  leftElbowQuat.setFromAxisAngle(RUN_ELBOW_AXIS,elbow);
+  rightElbowQuat.setFromAxisAngle(RUN_ELBOW_AXIS,-elbow);
+  if(actor.leftFore&&actor.armRest.leftFore)actor.leftFore.quaternion.copy(actor.armRest.leftFore).multiply(leftElbowQuat);
+  if(actor.rightFore&&actor.armRest.rightFore)actor.rightFore.quaternion.copy(actor.armRest.rightFore).multiply(rightElbowQuat);
 }
 function beginFrame(){mount();frame++;for(const a of actors.values())a.seen=-1}
 
@@ -207,7 +227,7 @@ function preview(canvasNode,data={}){
 
 mount();
 mark('loading');
-const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v350',gltf=>{
+const readyPromise=new Promise(resolve=>new GLTFLoader().load('/assets/hero-3d/eixo-hero.glb?v=20260929-v351',gltf=>{
   source=gltf.scene;clips=gltf.animations||[];ready=!!source;mark(ready?'ready':'error',ready?'':'empty model');resolve(ready);
 },()=>{},error=>{mark('error',error?.message||'model load failed');console.error('EIXO JUMP 3D model failed to load',error);resolve(false)}));
 
