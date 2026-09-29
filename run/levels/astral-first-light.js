@@ -7,7 +7,7 @@
 const shard=(n,x,y,group='main')=>({id:'first-light-shard-'+String(n).padStart(2,'0'),x,y,group});
 const solids=[
  {id:'awakening-0',x:0,y:9.0,w:18,h:4},{id:'awakening-1',x:21.1,y:8.4,w:14.4,h:4.6},{id:'awakening-2',x:39.0,y:7.7,w:14.8,h:5.3},
- {id:'garden-0',x:57.1,y:8.6,w:13.5,h:4.4},{id:'garden-1',x:74.0,y:8.0,w:13.7,h:5.0},{id:'garden-2',x:91.5,y:7.2,w:13.2,h:5.8},{id:'garden-3',x:108.4,y:8.4,w:13.1,h:4.6},
+ {id:'garden-0',x:57.1,y:8.6,w:13.5,h:4.4},{id:'garden-1',x:74.0,y:8.0,w:13.7,h:5.0},{id:'garden-2',x:91.5,y:7.2,w:13.2,h:5.8},{id:'garden-3',x:107.4,y:8.4,w:14.1,h:4.6},
  {id:'span-0',x:125.0,y:8.8,w:13.0,h:4.2},{id:'span-1',x:142.0,y:7.5,w:13.8,h:5.5},{id:'span-2',x:159.7,y:6.9,w:13.8,h:6.1},{id:'span-3',x:177.5,y:8.2,w:13.2,h:4.8},
  {id:'moonfall-0',x:194.6,y:7.1,w:12.1,h:5.9},{id:'moonfall-1',x:210.7,y:8.1,w:13.1,h:4.9},{id:'moonfall-2',x:227.2,y:7.0,w:14.1,h:6.0},
  {id:'engine-0',x:245.2,y:8.4,w:12.8,h:4.6},{id:'engine-1',x:261.8,y:7.2,w:13.2,h:5.8},{id:'engine-2',x:278.9,y:6.4,w:13.0,h:6.6},
