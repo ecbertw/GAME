@@ -5,20 +5,19 @@ test('RUN has 42 persistent shard ids, routes and a versioned First Light',async
 
 test('RUN source modules parse under Node',()=>{const cp=require('node:child_process');for(const file of ['run/run-client.mjs','run/rendering/renderer.mjs','run/audio/audio.mjs','run/camera/follow-camera.mjs','run/input/input.mjs']){const out=cp.spawnSync(process.execPath,['--check',require('node:path').join(__dirname,'..',file)],{encoding:'utf8'});assert.equal(out.status,0,file+' '+out.stderr)}});
 
-test('ASTRAL 01 main route is deterministically traversable with authored hazards',async()=>{
- const {ASTRAL01}=await import('../run/levels/astral/astral-01.mjs');const P=require('../run/engine/physics-core.js'),p=P.createPlayer(ASTRAL01.spawn);let prev=0,jumpHold=0;
+test('ASTRAL 01 main route is deterministically traversable with repeated skill jumps',async()=>{
+ const {ASTRAL01}=await import('../run/levels/astral/astral-01.mjs');
+ const P=require('../run/engine/physics-core.js'),p=P.createPlayer(ASTRAL01.spawn);
+ let prev=0,jumpHold=0,armed=true;
  for(let tick=0;tick<120*115&&!p.finished;tick++){
-  if(p.onGround&&jumpHold===0){
-   const bottom=p.y+p.h,center=p.x+p.w*.5;
-   const support=ASTRAL01.solids.find(r=>center>=r.x&&center<=r.x+r.w&&Math.abs(bottom-r.y)<.16);
-   const edge=support?support.x+support.w-(p.x+p.w):99;
-   const hazard=ASTRAL01.hazards.find(h=>h.type!=='void'&&h.x>p.x&&h.x-p.x<2.1&&Math.abs((h.y+h.h)-bottom)<.9);
-   if(edge<1.05||hazard)jumpHold=46;
-  }
-  const mask=P.INPUT.RIGHT|(jumpHold>0?P.INPUT.JUMP:0);P.step(p,ASTRAL01,mask,prev);prev=mask;if(jumpHold>0)jumpHold--;
+  if(p.onGround&&armed){jumpHold=44;armed=false}
+  let mask=P.INPUT.RIGHT;
+  if(jumpHold>0){mask|=P.INPUT.JUMP;jumpHold--}
+  else if(!p.onGround)armed=true;
+  P.step(p,ASTRAL01,mask,prev);prev=mask;
  }
- assert.equal(p.finished,true,`scripted runner stopped at x=${p.x.toFixed(2)}, deaths=${p.deaths}`);
- assert.ok(p.deaths<10,'main route should not require excessive deaths');
+ assert.equal(p.finished,true,`skill-jump replay stopped at x=${p.x.toFixed(2)}, deaths=${p.deaths}`);
+ assert.ok(p.deaths<8,'main route should remain challenging but consistently reachable');
 });
 
 test('RUN final art pipeline uses layered Astral rendering and the 14-frame runner',()=>{
