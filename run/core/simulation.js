@@ -52,7 +52,7 @@ function interactions(p,level,events){
  for(const s of level.shards||[])if(!p.collected.has(s.id)&&overlap(p,{x:s.x-.24,y:s.y-.32,w:.48,h:.64})){p.collected.add(s.id);events.push({type:'shard',id:s.id});}
  for(const z of level.secrets||[])if(!p.secrets.has(z.id)&&overlap(p,z)){p.secrets.add(z.id);events.push({type:'secret',id:z.id});}
  for(const cp of level.checkpoints||[])if(p.checkpoint!==cp.id&&overlap(p,cp)){p.checkpoint=cp.id;p.spawn={x:cp.spawnX,y:cp.spawnY};events.push({type:'checkpoint',id:cp.id});}
- for(const h of level.hazards||[])if(overlap(p,h)){if(kill(p))events.push({type:'death'});break;}
+ for(const h of level.hazards||[]){const box={x:h.x+.10,y:h.y+.14,w:Math.max(.05,h.w-.20),h:Math.max(.05,h.h-.14)};if(overlap(p,box)){if(kill(p))events.push({type:'death'});break;}}
  if(!p.dead&&p.finishTick==null&&level.finish&&overlap(p,level.finish)){p.finishTick=p.tick;events.push({type:'finish'});}
 }
 function step(p,level,mask,prevMask=0){
