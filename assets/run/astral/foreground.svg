@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="360" viewBox="0 0 2400 360">
+<defs><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#123d70"/><stop offset="1" stop-color="#081b39"/></linearGradient><filter id="g"><feGaussianBlur stdDeviation="2"/></filter></defs>
+<g opacity=".72" fill="url(#fg)">
+ <ellipse cx="60" cy="330" rx="110" ry="48"/><ellipse cx="250" cy="320" rx="145" ry="58"/><ellipse cx="440" cy="310" rx="110" ry="68"/><ellipse cx="630" cy="330" rx="145" ry="48"/><ellipse cx="820" cy="320" rx="110" ry="58"/><ellipse cx="1010" cy="310" rx="145" ry="68"/><ellipse cx="1200" cy="330" rx="110" ry="48"/><ellipse cx="1390" cy="320" rx="145" ry="58"/><ellipse cx="1580" cy="310" rx="110" ry="68"/><ellipse cx="1770" cy="330" rx="145" ry="48"/><ellipse cx="1960" cy="320" rx="110" ry="58"/><ellipse cx="2150" cy="310" rx="145" ry="68"/><ellipse cx="2340" cy="330" rx="110" ry="48"/>
+</g>
+<g fill="#45e4ff" opacity=".42" filter="url(#g)">
+ <path d="M120 350 l18 -120 l20 120z"/><path d="M520 350 l26 -158 l25 158z"/><path d="M900 350 l18 -196 l20 196z"/><path d="M1310 350 l26 -120 l25 120z"/><path d="M1760 350 l18 -158 l20 158z"/><path d="M2210 350 l26 -196 l25 196z"/>
+</g>
+</svg>

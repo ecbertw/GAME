@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2600" height="980" viewBox="0 0 2600 980">
+<defs>
+ <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#dce7fb"/><stop offset=".36" stop-color="#a7b7da"/><stop offset="1" stop-color="#5a6e9c"/></linearGradient>
+ <linearGradient id="island" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#7e91ba"/><stop offset=".45" stop-color="#54678f"/><stop offset="1" stop-color="#27344f"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="4"/></filter>
+</defs>
+<g opacity=".9">
+ 
+  <g transform="translate(140 490)">
+   <path d="M0 0 H330 L300 70 L252 118 L202 196 L152 154 L98 208 L42 112 Z" fill="url(#island)"/>
+   <rect x="10" y="-12" width="310" height="17" rx="7" fill="#6dbb76"/>
+   <g fill="url(#stone)" stroke="#768ab2" stroke-width="7">
+    <rect x="40" y="-176" width="38" height="164" rx="7"/>
+    <rect x="250" y="-210" width="42" height="198" rx="7"/>
+    <path d="M82 -12 V-116 Q162 -222 242 -116 V-12" fill="none"/>
+   </g>
+   <g fill="#ef9ad7">
+    <circle cx="110" cy="-44" r="14"/><circle cx="130" cy="-58" r="17"/><circle cx="151" cy="-42" r="13"/>
+   </g>
+   <g fill="#57efff" opacity=".9" filter="url(#glow)"><path d="M210 26 l10 24-10 30-10-30z"/><path d="M236 40 l8 18-8 22-8-22z"/></g>
+  </g>
+  <g transform="translate(660 425)">
+   <path d="M0 0 H330 L300 70 L252 118 L202 196 L152 154 L98 208 L42 112 Z" fill="url(#island)"/>
+   <rect x="10" y="-12" width="310" height="17" rx="7" fill="#6dbb76"/>
+   <g fill="url(#stone)" stroke="#768ab2" stroke-width="7">
+    <rect x="40" y="-176" width="38" height="164" rx="7"/>
+    <rect x="250" y="-210" width="42" height="198" rx="7"/>
+    <path d="M82 -12 V-116 Q162 -222 242 -116 V-12" fill="none"/>
+   </g>
+   <g fill="#ef9ad7">
+    <circle cx="110" cy="-44" r="14"/><circle cx="130" cy="-58" r="17"/><circle cx="151" cy="-42" r="13"/>
+   </g>
+   <g fill="#57efff" opacity=".9" filter="url(#glow)"><path d="M210 26 l10 24-10 30-10-30z"/><path d="M236 40 l8 18-8 22-8-22z"/></g>
+  </g>
+  <g transform="translate(1200 490)">
+   <path d="M0 0 H330 L300 70 L252 118 L202 196 L152 154 L98 208 L42 112 Z" fill="url(#island)"/>
+   <rect x="10" y="-12" width="310" height="17" rx="7" fill="#6dbb76"/>
+   <g fill="url(#stone)" stroke="#768ab2" stroke-width="7">
+    <rect x="40" y="-176" width="38" height="164" rx="7"/>
+    <rect x="250" y="-210" width="42" height="198" rx="7"/>
+    <path d="M82 -12 V-116 Q162 -222 242 -116 V-12" fill="none"/>
+   </g>
+   <g fill="#ef9ad7">
+    <circle cx="110" cy="-44" r="14"/><circle cx="130" cy="-58" r="17"/><circle cx="151" cy="-42" r="13"/>
+   </g>
+   <g fill="#57efff" opacity=".9" filter="url(#glow)"><path d="M210 26 l10 24-10 30-10-30z"/><path d="M236 40 l8 18-8 22-8-22z"/></g>
+  </g>
+  <g transform="translate(1780 425)">
+   <path d="M0 0 H330 L300 70 L252 118 L202 196 L152 154 L98 208 L42 112 Z" fill="url(#island)"/>
+   <rect x="10" y="-12" width="310" height="17" rx="7" fill="#6dbb76"/>
+   <g fill="url(#stone)" stroke="#768ab2" stroke-width="7">
+    <rect x="40" y="-176" width="38" height="164" rx="7"/>
+    <rect x="250" y="-210" width="42" height="198" rx="7"/>
+    <path d="M82 -12 V-116 Q162 -222 242 -116 V-12" fill="none"/>
+   </g>
+   <g fill="#ef9ad7">
+    <circle cx="110" cy="-44" r="14"/><circle cx="130" cy="-58" r="17"/><circle cx="151" cy="-42" r="13"/>
+   </g>
+   <g fill="#57efff" opacity=".9" filter="url(#glow)"><path d="M210 26 l10 24-10 30-10-30z"/><path d="M236 40 l8 18-8 22-8-22z"/></g>
+  </g>
+  <g transform="translate(2260 490)">
+   <path d="M0 0 H330 L300 70 L252 118 L202 196 L152 154 L98 208 L42 112 Z" fill="url(#island)"/>
+   <rect x="10" y="-12" width="310" height="17" rx="7" fill="#6dbb76"/>
+   <g fill="url(#stone)" stroke="#768ab2" stroke-width="7">
+    <rect x="40" y="-176" width="38" height="164" rx="7"/>
+    <rect x="250" y="-210" width="42" height="198" rx="7"/>
+    <path d="M82 -12 V-116 Q162 -222 242 -116 V-12" fill="none"/>
+   </g>
+   <g fill="#ef9ad7">
+    <circle cx="110" cy="-44" r="14"/><circle cx="130" cy="-58" r="17"/><circle cx="151" cy="-42" r="13"/>
+   </g>
+   <g fill="#57efff" opacity=".9" filter="url(#glow)"><path d="M210 26 l10 24-10 30-10-30z"/><path d="M236 40 l8 18-8 22-8-22z"/></g>
+  </g>
+</g>
+</svg>
