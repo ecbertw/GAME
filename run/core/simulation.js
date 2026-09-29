@@ -18,7 +18,7 @@ const rect=(x,y,w,h,id='',extra={})=>({x,y,w,h,id,...extra});
 function platformAt(m,tick){const q=(tick||0)*DT*Math.PI*2/(m.period||3),s=Math.sin(q+(m.phase||0));return rect(m.x+(m.dx||0)*s,m.y+(m.dy||0)*s,m.w,m.h,m.id,{oneWay:m.oneWay!==false,moving:true});}
 function createPlayer(spawn={x:2,y:7}){
  return{x:+spawn.x||0,y:+spawn.y||0,vx:0,vy:0,w:C.width,h:C.height,facing:1,onGround:false,
- coyote:0,jumpBuffer:0,skid:false,hardLanding:0,dead:false,respawnTicks:0,deaths:0,tick:0,
+ coyote:0,jumpBuffer:0,skid:false,landingTicks:0,hardLanding:0,dead:false,respawnTicks:0,deaths:0,tick:0,
  spawn:{x:+spawn.x||0,y:+spawn.y||0},checkpoint:null,collected:new Set(),secrets:new Set(),broken:new Set(),startTick:null,finishTick:null};
 }
 function resetAfterDeath(p){p.x=p.spawn.x;p.y=p.spawn.y;p.vx=p.vy=0;p.onGround=false;p.coyote=p.jumpBuffer=0;p.skid=false;p.hardLanding=0;p.dead=false;p.respawnTicks=0;}
@@ -61,7 +61,7 @@ function step(p,level,mask,prevMask=0){
  if(p.dead){p.respawnTicks--;if(p.respawnTicks<=0){resetAfterDeath(p);events.push({type:'respawn'});}p.tick++;return events;}
  const left=!!(mask&INPUT.LEFT),right=!!(mask&INPUT.RIGHT),jump=!!(mask&INPUT.JUMP),prevJump=!!(prevMask&INPUT.JUMP);
  const pressed=jump&&!prevJump,released=!jump&&prevJump;if(pressed)p.jumpBuffer=C.jumpBufferTicks;else if(p.jumpBuffer>0)p.jumpBuffer--;
- if(p.onGround)p.coyote=C.coyoteTicks;else if(p.coyote>0)p.coyote--;if(p.hardLanding>0)p.hardLanding--;
+ if(p.onGround)p.coyote=C.coyoteTicks;else if(p.coyote>0)p.coyote--;if(p.landingTicks>0)p.landingTicks--;if(p.hardLanding>0)p.hardLanding--;
  const dir=(right?1:0)-(left?1:0);if(dir)p.facing=dir;p.skid=false;
  if(p.onGround){
   if(dir){
@@ -73,7 +73,7 @@ function step(p,level,mask,prevMask=0){
  if(released&&p.vy<0)p.vy*=C.jumpCut;
  p.vy=clamp(p.vy+(p.vy<0?C.gravityRise:C.gravityFall)*DT,-40,C.maxFall);
  const solids=staticSolids(level,p);resolveX(p,solids,p.vx*DT);const landed=resolveY(p,solids,p.vy*DT);
- if(p.onGround&&landed>2){events.push({type:landed>C.hardLandSpeed?'hard-land':'land',speed:landed});if(landed>C.hardLandSpeed)p.hardLanding=11;}
+ if(p.onGround&&landed>2){const hard=landed>C.hardLandSpeed;events.push({type:hard?'hard-land':'land',speed:landed});p.landingTicks=hard?11:6;if(hard)p.hardLanding=11;}
  if(p.startTick==null&&Number.isFinite(level.startX)&&p.x+p.w*.5>=level.startX)p.startTick=p.tick;
  interactions(p,level,events);if(p.y>(level.killY||28)&&kill(p))events.push({type:'death'});
  p.tick++;return events;
