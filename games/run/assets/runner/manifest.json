@@ -1,0 +1,35 @@
+{
+  "source": "atlas_de_sprites_do_corredor_anime.png",
+  "frames": {
+    "idle_01": {"file":"runner/idle_01.png","width":233,"height":406,"originX":0.5,"originY":0.9409},
+    "idle_02": {"file":"runner/idle_02.png","width":226,"height":412,"originX":0.5,"originY":0.9417},
+    "run_01": {"file":"runner/run_01.png","width":310,"height":379,"originX":0.4839,"originY":0.9367},
+    "run_02": {"file":"runner/run_02.png","width":291,"height":357,"originX":0.5,"originY":0.9328},
+    "run_03": {"file":"runner/run_03.png","width":281,"height":355,"originX":0.5178,"originY":0.9324},
+    "run_04": {"file":"runner/run_04.png","width":318,"height":347,"originX":0.5346,"originY":0.9308},
+    "skid_01": {"file":"runner/skid_01.png","width":385,"height":252,"originX":0.4857,"originY":0.9048},
+    "jump_start": {"file":"runner/jump_start.png","width":332,"height":298,"originX":0.5452,"originY":0.9195},
+    "jump_rise": {"file":"runner/jump_rise.png","width":287,"height":312,"originX":0.5,"originY":0.9231},
+    "apex": {"file":"runner/apex.png","width":272,"height":338,"originX":0.5,"originY":0.929},
+    "fall": {"file":"runner/fall.png","width":284,"height":306,"originX":0.5,"originY":0.8137},
+    "land_soft": {"file":"runner/land_soft.png","width":349,"height":253,"originX":0.5,"originY":0.9051},
+    "land_hard": {"file":"runner/land_hard.png","width":339,"height":270,"originX":0.5,"originY":0.9111},
+    "death_01": {"file":"runner/death_01.png","width":369,"height":219,"originX":0.5569,"originY":0.8904},
+    "death_02": {"file":"runner/death_02.png","width":427,"height":201,"originX":0.4953,"originY":0.8806},
+    "victory": {"file":"runner/victory.png","width":315,"height":363,"originX":0.546,"originY":0.9339}
+  },
+  "animations": {
+    "idle":["idle_01","idle_02"],
+    "run":["run_01","run_02","run_03","run_04"],
+    "skid":["skid_01"],
+    "jumpStart":["jump_start"],
+    "jump":["jump_rise"],
+    "apex":["apex"],
+    "fall":["fall"],
+    "land":["land_soft"],
+    "hardLand":["land_hard"],
+    "death":["death_01","death_02"],
+    "victory":["victory"]
+  },
+  "fps":{"idle":2,"run":10,"death":6}
+}
