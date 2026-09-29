@@ -47,14 +47,4 @@ async function equipBadge(db,playerId,badge){
  return {ok:true,featuredBadge:value};
 }
 
-async function awardFixed(db,playerId,game,runId,exp,badges=[]){
- const points=Math.max(0,Math.min(250,Math.floor(Number(exp)||0)));
- const event=await db.query(`INSERT INTO progress_events(id,player_id,game,run_id,exp) VALUES($1,$2,$3,$4,$5) ON CONFLICT(game,run_id) DO NOTHING RETURNING exp`,[crypto.randomUUID(),playerId,String(game).slice(0,12),runId,points]);
- if(event.rowCount&&points>0)await db.query(`INSERT INTO player_progress(player_id,total_exp) VALUES($1,$2) ON CONFLICT(player_id) DO UPDATE SET total_exp=player_progress.total_exp+EXCLUDED.total_exp,updated_at=NOW()`,[playerId,points]);
- if(event.rowCount)for(const badge of badges||[])await db.query(`INSERT INTO player_badges(player_id,badge) VALUES($1,$2) ON CONFLICT DO NOTHING`,[playerId,String(badge).slice(0,32)]);
- const games=await db.query('SELECT COUNT(DISTINCT game)::int AS count FROM progress_events WHERE player_id=$1',[playerId]);
- if(Number(games.rows[0]?.count)>=2)await db.query(`INSERT INTO player_badges(player_id,badge) VALUES($1,'explorer') ON CONFLICT DO NOTHING`,[playerId]);
- return profile(db,{id:playerId});
-}
-
-module.exports={initDb,award,awardFixed,profile,equipBadge,levelFrom};
+module.exports={initDb,award,profile,equipBadge,levelFrom};
