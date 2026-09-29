@@ -62,13 +62,14 @@ function step(p,level,mask,prevMask=0){
  const left=!!(mask&INPUT.LEFT),right=!!(mask&INPUT.RIGHT),jump=!!(mask&INPUT.JUMP),prevJump=!!(prevMask&INPUT.JUMP);
  const pressed=jump&&!prevJump,released=!jump&&prevJump;if(pressed)p.jumpBuffer=C.jumpBufferTicks;else if(p.jumpBuffer>0)p.jumpBuffer--;
  if(p.onGround)p.coyote=C.coyoteTicks;else if(p.coyote>0)p.coyote--;if(p.landingTicks>0)p.landingTicks--;if(p.hardLanding>0)p.hardLanding--;
- const dir=(right?1:0)-(left?1:0);if(dir)p.facing=dir;p.skid=false;
+ const dir=(right?1:0)-(left?1:0);if(dir)p.facing=dir;const wasSkid=p.skid;p.skid=false;
  if(p.onGround){
   if(dir){
    if(Math.sign(p.vx)&&Math.sign(p.vx)!==dir&&Math.abs(p.vx)>=C.skidThreshold){p.vx=approach(p.vx,0,C.reverseBrake*DT);p.skid=true;}
    else p.vx=approach(p.vx,dir*C.maxRun,C.groundAccel*DT);
   }else p.vx=approach(p.vx,0,C.groundBrake*DT);
  }else if(dir)p.vx=approach(p.vx,dir*C.maxRun,C.airAccel*DT);
+ if(p.skid&&!wasSkid)events.push({type:'skid'});
  if(p.jumpBuffer>0&&p.coyote>0){p.vy=-C.jumpVelocity;p.onGround=false;p.coyote=0;p.jumpBuffer=0;events.push({type:'jump'});}
  if(released&&p.vy<0)p.vy*=C.jumpCut;
  p.vy=clamp(p.vy+(p.vy<0?C.gravityRise:C.gravityFall)*DT,-40,C.maxFall);
