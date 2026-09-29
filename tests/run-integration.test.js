@@ -4,7 +4,7 @@ test('RUN page exposes First Light and game HUD',()=>{const h=read('run/index.ht
 test('RUN modules parse',()=>{const cp=require('node:child_process');for(const f of ['run/run-client.mjs','run/input/input.mjs','run/camera/camera.mjs','run/player/runner-manifest.mjs','run/player/sprite-runner.mjs','run/rendering/astral-renderer.mjs','run/replay/recorder.mjs','run/audio/audio.mjs']){const x=cp.spawnSync(process.execPath,['--check',path.join(root,f)],{encoding:'utf8'});assert.equal(x.status,0,f+' '+x.stderr)}});
 test('RUN competitive meta includes 100 percent, Daily, Echoes and server-owned Passport rewards',()=>{
  const server=read('run-server.js'),app=read('server.js'),client=read('run/run-client.mjs'),html=read('run/index.html');
- assert.match(server,/run_scores_100/);assert.match(server,/run_daily_scores/);assert.match(server,/streakFor/);assert.match(server,/async function echo/);
+ assert.match(server,/run_astral_scores_100/);assert.match(server,/run_astral_daily_scores/);assert.doesNotMatch(server,/\brun_scores\b/);assert.doesNotMatch(server,/\brun_daily_scores\b/);assert.match(server,/streakFor/);assert.match(server,/async function echo/);
  assert.match(app,/\/api\/run\/daily/);assert.match(app,/awardFixed/);assert.match(app,/run-daily/);
  assert.match(client,/dailyMode/);assert.match(client,/PB ECHO|pbEcho/);assert.match(client,/WORLD ECHO|worldEcho/);
  assert.match(html,/BEST TIME/);assert.match(html,/>100%</);assert.match(html,/data-rank-category="daily"/);
