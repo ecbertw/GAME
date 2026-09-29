@@ -11,7 +11,7 @@ test('JUMP mounts the continuous 3D renderer and serves its model locally',()=>{
  assert.match(game,/EixoJump3D\?\.beginFrame/);assert.match(game,/EixoJump3D\?\.endFrame/);assert.match(game,/EixoJump3D\?\.actor/);
  assert.match(renderer,/GLTFLoader/);assert.match(renderer,/AnimationMixer/);assert.match(renderer,/crossFadeTo/);
  assert.match(renderer,/Accessory_Cape/);assert.match(renderer,/style\?\.accessory\|\|'none'/);
- assert.match(renderer,/rotation\.y=facing===1\?PROFILE_YAW:-PROFILE_YAW/,'profile orientation must remain consistent in both directions');
+ assert.match(renderer,/setFromAxisAngle\(ROOT_UP_AXIS,facing===1\?PROFILE_YAW:-PROFILE_YAW\)/,'profile orientation must remain consistent in both directions');
  assert.match(renderer,/setClearColor\(0x000000,0\)/,'the 3D overlay must remain transparent over the 2D world art');
  assert.doesNotMatch(renderer,/proceduralArms|RUN_SWING_AXIS|addRunPlaneBoneRotation/,'authored GLB arm rotations must not be overwritten by a procedural layer');
  assert.match(renderer,/function jumpPhase\(vy\)/,'jump pose must be driven by vertical physics instead of a fixed playback timer');
