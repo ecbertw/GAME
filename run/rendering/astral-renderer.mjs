@@ -10,6 +10,7 @@ export class AstralRenderer{
   if(e.type==='land'||e.type==='hard-land')for(let i=0;i<(e.type==='hard-land'?18:8);i++)this.fx.push({type:e.type==='hard-land'?'impact':'dust',x:p.x+.35,y:p.y+p.h,vx:(Math.random()-.5)*(e.type==='hard-land'?4.4:3.4),vy:-.7-Math.random()*(e.type==='hard-land'?2.4:1.7),life:1});
   if(e.type==='skid')for(let i=0;i<12;i++)this.fx.push({type:'skid',x:p.x+.35,y:p.y+p.h-.04,vx:-p.facing*(1.5+Math.random()*2.8)+(Math.random()-.5),vy:-.25-Math.random()*1.1,life:1});
   if(e.type==='shard')for(let i=0;i<10;i++)this.fx.push({type:'spark',x:p.x+.35,y:p.y+.55,vx:(Math.random()-.5)*3.8,vy:(Math.random()-.5)*3.8,life:1});
+  if(e.type==='break')for(let i=0;i<14;i++)this.fx.push({type:'debris',x:(e.x||p.x)+(e.w||1)*.5,y:(e.y||p.y)+(e.h||1)*.55,vx:(Math.random()-.5)*4.6,vy:-1.2-Math.random()*2.8,life:1});
   if(e.type==='death')for(let i=0;i<16;i++)this.fx.push({type:'death',x:p.x+.35,y:p.y+.55,vx:(Math.random()-.5)*4.8,vy:-1.0-Math.random()*3.6,life:1});
   if(['checkpoint','secret','finish'].includes(e.type))for(let i=0;i<(e.type==='finish'?34:24);i++)this.fx.push({type:e.type==='finish'?'victory':'spark',x:p.x+.35,y:p.y+.5,vx:(Math.random()-.5)*(e.type==='finish'?6.0:5.0),vy:(Math.random()-.5)*(e.type==='finish'?6.0:5.0),life:1});
  }
@@ -70,10 +71,10 @@ export class AstralRenderer{
   const n=Math.max(2,Math.round(h.w/.34));ctx.save();ctx.shadowColor='#ff244d';ctx.shadowBlur=.24;
   for(let i=0;i<n;i++){const x=h.x+i*h.w/n,w=h.w/n,g=ctx.createLinearGradient(x,h.y,x,h.y+h.h);g.addColorStop(0,'#ff3e5d');g.addColorStop(1,'#71152e');ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(x,h.y+h.h);ctx.lineTo(x+w*.5,h.y);ctx.lineTo(x+w,h.y+h.h);ctx.closePath();ctx.fill()}ctx.restore();
  }
- checkpoint(ctx,cp,t){
-  ctx.save();ctx.translate(cp.x+cp.w/2,cp.y+cp.h/2);ctx.fillStyle='#26355d';ctx.fillRect(-.25,-cp.h/2,.50,cp.h);ctx.fillStyle='#ef294f';ctx.fillRect(-.25,-cp.h/2,.50,.18);
-  ctx.fillStyle='#5d4b86';ctx.fillRect(.25,-cp.h*.35,1.10,1.70);ctx.strokeStyle='#b9c8f2';ctx.lineWidth=.06;ctx.strokeRect(.25,-cp.h*.35,1.10,1.70);
-  ctx.strokeStyle='#74f2ff';ctx.globalAlpha=.68+.22*Math.sin(t*.004);ctx.beginPath();ctx.arc(.80,.48,.28,0,TAU);ctx.stroke();ctx.beginPath();ctx.moveTo(.60,.25);ctx.lineTo(1.00,.70);ctx.moveTo(1.00,.25);ctx.lineTo(.60,.70);ctx.stroke();ctx.restore();
+ checkpoint(ctx,cp,t,active=false){
+  ctx.save();ctx.translate(cp.x+cp.w/2,cp.y+cp.h/2);ctx.fillStyle='#26355d';ctx.fillRect(-.25,-cp.h/2,.50,cp.h);ctx.fillStyle=active?'#6df4ff':'#ef294f';ctx.fillRect(-.25,-cp.h/2,.50,.18);
+  ctx.fillStyle=active?'#254e70':'#5d4b86';ctx.fillRect(.25,-cp.h*.35,1.10,1.70);ctx.strokeStyle=active?'#93f8ff':'#b9c8f2';ctx.lineWidth=.06;ctx.strokeRect(.25,-cp.h*.35,1.10,1.70);
+  ctx.shadowColor=active?'#6ef7ff':'#74f2ff';ctx.shadowBlur=active?.28:.12;ctx.strokeStyle=active?'#c8feff':'#74f2ff';ctx.globalAlpha=.68+.22*Math.sin(t*.004);ctx.beginPath();ctx.arc(.80,.48,.28,0,TAU);ctx.stroke();ctx.beginPath();ctx.moveTo(.60,.25);ctx.lineTo(1.00,.70);ctx.moveTo(1.00,.25);ctx.lineTo(.60,.70);ctx.stroke();ctx.restore();
  }
  breakable(ctx,r){
   ctx.fillStyle='#56617a';ctx.fillRect(r.x,r.y,r.w,r.h);ctx.strokeStyle='#9aa9c4';ctx.lineWidth=.055;ctx.strokeRect(r.x+.04,r.y+.04,r.w-.08,r.h-.08);
@@ -98,13 +99,13 @@ export class AstralRenderer{
   for(const m of this.level.movingPlatforms){const r=EixoRunCore.platformAt(m,player.tick);this.island(ctx,r,true);ctx.fillStyle='#63f1ff';ctx.fillRect(r.x+.35,r.y+.34,r.w-.7,.08)}
   for(const r of this.level.breakables)if(!player.broken.has(r.id))this.breakable(ctx,r);
   for(const x of this.level.visual.waterfalls||[]){const base=this.level.solids.find(s=>x>=s.x&&x<=s.x+s.w);if(base)this.waterfallWorld(ctx,x,base.y+.08,4.2)}
-  for(const hz of this.level.hazards)this.hazard(ctx,hz);for(const s of this.level.shards)if(!player.collected.has(s.id))this.shard(ctx,s,time);for(const cp of this.level.checkpoints)this.checkpoint(ctx,cp,time);this.finish(ctx,this.level.finish,time);
+  for(const hz of this.level.hazards)this.hazard(ctx,hz);for(const s of this.level.shards)if(!player.collected.has(s.id))this.shard(ctx,s,time);for(const cp of this.level.checkpoints)this.checkpoint(ctx,cp,time,player.checkpoint===cp.id);this.finish(ctx,this.level.finish,time);
   if(Math.abs(player.vx)>6.25&&!player.dead){this.trail.unshift({x:player.x,y:player.y,facing:player.facing,tick:player.tick,life:1});if(this.trail.length>7)this.trail.length=7}
   for(const t of this.trail)t.life-=.13;this.trail=this.trail.filter(t=>t.life>0);for(let i=this.trail.length-1;i>=0;i--){const t=this.trail[i];this.runner.draw(ctx,{...player,...t},{alpha:.075*t.life,tint:'#58e9ff'})}
   for(const g of ghosts||[])if(g?.player&&!g.player.dead&&g.player.finishTick==null)this.runner.draw(ctx,g.player,{alpha:.28,tint:g.tint||'#72eaff'});
   if(!player.dead&&Number(player.vipLevel)>0){const radius=.72+.08*Math.sin(time*.006);ctx.save();ctx.globalAlpha=.15+.03*Math.min(6,Number(player.vipLevel));ctx.fillStyle=Number(player.vipLevel)>=6?'#ffd45e':'#66eaff';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=.45;ctx.beginPath();ctx.ellipse(player.x+.36,player.y+.7,radius,radius*1.35,0,0,TAU);ctx.fill();ctx.restore()}
   this.runner.draw(ctx,player,{alpha:player.dead?Math.max(.18,Math.min(1,player.respawnTicks/18)):1});
-  for(const f of this.fx){f.x+=f.vx*.016;f.y+=f.vy*.016;f.vy+=1.8*.016;f.life-=.028;ctx.globalAlpha=Math.max(0,f.life);ctx.fillStyle=f.type==='dust'||f.type==='skid'?'#eadcec':f.type==='impact'?'#ffffff':f.type==='death'?'#ffcf5d':f.type==='victory'?(f.life>.55?'#ffd45f':'#ff5fd7'):'#82f7ff';ctx.beginPath();ctx.arc(f.x,f.y,.04+.08*f.life,0,TAU);ctx.fill()}ctx.globalAlpha=1;this.fx=this.fx.filter(f=>f.life>0);ctx.restore();
+  for(const f of this.fx){f.x+=f.vx*.016;f.y+=f.vy*.016;f.vy+=1.8*.016;f.life-=.028;ctx.globalAlpha=Math.max(0,f.life);ctx.fillStyle=f.type==='dust'||f.type==='skid'?'#eadcec':f.type==='impact'?'#ffffff':f.type==='debris'?'#8794ad':f.type==='death'?'#ffcf5d':f.type==='victory'?(f.life>.55?'#ffd45f':'#ff5fd7'):'#82f7ff';ctx.beginPath();ctx.arc(f.x,f.y,.04+.08*f.life,0,TAU);ctx.fill()}ctx.globalAlpha=1;this.fx=this.fx.filter(f=>f.life>0);ctx.restore();
   this.foreground(ctx,w,h,cam);
  }
 }
