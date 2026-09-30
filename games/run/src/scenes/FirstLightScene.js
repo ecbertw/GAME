@@ -24,7 +24,11 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, file => console.error('[RUN asset load failed]', file?.key, file?.url));
+    this.assetLoadErrors = [];
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, file => {
+      this.assetLoadErrors.push({ key: file?.key, url: file?.url });
+      console.error('[RUN asset load failed]', file?.key, file?.url);
+    });
     preloadAstralArt(this);
     this.load.spritesheet(RUNNER_ATLAS.key, RUNNER_ATLAS.file, {
       frameWidth: RUNNER_ATLAS.frameWidth,
@@ -35,6 +39,29 @@ export class FirstLightScene extends Phaser.Scene {
   create() {
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBackgroundColor('#0a1a38');
+
+    const missingTextures = [
+      ...Object.values(ASTRAL_BG),
+      ...Object.values(ASTRAL_OBJ),
+    ].filter((key, index, all) => all.indexOf(key) === index && !this.textures.exists(key));
+
+    if (missingTextures.length) {
+      console.error('[RUN missing textures]', missingTextures, this.assetLoadErrors);
+      this.add.rectangle(640, 360, 1280, 720, 0x050912, 1).setScrollFactor(0).setDepth(99999);
+      this.add.text(640, 300, 'RUN ASSET LOAD ERROR', {
+        fontFamily: 'Arial Black, sans-serif',
+        fontSize: '30px',
+        color: '#ff365e',
+      }).setOrigin(.5).setScrollFactor(0).setDepth(100000);
+      this.add.text(640, 365, missingTextures.join('\n'), {
+        fontFamily: 'monospace',
+        fontSize: '15px',
+        color: '#d8edff',
+        align: 'center',
+      }).setOrigin(.5).setScrollFactor(0).setDepth(100000);
+      return;
+    }
+
     this.createAstralBackdrop();
 
     this.platforms = [];
@@ -223,7 +250,8 @@ export class FirstLightScene extends Phaser.Scene {
     const frame = width >= 560 ? ASTRAL_OBJ.platformLarge : width >= 245 ? ASTRAL_OBJ.platformMedium : ASTRAL_OBJ.platformSmall;
     // All three gameplay sizes use the same approved canonical platform art.
     // Preserve its native aspect ratio instead of stretching the small/medium variants.
-    const ratio = 336 / 691;
+    const sourceImage = this.textures.get(frame).getSourceImage();
+    const ratio = sourceImage.height / sourceImage.width;
     const artWidth = width + (frame === ASTRAL_OBJ.platformLarge ? 80 : 44);
     const rawHeight = artWidth * ratio;
     const artHeight = Phaser.Math.Clamp(rawHeight, frame === ASTRAL_OBJ.platformLarge ? 220 : 125, 365);
@@ -287,9 +315,11 @@ export class FirstLightScene extends Phaser.Scene {
   addMovingPlatform(x, y, width, height, rangeX = 0, duration = 1700, rangeY = 0) {
     const visual = this.add.container(x, y).setDepth(8);
     const artWidth = width + 78;
+    const movingSource = this.textures.get(ASTRAL_OBJ.platformMoving).getSourceImage();
+    const movingRatio = movingSource.height / movingSource.width;
     const art = this.add.image(0, -height / 2 - 10, ASTRAL_OBJ.platformMoving)
       .setOrigin(0.5, 0)
-      .setDisplaySize(artWidth, artWidth * (336 / 691));
+      .setDisplaySize(artWidth, artWidth * movingRatio);
     visual.add(art);
 
     const glow = this.add.ellipse(0, height * 0.5 + 28, width * 0.78, 22, 0x35e9ff, 0.10);
