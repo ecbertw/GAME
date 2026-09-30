@@ -228,7 +228,7 @@ export class FirstLightScene extends Phaser.Scene {
       ? Phaser.Math.Clamp(rawHeight, 220, 365)
       : Phaser.Math.Clamp(rawHeight, 145, 275);
 
-    const art = this.add.image(0, -height / 2 - 12, objects, frame)
+    const art = this.add.image(0, -height / 2 - 12, frame)
       .setOrigin(0.5, 0)
       .setDisplaySize(artWidth, artHeight)
       .setAlpha(alt ? 0.96 : 1);
