@@ -1,6 +1,7 @@
 export const ASTRAL_KEYS = Object.freeze({
   exactConcept:'run-astral-exact-concept',
   exactPlatform:'run-astral-exact-platform',
+  exactSky:'run-astral-exact-sky',
   sky:'run-astral-sky',
   far:'run-astral-far',
   mid:'run-astral-mid',
@@ -31,6 +32,7 @@ const EXACT='/games/run/assets/astral-exact/';
 export function preloadAstralArt(scene){
   scene.load.image(ASTRAL_KEYS.exactConcept,EXACT+'first-light-concept.webp');
   scene.load.image(ASTRAL_KEYS.exactPlatform,EXACT+'platform-master.webp');
+  scene.load.image(ASTRAL_KEYS.exactSky,EXACT+'bg-sky.webp');
 
   // These are cropped directly from the approved RUN project boards.
   // Keep the public texture keys stable so FirstLightScene can swap from
