@@ -1,3 +1,9 @@
+import { BG_SKY, BG_WORLD } from '../assets/astral-data/backdrops.js';
+import { SHARD, CHECKPOINT_OFF, CHECKPOINT_ON, BREAKABLE, SPIKES } from '../assets/astral-data/objects-a.js';
+import { BOUNCE, SPEED, FINISH, CHEST_CLOSED, CHEST_OPEN, RELIC } from '../assets/astral-data/objects-b.js';
+import { ARCH, WATERFALL, CRYSTAL_CLUSTER } from '../assets/astral-data/objects-c.js';
+import { PLATFORM } from '../assets/astral-data/platform.js';
+
 export const ASTRAL_BG = Object.freeze({
   sky: 'run-bg-sky',
   world: 'run-bg-world',
@@ -31,41 +37,38 @@ export const ASTRAL_OBJ = Object.freeze({
   vegetationGreen: 'run-vegetation-green',
 });
 
-const EXACT='/games/run/assets/astral-exact/';
-
 export function preloadAstralArt(scene) {
-  const load=(key,file)=>scene.load.image(key,EXACT+file);
+  const load=(key,data)=>scene.load.image(key,data);
 
-  load(ASTRAL_BG.sky,'bg-sky.webp');
-  load(ASTRAL_BG.world,'first-light-concept.webp');
+  // Same transport strategy as the approved Runner: embedded data URIs.
+  // This removes Nginx/session/CSP/static-path variability from Phaser's loader.
+  load(ASTRAL_BG.sky, BG_SKY);
+  load(ASTRAL_BG.world, BG_WORLD);
 
-  // Use the approved extracted artwork already committed in astral-exact.
-  // Several size/decoration variants deliberately share the same canonical
-  // artwork so the browser never falls back to Phaser's green missing texture.
-  load(ASTRAL_OBJ.platformLarge,'platform-master.webp');
-  load(ASTRAL_OBJ.platformMedium,'platform-master.webp');
-  load(ASTRAL_OBJ.platformSmall,'platform-master.webp');
-  load(ASTRAL_OBJ.platformMoving,'platform-master.webp');
-  load(ASTRAL_OBJ.floatingIsland,'platform-master.webp');
+  load(ASTRAL_OBJ.platformLarge, PLATFORM);
+  load(ASTRAL_OBJ.platformMedium, PLATFORM);
+  load(ASTRAL_OBJ.platformSmall, PLATFORM);
+  load(ASTRAL_OBJ.platformMoving, PLATFORM);
+  load(ASTRAL_OBJ.floatingIsland, PLATFORM);
 
-  load(ASTRAL_OBJ.shard,'shard.webp');
-  load(ASTRAL_OBJ.checkpointOff,'checkpoint-off.webp');
-  load(ASTRAL_OBJ.checkpointOn,'checkpoint-on.webp');
-  load(ASTRAL_OBJ.breakable,'breakable.webp');
-  load(ASTRAL_OBJ.spikes,'spikes.webp');
-  load(ASTRAL_OBJ.dangerCrystal,'spikes.webp');
-  load(ASTRAL_OBJ.bounce,'bounce-pad.webp');
-  load(ASTRAL_OBJ.speed,'speed-strip.webp');
-  load(ASTRAL_OBJ.finish,'finish-gate.webp');
-  load(ASTRAL_OBJ.chestClosed,'chest-closed.webp');
-  load(ASTRAL_OBJ.chestOpen,'chest-open.webp');
-  load(ASTRAL_OBJ.relic,'secret-relic.webp');
-  load(ASTRAL_OBJ.pedestal,'secret-relic.webp');
-  load(ASTRAL_OBJ.routeBanner,'checkpoint-off.webp');
-  load(ASTRAL_OBJ.signMarker,'checkpoint-off.webp');
-  load(ASTRAL_OBJ.arch,'arch.webp');
-  load(ASTRAL_OBJ.waterfall,'waterfall.webp');
-  load(ASTRAL_OBJ.crystalCluster,'crystal-cluster.webp');
-  load(ASTRAL_OBJ.vegetationPink,'crystal-cluster.webp');
-  load(ASTRAL_OBJ.vegetationGreen,'crystal-cluster.webp');
+  load(ASTRAL_OBJ.shard, SHARD);
+  load(ASTRAL_OBJ.checkpointOff, CHECKPOINT_OFF);
+  load(ASTRAL_OBJ.checkpointOn, CHECKPOINT_ON);
+  load(ASTRAL_OBJ.breakable, BREAKABLE);
+  load(ASTRAL_OBJ.spikes, SPIKES);
+  load(ASTRAL_OBJ.dangerCrystal, SPIKES);
+  load(ASTRAL_OBJ.bounce, BOUNCE);
+  load(ASTRAL_OBJ.speed, SPEED);
+  load(ASTRAL_OBJ.finish, FINISH);
+  load(ASTRAL_OBJ.chestClosed, CHEST_CLOSED);
+  load(ASTRAL_OBJ.chestOpen, CHEST_OPEN);
+  load(ASTRAL_OBJ.relic, RELIC);
+  load(ASTRAL_OBJ.pedestal, RELIC);
+  load(ASTRAL_OBJ.routeBanner, CHECKPOINT_OFF);
+  load(ASTRAL_OBJ.signMarker, CHECKPOINT_OFF);
+  load(ASTRAL_OBJ.arch, ARCH);
+  load(ASTRAL_OBJ.waterfall, WATERFALL);
+  load(ASTRAL_OBJ.crystalCluster, CRYSTAL_CLUSTER);
+  load(ASTRAL_OBJ.vegetationPink, CRYSTAL_CLUSTER);
+  load(ASTRAL_OBJ.vegetationGreen, CRYSTAL_CLUSTER);
 }
