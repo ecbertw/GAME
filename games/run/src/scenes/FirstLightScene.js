@@ -6,7 +6,7 @@ import { RUNNER_ATLAS } from '../assets/runner-manifest.js';
 import { MOVEMENT } from '../config/movement.js';
 import { MovementFx } from '../effects/MovementFx.js';
 import { RunHud } from '../ui/RunHud.js';
-import { ASTRAL_BG, ASTRAL_OBJ, preloadAstralArt } from '../art/AstralArt.js';
+import { ASTRAL_BG, ASTRAL_OBJ, preloadAstralArt, installAstralTextures } from '../art/AstralArt.js';
 
 const WORLD_WIDTH = 9800;
 const WORLD_HEIGHT = 900;
@@ -39,6 +39,25 @@ export class FirstLightScene extends Phaser.Scene {
   create() {
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setBackgroundColor('#0a1a38');
+
+    try {
+      installAstralTextures(this);
+    } catch (error) {
+      console.error('[RUN atlas install failed]', error);
+      this.add.rectangle(640, 360, 1280, 720, 0x050912, 1).setScrollFactor(0).setDepth(99999);
+      this.add.text(640, 320, 'RUN ATLAS INSTALL ERROR', {
+        fontFamily: 'Arial Black, sans-serif',
+        fontSize: '30px',
+        color: '#ff365e',
+      }).setOrigin(.5).setScrollFactor(0).setDepth(100000);
+      this.add.text(640, 380, String(error?.message || error), {
+        fontFamily: 'monospace',
+        fontSize: '15px',
+        color: '#d8edff',
+        align: 'center',
+      }).setOrigin(.5).setScrollFactor(0).setDepth(100000);
+      return;
+    }
 
     const missingTextures = [
       ...Object.values(ASTRAL_BG),
