@@ -289,7 +289,7 @@ export class FirstLightScene extends Phaser.Scene {
     const artWidth = width + 78;
     const art = this.add.image(0, -height / 2 - 10, ASTRAL_OBJ.platformMoving)
       .setOrigin(0.5, 0)
-      .setDisplaySize(artWidth, artWidth * (183 / 447));
+      .setDisplaySize(artWidth, artWidth * (336 / 691));
     visual.add(art);
 
     const glow = this.add.ellipse(0, height * 0.5 + 28, width * 0.78, 22, 0x35e9ff, 0.10);
