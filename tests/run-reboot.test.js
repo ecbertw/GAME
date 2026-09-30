@@ -15,6 +15,7 @@ test('RUN reboot uses Phaser and is isolated from JUMP',()=>{
     'games/run/src/player/Runner.js',
     'games/run/src/player/RunnerController.js',
     'games/run/src/player/RunnerAnimator.js',
+    'games/run/src/player/RunnerRig.js',
     'games/run/src/camera/RunCamera.js',
     'games/run/src/effects/MovementFx.js'
   ];
@@ -94,4 +95,48 @@ test('RUN lab redirects expired admin sessions into a safe login-return flow',()
   assert.match(auth,/finishAuthNavigation/);
   assert.match(auth,/location\.replace\(returnTo\)/);
   assert.match(auth,/forcedLogin/);
+});
+
+
+test('RUN articulated rig guarantees opposite limbs every half-cycle',()=>{
+  const rig=read('games/run/src/player/RunnerRig.js');
+  const animator=read('games/run/src/player/RunnerAnimator.js');
+
+  assert.match(rig,/Math\.cos\(p \* Math\.PI \* 2\)/);
+  assert.match(rig,/legNearDeg:\s*-swing \* 38/);
+  assert.match(rig,/legFarDeg:\s*swing \* 38/);
+  assert.match(rig,/armNearDeg:\s*swing \* 26/);
+  assert.match(rig,/armFarDeg:\s*-swing \* 26/);
+  assert.match(rig,/runnerRig:legNear/);
+  assert.match(rig,/runnerRig:legFar/);
+  assert.match(animator,/state === 'run'/);
+  assert.match(animator,/showRunRig\(\)/);
+  assert.match(animator,/setRunPhase\(phase\)/);
+
+  const pose=phase=>{
+    const swing=Math.cos(phase*Math.PI*2);
+    return {
+      a:-swing*38,
+      b:swing*38,
+      armA:swing*26,
+      armB:-swing*26,
+    };
+  };
+  const contactA=pose(0);
+  const contactB=pose(0.5);
+  assert.ok(contactA.a < 0 && contactA.b > 0);
+  assert.ok(contactB.a > 0 && contactB.b < 0);
+  assert.equal(Math.round(contactA.a + contactA.b),0);
+  assert.equal(Math.round(contactB.a + contactB.b),0);
+  assert.ok(Math.sign(contactA.armA) === -Math.sign(contactA.a));
+  assert.ok(Math.sign(contactB.armA) === -Math.sign(contactB.a));
+});
+
+test('RUN articulated rig derives its appearance from the approved atlas',()=>{
+  const rig=read('games/run/src/player/RunnerRig.js');
+  assert.match(rig,/RUNNER_ATLAS/);
+  assert.match(rig,/RUNNER_FRAME_INDEX/);
+  assert.match(rig,/SOURCE_FRAME = 'run_01'/);
+  assert.match(rig,/drawImage\(/);
+  assert.doesNotMatch(rig,/svg|glb|gltf|three/i);
 });
