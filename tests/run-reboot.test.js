@@ -82,3 +82,16 @@ test('RUN Movement Lab exposes movement feedback without coupling particles to p
   assert.match(fx,/class MovementFx/);
   assert.doesNotMatch(fx,/body\.setVelocity|setGravityY|setAcceleration/);
 });
+
+
+test('RUN lab redirects expired admin sessions into a safe login-return flow',()=>{
+  const server=read('server.js');
+  const auth=read('auth-fix.js');
+  assert.match(server,/auth=login&next=%2Frun-lab/);
+  assert.match(server,/url\.pathname==='\/run-lab'/);
+  assert.match(server,/url\.pathname\.startsWith\('\/games\/run\/'\)/);
+  assert.match(auth,/next==='\/run-lab'/);
+  assert.match(auth,/finishAuthNavigation/);
+  assert.match(auth,/location\.replace\(returnTo\)/);
+  assert.match(auth,/forcedLogin/);
+});
