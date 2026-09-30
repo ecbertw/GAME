@@ -2,10 +2,6 @@ export const ASTRAL_KEYS = Object.freeze({
   exactConcept:'run-astral-exact-concept',
   exactPlatform:'run-astral-exact-platform',
   exactSky:'run-astral-exact-sky',
-  sky:'run-astral-sky',
-  far:'run-astral-far',
-  mid:'run-astral-mid',
-  foreground:'run-astral-foreground',
   platformLarge:'run-platform-large',
   platformMedium:'run-platform-medium',
   platformSmall:'run-platform-small',
@@ -26,7 +22,6 @@ export const ASTRAL_KEYS = Object.freeze({
   crystalCluster:'run-crystal-cluster',
 });
 
-const BASE='/games/run/assets/astral/';
 const EXACT='/games/run/assets/astral-exact/';
 
 export function preloadAstralArt(scene){
@@ -52,15 +47,4 @@ export function preloadAstralArt(scene){
   scene.load.image(ASTRAL_KEYS.waterfall,EXACT+'waterfall.webp');
   scene.load.image(ASTRAL_KEYS.crystalCluster,EXACT+'crystal-cluster.webp');
 
-  const assets=[
-    [ASTRAL_KEYS.sky,'sky.svg'],
-    [ASTRAL_KEYS.far,'far-ruins.svg'],
-    [ASTRAL_KEYS.mid,'mid-ruins.svg'],
-    [ASTRAL_KEYS.foreground,'foreground.svg'],
-    [ASTRAL_KEYS.platformLarge,'platform-large.svg'],
-    [ASTRAL_KEYS.platformMedium,'platform-medium.svg'],
-    [ASTRAL_KEYS.platformSmall,'platform-small.svg'],
-    [ASTRAL_KEYS.movingPlatform,'platform-moving.svg'],
-  ];
-  for(const [key,file] of assets) scene.load.svg(key,BASE+file);
 }
