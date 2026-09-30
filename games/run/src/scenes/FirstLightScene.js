@@ -75,45 +75,81 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   createAstralBackdrop() {
-    this.add.rectangle(640, 360, 1280, 720, 0xa9d7f6, 1)
+    // The approved project art is now the scenery source of truth. Keep only
+    // a flat fill behind it so there are no synthetic/vector ruins competing
+    // with the canonical FIRST LIGHT artwork.
+    this.add.rectangle(640, 360, 1280, 720, 0x8fcdf3, 1)
       .setScrollFactor(0)
-      .setDepth(-1210);
+      .setDepth(-1300);
 
     this.add.image(640, 92, ASTRAL_KEYS.exactSky)
       .setScrollFactor(0)
-      .setDepth(-1200)
+      .setDepth(-1250)
       .setDisplaySize(1280, 184)
       .setAlpha(1);
 
-    // Canonical FIRST LIGHT artwork: this is cropped directly from the
-    // approved project board supplied for ASTRAL 01, not a vector redraw.
+    // Main panoramic layer — cropped directly from the approved FIRST LIGHT
+    // concept. Slight overlap + alternating flip hides repetition during a
+    // long run while preserving the actual architecture and colour language.
     for (let i = 0; i < 9; i += 1) {
-      const concept = this.add.image(640 + i * 1220, 340 + (i % 2) * 10, ASTRAL_KEYS.exactConcept)
-        .setScrollFactor(0.10)
-        .setDepth(-920)
-        .setDisplaySize(1280, 404)
-        .setAlpha(0.98);
+      const concept = this.add.image(620 + i * 1175, 354 + (i % 3) * 7, ASTRAL_KEYS.exactConcept)
+        .setScrollFactor(0.12)
+        .setDepth(-940)
+        .setDisplaySize(1260, 398)
+        .setAlpha(0.94);
       if (i % 2) concept.setFlipX(true);
     }
 
-    // A faint second pass gives the distant ruins more depth without
-    // drawing new placeholder architecture over the approved artwork.
-    for (let i = 0; i < 6; i += 1) {
-      const far = this.add.image(700 + i * 1700, 255, ASTRAL_KEYS.exactConcept)
-        .setScrollFactor(0.04)
-        .setDepth(-980)
-        .setDisplaySize(980, 309)
-        .setAlpha(0.23)
-        .setTint(0xc8ddff);
-      if (i % 2) far.setFlipX(true);
+    // Distant floating islands built from the approved platform artwork.
+    // These are decorative only; gameplay collision remains completely
+    // separate from the art.
+    const farIslands = [
+      [720,260,230,false],[1330,205,180,true],[1930,300,250,false],[2550,220,190,true],
+      [3270,275,225,false],[3920,195,175,false],[4580,295,240,true],[5250,230,190,false],
+      [5920,285,225,true],[6600,205,175,false],[7270,285,230,false],[7940,220,185,true],
+      [8620,275,225,false],[9280,205,170,true],
+    ];
+    for (const [x,y,w,flip] of farIslands) {
+      const island = this.add.image(x, y, ASTRAL_KEYS.exactPlatform)
+        .setScrollFactor(0.24)
+        .setDepth(-875)
+        .setDisplaySize(w, w * (217 / 420))
+        .setAlpha(0.58)
+        .setTint(0xc9dcff);
+      if (flip) island.setFlipX(true);
     }
 
-    // Do not overlay the old vector foreground here. The approved concept
-    // artwork already contains the correct foliage/crystal silhouette and
-    // the previous SVG layer was what made the scene look like a placeholder.
+    // Mid-depth ruins and waterfalls make the world read as the 2.5D scene
+    // shown in the project boards instead of a flat strip of platforms.
+    const midArches = [
+      [980,440,225],[2200,405,260],[3600,450,205],[5000,405,255],
+      [6420,445,215],[7820,400,250],[9050,440,205],
+    ];
+    for (const [x,y,w] of midArches) {
+      this.add.image(x, y, ASTRAL_KEYS.arch)
+        .setOrigin(0.5,1)
+        .setScrollFactor(0.42)
+        .setDepth(-650)
+        .setDisplaySize(w, w * (124 / 120))
+        .setAlpha(0.64)
+        .setTint(0xdde7ff);
+    }
+
+    const distantFalls = [
+      [1550,420,70],[3000,390,62],[4380,425,74],[5750,390,64],[7160,420,72],[8500,395,62],
+    ];
+    for (const [x,y,w] of distantFalls) {
+      const fall = this.add.image(x, y, ASTRAL_KEYS.waterfall)
+        .setOrigin(0.5,0.05)
+        .setScrollFactor(0.40)
+        .setDepth(-625)
+        .setDisplaySize(w, w * (121 / 80))
+        .setAlpha(0.58);
+      this.tweens.add({ targets: fall, alpha: 0.38, duration: 1450 + (x % 650), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+
     this.drawForegroundMotes();
   }
-
   drawCloudBand(depth, scrollFactor, baseY, color, alpha) {
     const layer = this.add.graphics().setScrollFactor(scrollFactor).setDepth(depth);
     for (let i = 0; i < 28; i += 1) {
@@ -493,15 +529,20 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   decorateAstralWorld() {
+    // Near-world architectural accents, all using the approved extracted art.
     const arches = [[1510,585,360],[4300,550,310],[6880,565,350],[8740,545,290]];
     for (const [x,y,w] of arches) {
       this.add.image(x, y, ASTRAL_KEYS.arch)
         .setOrigin(0.5,1)
         .setDisplaySize(w, w * (124 / 120))
         .setDepth(2)
-        .setAlpha(0.96);
+        .setAlpha(0.98);
     }
-    const clusters = [[880,606,186],[1880,610,165],[3920,534,156],[6000,605,174],[8380,522,150],[9270,603,180]];
+
+    const clusters = [
+      [880,606,186],[1880,610,165],[3920,534,156],[6000,605,174],
+      [8380,522,150],[9270,603,180],
+    ];
     for (const [x,y,w] of clusters) {
       const art = this.add.image(x, y, ASTRAL_KEYS.crystalCluster)
         .setOrigin(0.5,1)
@@ -509,8 +550,28 @@ export class FirstLightScene extends Phaser.Scene {
         .setDepth(7);
       this.tweens.add({ targets: art, alpha: 0.78, duration: 1200 + (x % 700), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
-  }
 
+    // Foreground fragments create the richer layered silhouette visible in
+    // the approved environment sheets without changing collision geometry.
+    const foreground = [
+      [360,742,210,false],[1260,735,180,true],[2740,746,225,false],[4680,735,190,true],
+      [6580,744,220,false],[8220,736,185,true],[9630,744,215,false],
+    ];
+    for (const [x,y,w,flip] of foreground) {
+      const island = this.add.image(x, y, ASTRAL_KEYS.exactPlatform)
+        .setOrigin(0.5,0.2)
+        .setDisplaySize(w, w * (217 / 420))
+        .setDepth(82)
+        .setAlpha(0.86);
+      if (flip) island.setFlipX(true);
+      const crystals = this.add.image(x + (flip ? -58 : 58), y - 32, ASTRAL_KEYS.crystalCluster)
+        .setOrigin(0.5,1)
+        .setDisplaySize(w * 0.46, w * 0.46 * (79 / 100))
+        .setDepth(83)
+        .setAlpha(0.92);
+      if (flip) crystals.setFlipX(true);
+    }
+  }
   handleMovementEvent(event) {
     if (event.type === 'jump') this.fx.jump(this.runner);
     if (event.type === 'skid') this.fx.skid(this.runner);
