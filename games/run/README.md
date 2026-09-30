@@ -41,3 +41,14 @@ The Movement Lab is ready to leave Phase 1 only when all of these feel right in 
 - visual sprite size/position stays consistent while the collider remains stable.
 
 No First Light art pass or online systems should be started until this checklist is accepted.
+
+
+## Private First Light build
+
+The production-facing RUN prototype is available only to EIXO admins at:
+
+`/run-admin`
+
+It is deliberately separate from `/run-lab`. The admin build currently contains the first playable **ASTRAL 01 — FIRST LIGHT** pass: long-form route, alternate high route, moving platforms, Shards, checkpoints, hazards, breakable blocks, bounce pad, speed strip, secret relic room, finish gate, parallax-style Astral backdrop, HUD, pause and results screen.
+
+The public EIXO site does not expose the build. All `/games/run/*` source/assets remain behind the same admin session gate while RUN is in production.
