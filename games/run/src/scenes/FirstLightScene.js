@@ -310,7 +310,7 @@ export class FirstLightScene extends Phaser.Scene {
     const container = this.add.container(x, y).setDepth(10);
     const art = this.add.image(0, 2, ASTRAL_KEYS.spikes)
       .setOrigin(0.5, 1)
-      .setDisplaySize(width + 34, Math.max(70, width * 0.5));
+      .setDisplaySize(width + 34, (width + 34) * (122 / 140));
     container.add(art);
     const bodyObject = this.add.rectangle(x, y - 18, width, 42, 0xff0000, 0);
     this.physics.add.existing(bodyObject, true);
@@ -321,7 +321,7 @@ export class FirstLightScene extends Phaser.Scene {
   addBreakableBlock(x, y, width, height) {
     const container = this.add.container(x, y).setDepth(9);
     const art = this.add.image(0, 0, ASTRAL_KEYS.breakable)
-      .setDisplaySize(width * 1.32, height * 1.32);
+      .setDisplaySize(width * 1.32, width * 1.32 * (93 / 105));
     container.add(art);
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
@@ -343,7 +343,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addShard(x, y, index) {
     const container = this.add.container(x, y).setDepth(16);
-    const art = this.add.image(0, 0, ASTRAL_KEYS.shard).setDisplaySize(54, 74);
+    const art = this.add.image(0, 0, ASTRAL_KEYS.shard).setDisplaySize(48, 80);
     container.add(art);
     const bodyObject = this.add.rectangle(x, y, 36, 56, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
@@ -368,7 +368,7 @@ export class FirstLightScene extends Phaser.Scene {
     const container = this.add.container(x, y).setDepth(15);
     const art = this.add.image(0, -34, ASTRAL_KEYS.checkpointOff)
       .setOrigin(0.5, 0.5)
-      .setDisplaySize(120, 177);
+      .setDisplaySize(94, 193);
     container.add(art);
     const trigger = this.add.rectangle(x, y, 105, 160, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
@@ -397,7 +397,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addBouncePad(x, y) {
     const container = this.add.container(x, y).setDepth(11);
-    const art = this.add.image(0, -12, ASTRAL_KEYS.bounce).setDisplaySize(145, 99);
+    const art = this.add.image(0, -12, ASTRAL_KEYS.bounce).setDisplaySize(140, 124);
     container.add(art);
     const trigger = this.add.rectangle(x, y - 16, 100, 36, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
@@ -414,7 +414,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addSpeedStrip(x, y) {
     const container = this.add.container(x, y).setDepth(11);
-    const art = this.add.image(0, -12, ASTRAL_KEYS.speed).setDisplaySize(175, 58);
+    const art = this.add.image(0, -12, ASTRAL_KEYS.speed).setDisplaySize(175, 70);
     container.add(art);
     const trigger = this.add.rectangle(x, y - 20, 165, 54, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
@@ -471,7 +471,7 @@ export class FirstLightScene extends Phaser.Scene {
     const x = 9490, y = 520;
     const gate = this.add.image(x, y + 52, ASTRAL_KEYS.finish)
       .setOrigin(0.5, 0.5)
-      .setDisplaySize(275, 305)
+      .setDisplaySize(255, 266)
       .setDepth(14);
     this.finishGateArt = gate;
     this.tweens.add({ targets: gate, scaleX: gate.scaleX * 1.018, scaleY: gate.scaleY * 1.018, duration: 980, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
