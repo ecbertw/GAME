@@ -1,4 +1,6 @@
 export const ASTRAL_KEYS = Object.freeze({
+  exactConcept:'run-astral-exact-concept',
+  exactPlatform:'run-astral-exact-platform',
   sky:'run-astral-sky',
   far:'run-astral-far',
   mid:'run-astral-mid',
@@ -24,8 +26,12 @@ export const ASTRAL_KEYS = Object.freeze({
 });
 
 const BASE='/games/run/assets/astral/';
+const EXACT='/games/run/assets/astral-exact/';
 
 export function preloadAstralArt(scene){
+  scene.load.image(ASTRAL_KEYS.exactConcept,EXACT+'first-light-concept.webp');
+  scene.load.image(ASTRAL_KEYS.exactPlatform,EXACT+'platform-master.webp');
+
   const assets=[
     [ASTRAL_KEYS.sky,'sky.svg'],
     [ASTRAL_KEYS.far,'far-ruins.svg'],
