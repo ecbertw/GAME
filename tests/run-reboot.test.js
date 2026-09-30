@@ -31,18 +31,34 @@ test('RUN Movement Lab is private and Phaser is served locally',()=>{
   assert.match(server,/node_modules[\s\S]*phaser[\s\S]*phaser\.min\.js/);
 });
 
-test('RUN uses the approved Runner atlas, not a procedural redraw',()=>{
+test('approved Runner atlas is embedded, complete and uses the correct grid',()=>{
   const manifest=read('games/run/src/assets/runner-manifest.js');
   const runner=read('games/run/src/player/Runner.js');
-  assert.match(manifest,/approved-runner-atlas\.webp/);
-  assert.match(manifest,/atlas_de_sprites_do_corredor_anime\.png/);
-  assert.match(manifest,/frameWidth:\s*256/);
-  assert.match(manifest,/frameHeight:\s*256/);
+
+  assert.match(manifest,/embedded-webp-data-uri/);
+  assert.match(manifest,/frameWidth:\s*128/);
+  assert.match(manifest,/frameHeight:\s*128/);
   assert.match(manifest,/run_01/);
   assert.match(manifest,/run_04/);
+  assert.doesNotMatch(manifest,/\/assets\/run\/runner\/approved-runner-atlas\.webp/);
   assert.doesNotMatch(manifest,/runner-v2-data|embedded-svg-data-uri/);
   assert.match(runner,/RUNNER_FRAME_INDEX/);
-  assert.ok(fs.existsSync(path.join(ROOT,'assets/run/runner/approved-runner-atlas.webp')));
+
+  const parts=Array.from({length:8},(_,i)=>{
+    const file=path.join(ROOT,'games/run/src/assets/approved-runner-data',`part${i}.js`);
+    assert.ok(fs.existsSync(file),`missing part${i}.js`);
+    const body=fs.readFileSync(file,'utf8');
+    const match=body.match(/^export default "([^"]*)";\s*$/);
+    assert.ok(match,`invalid part${i}.js wrapper`);
+    return match[1];
+  });
+
+  const b64=parts.join('');
+  assert.equal(b64.length,72240);
+  const bin=Buffer.from(b64,'base64');
+  assert.equal(bin.length,54180);
+  assert.equal(bin.subarray(0,4).toString('ascii'),'RIFF');
+  assert.equal(bin.subarray(8,12).toString('ascii'),'WEBP');
 });
 
 test('RUN movement state machine remains event and distance aware',()=>{
@@ -54,6 +70,7 @@ test('RUN movement state machine remains event and distance aware',()=>{
   assert.match(animator,/runDistance/);
   assert.match(animator,/runCycleDistance/);
   assert.match(movement,/bodyWidth:\s*40/);
+  assert.match(movement,/spriteScale:\s*1\.0/);
 });
 
 test('RUN Movement Lab exposes movement feedback without coupling particles to physics',()=>{
