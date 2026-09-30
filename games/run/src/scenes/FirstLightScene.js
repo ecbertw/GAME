@@ -226,8 +226,8 @@ export class FirstLightScene extends Phaser.Scene {
       const wfWidth = Math.min(160, Math.max(82, width * 0.22));
       const wf = this.add.image(width * 0.23, -height / 2 + 7, ASTRAL_KEYS.waterfall)
         .setOrigin(0.5, 0.08)
-        .setDisplaySize(wfWidth, 225)
-        .setAlpha(0.9);
+        .setDisplaySize(wfWidth, wfWidth * (121 / 80))
+        .setAlpha(0.96);
       container.add(wf);
       this.tweens.add({ targets: wf, alpha: 0.68, scaleX: wf.scaleX * 1.035, duration: 1050, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
@@ -235,8 +235,8 @@ export class FirstLightScene extends Phaser.Scene {
     if (large && Math.floor(x / 400) % 2 === 0) {
       const cluster = this.add.image(-width * 0.31, -height / 2 - 20, ASTRAL_KEYS.crystalCluster)
         .setOrigin(0.5, 1)
-        .setDisplaySize(116, 90)
-        .setAlpha(0.92);
+        .setDisplaySize(116, 116 * (79 / 100))
+        .setAlpha(0.96);
       container.add(cluster);
     }
 
@@ -435,18 +435,17 @@ export class FirstLightScene extends Phaser.Scene {
     const shadow = this.add.ellipse(x, y + 4, 470, 285, 0x061020, 0.83).setDepth(2);
     const arch = this.add.image(x, y + 82, ASTRAL_KEYS.arch)
       .setOrigin(0.5, 1)
-      .setDisplaySize(430, 370)
-      .setDepth(3)
-      .setTint(0x8fa7d9);
+      .setDisplaySize(410, 410 * (124 / 120))
+      .setDepth(3);
     const crystals = this.add.image(x - 145, y + 66, ASTRAL_KEYS.crystalCluster)
       .setOrigin(0.5, 1)
-      .setDisplaySize(150, 115)
+      .setDisplaySize(150, 150 * (79 / 100))
       .setDepth(4);
 
     this.add.text(x, y - 160, 'SEGREDO', { fontFamily: 'Arial Black', fontSize: '13px', color: '#8feeff', backgroundColor: '#07101ddd', padding: { x: 8, y: 4 } }).setOrigin(.5).setDepth(20);
 
     const chest = this.add.container(x + 82, y + 38).setDepth(13);
-    const chestArt = this.add.image(0, 0, ASTRAL_KEYS.chestClosed).setDisplaySize(126, 105);
+    const chestArt = this.add.image(0, 0, ASTRAL_KEYS.chestClosed).setDisplaySize(126, 112);
     chest.add(chestArt);
     const trigger = this.add.rectangle(x + 82, y + 38, 132, 100, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
@@ -457,8 +456,11 @@ export class FirstLightScene extends Phaser.Scene {
     if (this.relic.found || this.finished) return;
     this.relic.found = true;
     this.relicFound = true;
-    this.relic.chestArt?.setTexture(ASTRAL_KEYS.chestOpen);
-    const relicArt = this.add.image(this.relic.chest.x, this.relic.chest.y - 78, ASTRAL_KEYS.relic).setDisplaySize(112, 108).setDepth(14).setAlpha(0);
+    this.relic.chestArt?.setTexture(ASTRAL_KEYS.chestOpen).setDisplaySize(126, 143);
+    const relicArt = this.add.image(this.relic.chest.x, this.relic.chest.y - 88, ASTRAL_KEYS.relic)
+      .setDisplaySize(96, 96 * (134 / 90))
+      .setDepth(14)
+      .setAlpha(0);
     this.tweens.add({ targets: relicArt, alpha: 1, y: relicArt.y - 18, duration: 320, ease: 'Back.easeOut' });
     this.relic.trigger.body.enable = false;
     this.fx.burst(this.relic.chest.x, this.relic.chest.y - 25, { count: 28, spreadX: 230, speedY: 230, life: 650, color: 0xffd35f, size: 5, gravity: 50 });
@@ -492,14 +494,21 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   decorateAstralWorld() {
-    const arches = [[1510,585,0.72],[4300,550,0.62],[6880,565,0.7],[8740,545,0.58]];
-    for (const [x,y,scale] of arches) {
-      this.add.image(x, y, ASTRAL_KEYS.arch).setOrigin(0.5,1).setScale(scale).setDepth(2).setAlpha(0.92);
+    const arches = [[1510,585,360],[4300,550,310],[6880,565,350],[8740,545,290]];
+    for (const [x,y,w] of arches) {
+      this.add.image(x, y, ASTRAL_KEYS.arch)
+        .setOrigin(0.5,1)
+        .setDisplaySize(w, w * (124 / 120))
+        .setDepth(2)
+        .setAlpha(0.96);
     }
-    const clusters = [[880,606,.62],[1880,610,.55],[3920,534,.52],[6000,605,.58],[8380,522,.5],[9270,603,.6]];
-    for (const [x,y,scale] of clusters) {
-      const art = this.add.image(x, y, ASTRAL_KEYS.crystalCluster).setOrigin(0.5,1).setScale(scale).setDepth(7);
-      this.tweens.add({ targets: art, alpha: 0.72, duration: 1200 + (x % 700), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const clusters = [[880,606,186],[1880,610,165],[3920,534,156],[6000,605,174],[8380,522,150],[9270,603,180]];
+    for (const [x,y,w] of clusters) {
+      const art = this.add.image(x, y, ASTRAL_KEYS.crystalCluster)
+        .setOrigin(0.5,1)
+        .setDisplaySize(w, w * (79 / 100))
+        .setDepth(7);
+      this.tweens.add({ targets: art, alpha: 0.78, duration: 1200 + (x % 700), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
   }
 
