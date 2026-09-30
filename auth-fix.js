@@ -86,6 +86,12 @@
     button.innerHTML=flagMarkup(code)+'<span class="auth-country-name">'+countryName(code).toUpperCase()+'</span><span class="auth-country-chevron">▼</span>';
     menu.innerHTML=codes.map(c=>'<button type="button" class="auth-country-option" role="option" aria-selected="'+String(c===code)+'" data-country="'+c+'">'+flagMarkup(c)+'<span class="auth-country-name">'+countryName(c).toUpperCase()+'</span></button>').join('');
   }
+  const returnTo=(()=>{try{const u=new URL(location.href);const next=u.searchParams.get('next');return next==='/run-lab'?next:''}catch(_){return''}})();
+  const forcedLogin=(()=>{try{return new URL(location.href).searchParams.get('auth')==='login'&&returnTo==='/run-lab'}catch(_){return false}})();
+  const finishAuthNavigation=player=>{
+    if(returnTo==='/run-lab'&&player?.role==='admin'){location.replace(returnTo);return true;}
+    return false;
+  };
   async function api(path,options){const r=await fetch(path,{credentials:'same-origin',...options});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(errorText(d.error));return d;}
   $('authLoginTab').addEventListener('click',()=>showMode('login'));
   $('authRegisterTab').addEventListener('click',()=>{populateCountries();showMode('register');});
@@ -95,7 +101,7 @@
   modal.addEventListener('click',e=>{if(e.target===modal)close();});
   loginForm.addEventListener('submit',async e=>{
     e.preventDefault();const err=$('authLoginError'),button=loginForm.querySelector('button[type="submit"]');err.textContent='';button.disabled=true;
-    try{const d=await api('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('authLoginEmail').value,password:$('authLoginPassword').value,rememberMe:!!$('authRemember')?.checked})});close();try{setPlayer(d.player);if(d.player?.bannedPermanent||(d.player?.bannedUntil&&Date.parse(d.player.bannedUntil)>Date.now())){const ban={permanent:!!d.player.bannedPermanent,until:d.player.bannedUntil||null,reason:d.player.banReason||null};window.__eixoPendingBan=ban;window.eixoShowBan?.(ban);window.dispatchEvent(new CustomEvent('eixo-ban',{detail:ban}));return;}window.applyLanguage?.();window.loadTopRankings?.();}catch(uiError){console.error('EIXO post-login UI:',uiError);location.reload();}}
+    try{const d=await api('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('authLoginEmail').value,password:$('authLoginPassword').value,rememberMe:!!$('authRemember')?.checked})});close();try{setPlayer(d.player);if(d.player?.bannedPermanent||(d.player?.bannedUntil&&Date.parse(d.player.bannedUntil)>Date.now())){const ban={permanent:!!d.player.bannedPermanent,until:d.player.bannedUntil||null,reason:d.player.banReason||null};window.__eixoPendingBan=ban;window.eixoShowBan?.(ban);window.dispatchEvent(new CustomEvent('eixo-ban',{detail:ban}));return;}if(finishAuthNavigation(d.player))return;window.applyLanguage?.();window.loadTopRankings?.();}catch(uiError){console.error('EIXO post-login UI:',uiError);location.reload();}}
     catch(x){err.textContent=errorText(x.message);}finally{button.disabled=false;}
   });
   registerForm.addEventListener('submit',async e=>{
@@ -113,6 +119,6 @@
   window.eixoOpenAuth=open;
   window.eixoLogout=async()=>{try{await api('/api/auth/logout',{method:'POST'});}catch(_){}setPlayer(null);localStorage.removeItem('eixo_country');location.reload();};
   populateCountries();
-  const p=window.eixoGetPlayer?.();if(p){$('playerName').textContent=p.visualName||p.name;modal.classList.add('hidden');}else{$('playerName').textContent='SIGN IN';showMode('login');}
+  const p=window.eixoGetPlayer?.();if(forcedLogin){$('playerName').textContent=p?.visualName||p?.name||'SIGN IN';open('login');}else if(p){$('playerName').textContent=p.visualName||p.name;modal.classList.add('hidden');}else{$('playerName').textContent='SIGN IN';showMode('login');}
   window.dispatchEvent(new Event('eixo-auth-ready'));
 })();
