@@ -46,6 +46,9 @@ export function preloadAstralArt(scene){
   scene.load.image(ASTRAL_KEYS.chestClosed,EXACT+'chest-closed.webp');
   scene.load.image(ASTRAL_KEYS.chestOpen,EXACT+'chest-open.webp');
   scene.load.image(ASTRAL_KEYS.relic,EXACT+'secret-relic.webp');
+  scene.load.image(ASTRAL_KEYS.arch,EXACT+'arch.webp');
+  scene.load.image(ASTRAL_KEYS.waterfall,EXACT+'waterfall.webp');
+  scene.load.image(ASTRAL_KEYS.crystalCluster,EXACT+'crystal-cluster.webp');
 
   const assets=[
     [ASTRAL_KEYS.sky,'sky.svg'],
@@ -56,9 +59,6 @@ export function preloadAstralArt(scene){
     [ASTRAL_KEYS.platformMedium,'platform-medium.svg'],
     [ASTRAL_KEYS.platformSmall,'platform-small.svg'],
     [ASTRAL_KEYS.movingPlatform,'platform-moving.svg'],
-    [ASTRAL_KEYS.arch,'arch.svg'],
-    [ASTRAL_KEYS.waterfall,'waterfall.svg'],
-    [ASTRAL_KEYS.crystalCluster,'crystal-cluster.svg'],
   ];
   for(const [key,file] of assets) scene.load.svg(key,BASE+file);
 }
