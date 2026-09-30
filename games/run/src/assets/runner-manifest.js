@@ -1,9 +1,21 @@
+import { RUNNER_V2_DATA_A } from './runner-v2-data-a.js';
+import { RUNNER_V2_DATA_B } from './runner-v2-data-b.js';
+import { RUNNER_V2_DATA_C } from './runner-v2-data-c.js';
+import { RUNNER_V2_DATA_D } from './runner-v2-data-d.js';
+
 export const RUNNER_TEXTURE_PREFIX = 'runnerV2:';
 
+const RUNNER_V2_DATA = Object.freeze({
+  ...RUNNER_V2_DATA_A,
+  ...RUNNER_V2_DATA_B,
+  ...RUNNER_V2_DATA_C,
+  ...RUNNER_V2_DATA_D,
+});
+
 export const RUNNER_FRAMES = Object.freeze(Object.fromEntries(
-  ["idle_01","idle_02","idle_03","idle_04","run_01","run_02","run_03","run_04","run_05","run_06","run_07","run_08","skid_01","skid_02","skid_03","jump_start_01","jump_start_02","jump_rise_01","jump_rise_02","apex_01","apex_02","fall_01","fall_02","land_soft_01","land_soft_02","land_hard_01","land_hard_02","land_hard_03","death_01","death_02","death_03","death_04","death_05","victory_01","victory_02","victory_03","victory_04"].map(name => [name, Object.freeze({
+  Object.entries(RUNNER_V2_DATA).map(([name, file]) => [name, Object.freeze({
     key: RUNNER_TEXTURE_PREFIX + name,
-    file: '/games/run/assets/runner/v2/' + name + '.svg',
+    file,
   })])
 ));
 
@@ -14,6 +26,7 @@ export const RUNNER_META = Object.freeze({
   frameCount: 37,
   fixedOutfit: true,
   bakedFx: false,
+  transport: 'embedded-svg-data-uri',
 });
 
 export const RUNNER_ANIMATIONS = Object.freeze({
