@@ -136,14 +136,14 @@ export class MovementLabScene extends Phaser.Scene {
     this.runner.body.enable = false;
     this.animator.update('death', 0);
     this.fx.death(this.runner);
-    this.tweens.add({ targets: this.runner.visual, alpha: 0.18, duration: 280, ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: [this.runner.visual, this.runner.runRig.container], alpha: 0.18, duration: 280, ease: 'Quad.easeOut' });
     this.time.delayedCall(MOVEMENT.respawnMs, () => this.respawn(false));
   }
 
   respawn(manual = false) {
     this.respawning = false;
     this.runner.body.enable = true;
-    this.runner.visual.setAlpha(1);
+    this.runner.setVisualAlpha(1);
     this.runner.setPosition(this.spawn.x, this.spawn.y);
     this.controller.reset();
     this.animator.reset();
@@ -165,15 +165,25 @@ export class MovementLabScene extends Phaser.Scene {
 
     const velocity = this.runner.body.velocity;
     const grounded = this.runner.body.blocked.down || this.runner.body.touching.down;
-    this.debugText.setText([
+    const state = this.controller.getState();
+    const lines = [
       'EIXO RUN — MOVEMENT LAB',
-      `STATE      ${this.controller.getState().toUpperCase()}`,
+      `STATE      ${state.toUpperCase()}`,
       `SPEED X    ${Math.round(velocity.x)} px/s`,
       `SPEED Y    ${Math.round(velocity.y)} px/s`,
       `GROUNDED   ${grounded ? 'YES' : 'NO'}`,
       `COYOTE     ${Math.round(this.controller.coyoteMs)} ms`,
       `BUFFER     ${Math.round(this.controller.jumpBufferMs)} ms`,
       `HITBOX     ${this.hitboxVisible ? 'ON' : 'OFF'}`,
-    ]);
+    ];
+    if (state === 'run') {
+      const pose = this.runner.getRunPose();
+      lines.push(
+        `RIG PHASE   ${pose.phase.toFixed(2)}`,
+        `LEG A/B     ${Math.round(pose.legNearDeg)}° / ${Math.round(pose.legFarDeg)}°`,
+        `ARM A/B     ${Math.round(pose.armNearDeg)}° / ${Math.round(pose.armFarDeg)}°`,
+      );
+    }
+    this.debugText.setText(lines);
   }
 }
