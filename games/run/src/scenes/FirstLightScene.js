@@ -6,6 +6,7 @@ import { RUNNER_ATLAS } from '../assets/runner-manifest.js';
 import { MOVEMENT } from '../config/movement.js';
 import { MovementFx } from '../effects/MovementFx.js';
 import { RunHud } from '../ui/RunHud.js';
+import { ASTRAL_KEYS, preloadAstralArt } from '../art/AstralArt.js';
 
 const WORLD_WIDTH = 9800;
 const WORLD_HEIGHT = 900;
@@ -23,6 +24,7 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   preload() {
+    preloadAstralArt(this);
     this.load.spritesheet(RUNNER_ATLAS.key, RUNNER_ATLAS.file, {
       frameWidth: RUNNER_ATLAS.frameWidth,
       frameHeight: RUNNER_ATLAS.frameHeight,
@@ -73,31 +75,36 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   createAstralBackdrop() {
-    const sky = this.add.graphics().setScrollFactor(0).setDepth(-1000);
-    sky.fillStyle(0x071b43, 1).fillRect(0, 0, 1280, 720);
-    sky.fillStyle(0x0f4f9c, .32).fillRect(0, 0, 1280, 360);
-    sky.fillStyle(0x5a8df5, .10).fillRect(0, 220, 1280, 300);
+    this.add.image(640, 360, ASTRAL_KEYS.sky)
+      .setScrollFactor(0)
+      .setDepth(-1200)
+      .setDisplaySize(1280, 720);
 
-    for (let i = 0; i < 90; i += 1) {
-      const x = (i * 137) % 1280;
-      const y = 24 + ((i * 79) % 330);
-      const radius = i % 9 === 0 ? 2.2 : 1.15;
-      this.add.circle(x, y, radius, i % 7 === 0 ? 0xa8eaff : 0xffffff, .62).setScrollFactor(0.015).setDepth(-990);
+    for (let i = 0; i < 8; i += 1) {
+      this.add.image(720 + i * 1450, 405 + (i % 2) * 18, ASTRAL_KEYS.far)
+        .setScrollFactor(0.12)
+        .setDepth(-980)
+        .setAlpha(0.64)
+        .setScale(0.92 + (i % 3) * 0.04);
+      this.add.image(690 + i * 1390, 505 - (i % 3) * 16, ASTRAL_KEYS.mid)
+        .setScrollFactor(0.28)
+        .setDepth(-820)
+        .setAlpha(0.82)
+        .setScale(0.86 + (i % 2) * 0.07);
     }
 
-    const moon = this.add.circle(970, 164, 128, 0xfff1d6, 1).setScrollFactor(.035).setDepth(-970);
-    moon.setStrokeStyle(10, 0xdcbfff, .18);
-    for (let i = 0; i < 13; i += 1) {
-      this.add.circle(930 + ((i * 47) % 115), 115 + ((i * 31) % 100), 11 + (i % 4) * 5, 0xcbb7d4, .18).setScrollFactor(.035).setDepth(-969);
+    for (let i = 0; i < 9; i += 1) {
+      this.add.image(650 + i * 1210, 810, ASTRAL_KEYS.foreground)
+        .setScrollFactor(1.04)
+        .setDepth(86)
+        .setAlpha(0.68)
+        .setScale(0.9 + (i % 2) * 0.08);
     }
-    const rings = this.add.graphics().setScrollFactor(.035).setDepth(-968);
-    rings.lineStyle(5, 0xffd3ff, .56).strokeEllipse(998, 165, 360, 58);
-    rings.lineStyle(2, 0x8be8ff, .52).strokeEllipse(998, 165, 405, 74);
 
-    this.drawCloudBand(-930, .06, 460, 0xffd6ed, 0.78);
-    this.drawCloudBand(-900, .09, 520, 0xe9d8ff, 0.68);
-    this.drawFarRuins();
-    this.drawMidRuins();
+    const beam = this.add.graphics().setScrollFactor(0.2).setDepth(-790);
+    beam.fillStyle(0x76f5ff, 0.11).fillTriangle(660, 80, 625, 560, 695, 560);
+    beam.lineStyle(3, 0xd8ffff, 0.42).lineBetween(660, 55, 660, 570);
+
     this.drawForegroundMotes();
   }
 
@@ -194,31 +201,41 @@ export class FirstLightScene extends Phaser.Scene {
     this.createSecretCave();
     this.createFinishGate();
     this.addSceneSigns();
+    this.decorateAstralWorld();
   }
 
   addAstralPlatform(x, y, width, height, { large = false, waterfall = false, alt = false } = {}) {
     const container = this.add.container(x, y).setDepth(5);
-    const rock = this.add.graphics();
-    rock.fillStyle(alt ? 0x263b67 : 0x22365e, 1).fillRoundedRect(-width/2, -height/2, width, height, 12);
-    rock.fillStyle(0x435a82, 1).fillRoundedRect(-width/2 + 8, -height/2 + 7, width - 16, 22, 7);
-    rock.fillStyle(0x7d8c96, .28);
-    for (let bx = -width/2 + 16; bx < width/2 - 20; bx += 62) rock.fillRoundedRect(bx, -height/2 + 34, 46, Math.max(20, height - 44), 7);
-    rock.fillStyle(0x83c83d, 1).fillRoundedRect(-width/2 + 4, -height/2 - 7, width - 8, 15, 8);
-    rock.fillStyle(0xd8ed75, .7).fillRoundedRect(-width/2 + 10, -height/2 - 3, width - 20, 5, 3);
-    container.add(rock);
+    const key = width > 430 ? ASTRAL_KEYS.platformLarge : width > 225 ? ASTRAL_KEYS.platformMedium : ASTRAL_KEYS.platformSmall;
+    const art = this.add.image(0, -height / 2 + 1, key)
+      .setOrigin(0.5, 0.12)
+      .setDisplaySize(width + (large ? 70 : 44), Math.max(height * 2.05, width * 0.36))
+      .setAlpha(alt ? 0.94 : 1);
+    if (alt) art.setTint(0xe5dcff);
+    container.add(art);
 
-    const core = this.add.graphics();
-    core.fillStyle(0x0a6cb4, .78).fillCircle(0, height/2 - 8, large ? 28 : 18);
-    core.lineStyle(4, 0x38e5ff, .86).strokeCircle(0, height/2 - 8, large ? 18 : 12);
-    core.fillStyle(0x59f2ff, .35).fillTriangle(-10, height/2 - 1, 0, height/2 + 35, 10, height/2 - 1);
-    container.add(core);
+    if (waterfall) {
+      const wfWidth = Math.min(160, Math.max(82, width * 0.22));
+      const wf = this.add.image(width * 0.23, -height / 2 + 7, ASTRAL_KEYS.waterfall)
+        .setOrigin(0.5, 0.08)
+        .setDisplaySize(wfWidth, 225)
+        .setAlpha(0.9);
+      container.add(wf);
+      this.tweens.add({ targets: wf, alpha: 0.68, scaleX: wf.scaleX * 1.035, duration: 1050, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
 
-    this.addVines(container, width, height);
-    if (waterfall) this.addWaterfall(container, Math.min(115, width * .22), height/2 - 2);
+    if (large && Math.floor(x / 400) % 2 === 0) {
+      const cluster = this.add.image(-width * 0.31, -height / 2 - 20, ASTRAL_KEYS.crystalCluster)
+        .setOrigin(0.5, 1)
+        .setDisplaySize(116, 90)
+        .setAlpha(0.92);
+      container.add(cluster);
+    }
 
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
     container.bodyObject = bodyObject;
+    container.artMeta = { width, height, moving: false };
     this.platforms.push(container);
     return container;
   }
@@ -248,17 +265,19 @@ export class FirstLightScene extends Phaser.Scene {
 
   addMovingPlatform(x, y, width, height, rangeX = 0, duration = 1700, rangeY = 0) {
     const visual = this.add.container(x, y).setDepth(8);
-    const g = this.add.graphics();
-    g.fillStyle(0x263a5c, 1).fillRoundedRect(-width/2, -height/2, width, height, 10);
-    g.fillStyle(0x7fbd3b, 1).fillRoundedRect(-width/2 + 4, -height/2 - 5, width - 8, 13, 7);
-    g.fillStyle(0x0871b8, .92).fillRoundedRect(-width/2 + 16, height/2 - 18, width - 32, 15, 7);
-    g.fillStyle(0x45e9ff, .82);
-    for (let px = -width/2 + 34; px < width/2 - 20; px += 62) g.fillTriangle(px, height/2 - 2, px + 11, height/2 + 26, px + 22, height/2 - 2);
-    visual.add(g);
+    const art = this.add.image(0, -height / 2 + 1, ASTRAL_KEYS.movingPlatform)
+      .setOrigin(0.5, 0.12)
+      .setDisplaySize(width + 54, Math.max(150, width * 0.43));
+    visual.add(art);
+
+    const halo = this.add.ellipse(0, height * 0.5 + 30, width * 0.72, 24, 0x33e8ff, 0.12);
+    visual.add(halo);
+    this.tweens.add({ targets: halo, alpha: 0.03, scaleX: 1.16, duration: 750, yoyo: true, repeat: -1 });
 
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
     visual.bodyObject = bodyObject;
+    visual.artMeta = { width, height, moving: true };
     this.platforms.push(visual);
 
     this.tweens.add({
@@ -279,15 +298,10 @@ export class FirstLightScene extends Phaser.Scene {
 
   addDangerCrystals(x, y, width) {
     const container = this.add.container(x, y).setDepth(10);
-    const g = this.add.graphics();
-    const count = Math.max(3, Math.floor(width / 30));
-    for (let i = 0; i < count; i += 1) {
-      const px = -width/2 + 14 + i * (width / count);
-      const h = 28 + (i % 3) * 18;
-      g.fillStyle(i % 2 ? 0x8a0f2c : 0xec244e, 1).fillTriangle(px - 12, 0, px, -h, px + 12, 0);
-      g.lineStyle(2, 0xff5578, .65).lineBetween(px, -h + 5, px, -4);
-    }
-    container.add(g);
+    const art = this.add.image(0, 2, ASTRAL_KEYS.spikes)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(width + 34, Math.max(70, width * 0.5));
+    container.add(art);
     const bodyObject = this.add.rectangle(x, y - 18, width, 42, 0xff0000, 0);
     this.physics.add.existing(bodyObject, true);
     container.bodyObject = bodyObject;
@@ -296,15 +310,12 @@ export class FirstLightScene extends Phaser.Scene {
 
   addBreakableBlock(x, y, width, height) {
     const container = this.add.container(x, y).setDepth(9);
-    const g = this.add.graphics();
-    g.fillStyle(0x566079, 1).fillRoundedRect(-width/2, -height/2, width, height, 8);
-    g.lineStyle(3, 0x98a5b6, .7).strokeRoundedRect(-width/2, -height/2, width, height, 8);
-    g.lineStyle(3, 0x3de0ff, .7);
-    g.lineBetween(-10,-height/2+7,5,-8);g.lineBetween(5,-8,-6,13);g.lineBetween(-6,13,18,height/2-7);
-    container.add(g);
+    const art = this.add.image(0, 0, ASTRAL_KEYS.breakable)
+      .setDisplaySize(width * 1.32, height * 1.32);
+    container.add(art);
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
-    const item = { container, bodyObject, broken: false };
+    const item = { container, bodyObject, art, broken: false };
     this.breakables.push(item);
     return item;
   }
@@ -322,17 +333,14 @@ export class FirstLightScene extends Phaser.Scene {
 
   addShard(x, y, index) {
     const container = this.add.container(x, y).setDepth(16);
-    const glow = this.add.circle(0, 0, 30, 0x24dfff, .12);
-    const diamond = this.add.polygon(0, 0, [0,-24,13,0,0,24,-13,0], 0x2cdfff, 1);
-    diamond.setStrokeStyle(2, 0xc7fbff, 1);
-    const core = this.add.polygon(0, 0, [0,-15,6,0,0,15,-6,0], 0xbefaff, .78);
-    container.add([glow, diamond, core]);
-    const bodyObject = this.add.rectangle(x, y, 34, 48, 0xffffff, 0);
+    const art = this.add.image(0, 0, ASTRAL_KEYS.shard).setDisplaySize(54, 74);
+    container.add(art);
+    const bodyObject = this.add.rectangle(x, y, 36, 56, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
-    const shard = { container, bodyObject, index, collected: false };
+    const shard = { container, bodyObject, art, index, collected: false };
     this.shards.push(shard);
     this.tweens.add({ targets: container, y: y - 9, duration: 900 + (index % 4) * 110, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.tweens.add({ targets: glow, scale: 1.35, alpha: .03, duration: 720, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: art, angle: 3, duration: 900 + (index % 5) * 80, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     return shard;
   }
 
@@ -348,43 +356,43 @@ export class FirstLightScene extends Phaser.Scene {
 
   addCheckpoint(x, y, spawn, index) {
     const container = this.add.container(x, y).setDepth(15);
-    const base = this.add.rectangle(0, 39, 86, 26, 0x283a58, 1).setStrokeStyle(2, 0x63dfff, .7);
-    const poleL = this.add.rectangle(-30, -30, 7, 120, 0xc49a52, 1);
-    const poleR = this.add.rectangle(30, -30, 7, 120, 0xc49a52, 1);
-    const banner = this.add.rectangle(0, -32, 55, 92, 0x322879, 1).setStrokeStyle(2, 0xe0b55a, .85);
-    const emblem = this.add.text(0, -35, '◈', { fontFamily: 'Arial Black', fontSize: '30px', color: '#dffbff' }).setOrigin(.5);
-    const glow = this.add.ellipse(0, 49, 96, 20, 0x20dfff, .24);
-    container.add([base, poleL, poleR, banner, emblem, glow]);
-    const trigger = this.add.rectangle(x, y, 100, 150, 0xffffff, 0);
+    const art = this.add.image(0, -34, ASTRAL_KEYS.checkpointOff)
+      .setOrigin(0.5, 0.5)
+      .setDisplaySize(120, 177);
+    container.add(art);
+    const trigger = this.add.rectangle(x, y, 105, 160, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
-    const cp = { container, trigger, spawn, index, active: false, banner, glow };
+    const cp = { container, trigger, spawn, index, active: false, art };
     this.checkpoints.push(cp);
-    this.tweens.add({ targets: glow, alpha: .08, scaleX: 1.2, duration: 900, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: art, y: -38, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     return cp;
   }
 
   activateCheckpoint(cp) {
     if (cp.active || this.finished) return;
-    this.checkpoints.forEach(other => { if (other !== cp) other.active = false; });
+    this.checkpoints.forEach(other => {
+      if (other !== cp) {
+        other.active = false;
+        other.art?.setTexture(ASTRAL_KEYS.checkpointOff);
+      }
+    });
     cp.active = true;
+    cp.art.setTexture(ASTRAL_KEYS.checkpointOn);
     this.checkpointSpawn = { ...cp.spawn };
     this.checkpointIndex = cp.index;
-    cp.banner.setFillStyle(0x45308d, 1);
-    cp.glow.setFillStyle(0xffbd44, .55);
     this.hud.setCheckpoint(cp.index);
     this.fx.burst(cp.container.x, cp.container.y + 30, { count: 22, spreadX: 190, speedY: 180, life: 520, color: 0xffc94b, size: 4.5, gravity: 40 });
+    this.tweens.add({ targets: cp.art, scaleX: cp.art.scaleX * 1.08, scaleY: cp.art.scaleY * 1.08, duration: 150, yoyo: true, ease: 'Quad.easeOut' });
   }
 
   addBouncePad(x, y) {
     const container = this.add.container(x, y).setDepth(11);
-    const base = this.add.ellipse(0, 0, 106, 32, 0x11375c, 1).setStrokeStyle(2, 0x40e7ff, .9);
-    const ring = this.add.ellipse(0, -3, 74, 18, 0x1bdcff, .20).setStrokeStyle(3, 0x8cf4ff, .9);
-    const arrows = this.add.text(0, -35, '⌃⌃', { fontFamily: 'Arial Black', fontSize: '30px', color: '#8af4ff' }).setOrigin(.5);
-    container.add([base, ring, arrows]);
-    const trigger = this.add.rectangle(x, y - 16, 95, 32, 0xffffff, 0);
+    const art = this.add.image(0, -12, ASTRAL_KEYS.bounce).setDisplaySize(145, 99);
+    container.add(art);
+    const trigger = this.add.rectangle(x, y - 16, 100, 36, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
-    this.tweens.add({ targets: arrows, y: -44, alpha: .35, duration: 650, yoyo: true, repeat: -1 });
-    return { container, trigger, coolUntil: 0 };
+    this.tweens.add({ targets: art, scaleX: art.scaleX * 1.035, scaleY: art.scaleY * 1.035, duration: 660, yoyo: true, repeat: -1 });
+    return { container, trigger, art, coolUntil: 0 };
   }
 
   triggerBounce() {
@@ -396,12 +404,11 @@ export class FirstLightScene extends Phaser.Scene {
 
   addSpeedStrip(x, y) {
     const container = this.add.container(x, y).setDepth(11);
-    const base = this.add.rectangle(0, 0, 160, 26, 0x173557, 1).setStrokeStyle(2, 0x35dfff, .8);
-    const arrows = this.add.text(0, -1, '≫≫', { fontFamily: 'Arial Black', fontSize: '30px', color: '#5cecff' }).setOrigin(.5);
-    container.add([base, arrows]);
-    const trigger = this.add.rectangle(x, y - 20, 160, 54, 0xffffff, 0);
+    const art = this.add.image(0, -12, ASTRAL_KEYS.speed).setDisplaySize(175, 58);
+    container.add(art);
+    const trigger = this.add.rectangle(x, y - 20, 165, 54, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
-    return { container, trigger, coolUntil: 0 };
+    return { container, trigger, art, coolUntil: 0 };
   }
 
   triggerSpeedStrip() {
@@ -414,29 +421,35 @@ export class FirstLightScene extends Phaser.Scene {
   createSecretCave() {
     const x = 5650, y = 730;
     this.addAstralPlatform(x, 820, 500, 64, { alt: true });
-    const cave = this.add.container(x, y).setDepth(3);
-    const g = this.add.graphics();
-    g.fillStyle(0x10192c, 1).fillRoundedRect(-210, -120, 420, 180, 70);
-    g.lineStyle(13, 0x31415e, 1).strokeRoundedRect(-210, -120, 420, 180, 70);
-    g.fillStyle(0x17395e, .8).fillCircle(-125, -32, 28);
-    g.fillStyle(0x24dfff, .55).fillTriangle(-140,-12,-125,-70,-110,-12);
-    cave.add(g);
-    this.add.text(x, y - 155, 'SEGREDO', { fontFamily: 'Arial Black', fontSize: '13px', color: '#8feeff', backgroundColor: '#07101ddd', padding: { x: 8, y: 4 } }).setOrigin(.5).setDepth(20);
 
-    const chest = this.add.container(x + 75, y - 18).setDepth(13);
-    const base = this.add.rectangle(0, 0, 92, 52, 0x24365a, 1).setStrokeStyle(5, 0xd7a63c, 1);
-    const lid = this.add.arc(0, -24, 46, 180, 360, false, 0x2d4d7c, 1).setStrokeStyle(5, 0xe1b84c, 1);
-    const gem = this.add.circle(0, -2, 9, 0x27dfff, 1).setStrokeStyle(3, 0xe6fdff, 1);
-    chest.add([base, lid, gem]);
-    const trigger = this.add.rectangle(x + 75, y - 18, 120, 90, 0xffffff, 0);
+    const shadow = this.add.ellipse(x, y + 4, 470, 285, 0x061020, 0.83).setDepth(2);
+    const arch = this.add.image(x, y + 82, ASTRAL_KEYS.arch)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(430, 370)
+      .setDepth(3)
+      .setTint(0x8fa7d9);
+    const crystals = this.add.image(x - 145, y + 66, ASTRAL_KEYS.crystalCluster)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(150, 115)
+      .setDepth(4);
+
+    this.add.text(x, y - 160, 'SEGREDO', { fontFamily: 'Arial Black', fontSize: '13px', color: '#8feeff', backgroundColor: '#07101ddd', padding: { x: 8, y: 4 } }).setOrigin(.5).setDepth(20);
+
+    const chest = this.add.container(x + 82, y + 38).setDepth(13);
+    const chestArt = this.add.image(0, 0, ASTRAL_KEYS.chestClosed).setDisplaySize(126, 105);
+    chest.add(chestArt);
+    const trigger = this.add.rectangle(x + 82, y + 38, 132, 100, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
-    this.relic = { chest, trigger, found: false };
+    this.relic = { chest, chestArt, trigger, found: false, shadow, arch, crystals };
   }
 
   collectRelic() {
     if (this.relic.found || this.finished) return;
     this.relic.found = true;
     this.relicFound = true;
+    this.relic.chestArt?.setTexture(ASTRAL_KEYS.chestOpen);
+    const relicArt = this.add.image(this.relic.chest.x, this.relic.chest.y - 78, ASTRAL_KEYS.relic).setDisplaySize(112, 108).setDepth(14).setAlpha(0);
+    this.tweens.add({ targets: relicArt, alpha: 1, y: relicArt.y - 18, duration: 320, ease: 'Back.easeOut' });
     this.relic.trigger.body.enable = false;
     this.fx.burst(this.relic.chest.x, this.relic.chest.y - 25, { count: 28, spreadX: 230, speedY: 230, life: 650, color: 0xffd35f, size: 5, gravity: 50 });
     this.tweens.add({ targets: this.relic.chest, y: this.relic.chest.y - 18, duration: 180, yoyo: true, ease: 'Quad.easeOut' });
@@ -446,19 +459,13 @@ export class FirstLightScene extends Phaser.Scene {
 
   createFinishGate() {
     const x = 9490, y = 520;
-    const gate = this.add.container(x, y).setDepth(14);
-    const g = this.add.graphics();
-    g.lineStyle(18, 0x7786a4, 1).strokeCircle(0, 0, 94);
-    g.lineStyle(5, 0x30e7ff, .85).strokeCircle(0, 0, 72);
-    g.fillStyle(0x24ddff, .13).fillCircle(0, 0, 70);
-    g.fillStyle(0x8193ab, 1).fillRect(-104, 78, 26, 95);
-    g.fillRect(78, 78, 26, 95);
-    g.fillStyle(0x91c83f, 1).fillRoundedRect(-110, 158, 220, 20, 8);
-    gate.add(g);
-    const symbol = this.add.text(0, -3, '⚑', { fontFamily: 'Arial Black', fontSize: '64px', color: '#ffffff' }).setOrigin(.5);
-    gate.add(symbol);
-    this.tweens.add({ targets: symbol, alpha: .45, duration: 700, yoyo: true, repeat: -1 });
-    this.finishTrigger = this.add.rectangle(x, y, 160, 220, 0xffffff, 0);
+    const gate = this.add.image(x, y + 52, ASTRAL_KEYS.finish)
+      .setOrigin(0.5, 0.5)
+      .setDisplaySize(275, 305)
+      .setDepth(14);
+    this.finishGateArt = gate;
+    this.tweens.add({ targets: gate, scaleX: gate.scaleX * 1.018, scaleY: gate.scaleY * 1.018, duration: 980, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.finishTrigger = this.add.rectangle(x, y, 170, 235, 0xffffff, 0);
     this.physics.add.existing(this.finishTrigger, true);
   }
 
@@ -467,10 +474,22 @@ export class FirstLightScene extends Phaser.Scene {
       [1080, 500, 'SALTA'], [3180, 540, 'BOUNCE'], [3620, 510, 'ROTA ↑'], [5560, 610, 'SEGREDO ↓'], [7330, 535, 'BOOST'], [8850, 540, 'FINAL →'],
     ];
     for (const [x,y,label] of signs) {
-      const post = this.add.rectangle(x, y, 8, 76, 0x6c5a46, 1).setDepth(7);
-      const plate = this.add.rectangle(x + 18, y - 38, 110, 38, 0x162743, 1).setStrokeStyle(2, 0x31dfff, .65).setDepth(7);
-      this.add.text(x + 18, y - 39, label, { fontFamily: 'Arial Black', fontSize: '12px', color: '#d9f8ff' }).setOrigin(.5).setDepth(8);
+      const post = this.add.rectangle(x, y, 7, 70, 0x6a5540, 1).setDepth(7);
+      const plate = this.add.rectangle(x + 18, y - 38, 112, 36, 0x13253f, 0.95).setStrokeStyle(2, 0x4de8ff, 0.72).setDepth(7);
+      this.add.text(x + 18, y - 39, label, { fontFamily: 'Arial Black', fontSize: '11px', color: '#eaffff' }).setOrigin(.5).setDepth(8);
       this.decor.push(post, plate);
+    }
+  }
+
+  decorateAstralWorld() {
+    const arches = [[1510,585,0.72],[4300,550,0.62],[6880,565,0.7],[8740,545,0.58]];
+    for (const [x,y,scale] of arches) {
+      this.add.image(x, y, ASTRAL_KEYS.arch).setOrigin(0.5,1).setScale(scale).setDepth(2).setAlpha(0.92);
+    }
+    const clusters = [[880,606,.62],[1880,610,.55],[3920,534,.52],[6000,605,.58],[8380,522,.5],[9270,603,.6]];
+    for (const [x,y,scale] of clusters) {
+      const art = this.add.image(x, y, ASTRAL_KEYS.crystalCluster).setOrigin(0.5,1).setScale(scale).setDepth(7);
+      this.tweens.add({ targets: art, alpha: 0.72, duration: 1200 + (x % 700), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
   }
 
