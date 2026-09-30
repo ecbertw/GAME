@@ -1,3 +1,5 @@
+import { ASTRAL_KEYS } from '../art/AstralArt.js';
+
 export class RunHud {
   constructor(scene, { totalShards = 0, worldWidth = 1 } = {}) {
     this.scene = scene;
@@ -17,10 +19,22 @@ export class RunHud {
   }
 
   panel(x, y, width, height, accent = 0x20c8ff) {
+    const cut = 12;
+    const pts = [
+      new Phaser.Geom.Point(x + cut, y),
+      new Phaser.Geom.Point(x + width - cut, y),
+      new Phaser.Geom.Point(x + width, y + cut),
+      new Phaser.Geom.Point(x + width, y + height - cut),
+      new Phaser.Geom.Point(x + width - cut, y + height),
+      new Phaser.Geom.Point(x + cut, y + height),
+      new Phaser.Geom.Point(x, y + height - cut),
+      new Phaser.Geom.Point(x, y + cut),
+    ];
     const g = this.scene.add.graphics();
-    g.fillStyle(0x061225, 0.90).fillRoundedRect(x, y, width, height, 10);
-    g.lineStyle(1.5, accent, 0.72).strokeRoundedRect(x, y, width, height, 10);
-    g.fillStyle(accent, 0.95).fillRect(x, y + 8, 4, height - 16);
+    g.fillStyle(0x061225, 0.94).fillPoints(pts, true);
+    g.lineStyle(1.7, accent, 0.92).strokePoints(pts, true);
+    g.fillStyle(accent, 1).fillRect(x + 5, y + 10, 4, height - 20);
+    g.lineStyle(1, 0xffffff, 0.08).lineBetween(x + 18, y + 5, x + width - 22, y + 5);
     this.root.add(g);
     return g;
   }
@@ -36,9 +50,11 @@ export class RunHud {
     this.scene.add.text(246, 27, 'PB', { fontFamily: 'Arial Black, sans-serif', fontSize: '13px', color: '#d9e8ff' }).setScrollFactor(0).setDepth(5001);
     this.pbText = this.scene.add.text(246, 43, '— ADMIN RUN —', { fontFamily: 'Arial Black, sans-serif', fontSize: '16px', color: '#ff3159' }).setScrollFactor(0).setDepth(5001);
 
-    this.shardIcon = this.scene.add.polygon(485, 45, [0,-20,12,0,0,20,-12,0], 0x38dcff, 1).setScrollFactor(0).setDepth(5001);
-    this.shardIcon.setStrokeStyle(2, 0xbaf6ff, 1);
-    this.shardText = this.scene.add.text(514, 31, `× 0 / ${this.totalShards}`, { fontFamily: 'Arial Black, sans-serif', fontSize: '20px', color: '#ffffff' }).setScrollFactor(0).setDepth(5001);
+    this.shardIcon = this.scene.add.image(486, 45, ASTRAL_KEYS.shard)
+      .setDisplaySize(40, 54)
+      .setScrollFactor(0)
+      .setDepth(5001);
+    this.shardText = this.scene.add.text(518, 31, `× 0 / ${this.totalShards}`, { fontFamily: 'Arial Black, sans-serif', fontSize: '20px', color: '#ffffff' }).setScrollFactor(0).setDepth(5001);
   }
 
   createProgress() {
@@ -51,13 +67,37 @@ export class RunHud {
   }
 
   createTitleCard() {
+    const x = 30, y = 100, w = 590, h = 104;
+    const cut = 12;
+    const pts = [
+      new Phaser.Geom.Point(x + cut, y),
+      new Phaser.Geom.Point(x + w - cut, y),
+      new Phaser.Geom.Point(x + w, y + cut),
+      new Phaser.Geom.Point(x + w, y + h - cut),
+      new Phaser.Geom.Point(x + w - cut, y + h),
+      new Phaser.Geom.Point(x + cut, y + h),
+      new Phaser.Geom.Point(x, y + h - cut),
+      new Phaser.Geom.Point(x, y + cut),
+    ];
     const g = this.scene.add.graphics().setScrollFactor(0).setDepth(5100);
-    g.fillStyle(0x061225, 0.94).fillRoundedRect(30, 100, 525, 94, 10);
-    g.lineStyle(1.4, 0x22ceff, 0.75).strokeRoundedRect(30, 100, 525, 94, 10);
-    g.fillStyle(0xf02b4f, 1).fillRect(30, 100, 7, 94);
-    const title = this.scene.add.text(55, 118, 'ASTRAL 01 — FIRST LIGHT', { fontFamily: 'Arial Black, sans-serif', fontSize: '24px', color: '#ffffff' }).setScrollFactor(0).setDepth(5101);
-    const sub = this.scene.add.text(56, 154, 'RUÍNAS CELESTIAIS · ILHAS FLUTUANTES · SHARDS · ROTAS ALTERNATIVAS', { fontSize: '11px', fontStyle: 'bold', color: '#8de9ff', letterSpacing: 1 }).setScrollFactor(0).setDepth(5101);
-    this.scene.tweens.add({ targets: [g, title, sub], alpha: 0, delay: 2800, duration: 650, ease: 'Quad.easeOut' });
+    g.fillStyle(0x061225, 0.96).fillPoints(pts, true);
+    g.lineStyle(1.6, 0x22ceff, 0.84).strokePoints(pts, true);
+    g.fillStyle(0xf02b4f, 1).fillRect(x + 6, y + 12, 5, h - 24);
+
+    const preview = this.scene.add.image(x + w - 116, y + h / 2, ASTRAL_KEYS.exactConcept)
+      .setDisplaySize(205, 82)
+      .setCrop(0, 0, 1280, 404)
+      .setScrollFactor(0)
+      .setDepth(5101);
+    const veil = this.scene.add.rectangle(x + w - 116, y + h / 2, 205, 82, 0x03101f, 0.18)
+      .setScrollFactor(0)
+      .setDepth(5102);
+
+    const title = this.scene.add.text(55, 116, 'ASTRAL 01', { fontFamily: 'Arial Black, sans-serif', fontSize: '23px', color: '#ffffff' }).setScrollFactor(0).setDepth(5103);
+    const name = this.scene.add.text(55, 145, 'FIRST LIGHT', { fontFamily: 'Arial Black, sans-serif', fontSize: '17px', color: '#8de9ff', letterSpacing: 1 }).setScrollFactor(0).setDepth(5103);
+    const sub = this.scene.add.text(56, 174, 'RUÍNAS CELESTIAIS · ILHAS FLUTUANTES · SHARDS', { fontSize: '10px', fontStyle: 'bold', color: '#b6c9df' }).setScrollFactor(0).setDepth(5103);
+
+    this.scene.tweens.add({ targets: [g, preview, veil, title, name, sub], alpha: 0, delay: 3000, duration: 650, ease: 'Quad.easeOut' });
   }
 
   createPauseHint() {
@@ -98,19 +138,45 @@ export class RunHud {
     const secs = Math.floor(seconds % 60);
     const cent = Math.floor((seconds % 1) * 100);
     const formatted = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}.${String(cent).padStart(2,'0')}`;
+    const rank = shards === totalShards && relicFound ? 'S+' : shards >= Math.ceil(totalShards * .75) ? 'S' : 'A';
 
-    const shade = this.scene.add.rectangle(640, 360, 1280, 720, 0x020713, 0.68).setScrollFactor(0).setDepth(9000);
+    const shade = this.scene.add.rectangle(640, 360, 1280, 720, 0x020713, 0.72).setScrollFactor(0).setDepth(9000);
     const card = this.scene.add.graphics().setScrollFactor(0).setDepth(9001);
-    card.fillStyle(0x071426, 0.98).fillRoundedRect(285, 145, 710, 430, 18);
-    card.lineStyle(2, 0x2ad9ff, 0.85).strokeRoundedRect(285, 145, 710, 430, 18);
-    card.fillStyle(0xf02b4f, 1).fillRect(285, 145, 8, 430);
+    const x = 250, y = 135, w = 780, h = 450, cut = 20;
+    const pts = [
+      new Phaser.Geom.Point(x + cut, y),
+      new Phaser.Geom.Point(x + w - cut, y),
+      new Phaser.Geom.Point(x + w, y + cut),
+      new Phaser.Geom.Point(x + w, y + h - cut),
+      new Phaser.Geom.Point(x + w - cut, y + h),
+      new Phaser.Geom.Point(x + cut, y + h),
+      new Phaser.Geom.Point(x, y + h - cut),
+      new Phaser.Geom.Point(x, y + cut),
+    ];
+    card.fillStyle(0x071426, 0.985).fillPoints(pts, true);
+    card.lineStyle(2, 0x2ad9ff, 0.88).strokePoints(pts, true);
+    card.fillStyle(0xf02b4f, 1).fillRect(x + 7, y + 20, 6, h - 40);
 
-    this.scene.add.text(330, 180, 'RESULTADOS', { fontFamily: 'Arial Black, sans-serif', fontSize: '34px', color: '#ffffff' }).setScrollFactor(0).setDepth(9002);
-    this.scene.add.text(330, 235, 'ASTRAL 01 — FIRST LIGHT', { fontFamily: 'Arial Black, sans-serif', fontSize: '17px', color: '#7fe7ff' }).setScrollFactor(0).setDepth(9002);
-    this.scene.add.text(330, 292, `TEMPO        ${formatted}\nSHARDS       ${shards} / ${totalShards}\nRELÍQUIA      ${relicFound ? 'DESCOBERTA' : 'NÃO ENCONTRADA'}`, { fontFamily: 'monospace', fontSize: '21px', color: '#eaf5ff', lineSpacing: 16 }).setScrollFactor(0).setDepth(9002);
-    this.scene.add.text(760, 276, shards === totalShards && relicFound ? 'S+' : shards >= Math.ceil(totalShards * .75) ? 'S' : 'A', { fontFamily: 'Arial Black, sans-serif', fontSize: '116px', fontStyle: 'italic', color: '#ffd45a', stroke: '#b66b00', strokeThickness: 4 }).setScrollFactor(0).setDepth(9002);
-    this.scene.add.text(640, 500, 'ENTER · RECOMEÇAR     |     H · EIXO HOME', { fontFamily: 'Arial Black, sans-serif', fontSize: '14px', color: '#bcd0ea' }).setOrigin(.5).setScrollFactor(0).setDepth(9002);
+    const preview = this.scene.add.image(390, 322, ASTRAL_KEYS.exactConcept)
+      .setDisplaySize(245, 238)
+      .setScrollFactor(0)
+      .setDepth(9002);
+    const previewFrame = this.scene.add.rectangle(390, 322, 249, 242, 0x000000, 0)
+      .setStrokeStyle(2, 0x2ad9ff, 0.55)
+      .setScrollFactor(0)
+      .setDepth(9003);
 
-    this.finishObjects = [shade, card];
+    this.scene.add.text(300, 170, 'RESULTADOS', { fontFamily: 'Arial Black, sans-serif', fontSize: '31px', color: '#ffffff' }).setScrollFactor(0).setDepth(9004);
+    this.scene.add.text(550, 190, 'ASTRAL 01 — FIRST LIGHT', { fontFamily: 'Arial Black, sans-serif', fontSize: '18px', color: '#7fe7ff' }).setScrollFactor(0).setDepth(9004);
+    this.scene.add.text(550, 248, `TEMPO        ${formatted}\nSHARDS       ${shards} / ${totalShards}\nRELÍQUIA      ${relicFound ? 'DESCOBERTA' : 'NÃO ENCONTRADA'}`, { fontFamily: 'monospace', fontSize: '20px', color: '#eaf5ff', lineSpacing: 18 }).setScrollFactor(0).setDepth(9004);
+    this.scene.add.text(820, 330, rank, { fontFamily: 'Arial Black, sans-serif', fontSize: '110px', fontStyle: 'italic', color: '#ffd45a', stroke: '#b66b00', strokeThickness: 4 }).setOrigin(.5).setScrollFactor(0).setDepth(9004);
+    this.scene.add.text(820, 408, 'RANK', { fontFamily: 'Arial Black, sans-serif', fontSize: '14px', color: '#ffd977', letterSpacing: 4 }).setOrigin(.5).setScrollFactor(0).setDepth(9004);
+
+    const button = this.scene.add.graphics().setScrollFactor(0).setDepth(9003);
+    button.fillStyle(0x101f34, 1).fillRoundedRect(470, 500, 340, 48, 8);
+    button.lineStyle(1.5, 0x37dfff, 0.7).strokeRoundedRect(470, 500, 340, 48, 8);
+    this.scene.add.text(640, 524, 'ENTER · RECOMEÇAR   |   H · EIXO HOME', { fontFamily: 'Arial Black, sans-serif', fontSize: '12px', color: '#d7e6f7' }).setOrigin(.5).setScrollFactor(0).setDepth(9004);
+
+    this.finishObjects = [shade, card, preview, previewFrame, button];
   }
 }
