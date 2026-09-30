@@ -84,9 +84,8 @@ export class RunHud {
     g.lineStyle(1.6, 0x22ceff, 0.84).strokePoints(pts, true);
     g.fillStyle(0xf02b4f, 1).fillRect(x + 6, y + 12, 5, h - 24);
 
-    const preview = this.scene.add.image(x + w - 116, y + h / 2, ASTRAL_BG.sky)
+    const preview = this.scene.add.image(x + w - 116, y + h / 2, ASTRAL_BG.world)
       .setDisplaySize(205, 82)
-      .setCrop(0, 0, 1280, 404)
       .setScrollFactor(0)
       .setDepth(5101);
     const veil = this.scene.add.rectangle(x + w - 116, y + h / 2, 205, 82, 0x03101f, 0.18)
@@ -157,7 +156,7 @@ export class RunHud {
     card.lineStyle(2, 0x2ad9ff, 0.88).strokePoints(pts, true);
     card.fillStyle(0xf02b4f, 1).fillRect(x + 7, y + 20, 6, h - 40);
 
-    const preview = this.scene.add.image(390, 322, ASTRAL_BG.sky)
+    const preview = this.scene.add.image(390, 322, ASTRAL_BG.world)
       .setDisplaySize(245, 238)
       .setScrollFactor(0)
       .setDepth(9002);
