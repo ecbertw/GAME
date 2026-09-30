@@ -1,12 +1,24 @@
+import p0 from './approved-runner-data/part0.js';
+import p1 from './approved-runner-data/part1.js';
+import p2 from './approved-runner-data/part2.js';
+import p3 from './approved-runner-data/part3.js';
+import p4 from './approved-runner-data/part4.js';
+import p5 from './approved-runner-data/part5.js';
+import p6 from './approved-runner-data/part6.js';
+import p7 from './approved-runner-data/part7.js';
+
+const APPROVED_RUNNER_DATA = 'data:image/webp;base64,' + p0 + p1 + p2 + p3 + p4 + p5 + p6 + p7;
+
 export const RUNNER_ATLAS = Object.freeze({
   key: 'approvedRunnerAtlas',
-  file: '/assets/run/runner/approved-runner-atlas.webp?v=approved-runner-20260930-01',
-  frameWidth: 256,
-  frameHeight: 256,
+  file: APPROVED_RUNNER_DATA,
+  frameWidth: 128,
+  frameHeight: 128,
   originX: 0.5,
   originY: 0.875,
-  source: 'atlas_de_sprites_do_corredor_anime.png',
+  source: 'approved EIXO RUN anime/chibi sprite atlas',
   concept: 'EIXO RUN approved Runner',
+  transport: 'embedded-webp-data-uri',
 });
 
 export const RUNNER_FRAME_INDEX = Object.freeze({
