@@ -1,5 +1,6 @@
 import { MOVEMENT } from '../config/movement.js';
 import { RUNNER_ATLAS, RUNNER_FRAME_INDEX } from '../assets/runner-manifest.js';
+import { RunnerRig } from './RunnerRig.js';
 
 export class Runner {
   constructor(scene, x, y) {
@@ -15,6 +16,10 @@ export class Runner {
     this.visual = scene.add.image(x, y, RUNNER_ATLAS.key, RUNNER_FRAME_INDEX.idle_01).setDepth(20);
     this.visual.setScale(MOVEMENT.spriteScale);
     this.visual.setOrigin(RUNNER_ATLAS.originX, RUNNER_ATLAS.originY);
+
+    this.runRig = new RunnerRig(scene);
+    this.runRig.setVisible(false);
+
     this.setFrame('idle_01');
     this.syncVisual();
   }
@@ -30,14 +35,39 @@ export class Runner {
     this.visual.setFlipX(this.facing < 0);
   }
 
+  showRunRig() {
+    this.visual.setVisible(false);
+    this.runRig.setVisible(true);
+  }
+
+  hideRunRig() {
+    this.runRig.setVisible(false);
+    this.visual.setVisible(true);
+  }
+
+  setRunPhase(phase) {
+    this.runRig.applyPhase(phase);
+  }
+
+  getRunPose() {
+    return this.runRig.pose;
+  }
+
   setFacing(direction) {
     if (direction) this.facing = direction < 0 ? -1 : 1;
     this.visual.setFlipX(this.facing < 0);
+    this.runRig.setFacing(this.facing);
+  }
+
+  setVisualAlpha(alpha) {
+    this.visual.setAlpha(alpha);
+    this.runRig.setAlpha(alpha);
   }
 
   syncVisual() {
     const feetY = this.collider.y + MOVEMENT.bodyHeight / 2 + 2;
     this.visual.setPosition(Math.round(this.collider.x), Math.round(feetY));
+    this.runRig.setPosition(this.collider.x, feetY);
   }
 
   setPosition(x, y) {
@@ -47,6 +77,7 @@ export class Runner {
   }
 
   destroy() {
+    this.runRig.destroy();
     this.visual.destroy();
     this.collider.destroy();
   }
