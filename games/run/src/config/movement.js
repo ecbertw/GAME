@@ -21,7 +21,7 @@ export const MOVEMENT = Object.freeze({
   hardLandingHoldMs: 132,
   hardLandingSpeed: 820,
   respawnMs: 425,
-  spriteScale: 0.62,
+  spriteScale: 1.0,
   runCycleDistance: 260,
   cameraLookAhead: 165,
   cameraLookAheadRate: 6.5,
