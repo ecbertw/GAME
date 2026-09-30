@@ -2,7 +2,7 @@ import { Runner } from '../player/Runner.js';
 import { RunnerController } from '../player/RunnerController.js';
 import { RunnerAnimator } from '../player/RunnerAnimator.js';
 import { RunCamera } from '../camera/RunCamera.js';
-import { RUNNER_FRAMES, RUNNER_TEXTURE_PREFIX } from '../assets/runner-manifest.js';
+import { RUNNER_ATLAS } from '../assets/runner-manifest.js';
 import { MOVEMENT } from '../config/movement.js';
 import { MovementFx } from '../effects/MovementFx.js';
 
@@ -14,11 +14,14 @@ export class MovementLabScene extends Phaser.Scene {
   }
 
   preload() {
-    this.failedRunnerAssets = [];
+    this.runnerAssetFailed = false;
     this.load.on('loaderror', file => {
-      if (file && String(file.key || '').startsWith(RUNNER_TEXTURE_PREFIX)) this.failedRunnerAssets.push(file.key);
+      if (file && file.key === RUNNER_ATLAS.key) this.runnerAssetFailed = true;
     });
-    for (const asset of Object.values(RUNNER_FRAMES)) this.load.image(asset.key, asset.file);
+    this.load.spritesheet(RUNNER_ATLAS.key, RUNNER_ATLAS.file, {
+      frameWidth: RUNNER_ATLAS.frameWidth,
+      frameHeight: RUNNER_ATLAS.frameHeight,
+    });
   }
 
   create() {
@@ -42,9 +45,8 @@ export class MovementLabScene extends Phaser.Scene {
     this.addHazard(2215, 582, 90, 20);
     this.addHazard(2910, 582, 120, 20);
 
-    const missingRunnerAssets = Object.values(RUNNER_FRAMES).filter(asset => !this.textures.exists(asset.key));
-    if (this.failedRunnerAssets.length || missingRunnerAssets.length) {
-      this.add.text(640, 230, 'RUNNER V2 ASSET FAILED\n' + (this.failedRunnerAssets.length + missingRunnerAssets.length) + ' frame(s) unavailable.', {
+    if (this.runnerAssetFailed || !this.textures.exists(RUNNER_ATLAS.key)) {
+      this.add.text(640, 230, 'APPROVED RUNNER ASSET FAILED\nThe approved EIXO RUN atlas did not load.', {
         align: 'center', fontFamily: 'monospace', fontSize: '22px', color: '#ff6d8a',
         backgroundColor: '#220914dd', padding: { x: 18, y: 14 },
       }).setOrigin(0.5).setScrollFactor(0).setDepth(2000);
