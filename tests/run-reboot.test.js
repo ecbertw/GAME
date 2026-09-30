@@ -91,6 +91,7 @@ test('RUN lab redirects expired admin sessions into a safe login-return flow',()
   assert.match(server,/auth=login&next=%2Frun-lab/);
   assert.match(server,/url\.pathname==='\/run-lab'/);
   assert.match(server,/url\.pathname\.startsWith\('\/games\/run\/'\)/);
+  assert.match(server,/!url\.pathname\.startsWith\('\/games\/run\/assets\/'\)/);
   assert.match(auth,/next==='\/run-lab'/);
   assert.match(auth,/finishAuthNavigation/);
   assert.match(auth,/location\.replace\(returnTo\)/);
