@@ -1,5 +1,5 @@
 import { MOVEMENT } from '../config/movement.js';
-import { RUNNER_FRAMES, RUNNER_META } from '../assets/runner-manifest.js';
+import { RUNNER_ATLAS, RUNNER_FRAME_INDEX } from '../assets/runner-manifest.js';
 
 export class Runner {
   constructor(scene, x, y) {
@@ -12,9 +12,9 @@ export class Runner {
     this.collider.body.setCollideWorldBounds(true);
     this.collider.body.setMaxVelocity(MOVEMENT.maxRunSpeed, MOVEMENT.maxFallSpeed);
 
-    this.visual = scene.add.image(x, y, RUNNER_FRAMES.idle_01.key).setDepth(20);
+    this.visual = scene.add.image(x, y, RUNNER_ATLAS.key, RUNNER_FRAME_INDEX.idle_01).setDepth(20);
     this.visual.setScale(MOVEMENT.spriteScale);
-    this.visual.setOrigin(RUNNER_META.originX, RUNNER_META.originY);
+    this.visual.setOrigin(RUNNER_ATLAS.originX, RUNNER_ATLAS.originY);
     this.setFrame('idle_01');
     this.syncVisual();
   }
@@ -24,9 +24,9 @@ export class Runner {
   get y() { return this.collider.y; }
 
   setFrame(frameName) {
-    const asset = RUNNER_FRAMES[frameName] || RUNNER_FRAMES.idle_01;
-    this.visual.setTexture(asset.key);
-    this.visual.setOrigin(RUNNER_META.originX, RUNNER_META.originY);
+    const index = RUNNER_FRAME_INDEX[frameName] ?? RUNNER_FRAME_INDEX.idle_01;
+    this.visual.setTexture(RUNNER_ATLAS.key, index);
+    this.visual.setOrigin(RUNNER_ATLAS.originX, RUNNER_ATLAS.originY);
     this.visual.setFlipX(this.facing < 0);
   }
 
