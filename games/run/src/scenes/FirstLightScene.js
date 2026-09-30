@@ -6,7 +6,7 @@ import { RUNNER_ATLAS } from '../assets/runner-manifest.js';
 import { MOVEMENT } from '../config/movement.js';
 import { MovementFx } from '../effects/MovementFx.js';
 import { RunHud } from '../ui/RunHud.js';
-import { ASTRAL_KEYS, ASTRAL_BG, ASTRAL_OBJ, preloadAstralArt } from '../art/AstralArt.js';
+import { ASTRAL_BG, ASTRAL_OBJ, preloadAstralArt } from '../art/AstralArt.js';
 
 const WORLD_WIDTH = 9800;
 const WORLD_HEIGHT = 900;
@@ -76,46 +76,52 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   createAstralBackdrop() {
-    const bg = ASTRAL_KEYS.backgrounds;
-
+    // Final admin preview uses the approved FIRST LIGHT artwork already
+    // committed in astral-exact. Physics and collision stay independent.
     this.add.rectangle(640, 360, 1280, 720, 0x8fcff4, 1)
       .setScrollFactor(0)
       .setDepth(-1400);
 
-    this.add.image(640, 215, bg, ASTRAL_BG.sky)
+    this.add.image(640, 150, ASTRAL_BG.sky)
       .setScrollFactor(0)
-      .setDepth(-1350)
-      .setDisplaySize(1280, 430)
-      .setAlpha(1);
+      .setDepth(-1360)
+      .setDisplaySize(1280, 300);
 
-    const repeatLayer = (frame, y, scrollFactor, depth, alpha, displayHeight, step = 1450, offset = 0) => {
-      for (let i = -1; i < 9; i += 1) {
-        const art = this.add.image(offset + 760 + i * step, y, bg, frame)
-          .setScrollFactor(scrollFactor)
-          .setDepth(depth)
-          .setDisplaySize(1536, displayHeight)
-          .setAlpha(alpha);
-        if (i % 2) art.setFlipX(true);
-      }
-    };
+    // Canonical world panorama. Repetition is hidden with overlap and flip,
+    // but every visible ruin/island comes from the approved project art.
+    for (let i = -1; i < 9; i += 1) {
+      const world = this.add.image(640 + i * 1180, 405 + (i % 2) * 8, ASTRAL_BG.world)
+        .setScrollFactor(0.11)
+        .setDepth(-1040)
+        .setDisplaySize(1280, 720)
+        .setAlpha(0.98);
+      if (i % 2) world.setFlipX(true);
+    }
 
-    repeatLayer(ASTRAL_BG.clouds, 365, 0.08, -1220, 0.95, 132, 1480, 0);
-    repeatLayer(ASTRAL_BG.far, 435, 0.16, -1100, 0.78, 157, 1470, 120);
-    repeatLayer(ASTRAL_BG.mid, 505, 0.32, -820, 0.96, 204, 1450, -80);
-
-    for (let i = 0; i < 8; i += 1) {
-      const island = this.add.image(520 + i * 1260, 305 + (i % 3) * 38, ASTRAL_KEYS.objects, ASTRAL_OBJ.floatingIsland)
-        .setScrollFactor(0.23)
-        .setDepth(-760)
-        .setDisplaySize(150 + (i % 3) * 35, 185 + (i % 3) * 44)
-        .setAlpha(0.74);
+    // Additional depth made from the exact extracted platform artwork.
+    for (let i = 0; i < 10; i += 1) {
+      const island = this.add.image(480 + i * 1080, 300 + (i % 3) * 44, ASTRAL_OBJ.floatingIsland)
+        .setScrollFactor(0.24)
+        .setDepth(-720)
+        .setDisplaySize(150 + (i % 3) * 34, 92 + (i % 3) * 20)
+        .setAlpha(0.70)
+        .setTint(0xd9e8ff);
       if (i % 2) island.setFlipX(true);
     }
 
-    repeatLayer(ASTRAL_BG.foreground, 790, 1.04, 84, 0.88, 160, 1420, 20);
+    // Near decorative silhouettes: crystals + vegetation from the approved kit.
+    for (let i = 0; i < 8; i += 1) {
+      const cluster = this.add.image(440 + i * 1320, 716, ASTRAL_OBJ.crystalCluster)
+        .setOrigin(0.5, 1)
+        .setScrollFactor(1.02)
+        .setDepth(82)
+        .setDisplaySize(150 + (i % 3) * 28, 118 + (i % 3) * 20)
+        .setAlpha(0.78);
+      if (i % 2) cluster.setFlipX(true);
+    }
+
     this.drawForegroundMotes();
   }
-
   drawCloudBand(depth, scrollFactor, baseY, color, alpha) {
     const layer = this.add.graphics().setScrollFactor(scrollFactor).setDepth(depth);
     for (let i = 0; i < 28; i += 1) {
@@ -214,7 +220,6 @@ export class FirstLightScene extends Phaser.Scene {
 
   addAstralPlatform(x, y, width, height, { large = false, waterfall = false, alt = false } = {}) {
     const container = this.add.container(x, y).setDepth(5);
-    const objects = ASTRAL_KEYS.objects;
     const frame = width >= 560 ? ASTRAL_OBJ.platformLarge : width >= 245 ? ASTRAL_OBJ.platformMedium : ASTRAL_OBJ.platformSmall;
     const ratio = frame === ASTRAL_OBJ.platformLarge ? 336 / 691 : frame === ASTRAL_OBJ.platformMedium ? 248 / 413 : 228 / 237;
     const artWidth = width + (frame === ASTRAL_OBJ.platformLarge ? 80 : 44);
@@ -232,7 +237,7 @@ export class FirstLightScene extends Phaser.Scene {
 
     if (waterfall) {
       const wfWidth = Math.min(150, Math.max(72, width * 0.18));
-      const wf = this.add.image(width * 0.23, -height / 2 + 14, objects, ASTRAL_OBJ.waterfall)
+      const wf = this.add.image(width * 0.23, -height / 2 + 14, ASTRAL_OBJ.waterfall)
         .setOrigin(0.5, 0.04)
         .setDisplaySize(wfWidth, wfWidth * (385 / 255))
         .setAlpha(0.92);
@@ -241,7 +246,7 @@ export class FirstLightScene extends Phaser.Scene {
     }
 
     if (large && Math.floor(x / 400) % 2 === 0) {
-      const cluster = this.add.image(-width * 0.31, -height / 2 - 8, objects, ASTRAL_OBJ.crystalCluster)
+      const cluster = this.add.image(-width * 0.31, -height / 2 - 8, ASTRAL_OBJ.crystalCluster)
         .setOrigin(0.5, 1)
         .setDisplaySize(126, 99)
         .setAlpha(0.96);
@@ -282,7 +287,7 @@ export class FirstLightScene extends Phaser.Scene {
   addMovingPlatform(x, y, width, height, rangeX = 0, duration = 1700, rangeY = 0) {
     const visual = this.add.container(x, y).setDepth(8);
     const artWidth = width + 78;
-    const art = this.add.image(0, -height / 2 - 10, ASTRAL_KEYS.objects, ASTRAL_OBJ.platformMoving)
+    const art = this.add.image(0, -height / 2 - 10, ASTRAL_OBJ.platformMoving)
       .setOrigin(0.5, 0)
       .setDisplaySize(artWidth, artWidth * (183 / 447));
     visual.add(art);
@@ -315,7 +320,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addDangerCrystals(x, y, width) {
     const container = this.add.container(x, y).setDepth(10);
-    const art = this.add.image(0, 4, ASTRAL_KEYS.objects, ASTRAL_OBJ.spikes)
+    const art = this.add.image(0, 4, ASTRAL_OBJ.spikes)
       .setOrigin(0.5, 1)
       .setDisplaySize(width + 46, Math.max(86, (width + 46) * (313 / 360)));
     container.add(art);
@@ -327,7 +332,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addBreakableBlock(x, y, width, height) {
     const container = this.add.container(x, y).setDepth(9);
-    const art = this.add.image(0, 0, ASTRAL_KEYS.objects, ASTRAL_OBJ.breakable)
+    const art = this.add.image(0, 0, ASTRAL_OBJ.breakable)
       .setDisplaySize(width * 1.42, height * 1.26);
     container.add(art);
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
@@ -350,7 +355,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addShard(x, y, index) {
     const container = this.add.container(x, y).setDepth(16);
-    const art = this.add.image(0, 0, ASTRAL_KEYS.objects, ASTRAL_OBJ.shard).setDisplaySize(44, 74);
+    const art = this.add.image(0, 0, ASTRAL_OBJ.shard).setDisplaySize(44, 74);
     container.add(art);
     const bodyObject = this.add.rectangle(x, y, 34, 54, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
@@ -373,7 +378,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addCheckpoint(x, y, spawn, index) {
     const container = this.add.container(x, y).setDepth(15);
-    const art = this.add.image(0, -45, ASTRAL_KEYS.objects, ASTRAL_OBJ.checkpointOff)
+    const art = this.add.image(0, -45, ASTRAL_OBJ.checkpointOff)
       .setDisplaySize(88, 181);
     container.add(art);
     const trigger = this.add.rectangle(x, y, 100, 160, 0xffffff, 0);
@@ -389,11 +394,11 @@ export class FirstLightScene extends Phaser.Scene {
     this.checkpoints.forEach(other => {
       if (other !== cp) {
         other.active = false;
-        other.art?.setFrame(ASTRAL_OBJ.checkpointOff);
+        other.art?.setTexture(ASTRAL_OBJ.checkpointOff);
       }
     });
     cp.active = true;
-    cp.art.setFrame(ASTRAL_OBJ.checkpointOn).setDisplaySize(88, 204);
+    cp.art.setTexture(ASTRAL_OBJ.checkpointOn).setDisplaySize(88, 204);
     this.checkpointSpawn = { ...cp.spawn };
     this.checkpointIndex = cp.index;
     this.hud.setCheckpoint(cp.index);
@@ -402,7 +407,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addBouncePad(x, y) {
     const container = this.add.container(x, y).setDepth(11);
-    const art = this.add.image(0, -18, ASTRAL_KEYS.objects, ASTRAL_OBJ.bounce).setDisplaySize(122, 108);
+    const art = this.add.image(0, -18, ASTRAL_OBJ.bounce).setDisplaySize(122, 108);
     container.add(art);
     const trigger = this.add.rectangle(x, y - 16, 98, 34, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
@@ -419,7 +424,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addSpeedStrip(x, y) {
     const container = this.add.container(x, y).setDepth(11);
-    const art = this.add.image(0, -12, ASTRAL_KEYS.objects, ASTRAL_OBJ.speed).setDisplaySize(175, 70);
+    const art = this.add.image(0, -12, ASTRAL_OBJ.speed).setDisplaySize(175, 70);
     container.add(art);
     const trigger = this.add.rectangle(x, y - 20, 165, 54, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
@@ -438,18 +443,18 @@ export class FirstLightScene extends Phaser.Scene {
     this.addAstralPlatform(x, 820, 500, 64, { alt: true });
 
     this.add.ellipse(x, y + 14, 470, 285, 0x051020, 0.72).setDepth(2);
-    this.add.image(x, y + 84, ASTRAL_KEYS.objects, ASTRAL_OBJ.arch)
+    this.add.image(x, y + 84, ASTRAL_OBJ.arch)
       .setOrigin(0.5, 1)
       .setDisplaySize(390, 402)
       .setDepth(3)
       .setAlpha(0.96);
 
-    this.add.image(x - 150, y + 70, ASTRAL_KEYS.objects, ASTRAL_OBJ.crystalCluster)
+    this.add.image(x - 150, y + 70, ASTRAL_OBJ.crystalCluster)
       .setOrigin(0.5, 1)
       .setDisplaySize(142, 112)
       .setDepth(4);
 
-    this.add.image(x + 150, y + 70, ASTRAL_KEYS.objects, ASTRAL_OBJ.vegetationPink)
+    this.add.image(x + 150, y + 70, ASTRAL_OBJ.vegetationPink)
       .setOrigin(0.5, 1)
       .setDisplaySize(132, 79)
       .setDepth(4);
@@ -457,7 +462,7 @@ export class FirstLightScene extends Phaser.Scene {
     this.add.text(x, y - 165, 'SEGREDO', { fontFamily: 'Arial Black', fontSize: '13px', color: '#8feeff', backgroundColor: '#07101ddd', padding: { x: 8, y: 4 } }).setOrigin(.5).setDepth(20);
 
     const chest = this.add.container(x + 80, y + 36).setDepth(13);
-    const chestArt = this.add.image(0, 0, ASTRAL_KEYS.objects, ASTRAL_OBJ.chestClosed).setDisplaySize(126, 112);
+    const chestArt = this.add.image(0, 0, ASTRAL_OBJ.chestClosed).setDisplaySize(126, 112);
     chest.add(chestArt);
     const trigger = this.add.rectangle(x + 80, y + 36, 132, 100, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
@@ -468,8 +473,8 @@ export class FirstLightScene extends Phaser.Scene {
     if (this.relic.found || this.finished) return;
     this.relic.found = true;
     this.relicFound = true;
-    this.relic.chestArt?.setFrame(ASTRAL_OBJ.chestOpen).setDisplaySize(126, 143);
-    const relicArt = this.add.image(this.relic.chest.x, this.relic.chest.y - 92, ASTRAL_KEYS.objects, ASTRAL_OBJ.relic)
+    this.relic.chestArt?.setTexture(ASTRAL_OBJ.chestOpen).setDisplaySize(126, 143);
+    const relicArt = this.add.image(this.relic.chest.x, this.relic.chest.y - 92, ASTRAL_OBJ.relic)
       .setDisplaySize(86, 128)
       .setDepth(14)
       .setAlpha(0);
@@ -483,7 +488,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   createFinishGate() {
     const x = 9490, y = 520;
-    const gate = this.add.image(x, y + 52, ASTRAL_KEYS.objects, ASTRAL_OBJ.finish)
+    const gate = this.add.image(x, y + 52, ASTRAL_OBJ.finish)
       .setDisplaySize(260, 270)
       .setDepth(14);
     this.finishGateArt = gate;
@@ -498,7 +503,7 @@ export class FirstLightScene extends Phaser.Scene {
       [5560,610,'SEGREDO ↓'], [7330,535,'BOOST'], [8850,540,'FINAL →'],
     ];
     for (const [x,y,label] of signs) {
-      const art = this.add.image(x, y - 22, ASTRAL_KEYS.objects, ASTRAL_OBJ.signMarker)
+      const art = this.add.image(x, y - 22, ASTRAL_OBJ.signMarker)
         .setDisplaySize(92, 88)
         .setDepth(7);
       this.add.text(x + 4, y - 58, label, { fontFamily: 'Arial Black', fontSize: '9px', color: '#eaffff', backgroundColor: '#07101dcc', padding: { x: 5, y: 2 } })
@@ -511,7 +516,7 @@ export class FirstLightScene extends Phaser.Scene {
   decorateAstralWorld() {
     const arches = [[1510,585,345],[4300,550,310],[6880,565,340],[8740,545,290]];
     for (const [x,y,w] of arches) {
-      this.add.image(x, y, ASTRAL_KEYS.objects, ASTRAL_OBJ.arch)
+      this.add.image(x, y, ASTRAL_OBJ.arch)
         .setOrigin(0.5,1)
         .setDisplaySize(w, w * (491 / 477))
         .setDepth(2)
@@ -520,7 +525,7 @@ export class FirstLightScene extends Phaser.Scene {
 
     const clusters = [[880,606,170],[1880,610,155],[3920,534,150],[6000,605,168],[8380,522,145],[9270,603,175]];
     for (const [x,y,w] of clusters) {
-      const art = this.add.image(x, y, ASTRAL_KEYS.objects, ASTRAL_OBJ.crystalCluster)
+      const art = this.add.image(x, y, ASTRAL_OBJ.crystalCluster)
         .setOrigin(0.5,1)
         .setDisplaySize(w, w * (281 / 356))
         .setDepth(7);
@@ -533,7 +538,7 @@ export class FirstLightScene extends Phaser.Scene {
       [8280,518,ASTRAL_OBJ.vegetationPink,102],[9340,600,ASTRAL_OBJ.vegetationGreen,116],
     ];
     for (const [x,y,frame,w] of vegetation) {
-      this.add.image(x, y, ASTRAL_KEYS.objects, frame)
+      this.add.image(x, y, frame)
         .setOrigin(0.5,1)
         .setDisplaySize(w, w * 0.58)
         .setDepth(6);
@@ -541,7 +546,7 @@ export class FirstLightScene extends Phaser.Scene {
 
     const routeBanners = [[1500,510],[4320,475],[6920,490],[8880,468]];
     for (const [x,y] of routeBanners) {
-      this.add.image(x, y, ASTRAL_KEYS.objects, ASTRAL_OBJ.routeBanner)
+      this.add.image(x, y, ASTRAL_OBJ.routeBanner)
         .setOrigin(0.5,1)
         .setDisplaySize(62, 143)
         .setDepth(4)
@@ -550,7 +555,7 @@ export class FirstLightScene extends Phaser.Scene {
 
     const foregroundIslands = [[360,760,190],[2700,766,215],[4720,758,185],[6600,765,205],[9600,760,190]];
     for (const [x,y,w] of foregroundIslands) {
-      this.add.image(x, y, ASTRAL_KEYS.objects, ASTRAL_OBJ.floatingIsland)
+      this.add.image(x, y, ASTRAL_OBJ.floatingIsland)
         .setOrigin(0.5,0.15)
         .setDisplaySize(w, w * (397 / 326))
         .setDepth(82)
