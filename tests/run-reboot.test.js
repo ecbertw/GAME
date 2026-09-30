@@ -55,6 +55,12 @@ test('Runner v2 is a 37-frame independent production pack',()=>{
   for(let i=1;i<=8;i++) assert.match(manifest,new RegExp('run_0'+i));
   assert.match(manifest,/distanceDriven:\s*true/);
   assert.match(manifest,/bakedFx:\s*false/);
+  assert.match(manifest,/embedded-svg-data-uri/);
+  assert.doesNotMatch(manifest,/\/games\/run\/assets\/runner\/v2\//);
+  for(const part of ['a','b','c','d']){
+    const data=read(`games/run/src/assets/runner-v2-data-${part}.js`);
+    assert.match(data,/data:image\/svg\+xml;charset=utf-8,/);
+  }
 });
 
 test('Runner v2 movement state machine is event and distance aware',()=>{
