@@ -32,6 +32,18 @@ export function preloadAstralArt(scene){
   scene.load.image(ASTRAL_KEYS.exactConcept,EXACT+'first-light-concept.webp');
   scene.load.image(ASTRAL_KEYS.exactPlatform,EXACT+'platform-master.webp');
 
+  // These are cropped directly from the approved RUN project boards.
+  // Keep the public texture keys stable so FirstLightScene can swap from
+  // placeholder SVGs to the canonical artwork without touching gameplay.
+  scene.load.image(ASTRAL_KEYS.shard,EXACT+'shard.webp');
+  scene.load.image(ASTRAL_KEYS.checkpointOff,EXACT+'checkpoint-off.webp');
+  scene.load.image(ASTRAL_KEYS.checkpointOn,EXACT+'checkpoint-on.webp');
+  scene.load.image(ASTRAL_KEYS.breakable,EXACT+'breakable.webp');
+  scene.load.image(ASTRAL_KEYS.spikes,EXACT+'spikes.webp');
+  scene.load.image(ASTRAL_KEYS.bounce,EXACT+'bounce-pad.webp');
+  scene.load.image(ASTRAL_KEYS.speed,EXACT+'speed-strip.webp');
+  scene.load.image(ASTRAL_KEYS.finish,EXACT+'finish-gate.webp');
+
   const assets=[
     [ASTRAL_KEYS.sky,'sky.svg'],
     [ASTRAL_KEYS.far,'far-ruins.svg'],
@@ -41,14 +53,6 @@ export function preloadAstralArt(scene){
     [ASTRAL_KEYS.platformMedium,'platform-medium.svg'],
     [ASTRAL_KEYS.platformSmall,'platform-small.svg'],
     [ASTRAL_KEYS.movingPlatform,'platform-moving.svg'],
-    [ASTRAL_KEYS.shard,'shard.svg'],
-    [ASTRAL_KEYS.checkpointOff,'checkpoint-off.svg'],
-    [ASTRAL_KEYS.checkpointOn,'checkpoint-on.svg'],
-    [ASTRAL_KEYS.breakable,'breakable.svg'],
-    [ASTRAL_KEYS.spikes,'spikes.svg'],
-    [ASTRAL_KEYS.bounce,'bounce.svg'],
-    [ASTRAL_KEYS.speed,'speed-strip.svg'],
-    [ASTRAL_KEYS.finish,'finish-gate.svg'],
     [ASTRAL_KEYS.chestClosed,'chest-closed.svg'],
     [ASTRAL_KEYS.chestOpen,'chest-open.svg'],
     [ASTRAL_KEYS.relic,'relic.svg'],
