@@ -78,32 +78,39 @@ export class FirstLightScene extends Phaser.Scene {
     this.add.image(640, 360, ASTRAL_KEYS.sky)
       .setScrollFactor(0)
       .setDepth(-1200)
-      .setDisplaySize(1280, 720);
+      .setDisplaySize(1280, 720)
+      .setAlpha(0.82);
 
-    for (let i = 0; i < 8; i += 1) {
-      this.add.image(720 + i * 1450, 405 + (i % 2) * 18, ASTRAL_KEYS.far)
-        .setScrollFactor(0.12)
+    // Canonical FIRST LIGHT artwork: this is cropped directly from the
+    // approved project board supplied for ASTRAL 01, not a vector redraw.
+    for (let i = 0; i < 9; i += 1) {
+      const concept = this.add.image(640 + i * 1220, 340 + (i % 2) * 10, ASTRAL_KEYS.exactConcept)
+        .setScrollFactor(0.10)
+        .setDepth(-920)
+        .setDisplaySize(1280, 404)
+        .setAlpha(0.98);
+      if (i % 2) concept.setFlipX(true);
+    }
+
+    // A faint second pass gives the distant ruins more depth without
+    // drawing new placeholder architecture over the approved artwork.
+    for (let i = 0; i < 6; i += 1) {
+      const far = this.add.image(700 + i * 1700, 255, ASTRAL_KEYS.exactConcept)
+        .setScrollFactor(0.04)
         .setDepth(-980)
-        .setAlpha(0.64)
-        .setScale(0.92 + (i % 3) * 0.04);
-      this.add.image(690 + i * 1390, 505 - (i % 3) * 16, ASTRAL_KEYS.mid)
-        .setScrollFactor(0.28)
-        .setDepth(-820)
-        .setAlpha(0.82)
-        .setScale(0.86 + (i % 2) * 0.07);
+        .setDisplaySize(980, 309)
+        .setAlpha(0.23)
+        .setTint(0xc8ddff);
+      if (i % 2) far.setFlipX(true);
     }
 
     for (let i = 0; i < 9; i += 1) {
       this.add.image(650 + i * 1210, 810, ASTRAL_KEYS.foreground)
         .setScrollFactor(1.04)
         .setDepth(86)
-        .setAlpha(0.68)
+        .setAlpha(0.54)
         .setScale(0.9 + (i % 2) * 0.08);
     }
-
-    const beam = this.add.graphics().setScrollFactor(0.2).setDepth(-790);
-    beam.fillStyle(0x76f5ff, 0.11).fillTriangle(660, 80, 625, 560, 695, 560);
-    beam.lineStyle(3, 0xd8ffff, 0.42).lineBetween(660, 55, 660, 570);
 
     this.drawForegroundMotes();
   }
@@ -206,10 +213,11 @@ export class FirstLightScene extends Phaser.Scene {
 
   addAstralPlatform(x, y, width, height, { large = false, waterfall = false, alt = false } = {}) {
     const container = this.add.container(x, y).setDepth(5);
-    const key = width > 430 ? ASTRAL_KEYS.platformLarge : width > 225 ? ASTRAL_KEYS.platformMedium : ASTRAL_KEYS.platformSmall;
-    const art = this.add.image(0, -height / 2 + 1, key)
-      .setOrigin(0.5, 0.12)
-      .setDisplaySize(width + (large ? 70 : 44), Math.max(height * 2.05, width * 0.36))
+    const artWidth = width + (large ? 92 : 58);
+    const artHeight = artWidth * (217 / 420);
+    const art = this.add.image(0, -height / 2 - 7, ASTRAL_KEYS.exactPlatform)
+      .setOrigin(0.5, 0.10)
+      .setDisplaySize(artWidth, artHeight)
       .setAlpha(alt ? 0.94 : 1);
     if (alt) art.setTint(0xe5dcff);
     container.add(art);
@@ -265,9 +273,11 @@ export class FirstLightScene extends Phaser.Scene {
 
   addMovingPlatform(x, y, width, height, rangeX = 0, duration = 1700, rangeY = 0) {
     const visual = this.add.container(x, y).setDepth(8);
-    const art = this.add.image(0, -height / 2 + 1, ASTRAL_KEYS.movingPlatform)
-      .setOrigin(0.5, 0.12)
-      .setDisplaySize(width + 54, Math.max(150, width * 0.43));
+    const artWidth = width + 66;
+    const art = this.add.image(0, -height / 2 - 7, ASTRAL_KEYS.exactPlatform)
+      .setOrigin(0.5, 0.10)
+      .setDisplaySize(artWidth, artWidth * (217 / 420))
+      .setTint(0xc6f4ff);
     visual.add(art);
 
     const halo = this.add.ellipse(0, height * 0.5 + 30, width * 0.72, 24, 0x33e8ff, 0.12);
