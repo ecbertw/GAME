@@ -1,14 +1,16 @@
 import { MOVEMENT, clamp } from '../config/movement.js';
 
 export class RunCamera {
-  constructor(scene, runner) {
+  constructor(scene, runner, bounds = {}) {
     this.scene = scene;
     this.runner = runner;
     this.lookAhead = 0;
     this.target = scene.add.zone(runner.x, runner.y, 1, 1);
 
     this.camera = scene.cameras.main;
-    this.camera.setBounds(0, 0, 3600, 900);
+    this.worldWidth = Number(bounds.width) || 3600;
+    this.worldHeight = Number(bounds.height) || 900;
+    this.camera.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.camera.setDeadzone(260, 180);
     this.camera.startFollow(this.target, false, 0.10, 0.08);
   }
