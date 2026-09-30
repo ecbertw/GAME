@@ -75,11 +75,15 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   createAstralBackdrop() {
-    this.add.image(640, 360, ASTRAL_KEYS.sky)
+    this.add.rectangle(640, 360, 1280, 720, 0xa9d7f6, 1)
+      .setScrollFactor(0)
+      .setDepth(-1210);
+
+    this.add.image(640, 92, ASTRAL_KEYS.exactSky)
       .setScrollFactor(0)
       .setDepth(-1200)
-      .setDisplaySize(1280, 720)
-      .setAlpha(0.82);
+      .setDisplaySize(1280, 184)
+      .setAlpha(1);
 
     // Canonical FIRST LIGHT artwork: this is cropped directly from the
     // approved project board supplied for ASTRAL 01, not a vector redraw.
@@ -104,14 +108,9 @@ export class FirstLightScene extends Phaser.Scene {
       if (i % 2) far.setFlipX(true);
     }
 
-    for (let i = 0; i < 9; i += 1) {
-      this.add.image(650 + i * 1210, 810, ASTRAL_KEYS.foreground)
-        .setScrollFactor(1.04)
-        .setDepth(86)
-        .setAlpha(0.54)
-        .setScale(0.9 + (i % 2) * 0.08);
-    }
-
+    // Do not overlay the old vector foreground here. The approved concept
+    // artwork already contains the correct foliage/crystal silhouette and
+    // the previous SVG layer was what made the scene look like a placeholder.
     this.drawForegroundMotes();
   }
 
