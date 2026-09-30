@@ -86,10 +86,10 @@
     button.innerHTML=flagMarkup(code)+'<span class="auth-country-name">'+countryName(code).toUpperCase()+'</span><span class="auth-country-chevron">▼</span>';
     menu.innerHTML=codes.map(c=>'<button type="button" class="auth-country-option" role="option" aria-selected="'+String(c===code)+'" data-country="'+c+'">'+flagMarkup(c)+'<span class="auth-country-name">'+countryName(c).toUpperCase()+'</span></button>').join('');
   }
-  const returnTo=(()=>{try{const u=new URL(location.href);const next=u.searchParams.get('next');return next==='/run-lab'?next:''}catch(_){return''}})();
-  const forcedLogin=(()=>{try{return new URL(location.href).searchParams.get('auth')==='login'&&returnTo==='/run-lab'}catch(_){return false}})();
+  const returnTo=(()=>{try{const u=new URL(location.href);const next=u.searchParams.get('next');return next==='/run-lab'||next==='/run-admin'?next:''}catch(_){return''}})();
+  const forcedLogin=(()=>{try{return new URL(location.href).searchParams.get('auth')==='login'&&(returnTo==='/run-lab'||returnTo==='/run-admin')}catch(_){return false}})();
   const finishAuthNavigation=player=>{
-    if(returnTo==='/run-lab'&&player?.role==='admin'){location.replace(returnTo);return true;}
+    if((returnTo==='/run-lab'||returnTo==='/run-admin')&&player?.role==='admin'){location.replace(returnTo);return true;}
     return false;
   };
   async function api(path,options){const r=await fetch(path,{credentials:'same-origin',...options});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(errorText(d.error));return d;}
