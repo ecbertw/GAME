@@ -31,39 +31,21 @@ test('RUN Movement Lab is private and Phaser is served locally',()=>{
   assert.match(server,/node_modules[\s\S]*phaser[\s\S]*phaser\.min\.js/);
 });
 
-test('Runner v2 is a 37-frame independent production pack',()=>{
+test('RUN uses the approved Runner atlas, not a procedural redraw',()=>{
   const manifest=read('games/run/src/assets/runner-manifest.js');
-  const names=[
-    'idle_01','idle_02','idle_03','idle_04',
-    'run_01','run_02','run_03','run_04','run_05','run_06','run_07','run_08',
-    'skid_01','skid_02','skid_03','jump_start_01','jump_start_02',
-    'jump_rise_01','jump_rise_02','apex_01','apex_02','fall_01','fall_02',
-    'land_soft_01','land_soft_02','land_hard_01','land_hard_02','land_hard_03',
-    'death_01','death_02','death_03','death_04','death_05',
-    'victory_01','victory_02','victory_03','victory_04'
-  ];
-  assert.equal(names.length,37);
-  for(const name of names){
-    const file=path.join(ROOT,'games/run/assets/runner/v2',name+'.svg');
-    assert.ok(fs.existsSync(file),name);
-    const body=fs.readFileSync(file,'utf8');
-    assert.match(body,/width="256"/,name);
-    assert.match(body,/viewBox="0 0 256 256"/,name);
-    assert.doesNotMatch(body,/dust|trail|particle|speed-line/i,name);
-    assert.match(manifest,new RegExp(name),name);
-  }
-  for(let i=1;i<=8;i++) assert.match(manifest,new RegExp('run_0'+i));
-  assert.match(manifest,/distanceDriven:\s*true/);
-  assert.match(manifest,/bakedFx:\s*false/);
-  assert.match(manifest,/embedded-svg-data-uri/);
-  assert.doesNotMatch(manifest,/\/games\/run\/assets\/runner\/v2\//);
-  for(const part of ['a','b','c','d']){
-    const data=read(`games/run/src/assets/runner-v2-data-${part}.js`);
-    assert.match(data,/data:image\/svg\+xml;charset=utf-8,/);
-  }
+  const runner=read('games/run/src/player/Runner.js');
+  assert.match(manifest,/approved-runner-atlas\.webp/);
+  assert.match(manifest,/atlas_de_sprites_do_corredor_anime\.png/);
+  assert.match(manifest,/frameWidth:\s*256/);
+  assert.match(manifest,/frameHeight:\s*256/);
+  assert.match(manifest,/run_01/);
+  assert.match(manifest,/run_04/);
+  assert.doesNotMatch(manifest,/runner-v2-data|embedded-svg-data-uri/);
+  assert.match(runner,/RUNNER_FRAME_INDEX/);
+  assert.ok(fs.existsSync(path.join(ROOT,'assets/run/runner/approved-runner-atlas.webp')));
 });
 
-test('Runner v2 movement state machine is event and distance aware',()=>{
+test('RUN movement state machine remains event and distance aware',()=>{
   const controller=read('games/run/src/player/RunnerController.js');
   const animator=read('games/run/src/player/RunnerAnimator.js');
   const movement=read('games/run/src/config/movement.js');
@@ -71,7 +53,6 @@ test('Runner v2 movement state machine is event and distance aware',()=>{
   assert.match(controller,/reverseFacingSpeed/);
   assert.match(animator,/runDistance/);
   assert.match(animator,/runCycleDistance/);
-  assert.match(movement,/spriteScale:\s*0\.62/);
   assert.match(movement,/bodyWidth:\s*40/);
 });
 
