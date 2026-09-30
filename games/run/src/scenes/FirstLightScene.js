@@ -641,6 +641,7 @@ export class FirstLightScene extends Phaser.Scene {
       this.animator.update(this.controller.getState(), delta);
       this.runner.syncVisual();
       this.runCamera.update(delta);
+      this.fx?.speedTrail(this.runner);
     }
     this.fx?.update(delta);
     this.hud?.update(this.runner.x);
