@@ -6,7 +6,7 @@ import { RUNNER_ATLAS } from '../assets/runner-manifest.js';
 import { MOVEMENT } from '../config/movement.js';
 import { MovementFx } from '../effects/MovementFx.js';
 import { RunHud } from '../ui/RunHud.js';
-import { ASTRAL_KEYS, preloadAstralArt } from '../art/AstralArt.js';
+import { ASTRAL_KEYS, ASTRAL_BG, ASTRAL_OBJ, preloadAstralArt } from '../art/AstralArt.js';
 
 const WORLD_WIDTH = 9800;
 const WORLD_HEIGHT = 900;
@@ -24,6 +24,7 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, file => console.error('[RUN asset load failed]', file?.key, file?.url));
     preloadAstralArt(this);
     this.load.spritesheet(RUNNER_ATLAS.key, RUNNER_ATLAS.file, {
       frameWidth: RUNNER_ATLAS.frameWidth,
@@ -75,81 +76,46 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   createAstralBackdrop() {
-    // The approved project art is now the scenery source of truth. Keep only
-    // a flat fill behind it so there are no synthetic/vector ruins competing
-    // with the canonical FIRST LIGHT artwork.
-    this.add.rectangle(640, 360, 1280, 720, 0x8fcdf3, 1)
-      .setScrollFactor(0)
-      .setDepth(-1300);
+    const bg = ASTRAL_KEYS.backgrounds;
 
-    this.add.image(640, 92, ASTRAL_KEYS.exactSky)
+    this.add.rectangle(640, 360, 1280, 720, 0x8fcff4, 1)
       .setScrollFactor(0)
-      .setDepth(-1250)
-      .setDisplaySize(1280, 184)
+      .setDepth(-1400);
+
+    this.add.image(640, 215, bg, ASTRAL_BG.sky)
+      .setScrollFactor(0)
+      .setDepth(-1350)
+      .setDisplaySize(1280, 430)
       .setAlpha(1);
 
-    // Main panoramic layer — cropped directly from the approved FIRST LIGHT
-    // concept. Slight overlap + alternating flip hides repetition during a
-    // long run while preserving the actual architecture and colour language.
-    for (let i = 0; i < 9; i += 1) {
-      const concept = this.add.image(620 + i * 1175, 354 + (i % 3) * 7, ASTRAL_KEYS.exactConcept)
-        .setScrollFactor(0.12)
-        .setDepth(-940)
-        .setDisplaySize(1260, 398)
-        .setAlpha(0.94);
-      if (i % 2) concept.setFlipX(true);
+    const repeatLayer = (frame, y, scrollFactor, depth, alpha, displayHeight, step = 1450, offset = 0) => {
+      for (let i = -1; i < 9; i += 1) {
+        const art = this.add.image(offset + 760 + i * step, y, bg, frame)
+          .setScrollFactor(scrollFactor)
+          .setDepth(depth)
+          .setDisplaySize(1536, displayHeight)
+          .setAlpha(alpha);
+        if (i % 2) art.setFlipX(true);
+      }
+    };
+
+    repeatLayer(ASTRAL_BG.clouds, 365, 0.08, -1220, 0.95, 132, 1480, 0);
+    repeatLayer(ASTRAL_BG.far, 435, 0.16, -1100, 0.78, 157, 1470, 120);
+    repeatLayer(ASTRAL_BG.mid, 505, 0.32, -820, 0.96, 204, 1450, -80);
+
+    for (let i = 0; i < 8; i += 1) {
+      const island = this.add.image(520 + i * 1260, 305 + (i % 3) * 38, ASTRAL_KEYS.objects, ASTRAL_OBJ.floatingIsland)
+        .setScrollFactor(0.23)
+        .setDepth(-760)
+        .setDisplaySize(150 + (i % 3) * 35, 185 + (i % 3) * 44)
+        .setAlpha(0.74);
+      if (i % 2) island.setFlipX(true);
     }
 
-    // Distant floating islands built from the approved platform artwork.
-    // These are decorative only; gameplay collision remains completely
-    // separate from the art.
-    const farIslands = [
-      [720,260,230,false],[1330,205,180,true],[1930,300,250,false],[2550,220,190,true],
-      [3270,275,225,false],[3920,195,175,false],[4580,295,240,true],[5250,230,190,false],
-      [5920,285,225,true],[6600,205,175,false],[7270,285,230,false],[7940,220,185,true],
-      [8620,275,225,false],[9280,205,170,true],
-    ];
-    for (const [x,y,w,flip] of farIslands) {
-      const island = this.add.image(x, y, ASTRAL_KEYS.exactPlatform)
-        .setScrollFactor(0.24)
-        .setDepth(-875)
-        .setDisplaySize(w, w * (217 / 420))
-        .setAlpha(0.58)
-        .setTint(0xc9dcff);
-      if (flip) island.setFlipX(true);
-    }
-
-    // Mid-depth ruins and waterfalls make the world read as the 2.5D scene
-    // shown in the project boards instead of a flat strip of platforms.
-    const midArches = [
-      [980,440,225],[2200,405,260],[3600,450,205],[5000,405,255],
-      [6420,445,215],[7820,400,250],[9050,440,205],
-    ];
-    for (const [x,y,w] of midArches) {
-      this.add.image(x, y, ASTRAL_KEYS.arch)
-        .setOrigin(0.5,1)
-        .setScrollFactor(0.42)
-        .setDepth(-650)
-        .setDisplaySize(w, w * (124 / 120))
-        .setAlpha(0.64)
-        .setTint(0xdde7ff);
-    }
-
-    const distantFalls = [
-      [1550,420,70],[3000,390,62],[4380,425,74],[5750,390,64],[7160,420,72],[8500,395,62],
-    ];
-    for (const [x,y,w] of distantFalls) {
-      const fall = this.add.image(x, y, ASTRAL_KEYS.waterfall)
-        .setOrigin(0.5,0.05)
-        .setScrollFactor(0.40)
-        .setDepth(-625)
-        .setDisplaySize(w, w * (121 / 80))
-        .setAlpha(0.58);
-      this.tweens.add({ targets: fall, alpha: 0.38, duration: 1450 + (x % 650), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    }
-
+    repeatLayer(ASTRAL_BG.foreground, 790, 1.04, 84, 0.88, 160, 1420, 20);
     this.drawForegroundMotes();
   }
+
   drawCloudBand(depth, scrollFactor, baseY, color, alpha) {
     const layer = this.add.graphics().setScrollFactor(scrollFactor).setDepth(depth);
     for (let i = 0; i < 28; i += 1) {
@@ -248,29 +214,36 @@ export class FirstLightScene extends Phaser.Scene {
 
   addAstralPlatform(x, y, width, height, { large = false, waterfall = false, alt = false } = {}) {
     const container = this.add.container(x, y).setDepth(5);
-    const artWidth = width + (large ? 92 : 58);
-    const artHeight = artWidth * (217 / 420);
-    const art = this.add.image(0, -height / 2 - 7, ASTRAL_KEYS.exactPlatform)
-      .setOrigin(0.5, 0.10)
+    const objects = ASTRAL_KEYS.objects;
+    const frame = width >= 560 ? ASTRAL_OBJ.platformLarge : width >= 245 ? ASTRAL_OBJ.platformMedium : ASTRAL_OBJ.platformSmall;
+    const ratio = frame === ASTRAL_OBJ.platformLarge ? 336 / 691 : frame === ASTRAL_OBJ.platformMedium ? 248 / 413 : 228 / 237;
+    const artWidth = width + (frame === ASTRAL_OBJ.platformLarge ? 80 : 44);
+    const rawHeight = artWidth * ratio;
+    const artHeight = frame === ASTRAL_OBJ.platformLarge
+      ? Phaser.Math.Clamp(rawHeight, 220, 365)
+      : Phaser.Math.Clamp(rawHeight, 145, 275);
+
+    const art = this.add.image(0, -height / 2 - 12, objects, frame)
+      .setOrigin(0.5, 0)
       .setDisplaySize(artWidth, artHeight)
-      .setAlpha(alt ? 0.94 : 1);
-    if (alt) art.setTint(0xe5dcff);
+      .setAlpha(alt ? 0.96 : 1);
+    if (alt) art.setTint(0xf0e8ff);
     container.add(art);
 
     if (waterfall) {
-      const wfWidth = Math.min(160, Math.max(82, width * 0.22));
-      const wf = this.add.image(width * 0.23, -height / 2 + 7, ASTRAL_KEYS.waterfall)
-        .setOrigin(0.5, 0.08)
-        .setDisplaySize(wfWidth, wfWidth * (121 / 80))
-        .setAlpha(0.96);
+      const wfWidth = Math.min(150, Math.max(72, width * 0.18));
+      const wf = this.add.image(width * 0.23, -height / 2 + 14, objects, ASTRAL_OBJ.waterfall)
+        .setOrigin(0.5, 0.04)
+        .setDisplaySize(wfWidth, wfWidth * (385 / 255))
+        .setAlpha(0.92);
       container.add(wf);
-      this.tweens.add({ targets: wf, alpha: 0.68, scaleX: wf.scaleX * 1.035, duration: 1050, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: wf, alpha: 0.72, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
 
     if (large && Math.floor(x / 400) % 2 === 0) {
-      const cluster = this.add.image(-width * 0.31, -height / 2 - 20, ASTRAL_KEYS.crystalCluster)
+      const cluster = this.add.image(-width * 0.31, -height / 2 - 8, objects, ASTRAL_OBJ.crystalCluster)
         .setOrigin(0.5, 1)
-        .setDisplaySize(116, 116 * (79 / 100))
+        .setDisplaySize(126, 99)
         .setAlpha(0.96);
       container.add(cluster);
     }
@@ -308,16 +281,15 @@ export class FirstLightScene extends Phaser.Scene {
 
   addMovingPlatform(x, y, width, height, rangeX = 0, duration = 1700, rangeY = 0) {
     const visual = this.add.container(x, y).setDepth(8);
-    const artWidth = width + 66;
-    const art = this.add.image(0, -height / 2 - 7, ASTRAL_KEYS.exactPlatform)
-      .setOrigin(0.5, 0.10)
-      .setDisplaySize(artWidth, artWidth * (217 / 420))
-      .setTint(0xc6f4ff);
+    const artWidth = width + 78;
+    const art = this.add.image(0, -height / 2 - 10, ASTRAL_KEYS.objects, ASTRAL_OBJ.platformMoving)
+      .setOrigin(0.5, 0)
+      .setDisplaySize(artWidth, artWidth * (183 / 447));
     visual.add(art);
 
-    const halo = this.add.ellipse(0, height * 0.5 + 30, width * 0.72, 24, 0x33e8ff, 0.12);
-    visual.add(halo);
-    this.tweens.add({ targets: halo, alpha: 0.03, scaleX: 1.16, duration: 750, yoyo: true, repeat: -1 });
+    const glow = this.add.ellipse(0, height * 0.5 + 28, width * 0.78, 22, 0x35e9ff, 0.10);
+    visual.add(glow);
+    this.tweens.add({ targets: glow, alpha: 0.03, scaleX: 1.16, duration: 720, yoyo: true, repeat: -1 });
 
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
@@ -343,9 +315,9 @@ export class FirstLightScene extends Phaser.Scene {
 
   addDangerCrystals(x, y, width) {
     const container = this.add.container(x, y).setDepth(10);
-    const art = this.add.image(0, 2, ASTRAL_KEYS.spikes)
+    const art = this.add.image(0, 4, ASTRAL_KEYS.objects, ASTRAL_OBJ.spikes)
       .setOrigin(0.5, 1)
-      .setDisplaySize(width + 34, (width + 34) * (122 / 140));
+      .setDisplaySize(width + 46, Math.max(86, (width + 46) * (313 / 360)));
     container.add(art);
     const bodyObject = this.add.rectangle(x, y - 18, width, 42, 0xff0000, 0);
     this.physics.add.existing(bodyObject, true);
@@ -355,8 +327,8 @@ export class FirstLightScene extends Phaser.Scene {
 
   addBreakableBlock(x, y, width, height) {
     const container = this.add.container(x, y).setDepth(9);
-    const art = this.add.image(0, 0, ASTRAL_KEYS.breakable)
-      .setDisplaySize(width * 1.32, width * 1.32 * (93 / 105));
+    const art = this.add.image(0, 0, ASTRAL_KEYS.objects, ASTRAL_OBJ.breakable)
+      .setDisplaySize(width * 1.42, height * 1.26);
     container.add(art);
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
@@ -378,14 +350,14 @@ export class FirstLightScene extends Phaser.Scene {
 
   addShard(x, y, index) {
     const container = this.add.container(x, y).setDepth(16);
-    const art = this.add.image(0, 0, ASTRAL_KEYS.shard).setDisplaySize(48, 80);
+    const art = this.add.image(0, 0, ASTRAL_KEYS.objects, ASTRAL_OBJ.shard).setDisplaySize(44, 74);
     container.add(art);
-    const bodyObject = this.add.rectangle(x, y, 36, 56, 0xffffff, 0);
+    const bodyObject = this.add.rectangle(x, y, 34, 54, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
     const shard = { container, bodyObject, art, index, collected: false };
     this.shards.push(shard);
     this.tweens.add({ targets: container, y: y - 9, duration: 900 + (index % 4) * 110, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.tweens.add({ targets: art, angle: 3, duration: 900 + (index % 5) * 80, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: art, angle: 3, duration: 850 + (index % 5) * 80, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     return shard;
   }
 
@@ -401,15 +373,14 @@ export class FirstLightScene extends Phaser.Scene {
 
   addCheckpoint(x, y, spawn, index) {
     const container = this.add.container(x, y).setDepth(15);
-    const art = this.add.image(0, -34, ASTRAL_KEYS.checkpointOff)
-      .setOrigin(0.5, 0.5)
-      .setDisplaySize(94, 193);
+    const art = this.add.image(0, -45, ASTRAL_KEYS.objects, ASTRAL_OBJ.checkpointOff)
+      .setDisplaySize(88, 181);
     container.add(art);
-    const trigger = this.add.rectangle(x, y, 105, 160, 0xffffff, 0);
+    const trigger = this.add.rectangle(x, y, 100, 160, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
     const cp = { container, trigger, spawn, index, active: false, art };
     this.checkpoints.push(cp);
-    this.tweens.add({ targets: art, y: -38, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: art, y: -50, duration: 1250, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     return cp;
   }
 
@@ -418,25 +389,24 @@ export class FirstLightScene extends Phaser.Scene {
     this.checkpoints.forEach(other => {
       if (other !== cp) {
         other.active = false;
-        other.art?.setTexture(ASTRAL_KEYS.checkpointOff);
+        other.art?.setFrame(ASTRAL_OBJ.checkpointOff);
       }
     });
     cp.active = true;
-    cp.art.setTexture(ASTRAL_KEYS.checkpointOn);
+    cp.art.setFrame(ASTRAL_OBJ.checkpointOn).setDisplaySize(88, 204);
     this.checkpointSpawn = { ...cp.spawn };
     this.checkpointIndex = cp.index;
     this.hud.setCheckpoint(cp.index);
-    this.fx.burst(cp.container.x, cp.container.y + 30, { count: 22, spreadX: 190, speedY: 180, life: 520, color: 0xffc94b, size: 4.5, gravity: 40 });
-    this.tweens.add({ targets: cp.art, scaleX: cp.art.scaleX * 1.08, scaleY: cp.art.scaleY * 1.08, duration: 150, yoyo: true, ease: 'Quad.easeOut' });
+    this.fx.burst(cp.container.x, cp.container.y + 30, { count: 22, spreadX: 190, speedY: 180, life: 520, color: 0xffc94b, size: 4.5, gravity: 40, shape: 'diamond' });
   }
 
   addBouncePad(x, y) {
     const container = this.add.container(x, y).setDepth(11);
-    const art = this.add.image(0, -12, ASTRAL_KEYS.bounce).setDisplaySize(140, 124);
+    const art = this.add.image(0, -18, ASTRAL_KEYS.objects, ASTRAL_OBJ.bounce).setDisplaySize(122, 108);
     container.add(art);
-    const trigger = this.add.rectangle(x, y - 16, 100, 36, 0xffffff, 0);
+    const trigger = this.add.rectangle(x, y - 16, 98, 34, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
-    this.tweens.add({ targets: art, scaleX: art.scaleX * 1.035, scaleY: art.scaleY * 1.035, duration: 660, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: art, scaleX: art.scaleX * 1.035, scaleY: art.scaleY * 1.035, duration: 650, yoyo: true, repeat: -1 });
     return { container, trigger, art, coolUntil: 0 };
   }
 
@@ -449,7 +419,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   addSpeedStrip(x, y) {
     const container = this.add.container(x, y).setDepth(11);
-    const art = this.add.image(0, -12, ASTRAL_KEYS.speed).setDisplaySize(175, 70);
+    const art = this.add.image(0, -12, ASTRAL_KEYS.objects, ASTRAL_OBJ.speed).setDisplaySize(175, 70);
     container.add(art);
     const trigger = this.add.rectangle(x, y - 20, 165, 54, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
@@ -467,38 +437,45 @@ export class FirstLightScene extends Phaser.Scene {
     const x = 5650, y = 730;
     this.addAstralPlatform(x, 820, 500, 64, { alt: true });
 
-    const shadow = this.add.ellipse(x, y + 4, 470, 285, 0x061020, 0.83).setDepth(2);
-    const arch = this.add.image(x, y + 82, ASTRAL_KEYS.arch)
+    this.add.ellipse(x, y + 14, 470, 285, 0x051020, 0.72).setDepth(2);
+    this.add.image(x, y + 84, ASTRAL_KEYS.objects, ASTRAL_OBJ.arch)
       .setOrigin(0.5, 1)
-      .setDisplaySize(410, 410 * (124 / 120))
-      .setDepth(3);
-    const crystals = this.add.image(x - 145, y + 66, ASTRAL_KEYS.crystalCluster)
+      .setDisplaySize(390, 402)
+      .setDepth(3)
+      .setAlpha(0.96);
+
+    this.add.image(x - 150, y + 70, ASTRAL_KEYS.objects, ASTRAL_OBJ.crystalCluster)
       .setOrigin(0.5, 1)
-      .setDisplaySize(150, 150 * (79 / 100))
+      .setDisplaySize(142, 112)
       .setDepth(4);
 
-    this.add.text(x, y - 160, 'SEGREDO', { fontFamily: 'Arial Black', fontSize: '13px', color: '#8feeff', backgroundColor: '#07101ddd', padding: { x: 8, y: 4 } }).setOrigin(.5).setDepth(20);
+    this.add.image(x + 150, y + 70, ASTRAL_KEYS.objects, ASTRAL_OBJ.vegetationPink)
+      .setOrigin(0.5, 1)
+      .setDisplaySize(132, 79)
+      .setDepth(4);
 
-    const chest = this.add.container(x + 82, y + 38).setDepth(13);
-    const chestArt = this.add.image(0, 0, ASTRAL_KEYS.chestClosed).setDisplaySize(126, 112);
+    this.add.text(x, y - 165, 'SEGREDO', { fontFamily: 'Arial Black', fontSize: '13px', color: '#8feeff', backgroundColor: '#07101ddd', padding: { x: 8, y: 4 } }).setOrigin(.5).setDepth(20);
+
+    const chest = this.add.container(x + 80, y + 36).setDepth(13);
+    const chestArt = this.add.image(0, 0, ASTRAL_KEYS.objects, ASTRAL_OBJ.chestClosed).setDisplaySize(126, 112);
     chest.add(chestArt);
-    const trigger = this.add.rectangle(x + 82, y + 38, 132, 100, 0xffffff, 0);
+    const trigger = this.add.rectangle(x + 80, y + 36, 132, 100, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
-    this.relic = { chest, chestArt, trigger, found: false, shadow, arch, crystals };
+    this.relic = { chest, chestArt, trigger, found: false };
   }
 
   collectRelic() {
     if (this.relic.found || this.finished) return;
     this.relic.found = true;
     this.relicFound = true;
-    this.relic.chestArt?.setTexture(ASTRAL_KEYS.chestOpen).setDisplaySize(126, 143);
-    const relicArt = this.add.image(this.relic.chest.x, this.relic.chest.y - 88, ASTRAL_KEYS.relic)
-      .setDisplaySize(96, 96 * (134 / 90))
+    this.relic.chestArt?.setFrame(ASTRAL_OBJ.chestOpen).setDisplaySize(126, 143);
+    const relicArt = this.add.image(this.relic.chest.x, this.relic.chest.y - 92, ASTRAL_KEYS.objects, ASTRAL_OBJ.relic)
+      .setDisplaySize(86, 128)
       .setDepth(14)
       .setAlpha(0);
     this.tweens.add({ targets: relicArt, alpha: 1, y: relicArt.y - 18, duration: 320, ease: 'Back.easeOut' });
     this.relic.trigger.body.enable = false;
-    this.fx.burst(this.relic.chest.x, this.relic.chest.y - 25, { count: 28, spreadX: 230, speedY: 230, life: 650, color: 0xffd35f, size: 5, gravity: 50 });
+    this.fx.burst(this.relic.chest.x, this.relic.chest.y - 25, { count: 28, spreadX: 230, speedY: 230, life: 650, color: 0xffd35f, size: 5, gravity: 50, shape: 'diamond' });
     this.tweens.add({ targets: this.relic.chest, y: this.relic.chest.y - 18, duration: 180, yoyo: true, ease: 'Quad.easeOut' });
     const msg = this.add.text(640, 610, 'RELÍQUIA SECRETA DESCOBERTA', { fontFamily: 'Arial Black', fontSize: '16px', color: '#ffd45b', backgroundColor: '#07101de8', padding: { x: 18, y: 10 } }).setOrigin(.5).setScrollFactor(0).setDepth(6000);
     this.tweens.add({ targets: msg, alpha: 0, y: 588, delay: 1200, duration: 500, onComplete: () => msg.destroy() });
@@ -506,9 +483,8 @@ export class FirstLightScene extends Phaser.Scene {
 
   createFinishGate() {
     const x = 9490, y = 520;
-    const gate = this.add.image(x, y + 52, ASTRAL_KEYS.finish)
-      .setOrigin(0.5, 0.5)
-      .setDisplaySize(255, 266)
+    const gate = this.add.image(x, y + 52, ASTRAL_KEYS.objects, ASTRAL_OBJ.finish)
+      .setDisplaySize(260, 270)
       .setDepth(14);
     this.finishGateArt = gate;
     this.tweens.add({ targets: gate, scaleX: gate.scaleX * 1.018, scaleY: gate.scaleY * 1.018, duration: 980, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
@@ -518,60 +494,70 @@ export class FirstLightScene extends Phaser.Scene {
 
   addSceneSigns() {
     const signs = [
-      [1080, 500, 'SALTA'], [3180, 540, 'BOUNCE'], [3620, 510, 'ROTA ↑'], [5560, 610, 'SEGREDO ↓'], [7330, 535, 'BOOST'], [8850, 540, 'FINAL →'],
+      [1080,500,'SALTA'], [3180,540,'BOUNCE'], [3620,510,'ROTA ↑'],
+      [5560,610,'SEGREDO ↓'], [7330,535,'BOOST'], [8850,540,'FINAL →'],
     ];
     for (const [x,y,label] of signs) {
-      const post = this.add.rectangle(x, y, 7, 70, 0x6a5540, 1).setDepth(7);
-      const plate = this.add.rectangle(x + 18, y - 38, 112, 36, 0x13253f, 0.95).setStrokeStyle(2, 0x4de8ff, 0.72).setDepth(7);
-      this.add.text(x + 18, y - 39, label, { fontFamily: 'Arial Black', fontSize: '11px', color: '#eaffff' }).setOrigin(.5).setDepth(8);
-      this.decor.push(post, plate);
+      const art = this.add.image(x, y - 22, ASTRAL_KEYS.objects, ASTRAL_OBJ.signMarker)
+        .setDisplaySize(92, 88)
+        .setDepth(7);
+      this.add.text(x + 4, y - 58, label, { fontFamily: 'Arial Black', fontSize: '9px', color: '#eaffff', backgroundColor: '#07101dcc', padding: { x: 5, y: 2 } })
+        .setOrigin(.5)
+        .setDepth(8);
+      this.decor.push(art);
     }
   }
 
   decorateAstralWorld() {
-    // Near-world architectural accents, all using the approved extracted art.
-    const arches = [[1510,585,360],[4300,550,310],[6880,565,350],[8740,545,290]];
+    const arches = [[1510,585,345],[4300,550,310],[6880,565,340],[8740,545,290]];
     for (const [x,y,w] of arches) {
-      this.add.image(x, y, ASTRAL_KEYS.arch)
+      this.add.image(x, y, ASTRAL_KEYS.objects, ASTRAL_OBJ.arch)
         .setOrigin(0.5,1)
-        .setDisplaySize(w, w * (124 / 120))
+        .setDisplaySize(w, w * (491 / 477))
         .setDepth(2)
-        .setAlpha(0.98);
+        .setAlpha(0.97);
     }
 
-    const clusters = [
-      [880,606,186],[1880,610,165],[3920,534,156],[6000,605,174],
-      [8380,522,150],[9270,603,180],
-    ];
+    const clusters = [[880,606,170],[1880,610,155],[3920,534,150],[6000,605,168],[8380,522,145],[9270,603,175]];
     for (const [x,y,w] of clusters) {
-      const art = this.add.image(x, y, ASTRAL_KEYS.crystalCluster)
+      const art = this.add.image(x, y, ASTRAL_KEYS.objects, ASTRAL_OBJ.crystalCluster)
         .setOrigin(0.5,1)
-        .setDisplaySize(w, w * (79 / 100))
+        .setDisplaySize(w, w * (281 / 356))
         .setDepth(7);
       this.tweens.add({ targets: art, alpha: 0.78, duration: 1200 + (x % 700), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
 
-    // Foreground fragments create the richer layered silhouette visible in
-    // the approved environment sheets without changing collision geometry.
-    const foreground = [
-      [360,742,210,false],[1260,735,180,true],[2740,746,225,false],[4680,735,190,true],
-      [6580,744,220,false],[8220,736,185,true],[9630,744,215,false],
+    const vegetation = [
+      [720,605,ASTRAL_OBJ.vegetationPink,120],[1760,605,ASTRAL_OBJ.vegetationGreen,115],
+      [3820,528,ASTRAL_OBJ.vegetationPink,105],[6120,602,ASTRAL_OBJ.vegetationGreen,118],
+      [8280,518,ASTRAL_OBJ.vegetationPink,102],[9340,600,ASTRAL_OBJ.vegetationGreen,116],
     ];
-    for (const [x,y,w,flip] of foreground) {
-      const island = this.add.image(x, y, ASTRAL_KEYS.exactPlatform)
-        .setOrigin(0.5,0.2)
-        .setDisplaySize(w, w * (217 / 420))
+    for (const [x,y,frame,w] of vegetation) {
+      this.add.image(x, y, ASTRAL_KEYS.objects, frame)
+        .setOrigin(0.5,1)
+        .setDisplaySize(w, w * 0.58)
+        .setDepth(6);
+    }
+
+    const routeBanners = [[1500,510],[4320,475],[6920,490],[8880,468]];
+    for (const [x,y] of routeBanners) {
+      this.add.image(x, y, ASTRAL_KEYS.objects, ASTRAL_OBJ.routeBanner)
+        .setOrigin(0.5,1)
+        .setDisplaySize(62, 143)
+        .setDepth(4)
+        .setAlpha(0.92);
+    }
+
+    const foregroundIslands = [[360,760,190],[2700,766,215],[4720,758,185],[6600,765,205],[9600,760,190]];
+    for (const [x,y,w] of foregroundIslands) {
+      this.add.image(x, y, ASTRAL_KEYS.objects, ASTRAL_OBJ.floatingIsland)
+        .setOrigin(0.5,0.15)
+        .setDisplaySize(w, w * (397 / 326))
         .setDepth(82)
         .setAlpha(0.86);
-      if (flip) island.setFlipX(true);
-      const crystals = this.add.image(x + (flip ? -58 : 58), y - 32, ASTRAL_KEYS.crystalCluster)
-        .setOrigin(0.5,1)
-        .setDisplaySize(w * 0.46, w * 0.46 * (79 / 100))
-        .setDepth(83)
-        .setAlpha(0.92);
-      if (flip) crystals.setFlipX(true);
     }
   }
+
   handleMovementEvent(event) {
     if (event.type === 'jump') this.fx.jump(this.runner);
     if (event.type === 'skid') this.fx.skid(this.runner);

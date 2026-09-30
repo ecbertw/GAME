@@ -16,6 +16,7 @@ const ROOT=__dirname;
 const PRIVATE_STATIC_NAMES=new Set(['server.js','server-start.js','auth-server.js','paypal-server.js','jump-server.js','pulse-orbit-server.js','progression-server.js','package.json','package-lock.json','README.md','.gitignore','LICENSE']);
 const PUBLIC_STATIC_EXTS=new Set(['.html','.css','.js','.mjs','.glb','.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.woff','.woff2']);
 function isPublicStaticRequestPath(pathname){
+  if(pathname.startsWith('/games/run/assets/final/')&&pathname.endsWith('.json'))return true;
   if(pathname==='/assets/game-v300/hero-parts.json')return true;
   if(['/jump','/pulse','/passport','/rankings','/rooms','/vip'].includes(pathname))return true;
   const clean=String(pathname||'').replace(/^\/+/,''),parts=clean.split('/');
