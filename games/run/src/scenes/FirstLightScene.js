@@ -257,13 +257,23 @@ export class FirstLightScene extends Phaser.Scene {
     visual.add(g);
 
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
-    this.physics.add.existing(bodyObject);
-    bodyObject.body.setAllowGravity(false).setImmovable(true);
-    bodyObject.body.pushable = false;
+    this.physics.add.existing(bodyObject, true);
     visual.bodyObject = bodyObject;
     this.platforms.push(visual);
 
-    this.tweens.add({ targets: [visual, bodyObject], x: x + rangeX, y: y + rangeY, duration, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({
+      targets: visual,
+      x: x + rangeX,
+      y: y + rangeY,
+      duration,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        bodyObject.setPosition(visual.x, visual.y);
+        bodyObject.body.updateFromGameObject();
+      },
+    });
     return visual;
   }
 
@@ -403,6 +413,7 @@ export class FirstLightScene extends Phaser.Scene {
 
   createSecretCave() {
     const x = 5650, y = 730;
+    this.addAstralPlatform(x, 820, 500, 64, { alt: true });
     const cave = this.add.container(x, y).setDepth(3);
     const g = this.add.graphics();
     g.fillStyle(0x10192c, 1).fillRoundedRect(-210, -120, 420, 180, 70);
