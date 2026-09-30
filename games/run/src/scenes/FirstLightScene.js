@@ -221,12 +221,12 @@ export class FirstLightScene extends Phaser.Scene {
   addAstralPlatform(x, y, width, height, { large = false, waterfall = false, alt = false } = {}) {
     const container = this.add.container(x, y).setDepth(5);
     const frame = width >= 560 ? ASTRAL_OBJ.platformLarge : width >= 245 ? ASTRAL_OBJ.platformMedium : ASTRAL_OBJ.platformSmall;
-    const ratio = frame === ASTRAL_OBJ.platformLarge ? 336 / 691 : frame === ASTRAL_OBJ.platformMedium ? 248 / 413 : 228 / 237;
+    // All three gameplay sizes use the same approved canonical platform art.
+    // Preserve its native aspect ratio instead of stretching the small/medium variants.
+    const ratio = 336 / 691;
     const artWidth = width + (frame === ASTRAL_OBJ.platformLarge ? 80 : 44);
     const rawHeight = artWidth * ratio;
-    const artHeight = frame === ASTRAL_OBJ.platformLarge
-      ? Phaser.Math.Clamp(rawHeight, 220, 365)
-      : Phaser.Math.Clamp(rawHeight, 145, 275);
+    const artHeight = Phaser.Math.Clamp(rawHeight, frame === ASTRAL_OBJ.platformLarge ? 220 : 125, 365);
 
     const art = this.add.image(0, -height / 2 - 12, frame)
       .setOrigin(0.5, 0)
