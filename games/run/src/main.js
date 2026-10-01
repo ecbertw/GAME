@@ -1,11 +1,11 @@
-import { MovementLabScene } from './scenes/MovementLabScene.js';
+import { HardcoreRunScene } from './scenes/HardcoreRunScene.js';
 
 const config = {
   type: Phaser.AUTO,
   parent: 'run-root',
   width: 1280,
   height: 720,
-  backgroundColor: '#0b1220',
+  backgroundColor: '#08090d',
   pixelArt: false,
   antialias: true,
   roundPixels: true,
@@ -16,13 +16,13 @@ const config = {
   physics: {
     default: 'arcade',
     arcade: {
-      gravity: { y: 0 },
+      gravity: { y: 1700 },
       debug: false,
       fps: 120,
       fixedStep: true,
     },
   },
-  scene: [MovementLabScene],
+  scene: [HardcoreRunScene],
 };
 
 new Phaser.Game(config);
