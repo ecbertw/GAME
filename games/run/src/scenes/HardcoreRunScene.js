@@ -233,7 +233,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.levelIndex=Phaser.Math.Clamp(index,0,RUN_LEVEL_COUNT-1);
     this.dead=false;
     this.levelLocked=false;
-    const L=getRunLevel(index);
+    const L=getRunLevel(this.levelIndex);
     this.physics.world.setBounds(0,0,L.width,720);
     this.cameras.main.setBounds(0,0,L.width,720);
     this.configureViewport();
@@ -255,14 +255,14 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.createGoal(L.goal[0],L.goal[1]);
     this.createPlayer(L.spawn[0],L.spawn[1]);
 
-    this.levelText.setText('LEVEL '+String(index+1).padStart(3,'0')+' / '+String(RUN_LEVEL_COUNT).padStart(3,'0'));
+    this.levelText.setText('LEVEL '+String(this.levelIndex+1).padStart(3,'0')+' / '+String(RUN_LEVEL_COUNT).padStart(3,'0'));
     this.nameText.setText(L.name+'  ·  NEON VOID');
     this.setProgress((this.levelIndex+1)/RUN_LEVEL_COUNT);
     this.cameras.main.startFollow(this.player,true,.11,.08,-Math.min(260,this.uiWidth()*.18),20);
     this.cameras.main.scrollX=0;
     if(resetClock&&this.runActive) this.levelStartedAt=this.time.now;
 
-    this.showLevelCard(index,L.name);
+    this.showLevelCard(this.levelIndex,L.name);
   }
 
   drawGrid(width){
