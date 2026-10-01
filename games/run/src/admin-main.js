@@ -8,7 +8,7 @@ const config = {
   backgroundColor: '#08152c',
   pixelArt: false,
   antialias: true,
-  roundPixels: true,
+  roundPixels: false,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
