@@ -388,9 +388,17 @@ async function handleApi(req,res,url){
     const targetHost=requestHost(req);
     if(!ALLOWED_HOSTS.has(targetHost))return json(res,403,{error:'Host não autorizado.'});
     const source=String(req.headers.origin||req.headers.referer||'').trim();
-    if(!source)return json(res,403,{error:'Origem não autorizada.'});
-    let ok=false;try{ok=new URL(source).hostname.toLowerCase()===targetHost}catch(_){}
-    if(!ok)return json(res,403,{error:'Origem não autorizada.'});
+    const runCookiePost=req.method==='POST'&&['/api/run/start','/api/run/level'].includes(url.pathname);
+    const browserSameOrigin=fetchSite==='same-origin'||fetchSite==='same-site';
+    // Privacy-focused browsers may omit Origin/Referer on same-origin fetches.
+    // RUN still requires the secure HttpOnly session cookie below, so accept
+    // missing source headers only for these two authenticated same-origin APIs.
+    if(!source){
+      if(!(runCookiePost&&browserSameOrigin&&parseCookies(req)[SESSION_COOKIE]))return json(res,403,{error:'Origem não autorizada.'});
+    }else{
+      let ok=false;try{ok=new URL(source).hostname.toLowerCase()===targetHost}catch(_){}
+      if(!ok)return json(res,403,{error:'Origem não autorizada.'});
+    }
   }
   const cookieToken=parseCookies(req)[SESSION_COOKIE];
   if(cookieToken)url.searchParams.set('token',cookieToken);
