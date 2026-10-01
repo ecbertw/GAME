@@ -72,7 +72,11 @@ body{overscroll-behavior:none}
 
 .run-stage{
   position:fixed;left:0;right:0;top:76px;bottom:0;overflow:hidden;
-  background:#dce9f1 url('/games/run/assets/neon-void/background.svg?v=20261001-lab1') center center / cover no-repeat
+  background-color:#dce9f1;
+  background-image:url('/games/run/assets/neon-void/background.svg?v=20261001-lab2');
+  background-position:center center;
+  background-size:cover;
+  background-repeat:no-repeat
 }
 .run-stage:after{
   content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
