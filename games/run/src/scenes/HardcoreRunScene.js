@@ -56,8 +56,36 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.runnerPhase=0;
   }
 
+  preload(){
+    const base='/games/run/assets/neon-void/';
+    this.load.svg('nv-bg',base+'background.svg');
+    this.load.svg('nv-platform',base+'platform.svg');
+    this.load.svg('nv-moving',base+'moving-platform.svg');
+    this.load.svg('nv-spikes',base+'spikes.svg');
+    this.load.svg('nv-saw',base+'saw.svg');
+    this.load.svg('nv-laser',base+'laser.svg');
+    this.load.svg('nv-crusher',base+'crusher.svg');
+    this.load.svg('nv-exit',base+'exit.svg');
+    this.load.svg('nv-stopwatch',base+'stopwatch.svg');
+    this.load.svg('nv-skull',base+'skull.svg');
+  }
+
+  configureViewport(){
+    const pxW=Math.max(640,Number(this.scale.width)||1280);
+    const pxH=Math.max(360,Number(this.scale.height)||720);
+    const zoom=pxH/720;
+    this.uiZoom=zoom;
+    this.uiWorldWidth=pxW/zoom;
+    this.cameras.main.setViewport(0,0,pxW,pxH);
+    this.cameras.main.setZoom(zoom);
+  }
+
+  uiWidth(){ return this.uiWorldWidth||1280; }
+  uiCenterX(){ return this.uiWidth()/2; }
+
   create(){
     this.cameras.main.setBackgroundColor(C.bg);
+    this.configureViewport();
     this.physics.world.setBounds(0,0,1280,720);
     this.keys=this.input.keyboard.addKeys({
       left:Phaser.Input.Keyboard.KeyCodes.LEFT,
@@ -91,55 +119,45 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   createHud(){
+    const vw=this.uiWidth();
     this.hud=this.add.container(0,0).setScrollFactor(0).setDepth(1000);
+    this.hudGlass=this.add.rectangle(vw/2,41,vw,82,0x01050b,.965);
+    this.hudLine=this.add.rectangle(vw/2,81,vw,1,0x547493,.72);
+    this.brandText=this.add.text(24,10,'RUN',{fontFamily:'Arial Black,Arial',fontSize:'35px',fontStyle:'italic',color:'#ffffff',letterSpacing:1});
+    this.brandText.setShadow(0,0,'#d9f7ff',7,true,true);
+    this.brandSlash=this.add.text(145,18,'//',{fontFamily:'Arial Black,Arial',fontSize:'23px',color:'#657487'});
+    this.levelText=this.add.text(198,13,'LEVEL 001',{fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#f8fbff',letterSpacing:2});
+    this.nameText=this.add.text(198,40,'NEON VOID',{fontFamily:'monospace',fontSize:'10px',color:'#c1cad5',letterSpacing:6});
 
-    const glass=this.add.rectangle(640,39,1280,78,0x02050a,.91);
-    const bottomLine=this.add.rectangle(640,77,1280,1,0x2b4961,.85);
-    const redDash=this.add.rectangle(190,39,32,3,C.accent,1).setRotation(-.08);
+    const timerX=Math.max(560,Math.min(vw-330,vw*.69));
+    this.timerIcon=this.add.image(timerX-132,34,'nv-stopwatch').setDisplaySize(40,40);
+    this.timerText=this.add.text(timerX-92,10,'00:00.000',{fontFamily:'monospace',fontSize:'27px',fontStyle:'bold',color:'#ffffff',letterSpacing:1});
+    this.pbText=this.add.text(timerX-88,45,'PB  --:--.---',{fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#aeb9c8',letterSpacing:2});
 
-    this.brandText=this.add.text(28,14,'RUN',{fontFamily:'Arial Black,Arial',fontSize:'31px',fontStyle:'italic',color:'#f6fbff',letterSpacing:2});
-    this.brandSlash=this.add.text(146,20,'//',{fontFamily:'Arial Black,Arial',fontSize:'17px',color:'#60758b'});
-    this.levelText=this.add.text(220,15,'LEVEL 001 / 900',{fontFamily:'Arial Black,Arial',fontSize:'13px',color:'#f4fbff',letterSpacing:1});
-    this.nameText=this.add.text(220,39,'NEON VOID',{fontFamily:'monospace',fontSize:'11px',color:'#7b9bb6',letterSpacing:4});
+    this.hudDivider=this.add.rectangle(vw-248,40,1,42,0x8192a5,.62);
+    this.deathIcon=this.add.image(vw-190,39,'nv-skull').setDisplaySize(42,42);
+    this.deathLabel=this.add.text(vw-144,12,'DEATHS',{fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',color:'#cbd3df',letterSpacing:4});
+    this.deathText=this.add.text(vw-144,34,'0',{fontFamily:'Arial Black,Arial',fontSize:'24px',color:'#ffffff'});
+    this.progressBase=this.add.rectangle(vw/2,80,vw,2,0x17304a,.75);
+    this.progressFill=this.add.rectangle(0,80,0,2,C.cyan,1).setOrigin(0,.5);
 
-    this.timerLabel=this.add.text(640,9,'TIME',{fontFamily:'Arial Black,Arial',fontSize:'9px',color:'#72869a',letterSpacing:2}).setOrigin(.5,0);
-    this.timerText=this.add.text(640,25,'00:00.000',{fontFamily:'Arial Black,Arial',fontSize:'28px',color:'#ffffff'}).setOrigin(.5,0);
-
-    this.pbText=this.add.text(1010,17,'PB  --:--.---',{fontFamily:'monospace',fontSize:'13px',color:'#79dfff'}).setOrigin(1,0);
-    this.deathText=this.add.text(1240,17,'DEATHS  0',{fontFamily:'Arial Black,Arial',fontSize:'11px',color:'#ff5573'}).setOrigin(1,0);
-    this.deathIcon=this.add.text(1080,13,'◆',{fontFamily:'Arial Black,Arial',fontSize:'17px',color:'#ff3159'});
-
-    this.progressBase=this.add.rectangle(640,76,780,2,0x183044,.9);
-    this.progressFill=this.add.rectangle(250,76,0,2,C.cyan,1).setOrigin(0,.5);
-
-    this.hud.add([glass,bottomLine,redDash,this.brandText,this.brandSlash,this.levelText,this.nameText,this.timerLabel,this.timerText,this.pbText,this.deathIcon,this.deathText,this.progressBase,this.progressFill]);
-
-    this.controls=this.add.text(24,691,'A/D  MOVE    SPACE  JUMP    R  RESTART    H  HOME',{
-      fontFamily:'monospace',fontSize:'10px',color:'#50667a',letterSpacing:1
-    }).setScrollFactor(0).setDepth(1000);
+    this.hud.add([this.hudGlass,this.hudLine,this.brandText,this.brandSlash,this.levelText,this.nameText,this.timerIcon,this.timerText,this.pbText,this.hudDivider,this.deathIcon,this.deathLabel,this.deathText,this.progressBase,this.progressFill]);
+    this.controls=this.add.text(22,692,'A/D  MOVE    SPACE  JUMP    R  RESTART    H  HOME',{fontFamily:'monospace',fontSize:'9px',color:'#66778a',letterSpacing:1}).setScrollFactor(0).setDepth(1000);
   }
 
   createStartOverlay(){
-    this.startShade=this.add.rectangle(640,360,1280,720,0x02050a,.82).setScrollFactor(0).setDepth(2000);
-    const panel=this.add.rectangle(640,355,610,420,0x07101a,.87).setStrokeStyle(1,0x27445b,.95).setScrollFactor(0).setDepth(2001);
-    const lineA=this.add.rectangle(640,164,520,1,C.cyan,.42).setScrollFactor(0).setDepth(2002);
-    const lineB=this.add.rectangle(640,545,520,1,C.hazard,.35).setScrollFactor(0).setDepth(2002);
-
-    this.startTitle=this.add.text(640,180,'RUN //',{fontFamily:'Arial Black,Arial',fontSize:'72px',fontStyle:'italic',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startTitle.setShadow(5,5,'#12384f',6,true,true);
-    this.startSub=this.add.text(640,246,'NEON VOID',{fontFamily:'monospace',fontSize:'14px',color:'#79dfff',letterSpacing:8}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startRules=this.add.text(640,298,'900 HARDCORE LEVELS\nHIGHEST LEVEL · FASTEST TIME',{
-      fontFamily:'Arial Black,Arial',fontSize:'12px',color:'#a8b8c8',align:'center',lineSpacing:10,letterSpacing:1
-    }).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startRanking=this.add.text(640,390,'WORLD TOP\nLOADING...',{
-      fontFamily:'monospace',fontSize:'14px',color:'#e9f7ff',align:'left',lineSpacing:7
-    }).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startPrompt=this.add.text(640,500,'SPACE / ENTER / CLICK  —  START',{
-      fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#56ff9d',letterSpacing:1
-    }).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startNote=this.add.text(640,570,'LOGIN FOR GLOBAL RANKING · PRACTICE WORKS OFFLINE',{
-      fontFamily:'monospace',fontSize:'9px',color:'#62778b',letterSpacing:1
-    }).setOrigin(.5).setScrollFactor(0).setDepth(2003);
+    const cx=this.uiCenterX(),vw=this.uiWidth();
+    this.startShade=this.add.rectangle(cx,360,vw,720,0x01040a,.88).setScrollFactor(0).setDepth(2000);
+    const panel=this.add.rectangle(cx,355,610,420,0x07101a,.93).setStrokeStyle(1,0x334b61,.98).setScrollFactor(0).setDepth(2001);
+    const lineA=this.add.rectangle(cx,164,520,1,C.cyan,.42).setScrollFactor(0).setDepth(2002);
+    const lineB=this.add.rectangle(cx,545,520,1,C.hazard,.35).setScrollFactor(0).setDepth(2002);
+    this.startTitle=this.add.text(cx,180,'RUN //',{fontFamily:'Arial Black,Arial',fontSize:'72px',fontStyle:'italic',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
+    this.startTitle.setShadow(0,0,'#9eefff',10,true,true);
+    this.startSub=this.add.text(cx,246,'NEON VOID',{fontFamily:'monospace',fontSize:'14px',color:'#bcecff',letterSpacing:8}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
+    this.startRules=this.add.text(cx,298,'900 HARDCORE LEVELS\nHIGHEST LEVEL · FASTEST TIME',{fontFamily:'Arial Black,Arial',fontSize:'12px',color:'#a8b8c8',align:'center',lineSpacing:10,letterSpacing:1}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
+    this.startRanking=this.add.text(cx,390,'WORLD TOP\nLOADING...',{fontFamily:'monospace',fontSize:'14px',color:'#e9f7ff',align:'left',lineSpacing:7}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
+    this.startPrompt=this.add.text(cx,500,'SPACE / ENTER / CLICK  —  START',{fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#56ff9d',letterSpacing:1}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
+    this.startNote=this.add.text(cx,570,'LOGIN FOR GLOBAL RANKING · PRACTICE WORKS OFFLINE',{fontFamily:'monospace',fontSize:'9px',color:'#62778b',letterSpacing:1}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
     this.startObjects=[this.startShade,panel,lineA,lineB,this.startTitle,this.startSub,this.startRules,this.startRanking,this.startPrompt,this.startNote];
   }
 
@@ -197,6 +215,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const L=getRunLevel(index);
     this.physics.world.setBounds(0,0,L.width,720);
     this.cameras.main.setBounds(0,0,L.width,720);
+    this.configureViewport();
     this.drawGrid(L.width);
 
     for(const f of L.floors||[]) this.addFloor(f[0],f[1],f[2]);
@@ -215,8 +234,8 @@ export class HardcoreRunScene extends Phaser.Scene {
 
     this.levelText.setText('LEVEL '+String(index+1).padStart(3,'0')+' / '+String(RUN_LEVEL_COUNT).padStart(3,'0'));
     this.nameText.setText(L.name+'  ·  NEON VOID');
-    this.progressFill.width=760*(index/RUN_LEVEL_COUNT);
-    this.cameras.main.startFollow(this.player,true,.11,.08,-230,20);
+    this.progressFill.width=this.uiWidth()*(index/RUN_LEVEL_COUNT);
+    this.cameras.main.startFollow(this.player,true,.11,.08,-Math.min(260,this.uiWidth()*.18),20);
     this.cameras.main.scrollX=0;
     if(resetClock&&this.runActive) this.levelStartedAt=this.time.now;
 
@@ -224,39 +243,12 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   drawGrid(width){
-    const sky=this.add.graphics().setScrollFactor(0).setDepth(-80);
-    sky.fillStyle(C.bg,1).fillRect(0,0,1280,720);
-    sky.fillStyle(C.bg2,.95).fillRect(0,78,1280,642);
-
-    // distant planet / arc
-    sky.fillStyle(0x0c2440,.65).fillCircle(1070,230,190);
-    sky.fillStyle(C.bg2,1).fillCircle(1010,265,185);
-    sky.lineStyle(2,0x4a86b0,.18).strokeCircle(1070,230,190);
-
-    // distant city silhouettes
-    for(let i=0;i<22;i++){
-      const x=i*66-20;
-      const h=90+((i*47)%210);
-      const w=34+((i*19)%42);
-      sky.fillStyle(i%3===0?0x081522:0x07101b,.96).fillRect(x,650-h,w,h);
-      if(i%2===0){
-        sky.fillStyle(0x2b94c4,.22);
-        for(let yy=650-h+20;yy<630;yy+=34) sky.fillRect(x+w*.42,yy,3,10);
-      }
-    }
-
-    const grid=this.add.graphics().setScrollFactor(0).setDepth(-70);
-    grid.lineStyle(1,C.grid,.20);
-    for(let x=0;x<=1280;x+=80) grid.lineBetween(x,78,x,720);
-    for(let y=80;y<=720;y+=80) grid.lineBetween(0,y,1280,y);
-    grid.lineStyle(1,0x6cc7ff,.045);
-    for(let x=40;x<1280;x+=320) grid.lineBetween(x,78,x,720);
-
-    const haze=this.add.graphics().setScrollFactor(0).setDepth(-60);
-    haze.fillStyle(0x0b2740,.10).fillRect(0,360,1280,360);
-    haze.fillStyle(0xff3159,.025).fillRect(0,560,1280,160);
-
-    this.levelObjects.push(sky,grid,haze);
+    const vw=this.uiWidth();
+    const bg=this.add.image(vw/2,360,'nv-bg').setScrollFactor(0).setDepth(-100).setDisplaySize(vw,720);
+    const vignette=this.add.graphics().setScrollFactor(0).setDepth(-60);
+    vignette.fillStyle(0x000000,.18).fillRect(0,82,vw,638);
+    vignette.fillStyle(0xff3159,.025).fillRect(0,570,vw,150);
+    this.levelObjects.push(bg,vignette);
   }
 
   addFloor(start,end,top){
@@ -265,25 +257,25 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   addPlatform(x,y,w,h,solidFloor=false){
-    const r=this.add.rectangle(x,y,w,h,C.platform,1).setDepth(5);
-    r.setStrokeStyle(1,0x24384b,.95);
+    const r=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(5);
     r.__isPlatform=true;
     this.physics.add.existing(r,true);
-
     const top=y-h/2;
-    const shadow=this.add.rectangle(x,top+7,w,14,0x000000,.45).setDepth(5);
-    const glow=this.add.rectangle(x,top+1,w,5,C.platformGlow,.10).setDepth(6);
-    const edge=this.add.rectangle(x,top,w,2,C.platformEdge,.94).setDepth(7);
-
-    const leftCap=this.add.rectangle(x-w/2+3,top+8,3,16,C.cyan,.18).setDepth(7);
-    const rightCap=this.add.rectangle(x+w/2-3,top+8,3,16,C.cyan,.18).setDepth(7);
-
-    if(!solidFloor&&h<=40){
-      const panel=this.add.rectangle(x,y+Math.min(7,h*.18),Math.max(8,w-18),Math.max(3,h*.30),0x07101a,.82).setDepth(6);
-      this.levelObjects.push(panel);
+    const visualH=solidFloor?Math.min(92,Math.max(58,h*.30)):Math.min(50,Math.max(38,h+24));
+    const cap=this.add.image(x,top,'nv-platform').setOrigin(.5,0).setDepth(7).setDisplaySize(w,visualH);
+    if(solidFloor&&h>visualH){
+      const bodyH=h-visualH;
+      const body=this.add.rectangle(x,top+visualH+bodyH/2,w,bodyH,0x070c13,1).setDepth(5);
+      body.setStrokeStyle(1,0x182332,.9);
+      const braces=this.add.graphics().setDepth(6);
+      braces.lineStyle(2,0x28364a,.48);
+      for(let bx=x-w/2+18;bx<x+w/2-18;bx+=72){
+        braces.lineBetween(bx,top+visualH+8,Math.min(bx+42,x+w/2-12),Math.min(top+h-10,top+visualH+64));
+        braces.lineBetween(Math.min(bx+42,x+w/2-12),top+visualH+8,bx,Math.min(top+h-10,top+visualH+64));
+      }
+      this.levelObjects.push(body,braces);
     }
-
-    this.levelObjects.push(r,shadow,glow,edge,leftCap,rightCap);
+    this.levelObjects.push(r,cap);
     return r;
   }
 
@@ -292,15 +284,8 @@ export class HardcoreRunScene extends Phaser.Scene {
     const r=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(6);
     r.__isPlatform=true;
     this.physics.add.existing(r,true);
-
-    const visual=this.add.container(x,y).setDepth(8);
-    const glow=this.add.rectangle(0,0,w+8,h+8,C.cyan,.10);
-    const base=this.add.rectangle(0,0,w,h,0x0d1723,1).setStrokeStyle(2,0xbcefff,.9);
-    const top=this.add.rectangle(0,-h/2+1,w-8,2,0xffffff,.95);
-    const arrows=this.add.text(0,0,axis==='x'?'‹‹  ››':'▲\n▼',{fontFamily:'Arial Black,Arial',fontSize:axis==='x'?'12px':'8px',color:'#73e6ff',align:'center'}).setOrigin(.5);
-    visual.add([glow,base,top,arrows]);
-
-    r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;r.visual=visual;
+    const visual=this.add.image(x,y-4,'nv-moving').setDepth(9).setDisplaySize(Math.max(92,w+18),46);
+    r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;r.visual=visual;r.visualYOffset=-4;
     this.levelObjects.push(r,visual);
     this.dynamicPlatforms.push(r);
     return r;
@@ -311,17 +296,8 @@ export class HardcoreRunScene extends Phaser.Scene {
     const sensor=this.add.rectangle(x,bottom+h/2,width,h,0x000000,0).setDepth(9);
     sensor.__isHazard=true;
     this.physics.add.existing(sensor,true);
-    const g=this.add.graphics().setDepth(11);
-    const count=Math.max(2,Math.floor(width/22)),step=width/count;
-    g.fillStyle(C.hazard,.15);
-    g.fillRect(x-width/2,bottom,width,4);
-    g.fillStyle(C.hazard,1);
-    for(let i=0;i<count;i++){
-      const left=x-width/2+i*step;
-      g.fillTriangle(left,bottom,left+step/2,bottom+h,left+step,bottom);
-    }
-    g.lineStyle(1,0xff9aad,.85).lineBetween(x-width/2,bottom,x+width/2,bottom);
-    this.levelObjects.push(sensor,g);
+    const visual=this.add.image(x,bottom,'nv-spikes').setOrigin(.5,1).setFlipY(true).setDepth(12).setDisplaySize(width,38);
+    this.levelObjects.push(sensor,visual);
   }
 
   addCrusher(spec){
@@ -329,15 +305,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const block=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(12);
     block.__isHazard=true;
     this.physics.add.existing(block,true);
-
-    const visual=this.add.container(x,y).setDepth(14);
-    const glow=this.add.rectangle(0,h/2+5,w+12,16,C.hazard,.12);
-    const body=this.add.rectangle(0,0,w,h,0x111a26,1).setStrokeStyle(2,0x344557,1);
-    const face=this.add.rectangle(0,4,w-10,h-16,0x0a111a,1);
-    const warning=this.add.rectangle(0,h/2-10,w-8,10,C.hazardDark,1).setStrokeStyle(1,C.hazard,.9);
-    const arrow=this.add.text(0,2,'▼',{fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#ff3159'}).setOrigin(.5);
-    visual.add([glow,body,face,warning,arrow]);
-
+    const visual=this.add.image(x,y,'nv-crusher').setDepth(15).setDisplaySize(Math.max(110,w+58),Math.max(105,h+74));
     block.baseY=y;block.range=range;block.period=period;block.phase=phase;block.visual=visual;
     this.levelObjects.push(block,visual);
     this.dynamicHazards.push({type:'crusher',obj:block});
@@ -348,16 +316,8 @@ export class HardcoreRunScene extends Phaser.Scene {
     const sensor=this.add.rectangle(x,top-h/2,width,h,0x000000,0).setDepth(9);
     sensor.__isHazard=true;
     this.physics.add.existing(sensor,true);
-    const g=this.add.graphics().setDepth(11);
-    const count=Math.max(2,Math.floor(width/22)),step=width/count;
-    g.fillStyle(C.hazard,.12).fillRect(x-width/2,top-h-4,width,h+8);
-    g.fillStyle(C.hazard,1);
-    for(let i=0;i<count;i++){
-      const left=x-width/2+i*step;
-      g.fillTriangle(left,top,left+step/2,top-h,left+step,top);
-    }
-    g.lineStyle(1,0xffa1b1,.9).lineBetween(x-width/2,top,x+width/2,top);
-    this.levelObjects.push(sensor,g);
+    const visual=this.add.image(x,top,'nv-spikes').setOrigin(.5,1).setDepth(12).setDisplaySize(width,38);
+    this.levelObjects.push(sensor,visual);
   }
 
   addSaw(spec){
@@ -365,27 +325,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const saw=this.add.circle(x,y,r,0x000000,0).setDepth(12);
     saw.__isHazard=true;
     this.physics.add.existing(saw,true);
-
-    const visual=this.add.container(x,y).setDepth(15);
-    const g=this.add.graphics();
-    g.fillStyle(C.hazard,.12).fillCircle(0,0,r+10);
-    const teeth=16;
-    g.fillStyle(C.hazard,1);
-    for(let i=0;i<teeth;i++){
-      const a=i/teeth*Math.PI*2;
-      const a1=a-.10,a2=a+.10;
-      g.fillTriangle(
-        Math.cos(a1)*(r-1),Math.sin(a1)*(r-1),
-        Math.cos(a)*(r+7),Math.sin(a)*(r+7),
-        Math.cos(a2)*(r-1),Math.sin(a2)*(r-1)
-      );
-    }
-    g.fillStyle(0x17202b,1).fillCircle(0,0,r-3);
-    g.lineStyle(3,0xff5474,1).strokeCircle(0,0,r-3);
-    g.fillStyle(0x030711,1).fillCircle(0,0,Math.max(5,r*.28));
-    g.lineStyle(2,0x8de9ff,.85).strokeCircle(0,0,Math.max(5,r*.28));
-    visual.add(g);
-
+    const visual=this.add.image(x,y,'nv-saw').setDepth(15).setDisplaySize((r+9)*2,(r+9)*2);
     saw.baseX=x;saw.baseY=y;saw.axis=axis;saw.range=range;saw.period=period;saw.phase=phase;saw.visual=visual;
     this.levelObjects.push(saw,visual);
     this.dynamicHazards.push({type:'saw',obj:saw});
@@ -393,32 +333,23 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   addLaser(spec){
     const x=spec[0],y=spec[1],w=spec[2],h=spec[3],period=spec[4],phase=spec[5]||0;
-    const beam=this.add.rectangle(x,y,w,h,C.hazard,.98).setDepth(12);
-    const glow=this.add.rectangle(x,y,w+18,h,C.hazard,.10).setDepth(10);
-    const emitterTop=this.add.rectangle(x,y-h/2,22,13,0x111a26,1).setStrokeStyle(2,0xff4f6e,.9).setDepth(13);
-    const emitterBottom=this.add.rectangle(x,y+h/2,22,13,0x111a26,1).setStrokeStyle(2,0xff4f6e,.9).setDepth(13);
-    const coreTop=this.add.rectangle(x,y-h/2,6,6,C.hazard,1).setDepth(14);
-    const coreBottom=this.add.rectangle(x,y+h/2,6,6,C.hazard,1).setDepth(14);
+    const beam=this.add.rectangle(x,y,w,h,C.hazard,0).setDepth(12);
     beam.__isHazard=true;
     this.physics.add.existing(beam,true);
-    beam.period=period;beam.phase=phase;beam.glow=glow;beam.lastOn=true;
-    this.levelObjects.push(beam,glow,emitterTop,emitterBottom,coreTop,coreBottom);
+    const visual=this.add.image(x,y,'nv-laser').setDepth(14).setDisplaySize(38,h+24);
+    beam.period=period;beam.phase=phase;beam.visual=visual;beam.lastOn=true;
+    this.levelObjects.push(beam,visual);
     this.dynamicHazards.push({type:'laser',obj:beam});
   }
 
   createGoal(x,top){
-    const glow=this.add.rectangle(x,top-48,66,116,C.safe,.08).setDepth(7);
-    const outer=this.add.rectangle(x,top-48,56,106,0x07150f,.72).setStrokeStyle(3,C.safe,.95).setDepth(8);
-    const inner=this.add.rectangle(x,top-48,42,88,0x0b2318,.88).setStrokeStyle(1,0xb2ffd0,.5).setDepth(9);
-    const line=this.add.rectangle(x,top-48,4,70,C.safe,.9).setDepth(10);
-    const cap=this.add.rectangle(x,top-98,42,5,C.safe,.8).setDepth(10);
-    const label=this.add.text(x,top-119,'EXIT',{fontFamily:'Arial Black,Arial',fontSize:'10px',color:'#72ffae',letterSpacing:2}).setOrigin(.5).setDepth(10);
-    const arrow=this.add.text(x,top-145,'▼',{fontFamily:'Arial Black,Arial',fontSize:'12px',color:'#56ff9d'}).setOrigin(.5).setDepth(10);
-    const trigger=this.add.rectangle(x,top-48,60,110,0x69ff9c,0);
+    const visual=this.add.image(x,top,'nv-exit').setOrigin(.5,1).setDepth(12).setDisplaySize(92,145);
+    const label=this.add.text(x,top-166,'EXIT',{fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',color:'#76ffae',letterSpacing:4}).setOrigin(.5).setDepth(13);
+    const trigger=this.add.rectangle(x,top-60,68,122,0x69ff9c,0);
     trigger.__isGoal=true;
     this.physics.add.existing(trigger,true);
     this.goalTrigger=trigger;
-    this.levelObjects.push(glow,outer,inner,line,cap,label,arrow,trigger);
+    this.levelObjects.push(visual,label,trigger);
   }
 
   createPlayer(x,y){
@@ -479,14 +410,6 @@ export class HardcoreRunScene extends Phaser.Scene {
     const lift=grounded&&moving?Math.max(0,Math.sin(phase*2))*2:0;
     const lean=grounded?Math.min(.13,speed/2600):(b.velocity.y<0?.10:.03);
 
-    // speed streaks
-    if(grounded&&speed>120){
-      halo.lineStyle(2,C.cyan,.28);
-      const tail=18+speed*.045;
-      for(let i=0;i<3;i++) halo.lineBetween(-13-tail-i*7,5+i*5,-15-i*3,5+i*5);
-      halo.fillStyle(C.cyan,.12).fillCircle(-18,18,5);
-    }
-
     const shoulder={x:lean*22,y:-9-lift};
     const hip={x:0,y:3-lift};
 
@@ -534,8 +457,9 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   showLevelCard(index,name){
-    const n=this.add.text(640,260,'LEVEL '+String(index+1).padStart(3,'0'),{fontFamily:'Arial Black,Arial',fontSize:'14px',color:'#ff3159',letterSpacing:4}).setOrigin(.5).setScrollFactor(0).setDepth(1200);
-    const t=this.add.text(640,302,name,{fontFamily:'Arial Black,Arial',fontSize:'38px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(1200);
+    const cx=this.uiCenterX();
+    const n=this.add.text(cx,260,'LEVEL '+String(index+1).padStart(3,'0'),{fontFamily:'Arial Black,Arial',fontSize:'14px',color:'#ff3159',letterSpacing:4}).setOrigin(.5).setScrollFactor(0).setDepth(1200);
+    const t=this.add.text(cx,302,name,{fontFamily:'Arial Black,Arial',fontSize:'38px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(1200);
     n.setAlpha(0);t.setAlpha(0);
     this.tweens.add({targets:[n,t],alpha:1,duration:120,yoyo:true,hold:430,onComplete:()=>{n.destroy();t.destroy();}});
   }
@@ -544,13 +468,13 @@ export class HardcoreRunScene extends Phaser.Scene {
     if(!this.runActive||this.finished||this.dead||this.levelLocked) return;
     this.dead=true;
     this.deaths+=1;
-    this.deathText.setText('DEATHS  '+this.deaths);
+    this.deathText.setText(String(this.deaths));
     this.player.body.enable=false;
     this.player.setVisible(false);
     if(this.playerVisual)this.playerVisual.setVisible(false);
     this.cameras.main.shake(85,.004);
     this.cameras.main.flash(70,255,49,89,false);
-    const msg=this.add.text(640,355,manual?'RESTART':'DEAD',{fontFamily:'Arial Black,Arial',fontSize:'32px',color:'#ff3159'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
+    const msg=this.add.text(this.uiCenterX(),355,manual?'RESTART':'DEAD',{fontFamily:'Arial Black,Arial',fontSize:'32px',color:'#ff3159'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
     this.time.delayedCall(190,()=>{
       msg.destroy();
       this.loadLevel(this.levelIndex);
@@ -563,7 +487,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const level=this.levelIndex+1;
     let levelTimeMs=Math.max(1,Math.round(this.time.now-this.levelStartedAt));
     this.timerText.setText(formatTime(levelTimeMs));
-    this.progressFill.width=760*(level/RUN_LEVEL_COUNT);
+    this.progressFill.width=this.uiWidth()*(level/RUN_LEVEL_COUNT);
     this.player.body.setVelocity(0,0);
     this.player.body.enable=false;
 
@@ -590,7 +514,7 @@ export class HardcoreRunScene extends Phaser.Scene {
 
     saveLevel(level===RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:level+1);
     const suffix=serverResult&&serverResult.isPersonalBest?' · NEW PB':'';
-    const clear=this.add.text(640,348,'CLEAR · '+formatTime(levelTimeMs)+suffix,{fontFamily:'Arial Black,Arial',fontSize:'30px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
+    const clear=this.add.text(this.uiCenterX(),348,'CLEAR · '+formatTime(levelTimeMs)+suffix,{fontFamily:'Arial Black,Arial',fontSize:'30px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
     this.time.delayedCall(420,()=>{
       clear.destroy();
       this.loadLevel(this.levelIndex+1,{resetClock:true});
@@ -607,14 +531,15 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   showFinishOverlay(levelTimeMs,result){
-    this.add.rectangle(640,360,1280,720,0x050609,.88).setScrollFactor(0).setDepth(2500);
-    this.add.text(640,145,'LEVEL '+RUN_LEVEL_COUNT+' COMPLETE',{fontFamily:'Arial Black,Arial',fontSize:'46px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
-    this.add.text(640,235,formatTime(levelTimeMs),{fontFamily:'Arial Black,Arial',fontSize:'58px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
+    const cx=this.uiCenterX(),vw=this.uiWidth();
+    this.add.rectangle(cx,360,vw,720,0x050609,.90).setScrollFactor(0).setDepth(2500);
+    this.add.text(cx,145,'LEVEL '+RUN_LEVEL_COUNT+' COMPLETE',{fontFamily:'Arial Black,Arial',fontSize:'46px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
+    this.add.text(cx,235,formatTime(levelTimeMs),{fontFamily:'Arial Black,Arial',fontSize:'58px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
     let note=this.practice?'PRACTICE — NOT SUBMITTED':'LEVEL '+RUN_LEVEL_COUNT;
     if(!this.practice&&result&&result.isPersonalBest) note+='   ·   NEW PERSONAL BEST';
-    this.add.text(640,305,note,{fontFamily:'Arial Black,Arial',fontSize:'13px',color:this.practice?'#8f96a3':'#ff3159'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
-    this.add.text(640,410,this.leaderboardText(),{fontFamily:'monospace',fontSize:'15px',color:'#e8eaf0',align:'left',lineSpacing:7}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
-    this.add.text(640,590,'REFRESH PAGE TO RUN AGAIN   ·   H  EIXO HOME',{fontFamily:'Arial Black,Arial',fontSize:'12px',color:'#7b818d'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
+    this.add.text(cx,305,note,{fontFamily:'Arial Black,Arial',fontSize:'13px',color:this.practice?'#8f96a3':'#ff3159'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
+    this.add.text(cx,410,this.leaderboardText(),{fontFamily:'monospace',fontSize:'15px',color:'#e8eaf0',align:'left',lineSpacing:7}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
+    this.add.text(cx,590,'REFRESH PAGE TO RUN AGAIN   ·   H  EIXO HOME',{fontFamily:'Arial Black,Arial',fontSize:'12px',color:'#7b818d'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
   }
 
   leaderboardText(){
@@ -707,7 +632,7 @@ export class HardcoreRunScene extends Phaser.Scene {
       const oldTop=o.y-o.displayHeight/2;
       const riding=!!(p&&p.body&&p.body.enable&&!this.dead&&Math.abs((p.y+19)-oldTop)<12&&p.x>o.x-o.displayWidth/2-8&&p.x<o.x+o.displayWidth/2+8&&p.body.velocity.y>=-30);
       o.x=nx;o.y=ny;
-      if(o.visual){o.visual.x=nx;o.visual.y=ny;}
+      if(o.visual){o.visual.x=nx;o.visual.y=ny+(o.visualYOffset||0);}
       o.body.updateFromGameObject();
       if(riding){
         p.x+=dx;p.y+=dy;
@@ -734,8 +659,7 @@ export class HardcoreRunScene extends Phaser.Scene {
         if(on!==o.lastOn){
           o.lastOn=on;
           o.body.enable=on;
-          o.setAlpha(on ? .98 : .13);
-          o.glow.setAlpha(on ? .18 : .035);
+          if(o.visual)o.visual.setAlpha(on?1:.16);
         }
       }else if(d.type==='crusher'){
         const phase=((time+o.phase)%o.period)/o.period;
