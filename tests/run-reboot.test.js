@@ -64,11 +64,12 @@ test('NEON VOID visual layer is edge-to-edge and keeps physics separate from the
   const css=read('games/run/run.css');
   const html=read('games/run/index.html');
   assert.match(main,/Phaser\.Scale\.RESIZE/);
-  assert.match(css,/\.run-stage\{[\s\S]*position:fixed;left:0;right:0;top:68px;bottom:0/);
+  assert.match(css,/\.run-stage\{[\s\S]*position:fixed;left:0;right:0;top:76px;bottom:0/);
   assert.match(css,/#run-root\{position:absolute;inset:0;z-index:1;overflow:hidden;background:transparent\}/);
   assert.match(html,/class="run-site-nav"/);
-  assert.match(html,/href="\/pulse">PULSE/);
-  assert.match(html,/href="\/run" aria-current="page">RUN/);
+  assert.match(html,/eixo-logo\.svg/);
+  assert.match(html,/href="\/passport">Passaporte/);
+  assert.match(html,/href="\/rankings">Rankings/);
   assert.match(scene,/createRunnerVisual/);
   assert.match(scene,/updateRunnerVisual/);
   assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
@@ -91,7 +92,7 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-noticecenter1/);
+  assert.match(html,/20261001-eixosite3/);
 });
 
 
@@ -267,4 +268,17 @@ test('transient RUN notices are DOM-centered instead of camera-positioned',()=>{
   const card=scene.slice(scene.indexOf('  showLevelCard(index,name){'),scene.indexOf('  killPlayer(manual){'));
   assert.doesNotMatch(card,/uiCenterX/);
   assert.doesNotMatch(card,/this\.add\.text/);
+});
+
+
+test('RUN shell matches the EIXO site visual language',()=>{
+  const html=read('games/run/index.html');
+  const css=read('games/run/run.css');
+  assert.match(html,/class="run-site-brand"[\s\S]*eixo-logo\.svg/);
+  assert.match(html,/01 \/ ARCADE/);
+  assert.match(html,/100 níveis hardcore/);
+  assert.match(css,/\.run-start-card\{[\s\S]*border-radius:28px/);
+  assert.match(css,/linear-gradient\(135deg,#172338f5,#111c2df2/);
+  assert.match(css,/\.run-site-nav\{[\s\S]*background:#09111f/);
+  assert.doesNotMatch(html,/>HOME<|>PULSE<|EIXO HOME/);
 });
