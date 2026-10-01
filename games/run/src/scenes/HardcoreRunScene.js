@@ -65,6 +65,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.load.svg('nv-spikes',base+'spikes.svg');
     this.load.svg('nv-saw',base+'saw.svg');
     this.load.svg('nv-laser',base+'laser.svg');
+    this.load.svg('nv-swing-laser',base+'swing-laser.svg');
     this.load.svg('nv-crusher',base+'crusher.svg');
     this.load.svg('nv-exit',base+'exit.svg');
     this.load.svg('nv-stopwatch',base+'stopwatch.svg');
@@ -229,6 +230,8 @@ export class HardcoreRunScene extends Phaser.Scene {
     for(const s of L.ceilingSpikes||[]) this.addCeilingSpikes(s[0],s[1],s[2]);
     for(const s of L.saws||[]) this.addSaw(s);
     for(const l of L.lasers||[]) this.addLaser(l);
+    for(const l of L.swingLasers||[]) this.addSwingLaser(l);
+    for(const p of L.pulseFloors||[]) this.addPulseFloor(p);
     for(const c of L.crushers||[]) this.addCrusher(c);
 
     this.createGoal(L.goal[0],L.goal[1]);
@@ -374,6 +377,46 @@ export class HardcoreRunScene extends Phaser.Scene {
     saw.baseX=x;saw.baseY=y;saw.axis=axis;saw.range=range;saw.period=period;saw.phase=phase;saw.visual=visual;
     this.levelObjects.push(saw,visual);
     this.dynamicHazards.push({type:'saw',obj:saw});
+  }
+
+  addSwingLaser(spec){
+    const pivotX=spec[0],pivotY=spec[1],length=spec[2],angleDeg=spec[3],period=spec[4],phase=spec[5]||0;
+    const visual=this.add.image(pivotX,pivotY,'nv-swing-laser').setOrigin(.5,0).setDepth(14).setDisplaySize(42,length);
+
+    const sensors=[];
+    const count=Math.max(5,Math.min(9,Math.round(length/34)));
+    for(let i=0;i<count;i++){
+      const dist=24+(length-34)*(i/(Math.max(1,count-1)));
+      const sensor=this.add.circle(pivotX,pivotY+dist,7,0x000000,0).setDepth(12);
+      sensor.__isHazard=true;
+      sensor.swingDist=dist;
+      this.physics.add.existing(sensor,true);
+      sensors.push(sensor);
+      this.levelObjects.push(sensor);
+    }
+
+    const anchor=sensors[0];
+    anchor.pivotX=pivotX;anchor.pivotY=pivotY;anchor.length=length;anchor.angleDeg=angleDeg;
+    anchor.period=period;anchor.phase=phase;anchor.visual=visual;anchor.sensors=sensors;anchor.lastOn=true;
+    this.levelObjects.push(visual);
+    this.dynamicHazards.push({type:'swingLaser',obj:anchor});
+  }
+
+  addPulseFloor(spec){
+    const x=spec[0],top=spec[1],width=spec[2],period=spec[3],phase=spec[4]||0;
+    const sensor=this.add.rectangle(x,top-5,width,10,0x000000,0).setDepth(12);
+    sensor.__isHazard=true;
+    this.physics.add.existing(sensor,true);
+
+    const visual=this.add.container(x,top-4).setDepth(13);
+    const glow=this.add.rectangle(0,0,width+18,16,C.hazard,.10);
+    const rail=this.add.rectangle(0,0,width,5,C.hazard,.95);
+    const core=this.add.rectangle(0,-1,width-10,1,0xffffff,.72);
+    visual.add([glow,rail,core]);
+
+    sensor.period=period;sensor.phase=phase;sensor.visual=visual;sensor.lastOn=true;
+    this.levelObjects.push(sensor,visual);
+    this.dynamicHazards.push({type:'pulseFloor',obj:sensor});
   }
 
   addLaser(spec){
@@ -749,22 +792,49 @@ export class HardcoreRunScene extends Phaser.Scene {
     for(const d of this.dynamicHazards){
       const o=d.obj;
       if(!o||!o.body) continue;
+
       if(d.type==='saw'){
         const wave=Math.sin(((time+o.phase)%o.period)/o.period*Math.PI*2);
-        if(o.axis==='x') o.x=o.baseX+wave*o.range;
+        if(o.axis==='x')o.x=o.baseX+wave*o.range;
         else o.y=o.baseY+wave*o.range;
         if(o.visual){
           o.visual.x=o.x;o.visual.y=o.y;
           o.visual.rotation+=0.055;
         }
         o.body.updateFromGameObject();
+
       }else if(d.type==='laser'){
         const on=((time+o.phase)%o.period)<o.period*.58;
         if(on!==o.lastOn){
-          o.lastOn=on;
-          o.body.enable=on;
+          o.lastOn=on;o.body.enable=on;
           if(o.visual)o.visual.setAlpha(on?1:.16);
         }
+
+      }else if(d.type==='swingLaser'){
+        const cycle=((time+o.phase)%o.period)/o.period;
+        const angle=Math.sin(cycle*Math.PI*2)*Phaser.Math.DegToRad(o.angleDeg);
+        const on=cycle<.55;
+        if(o.visual){
+          o.visual.x=o.pivotX;o.visual.y=o.pivotY;
+          o.visual.rotation=angle;
+          o.visual.setAlpha(on?1:.14);
+        }
+        for(const sensor of o.sensors){
+          const dist=sensor.swingDist;
+          sensor.x=o.pivotX+Math.sin(angle)*dist;
+          sensor.y=o.pivotY+Math.cos(angle)*dist;
+          sensor.body.updateFromGameObject();
+          sensor.body.enable=on;
+        }
+        o.lastOn=on;
+
+      }else if(d.type==='pulseFloor'){
+        const on=((time+o.phase)%o.period)<o.period*.56;
+        if(on!==o.lastOn){
+          o.lastOn=on;o.body.enable=on;
+          if(o.visual)o.visual.setAlpha(on?1:.12);
+        }
+
       }else if(d.type==='crusher'){
         const phase=((time+o.phase)%o.period)/o.period;
         const drop=(1-Math.cos(phase*Math.PI*2))*.5;
