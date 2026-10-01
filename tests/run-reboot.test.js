@@ -92,7 +92,7 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-spikeflush1/);
+  assert.match(html,/20261001-runfix3/);
 });
 
 
@@ -322,4 +322,20 @@ test('level status unlocks exactly the level after the recorded best',()=>{
   const service=read('run-server.js');
   assert.match(service,/const completedLevel=Math\.max\(0,Math\.min\(RUN_LEVEL_COUNT,Number\(best\.rows\[0\]\?\.best_level\)\|\|0\)\);/);
   assert.match(service,/const unlockedLevel=completedLevel>=RUN_LEVEL_COUNT\?RUN_LEVEL_COUNT:completedLevel\+1;/);
+});
+
+
+test('RUN header mirrors the main EIXO navigation and account controls',()=>{
+  const html=read('games/run/index.html');
+  const css=read('games/run/run.css');
+  const shell=read('games/run/run-shell.js');
+  for(const label of ['Início','Passaporte','Rankings','Salas','VIP'])assert.match(html,new RegExp('>'+label+'<'));
+  assert.match(html,/id="runSoundButton"/);
+  assert.match(html,/id="runPlayerButton"/);
+  assert.match(html,/id="runCountryButton"/);
+  assert.match(html,/run-vip-top-button/);
+  assert.doesNotMatch(html,/run-site-pill/);
+  assert.match(css,/background:rgba\(9,15,26,.96\)/);
+  assert.match(shell,/eixo_player/);
+  assert.match(shell,/eixo_audio_settings/);
 });
