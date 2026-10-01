@@ -107,7 +107,7 @@ test('public EIXO presentation promotes RUN and PULSE instead of old JUMP',()=>{
   const jumpShell=read('jump.js');
   assert.match(home,/<h2>RUN<\/h2>/);
   assert.match(home,/href="\/run"/);
-  assert.match(home,/RUN \/ '+t\('NÍVEL','LEVEL'\)/);
+  assert.ok(home.includes("RUN / '+t('NÍVEL','LEVEL')+'"));
   assert.match(jumpShell,/data-game="run">RUN/);
   assert.doesNotMatch(jumpShell,/data-game="jump">JUMP/);
 });
