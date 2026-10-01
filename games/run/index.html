@@ -1,21 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#030711">
-  <meta name="description" content="EIXO RUN — 100 hardcore Neon Void levels.">
-  <title>EIXO RUN — Neon Void</title>
-  <link rel="stylesheet" href="/games/run/run.css?v=20261001-noticecenter1">
+  <meta name="theme-color" content="#0a101b">
+  <meta name="description" content="EIXO RUN — 100 níveis hardcore no Neon Void.">
+  <title>EIXO — RUN</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg?v=20260927-v312">
+  <link rel="stylesheet" href="/games/run/run.css?v=20261001-eixosite3">
 </head>
 <body>
   <header class="run-site-nav">
-    <a class="run-site-brand" href="/" aria-label="EIXO home">EIXO<span>•</span></a>
+    <a class="run-site-brand" href="/" aria-label="EIXO">
+      <img src="/eixo-logo.svg?v=20260927-v312" width="116" height="36" alt="EIXO">
+    </a>
     <nav aria-label="EIXO">
-      <a href="/">HOME</a><a href="/pulse">PULSE</a><a class="is-active" href="/run" aria-current="page">RUN</a>
-      <a href="/passport">PASSPORT</a><a href="/rankings">RANKINGS</a><a href="/vip">VIP</a>
+      <a href="/">Início</a>
+      <a href="/passport">Passaporte</a>
+      <a href="/rankings">Rankings</a>
+      <a href="/rooms">Salas</a>
+      <a href="/vip">VIP</a>
     </nav>
-    <a class="run-site-exit" href="/">EIXO HOME</a>
+    <span class="run-site-pill">RUN</span>
   </header>
 
   <main class="run-stage">
@@ -29,58 +35,71 @@
     </div>
 
     <section id="run-game-hud" class="run-game-hud" aria-label="RUN HUD">
-      <div class="run-hud-brand">RUN <span>//</span></div>
+      <div class="run-hud-brand">RUN</div>
       <div class="run-hud-level-block"><strong id="run-hud-level">LEVEL 001 / 100</strong><span id="run-hud-name">NEON VOID</span></div>
-      <div class="run-hud-time-block"><small>TIME</small><strong id="run-hud-time">00:00.000</strong><span id="run-hud-pb">PB --:--.---</span></div>
-      <div class="run-hud-deaths-block"><small>DEATHS</small><strong id="run-hud-deaths">0</strong></div>
+      <div class="run-hud-time-block"><small>TEMPO</small><strong id="run-hud-time">00:00.000</strong><span id="run-hud-pb">PB --:--.---</span></div>
+      <div class="run-hud-deaths-block"><small>MORTES</small><strong id="run-hud-deaths">0</strong></div>
       <div class="run-hud-progress"><i id="run-hud-progress-fill"></i></div>
     </section>
-    <div id="run-controls" class="run-controls">A/D MOVE · SPACE JUMP · R RESTART · H HOME</div>
 
-    <section id="run-start-overlay" class="run-start-overlay" aria-label="RUN start">
+    <div id="run-controls" class="run-controls">A/D MOVER · SPACE SALTAR · R REINICIAR · H INÍCIO</div>
+
+    <section id="run-start-overlay" class="run-start-overlay" aria-label="Iniciar RUN">
       <div class="run-start-card">
-        <div class="run-start-kicker">EIXO ARCADE</div><h1>RUN <span>//</span></h1><div class="run-start-sub">NEON VOID</div>
-        <div class="run-start-rule"></div>
-        <p class="run-start-copy">100 HARDCORE LEVELS<br>HIGHEST LEVEL · FASTEST TIME</p>
-        <div class="run-start-level-row">
-          <span id="run-start-selected" class="run-start-selected">SELECTED · LEVEL 001</span>
-          <button id="run-open-levels" class="run-level-open" type="button">SELECT LEVEL</button>
+        <div class="run-start-main">
+          <div class="run-start-kicker">01 / ARCADE</div>
+          <h1>RUN</h1>
+          <p class="run-start-copy">100 níveis hardcore. Chega mais longe, domina cada obstáculo e bate o teu melhor tempo.</p>
+
+          <div class="run-start-level-row">
+            <div>
+              <small>NÍVEL SELECIONADO</small>
+              <strong id="run-start-selected" class="run-start-selected">LEVEL 001</strong>
+            </div>
+            <button id="run-open-levels" class="run-level-open" type="button">Selecionar nível</button>
+          </div>
+
+          <button id="run-start-prompt" class="run-start-button" type="button">Jogar nível 001 ↗</button>
+          <p class="run-start-note">Com sessão iniciada, o teu progresso e os teus tempos ficam ligados à conta.</p>
         </div>
-        <pre id="run-start-ranking" class="run-start-ranking">WORLD TOP
+
+        <aside class="run-start-side">
+          <span class="run-start-side-label">RANKING GLOBAL</span>
+          <pre id="run-start-ranking" class="run-start-ranking">WORLD TOP
 LOADING...</pre>
-        <button id="run-start-prompt" class="run-start-button" type="button">START LEVEL 001</button>
-        <div class="run-start-rule danger"></div><p class="run-start-note">LOGIN FOR GLOBAL RANKING · PRACTICE WORKS OFFLINE</p>
+          <a href="/rankings">Ver rankings completos ↗</a>
+        </aside>
       </div>
     </section>
 
-
-    <section id="run-level-overlay" class="run-level-overlay is-hidden" aria-label="Select RUN level">
+    <section id="run-level-overlay" class="run-level-overlay is-hidden" aria-label="Selecionar nível RUN">
       <div class="run-level-card">
         <div class="run-level-head">
-          <div><small>RUN // NEON VOID</small><h2>SELECT LEVEL</h2><p id="run-level-summary">UNLOCKED 001 / 100</p></div>
-          <button id="run-level-close" type="button" aria-label="Close level selector">CLOSE ×</button>
+          <div><small>EIXO / RUN</small><h2>Selecionar nível</h2><p id="run-level-summary">DESBLOQUEADO 001 / 100</p></div>
+          <button id="run-level-close" type="button" aria-label="Fechar seletor">Fechar ×</button>
         </div>
         <div id="run-level-grid" class="run-level-grid"></div>
-        <p class="run-level-note">Completed levels stay unlocked. Replay any available level to improve its personal best.</p>
+        <p class="run-level-note">Podes repetir qualquer nível desbloqueado para melhorar o teu melhor tempo.</p>
       </div>
     </section>
 
-    <section id="run-clear-overlay" class="run-clear-overlay is-hidden" aria-label="Level complete">
+    <section id="run-clear-overlay" class="run-clear-overlay is-hidden" aria-label="Nível concluído">
       <div class="run-clear-card">
         <div id="run-clear-title" class="run-clear-title">LEVEL CLEAR</div>
         <div id="run-clear-time" class="run-clear-time">00:00.000</div>
         <div id="run-clear-pb" class="run-clear-pb">LEVEL CLEAR</div>
         <div class="run-clear-actions">
-          <button id="run-clear-retry" type="button">R · RETRY LEVEL</button>
-          <button id="run-clear-levels" type="button">SELECT LEVEL</button>
-          <button id="run-clear-next" type="button">ENTER · NEXT LEVEL</button>
+          <button id="run-clear-retry" type="button">R · Repetir nível</button>
+          <button id="run-clear-levels" type="button">Selecionar nível</button>
+          <button id="run-clear-next" type="button">ENTER · Próximo nível</button>
         </div>
       </div>
     </section>
 
-    <noscript>JavaScript is required to play EIXO RUN.</noscript>
+    <noscript>É necessário JavaScript para jogar EIXO RUN.</noscript>
   </main>
+
   <script src="/vendor/phaser.min.js"></script>
-  <script type="module" src="/games/run/src/main.js?v=20261001-noticecenter1"></script>
+  <script type="module" src="/games/run/src/main.js?v=20261001-eixosite3"></script>
 </body>
 </html>
