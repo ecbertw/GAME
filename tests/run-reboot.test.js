@@ -91,7 +91,7 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-hard100/);
+  assert.match(html,/20261001-levelselect1/);
 });
 
 
@@ -203,4 +203,35 @@ test('100-level generator is hardcore from level one',()=>{
   assert.ok(minChallenges>=9,'min challenges '+minChallenges);
   assert.ok(minFamilies>=3,'min families '+minFamilies);
   assert.ok(maxEmpty<=1,'max empty '+maxEmpty);
+});
+
+
+test('level selector unlocks completed levels and preserves per-level PBs',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const html=read('games/run/index.html');
+  const css=read('games/run/run.css');
+  const server=read('server.js');
+  const service=read('run-server.js');
+
+  assert.match(html,/id="run-open-levels"/);
+  assert.match(html,/id="run-level-overlay"/);
+  assert.match(html,/id="run-level-grid"/);
+  assert.match(html,/id="run-clear-levels"/);
+  assert.match(scene,/selectLevel\(level\)/);
+  assert.match(scene,/refreshLevelStatus\(\)/);
+  assert.match(scene,/RUN_LEVEL_BESTS_KEY/);
+  assert.match(scene,/Math\.max\(current,Math\.floor\(Number\(level\)\|\|1\)\)/);
+  assert.match(scene,/body:JSON\.stringify\(\{level:requested\}\)/);
+  assert.match(css,/background\.svg'\) center bottom \/ cover no-repeat/);
+  assert.match(server,/url\.pathname==='\/api\/run\/levels'/);
+  assert.match(service,/CREATE TABLE IF NOT EXISTS run_level_bests/);
+  assert.match(service,/async function levelStatus/);
+  assert.match(service,/RUN level is locked/);
+});
+
+test('replaying an older RUN level does not replace highest overall progress',()=>{
+  const service=read('run-server.js');
+  assert.match(service,/level>Number\(old\.best_level\|\|0\)\|\|\(level===Number\(old\.best_level\|\|0\)&&timeMs<Number\(old\.best_time_ms\)\)/);
+  assert.match(service,/isLevelPersonalBest/);
+  assert.match(service,/best_level DESC,rb\.best_time_ms ASC/);
 });
