@@ -122,9 +122,8 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   createAstralBackdrop() {
-    // Final admin preview uses the approved FIRST LIGHT artwork already
-    // committed in astral-exact. Physics and collision stay independent.
-    this.add.rectangle(640, 360, 1280, 720, 0x8fcff4, 1)
+    // Canonical FIRST LIGHT sky from the approved art sheet.
+    this.add.rectangle(640, 360, 1280, 720, 0x79bfe9, 1)
       .setScrollFactor(0)
       .setDepth(-1400);
 
@@ -133,36 +132,64 @@ export class FirstLightScene extends Phaser.Scene {
       .setDepth(-1360)
       .setDisplaySize(1280, 300);
 
-    // Canonical world panorama. Repetition is hidden with overlap and flip,
-    // but every visible ruin/island comes from the approved project art.
-    for (let i = -1; i < 9; i += 1) {
-      const world = this.add.image(640 + i * 1180, 405 + (i % 2) * 8, ASTRAL_BG.world)
-        .setScrollFactor(0.11)
-        .setDepth(-1040)
-        .setDisplaySize(1280, 720)
-        .setAlpha(0.98);
-      if (i % 2) world.setFlipX(true);
-    }
+    // Soft cloud horizon beneath the moon.
+    this.drawCloudBand(-1180, 0.04, 340, 0xffd9ef, 0.72);
+    this.drawCloudBand(-1160, 0.07, 390, 0xeed9ff, 0.56);
 
-    // Additional depth made from the exact extracted platform artwork.
-    for (let i = 0; i < 10; i += 1) {
-      const island = this.add.image(480 + i * 1080, 300 + (i % 3) * 44, ASTRAL_OBJ.floatingIsland)
-        .setScrollFactor(0.24)
-        .setDepth(-720)
-        .setDisplaySize(150 + (i % 3) * 34, 92 + (i % 3) * 20)
-        .setAlpha(0.70)
-        .setTint(0xd9e8ff);
-      if (i % 2) island.setFlipX(true);
-    }
-
-    // Near decorative silhouettes: crystals + vegetation from the approved kit.
-    for (let i = 0; i < 8; i += 1) {
-      const cluster = this.add.image(440 + i * 1320, 716, ASTRAL_OBJ.crystalCluster)
+    // Far celestial ruins built from the approved arch/platform/waterfall art.
+    for (let i = 0; i < 15; i += 1) {
+      const x = 260 + i * 720;
+      const y = 390 - (i % 4) * 30;
+      const arch = this.add.image(x, y, ASTRAL_OBJ.arch)
         .setOrigin(0.5, 1)
-        .setScrollFactor(1.02)
+        .setScrollFactor(0.12)
+        .setDepth(-1020)
+        .setDisplaySize(150 + (i % 3) * 35, 154 + (i % 3) * 36)
+        .setAlpha(0.42)
+        .setTint(0xc7d7ff);
+      if (i % 2) arch.setFlipX(true);
+
+      const island = this.add.image(x + 220, y + 40, ASTRAL_OBJ.floatingIsland)
+        .setOrigin(0.5, 0.25)
+        .setScrollFactor(0.15)
+        .setDepth(-1010)
+        .setDisplaySize(150 + (i % 2) * 40, 86 + (i % 2) * 18)
+        .setAlpha(0.50)
+        .setTint(0xd8e4ff);
+      if (i % 3 === 0) island.setFlipX(true);
+    }
+
+    // Mid-depth ruins, waterfalls and floating fragments.
+    for (let i = 0; i < 12; i += 1) {
+      const x = 420 + i * 880;
+      const y = 520 - (i % 3) * 34;
+      const arch = this.add.image(x, y, ASTRAL_OBJ.arch)
+        .setOrigin(0.5, 1)
+        .setScrollFactor(0.28)
+        .setDepth(-760)
+        .setDisplaySize(245 + (i % 2) * 45, 252 + (i % 2) * 46)
+        .setAlpha(0.72)
+        .setTint(0xf2ecff);
+      if (i % 2) arch.setFlipX(true);
+
+      const fall = this.add.image(x + 185, y - 8, ASTRAL_OBJ.waterfall)
+        .setOrigin(0.5, 0.10)
+        .setScrollFactor(0.30)
+        .setDepth(-750)
+        .setDisplaySize(72, 122)
+        .setAlpha(0.58);
+      this.tweens.add({ targets: fall, alpha: 0.34, duration: 1450 + (i % 4) * 170, yoyo: true, repeat: -1 });
+    }
+
+    // Foreground vegetation/crystal silhouette.
+    for (let i = 0; i < 10; i += 1) {
+      const x = 140 + i * 1120;
+      const cluster = this.add.image(x, 720, ASTRAL_OBJ.crystalCluster)
+        .setOrigin(0.5, 1)
+        .setScrollFactor(1.03)
         .setDepth(82)
-        .setDisplaySize(150 + (i % 3) * 28, 118 + (i % 3) * 20)
-        .setAlpha(0.78);
+        .setDisplaySize(150 + (i % 3) * 30, 118 + (i % 3) * 22)
+        .setAlpha(0.88);
       if (i % 2) cluster.setFlipX(true);
     }
 
@@ -443,11 +470,11 @@ export class FirstLightScene extends Phaser.Scene {
     this.checkpoints.forEach(other => {
       if (other !== cp) {
         other.active = false;
-        other.art?.setTexture(ASTRAL_OBJ.checkpointOff);
+        other.art?.setTexture(ASTRAL_OBJ.checkpointOff).setTint(0x7c9ab8).setAlpha(0.82);
       }
     });
     cp.active = true;
-    cp.art.setTexture(ASTRAL_OBJ.checkpointOn).setDisplaySize(88, 204);
+    cp.art.setTexture(ASTRAL_OBJ.checkpointOn).clearTint().setAlpha(1).setDisplaySize(88, 204);
     this.checkpointSpawn = { ...cp.spawn };
     this.checkpointIndex = cp.index;
     this.hud.setCheckpoint(cp.index);
@@ -552,16 +579,18 @@ export class FirstLightScene extends Phaser.Scene {
       [5560,610,'SEGREDO ↓'], [7330,535,'BOOST'], [8850,540,'FINAL →'],
     ];
     for (const [x,y,label] of signs) {
-      const art = this.add.image(x, y - 22, ASTRAL_OBJ.signMarker)
-        .setDisplaySize(92, 88)
+      const post = this.add.rectangle(x, y, 7, 72, 0x756044, 0.95).setDepth(7);
+      const plate = this.add.rectangle(x + 14, y - 42, 112, 38, 0x10233d, 0.96)
+        .setStrokeStyle(2, 0x44dfff, 0.78)
         .setDepth(7);
-      this.add.text(x + 4, y - 58, label, { fontFamily: 'Arial Black', fontSize: '9px', color: '#eaffff', backgroundColor: '#07101dcc', padding: { x: 5, y: 2 } })
-        .setOrigin(.5)
-        .setDepth(8);
-      this.decor.push(art);
+      const txt = this.add.text(x + 14, y - 43, label, {
+        fontFamily: 'Arial Black',
+        fontSize: '10px',
+        color: '#efffff',
+      }).setOrigin(.5).setDepth(8);
+      this.decor.push(post, plate, txt);
     }
   }
-
   decorateAstralWorld() {
     const arches = [[1510,585,345],[4300,550,310],[6880,565,340],[8740,545,290]];
     for (const [x,y,w] of arches) {
@@ -595,11 +624,12 @@ export class FirstLightScene extends Phaser.Scene {
 
     const routeBanners = [[1500,510],[4320,475],[6920,490],[8880,468]];
     for (const [x,y] of routeBanners) {
-      this.add.image(x, y, ASTRAL_OBJ.routeBanner)
-        .setOrigin(0.5,1)
-        .setDisplaySize(62, 143)
-        .setDepth(4)
-        .setAlpha(0.92);
+      this.add.rectangle(x, y - 72, 7, 145, 0x6f593e, 0.92).setDepth(4);
+      this.add.rectangle(x + 18, y - 108, 46, 82, 0x44227d, 0.94)
+        .setStrokeStyle(2, 0xf3c85b, 0.88)
+        .setDepth(5);
+      this.add.text(x + 18, y - 110, '✕', { fontFamily:'Arial Black', fontSize:'22px', color:'#eaffff' })
+        .setOrigin(.5).setDepth(6);
     }
 
     const foregroundIslands = [[360,760,190],[2700,766,215],[4720,758,185],[6600,765,205],[9600,760,190]];
