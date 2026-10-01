@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-levelselect1';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-levelselect1';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-noticecenter1';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-noticecenter1';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 const RUN_LEVEL_BESTS_KEY='eixo.run.level-bests.v1';
@@ -144,6 +144,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.createStartOverlay();
     this.createClearOverlay();
     this.createLevelSelector();
+    this.createNoticeOverlay();
     this.loadLevel(this.selectedLevel-1);
     this.refreshLeaderboard();
     this.refreshLevelStatus();
@@ -727,13 +728,41 @@ export class HardcoreRunScene extends Phaser.Scene {
     g.fillStyle(C.cyan,.9).fillCircle(shoulder.x+1,shoulder.y+2,1.5);
   }
 
-  showLevelCard(index,name){
-    const cx=this.uiCenterX();
-    const n=this.add.text(cx,260,'LEVEL '+String(index+1).padStart(3,'0'),{fontFamily:'Arial Black,Arial',fontSize:'14px',color:'#ff3159',letterSpacing:4}).setOrigin(.5).setScrollFactor(0).setDepth(1200);
-    const t=this.add.text(cx,302,name,{fontFamily:'Arial Black,Arial',fontSize:'38px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(1200);
-    n.setAlpha(0);t.setAlpha(0);
-    this.tweens.add({targets:[n,t],alpha:1,duration:120,yoyo:true,hold:430,onComplete:()=>{n.destroy();t.destroy();}});
+  createNoticeOverlay(){
+    this.noticeOverlayEl=document.getElementById('run-notice-overlay');
+    this.noticeKickerEl=document.getElementById('run-notice-kicker');
+    this.noticeTitleEl=document.getElementById('run-notice-title');
+    this.noticeTimer=null;
   }
+
+  showCenteredNotice({kicker='',title='',danger=false,duration=650}={}){
+    if(!this.noticeOverlayEl)return;
+
+    if(this.noticeTimer){
+      clearTimeout(this.noticeTimer);
+      this.noticeTimer=null;
+    }
+
+    if(this.noticeKickerEl)this.noticeKickerEl.textContent=String(kicker||'');
+    if(this.noticeTitleEl)this.noticeTitleEl.textContent=String(title||'');
+    this.noticeOverlayEl.classList.toggle('is-danger',!!danger);
+    this.noticeOverlayEl.classList.remove('is-hidden');
+
+    this.noticeTimer=setTimeout(()=>{
+      if(this.noticeOverlayEl)this.noticeOverlayEl.classList.add('is-hidden');
+      this.noticeTimer=null;
+    },Math.max(100,Number(duration)||650));
+  }
+
+  showLevelCard(index,name){
+    this.showCenteredNotice({
+      kicker:'LEVEL '+String(index+1).padStart(3,'0'),
+      title:name,
+      danger:false,
+      duration:700
+    });
+  }
+
 
   killPlayer(manual){
     if(!this.runActive||this.finished||this.dead||this.levelLocked) return;
@@ -745,9 +774,13 @@ export class HardcoreRunScene extends Phaser.Scene {
     if(this.playerVisual)this.playerVisual.setVisible(false);
     this.cameras.main.shake(85,.004);
     this.cameras.main.flash(70,255,49,89,false);
-    const msg=this.add.text(this.uiCenterX(),355,manual?'RESTART':'DEAD',{fontFamily:'Arial Black,Arial',fontSize:'32px',color:'#ff3159'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
-    this.time.delayedCall(190,()=>{
-      msg.destroy();
+    this.showCenteredNotice({
+      kicker:'',
+      title:manual?'RESTART':'DEAD',
+      danger:true,
+      duration:360
+    });
+    this.time.delayedCall(360,()=>{
       this.loadLevel(this.levelIndex);
     });
   }
