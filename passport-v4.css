@@ -183,3 +183,18 @@
 @media(prefers-reduced-motion:reduce){
  .rx-live-dot,.rx-vip-pass-front,.rx-vip-pass-front::after{animation:none!important}
 }
+
+
+/* Passport identity seal replaces the retired JUMP character preview. */
+.rx-passport-seal-panel{min-width:0;display:flex;flex-direction:column;gap:10px}
+.rx-passport-seal{position:relative;min-height:355px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border:1px solid #62759b67;border-radius:17px;background:radial-gradient(circle at 50% 42%,#343a67 0,#1d2942 42%,#0f1a2c 78%);overflow:hidden}
+.rx-passport-seal::before{content:"";position:absolute;width:210px;height:210px;border:1px solid #a9a5e33a;border-radius:50%;box-shadow:0 0 0 38px #a7acf008,0 0 0 78px #a7acf005}
+.rx-passport-seal::after{content:"";position:absolute;inset:12%;border:1px solid #9aa7ca16;border-radius:50%;transform:rotate(18deg)}
+.rx-passport-seal>span{position:relative;z-index:1;display:grid;place-items:center;width:108px;height:108px;border:1px solid #c4b5ff62;border-radius:26px;background:linear-gradient(145deg,#4d4777,#262b4a);box-shadow:0 22px 50px #0509148f,inset 0 1px #ffffff38;color:#f1edff;font:800 70px/1 Inter,Arial,sans-serif;letter-spacing:-7px}
+.rx-passport-seal>span span{color:#ff526e}
+.rx-passport-seal>small,.rx-passport-seal>b{position:relative;z-index:1}
+.rx-passport-seal>small{font:800 9px/1 Inter,Arial,sans-serif;letter-spacing:5px;color:#8799b3}
+.rx-passport-seal>b{font:800 11px/1 Inter,Arial,sans-serif;letter-spacing:3px;color:#c9bef3}
+.rx-passport-seal-caption{display:flex;justify-content:space-between;align-items:center;padding:6px 2px;color:#9cacc6;font:700 9px Inter,Arial,sans-serif;letter-spacing:1.2px}
+.rx-passport-seal-caption::after{content:"EIXO";color:#c9c1f8}
+@media(max-width:700px){.rx-passport-seal{min-height:280px}.rx-passport-seal-panel{width:100%}}
