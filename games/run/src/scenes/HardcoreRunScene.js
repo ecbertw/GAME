@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-platformfix2';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-platformfix2';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-centred3';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-centred3';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 
@@ -155,19 +155,19 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   createStartOverlay(){
-    const cx=this.uiCenterX(),vw=this.uiWidth();
-    this.startShade=this.add.rectangle(cx,360,vw,720,0x01040a,.88).setScrollFactor(0).setDepth(2000);
-    const panel=this.add.rectangle(cx,355,610,420,0x07101a,.93).setStrokeStyle(1,0x334b61,.98).setScrollFactor(0).setDepth(2001);
-    const lineA=this.add.rectangle(cx,164,520,1,C.cyan,.42).setScrollFactor(0).setDepth(2002);
-    const lineB=this.add.rectangle(cx,545,520,1,C.hazard,.35).setScrollFactor(0).setDepth(2002);
-    this.startTitle=this.add.text(cx,180,'RUN //',{fontFamily:'Arial Black,Arial',fontSize:'72px',fontStyle:'italic',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startTitle.setShadow(0,0,'#9eefff',10,true,true);
-    this.startSub=this.add.text(cx,246,'NEON VOID',{fontFamily:'monospace',fontSize:'14px',color:'#bcecff',letterSpacing:8}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startRules=this.add.text(cx,298,'900 HARDCORE LEVELS\nHIGHEST LEVEL · FASTEST TIME',{fontFamily:'Arial Black,Arial',fontSize:'12px',color:'#a8b8c8',align:'center',lineSpacing:10,letterSpacing:1}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startRanking=this.add.text(cx,390,'WORLD TOP\nLOADING...',{fontFamily:'monospace',fontSize:'14px',color:'#e9f7ff',align:'left',lineSpacing:7}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startPrompt=this.add.text(cx,500,'SPACE / ENTER / CLICK  —  START',{fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#56ff9d',letterSpacing:1}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startNote=this.add.text(cx,570,'LOGIN FOR GLOBAL RANKING · PRACTICE WORKS OFFLINE',{fontFamily:'monospace',fontSize:'9px',color:'#62778b',letterSpacing:1}).setOrigin(.5).setScrollFactor(0).setDepth(2003);
-    this.startObjects=[this.startShade,panel,lineA,lineB,this.startTitle,this.startSub,this.startRules,this.startRanking,this.startPrompt,this.startNote];
+    this.startOverlayEl=document.getElementById('run-start-overlay');
+    this.startRankingEl=document.getElementById('run-start-ranking');
+    this.startPromptEl=document.getElementById('run-start-prompt');
+
+    if(this.startRankingEl)this.startRankingEl.textContent='WORLD TOP\nLOADING...';
+    if(this.startPromptEl)this.startPromptEl.textContent='SPACE / ENTER / CLICK  —  START';
+
+    if(this.startOverlayEl){
+      this.startOverlayEl.classList.remove('is-hidden');
+      this.startOverlayEl.addEventListener('pointerdown',()=>{
+        if(!this.runActive&&!this.finished)this.requestStart();
+      });
+    }
   }
 
   queueJump(){
@@ -178,7 +178,7 @@ export class HardcoreRunScene extends Phaser.Scene {
   async requestStart(){
     if(this.starting||this.runActive||this.finished) return;
     this.starting=true;
-    this.startPrompt.setText('STARTING...');
+    if(this.startPromptEl)this.startPromptEl.textContent='STARTING...';
     let runId=null;
     try{
       const res=await fetch('/api/run/start',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:'{}'});
@@ -198,7 +198,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.runActive=true;
     this.starting=false;
     this.levelStartedAt=this.time.now;
-    this.startObjects.forEach(o=>o.setVisible(false));
+    if(this.startOverlayEl)this.startOverlayEl.classList.add('is-hidden');
     this.controls.setAlpha(.78);
     if(this.practice) this.pbText.setText('PRACTICE');
   }
@@ -256,11 +256,10 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   drawGrid(width){
     const vw=this.uiWidth();
-    const bg=this.add.image(vw/2,360,'nv-bg').setScrollFactor(0).setDepth(-100).setDisplaySize(vw,720);
     const vignette=this.add.graphics().setScrollFactor(0).setDepth(-60);
-    vignette.fillStyle(0x000000,.18).fillRect(0,82,vw,638);
-    vignette.fillStyle(0xff3159,.025).fillRect(0,570,vw,150);
-    this.levelObjects.push(bg,vignette);
+    vignette.fillStyle(0x02050a,.12).fillRect(0,82,vw,638);
+    vignette.fillStyle(0x163451,.045).fillRect(0,520,vw,200);
+    this.levelObjects.push(vignette);
   }
 
   addFloor(start,end,top){
@@ -313,7 +312,12 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   addMovingPlatform(spec){
     const x=spec[0],y=spec[1],w=spec[2],h=spec[3],axis=spec[4],range=spec[5],period=spec[6],phase=spec[7]||0;
-    const r=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(6);
+    const theta=((this.time.now+phase)%period)/period*Math.PI*2;
+    const wave=Math.sin(theta);
+    const startX=axis==='x'?x+wave*range:x;
+    const startY=axis==='y'?y+wave*range:y;
+
+    const r=this.add.rectangle(startX,startY,w,h,0x000000,0).setDepth(6);
     r.__isPlatform=true;
     r.__isMovingPlatform=true;
 
@@ -323,9 +327,10 @@ export class HardcoreRunScene extends Phaser.Scene {
     r.body.setSize(w,h,true);
     r.body.setVelocity(0,0);
     if(r.body.setFriction)r.body.setFriction(1,1);
+    r.body.reset(startX,startY);
 
     const visualOffsetY=3;
-    const visual=this.add.image(x,y+visualOffsetY,'nv-moving').setDepth(9).setDisplaySize(Math.max(92,w+18),46);
+    const visual=this.add.image(startX,startY+visualOffsetY,'nv-moving').setDepth(9).setDisplaySize(Math.max(92,w+18),46);
 
     r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;
     r.visual=visual;r.visualYOffset=visualOffsetY;
@@ -478,7 +483,7 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   createRunnerVisual(x,y){
-    const c=this.add.container(x,y).setDepth(40);
+    const c=this.add.container(x,y).setDepth(40).setScale(1.12);
     const body=this.add.graphics();
     c.add(body);
     c.bodyGraphics=body;
@@ -503,60 +508,74 @@ export class HardcoreRunScene extends Phaser.Scene {
     const moving=grounded&&inputMoving&&speed>28;
     if(moving)this.runnerPhase+=(delta||16)*(0.0045+Math.min(1,speed/RUN_PHYSICS.runSpeed)*0.0105);
 
-    c.x=p.x;c.y=p.y+1;c.scaleX=this.runnerFacing;
+    c.x=p.x;c.y=p.y;c.scaleX=Math.abs(c.scaleX)*this.runnerFacing;
 
     const g=c.bodyGraphics;
     g.clear();
 
-    const phase=this.runnerPhase;
-    const stride=moving?Math.sin(phase)*9:0;
-    const lift=moving?Math.max(0,Math.sin(phase*2))*1.5:0;
-    const lean=grounded?Math.min(.13,speed/2600):(b.velocity.y<0?.10:.03);
-    const shoulder={x:lean*22,y:-9-lift};
-    const hip={x:0,y:3-lift};
+    const stride=moving?Math.sin(this.runnerPhase)*9:0;
+    const lift=moving?Math.max(0,Math.sin(this.runnerPhase*2))*1.4:0;
+    const lean=grounded?Math.min(2.0,speed/170):b.velocity.y<0?2.0:.7;
+    const hip={x:-1+lean*.12,y:3-lift};
+    const shoulder={x:1+lean,y:-9-lift};
 
     let lf,rf,lh,rh,lk,rk,le,re;
     if(!grounded){
       if(b.velocity.y<20){
-        lf={x:-7,y:15};rf={x:9,y:10};lk={x:-10,y:8};rk={x:5,y:7};
-        lh={x:8,y:-18};rh={x:-8,y:-13};le={x:6,y:-12};re={x:-7,y:-8};
+        lf={x:-8,y:16};rf={x:10,y:11};lk={x:-9,y:8};rk={x:5,y:7};
+        lh={x:9,y:-17};rh={x:-9,y:-12};le={x:6,y:-11};re={x:-7,y:-7};
       }else{
-        lf={x:-7,y:20};rf={x:7,y:18};lk={x:-4,y:10};rk={x:5,y:10};
-        lh={x:-7,y:4};rh={x:8,y:2};le={x:-4,y:-4};re={x:6,y:-3};
+        lf={x:-7,y:20};rf={x:7,y:19};lk={x:-4,y:10};rk={x:5,y:10};
+        lh={x:-8,y:5};rh={x:9,y:3};le={x:-4,y:-3};re={x:6,y:-2};
       }
     }else{
-      lf={x:stride,y:20};rf={x:-stride,y:20};
+      lf={x:stride,y:21};rf={x:-stride,y:21};
       lk={x:stride*.48-2,y:11-lift};rk={x:-stride*.48+2,y:11-lift};
       lh={x:-stride*.72,y:4-lift};rh={x:stride*.72,y:4-lift};
       le={x:-stride*.42,y:-2-lift};re={x:stride*.42,y:-2-lift};
     }
 
-    const BLACK=0x000000,OUTLINE=0xdff8ff;
+    const BLACK=0x000000;
 
-    const limb=(a,k,f,alpha=1)=>{
-      g.lineStyle(6,OUTLINE,.78*alpha);
-      g.lineBetween(a.x,a.y,k.x,k.y);
-      g.lineBetween(k.x,k.y,f.x,f.y);
-      g.lineStyle(4,BLACK,alpha);
-      g.lineBetween(a.x,a.y,k.x,k.y);
-      g.lineBetween(k.x,k.y,f.x,f.y);
-      g.fillStyle(BLACK,alpha).fillCircle(k.x,k.y,2.6);
-      g.fillStyle(BLACK,alpha).fillEllipse(f.x,f.y+1,6,3.4);
+    const capsule=(a,b,width)=>{
+      g.lineStyle(width,BLACK,1);
+      g.lineBetween(a.x,a.y,b.x,b.y);
+      g.fillStyle(BLACK,1);
+      g.fillCircle(a.x,a.y,width/2);
+      g.fillCircle(b.x,b.y,width/2);
     };
 
-    limb({x:hip.x-2,y:hip.y},rk,rf,.52);
-    limb({x:shoulder.x-2,y:shoulder.y},re,rh,.52);
+    const limb=(a,k,f,alpha=1)=>{
+      g.setAlpha(alpha);
+      capsule(a,k,6.4);
+      capsule(k,f,6.0);
+      g.fillStyle(BLACK,1).fillEllipse(f.x,f.y+1,7.5,4.4);
+      g.setAlpha(1);
+    };
 
-    g.lineStyle(9,OUTLINE,.78);
-    g.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
-    g.lineStyle(7,BLACK,1);
-    g.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
+    // rear limbs
+    limb({x:hip.x-2,y:hip.y},rk,rf,.68);
+    limb({x:shoulder.x-3,y:shoulder.y+1},re,rh,.68);
 
+    // athletic tapered torso
+    g.fillStyle(BLACK,1);
+    g.fillPoints([
+      {x:shoulder.x-7.2,y:shoulder.y},
+      {x:shoulder.x-6.2,y:shoulder.y+8},
+      {x:hip.x-4.0,y:hip.y+3},
+      {x:hip.x+4.0,y:hip.y+3},
+      {x:shoulder.x+6.2,y:shoulder.y+8},
+      {x:shoulder.x+7.2,y:shoulder.y}
+    ],true);
+    g.fillEllipse(hip.x,hip.y+2,9,8);
+
+    // front limbs
     limb({x:hip.x+2,y:hip.y},lk,lf,1);
-    limb({x:shoulder.x+2,y:shoulder.y},le,lh,1);
+    limb({x:shoulder.x+3,y:shoulder.y+1},le,lh,1);
 
-    g.fillStyle(OUTLINE,.82).fillCircle(shoulder.x+2,shoulder.y-9,6.5);
-    g.fillStyle(BLACK,1).fillCircle(shoulder.x+2,shoulder.y-9,5);
+    // neck + faceless head
+    capsule({x:shoulder.x+1,y:shoulder.y-2},{x:shoulder.x+1.4,y:shoulder.y-5},4.2);
+    g.fillStyle(BLACK,1).fillEllipse(shoulder.x+2,shoulder.y-11,11,13);
   }
 
   showLevelCard(index,name){
@@ -671,7 +690,7 @@ export class HardcoreRunScene extends Phaser.Scene {
         }
       }
     }catch(_){}
-    if(this.startRanking&&this.startRanking.visible) this.startRanking.setText(this.leaderboardText());
+    if(this.startRankingEl)this.startRankingEl.textContent=this.leaderboardText();
     return this.rankingData;
   }
 
@@ -726,19 +745,23 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   updateDynamicPlatforms(time,delta=16){
     const p=this.player;
-    const dt=Math.max(.004,Math.min(.05,(Number(delta)||16)/1000));
     let riding=null;
 
     for(const o of this.dynamicPlatforms){
       if(!o||!o.body)continue;
 
-      const wave=Math.sin(((time+o.phase)%o.period)/o.period*Math.PI*2);
+      const theta=((time+o.phase)%o.period)/o.period*Math.PI*2;
+      const wave=Math.sin(theta);
+      const cosine=Math.cos(theta);
       const targetX=o.axis==='x'?o.baseX+wave*o.range:o.baseX;
       const targetY=o.axis==='y'?o.baseY+wave*o.range:o.baseY;
-      const vx=(targetX-o.x)/dt;
-      const vy=(targetY-o.y)/dt;
+      const idealSpeed=cosine*(Math.PI*2*o.range)/(o.period/1000);
 
-      // Arcade moves this dynamic immovable body through the collision solver.
+      const errX=targetX-o.x;
+      const errY=targetY-o.y;
+      const vx=o.axis==='x'?Phaser.Math.Clamp(idealSpeed+errX*5,-300,300):0;
+      const vy=o.axis==='y'?Phaser.Math.Clamp(idealSpeed+errY*5,-300,300):0;
+
       o.body.setVelocity(vx,vy);
 
       if(o.visual){
@@ -750,22 +773,7 @@ export class HardcoreRunScene extends Phaser.Scene {
         const pb=p.body,ob=o.body;
         const horizontal=pb.right>ob.left+3&&pb.left<ob.right-3;
         const feetGap=Math.abs(pb.bottom-ob.top);
-        const onTop=horizontal&&feetGap<=10&&pb.velocity.y>=-45;
-
-        if(onTop){
-          riding=o;
-
-          // Explicit horizontal carry; vertical separation is handled by
-          // Arcade, with a small downward snap to avoid a one-frame gap.
-          if(Math.abs(vx)>1){
-            pb.position.x+=vx*dt;
-            p.x=pb.position.x+pb.halfWidth;
-          }
-          if(vy>0&&feetGap<=10){
-            pb.position.y=ob.top-pb.height;
-            p.y=pb.position.y+pb.halfHeight;
-          }
-        }
+        if(horizontal&&feetGap<=9&&pb.velocity.y>=-45)riding=o;
       }
     }
 
