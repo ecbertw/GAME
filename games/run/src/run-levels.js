@@ -3,6 +3,7 @@ import { RUN_PHYSICS } from './run-config.js';
 export const RUN_LEVEL_COUNT=900;
 export const RUN_ROUTE_MARGIN=.82;
 export const RUN_MIN_SAFE_EDGE=46;
+export const RUN_STYLE_COUNT=24;
 
 const PREFIXES=['ASH','BLACK','COLD','DARK','DEAD','DUST','ECHO','FROST','GLASS','GRIM','IRON','LAST','LOST','NEON','NIGHT','NULL','PALE','RED','RIFT','RUST','SHARP','SILENT','STEEL','STONE','VOID','WHITE','WILD','ZERO','BROKEN','FINAL'];
 const SUFFIXES=['BRIDGE','CAGE','CHASM','CIRCUIT','CLIMB','CORRIDOR','CUT','DROP','EDGE','FALL','FAULT','GATE','GRID','KNIFE','LINE','MAZE','NEEDLE','PATH','PIT','RAIL','RIFT','RUN','SHAFT','SPIRE','STEP','THREAD','TOWER','TRIAL','WALL','ZONE'];
@@ -30,8 +31,9 @@ export function jumpEnvelope(a,b,margin=RUN_ROUTE_MARGIN){
   return{reachable:gap<=maxGap,gap,maxGap,flight,rise};
 }
 
-function nextTop(archetype,i,count,prev,d,rng){
-  const rise=44+Math.round(20*d),drop=48+Math.round(24*d);
+function nextTop(style,i,count,prev,d,rng){
+  const archetype=style%8,variant=Math.floor(style/8);
+  const rise=44+Math.round(20*d)+variant*3,drop=48+Math.round(24*d)+variant*3;
   let sign;
   switch(archetype){
     case 0: sign=i%2===0?-1:1; break;                         // zig-zag
@@ -43,8 +45,14 @@ function nextTop(archetype,i,count,prev,d,rng){
     case 6: sign=i%3===0?-1:(rng()<.5?-1:1); break;           // pulse
     default: sign=rng()<.5?-1:1;                              // void
   }
+  if(prev>=638&&sign>0)sign=-1;
+  if(prev<=365&&sign<0)sign=1;
   let mag=22+rng()*(24+22*d);
   if(archetype===6)mag*=.78;
+  if(variant===1){mag*=.88;if(i%5===4)sign*=-1;}
+  if(variant===2){mag*=1.08;if(i%4===2)sign*=-1;}
+  if(prev>=638&&sign>0)sign=-1;
+  if(prev<=365&&sign<0)sign=1;
   const delta=sign<0?-Math.min(rise,mag):Math.min(drop,mag);
   return Math.round(clamp(prev+delta,350,650));
 }
@@ -52,7 +60,7 @@ function nextTop(archetype,i,count,prev,d,rng){
 function addSpike(level,surfaceIndex,rng){
   const s=level.route[surfaceIndex],w=widthOf(s);
   if(w<132)return false;
-  const safe=RUN_MIN_SAFE_EDGE+Math.round(rng()*8);
+  const safe=RUN_MIN_SAFE_EDGE+2+Math.round(rng()*8);
   const maxSpike=w-safe*2;
   if(maxSpike<34)return false;
   const spikeW=Math.round(clamp(38+rng()*Math.min(54,maxSpike-30),34,maxSpike));
@@ -106,9 +114,8 @@ function decorateHardcore(level,rng,d){
     if(widthOf(level.route[i])>=176)wideIndices.push(i);
   }
 
-  // Every level is hardcore from Level 001: all three hazard families are guaranteed.
-  addSpike(level,0,rng);
-  let spikeCount=level.spikes.length;
+  // Spawn surface is always completely clean.
+  let spikeCount=0;
   for(const i of platformIndices){
     const chance=.28+.18*d+(level.archetype===3?.14:0);
     if(rng()<chance&&addSpike(level,i,rng))spikeCount++;
@@ -133,7 +140,7 @@ function decorateHardcore(level,rng,d){
 
   let laserCount=0;
   const gaps=[];
-  for(let i=0;i<level.route.length-1;i++)if(gapBetween(level.route[i],level.route[i+1])>=72)gaps.push(i);
+  for(let i=1;i<level.route.length-1;i++)if(gapBetween(level.route[i],level.route[i+1])>=72)gaps.push(i);
   const start=(level.number*3)%Math.max(1,gaps.length);
   for(let k=0;k<gaps.length;k++){
     const i=gaps[(start+k)%gaps.length];
@@ -155,19 +162,23 @@ function decorateHardcore(level,rng,d){
 export function getRunLevel(index){
   const idx=Math.floor(Number(index));
   if(!Number.isFinite(idx)||idx<0||idx>=RUN_LEVEL_COUNT)throw new RangeError('RUN level index out of range.');
-  const n=idx+1,d=idx/(RUN_LEVEL_COUNT-1),rng=rngFor(n),archetype=(n-1)%8;
+  const n=idx+1,d=idx/(RUN_LEVEL_COUNT-1),rng=rngFor(n),style=(n-1)%RUN_STYLE_COUNT,archetype=style%8,hazardTheme=(Math.imul(n,5)+Math.floor((n-1)/RUN_STYLE_COUNT))%6;
   const floors=[[0,360,650]],platforms=[],walls=[],spikes=[],saws=[],lasers=[];
   const spikeMeta=[],sawMeta=[],laserMeta=[];
   const route=[surface('floor',0,360,650)];
-  const steps=11+Math.floor(d*5)+Math.floor(rng()*2);
+  const steps=12+(style%4)+Math.floor(d*3)+Math.floor(rng()*2);
   let prev=route[0];
 
   for(let i=0;i<steps;i++){
-    const top=nextTop(archetype,i,steps,prev.top,d,rng);
-    const challenge=((i+archetype+n)%3===1);
-    const width=challenge
-      ?Math.round(184+rng()*42)
-      :Math.round(clamp(112-20*d+(rng()-.5)*24,82,126));
+    const top=nextTop(style,i,steps,prev.top,d,rng);
+    const family=Math.floor(style/8);
+    const kind=(family===0?'platform':family===1&&i%4===2?'floor':family===2&&i%3===1?'floor':'platform');
+    const lane=(i+style)%4;
+    let width;
+    if(kind==='floor')width=Math.round(220+rng()*105);
+    else if(lane===1)width=Math.round(198+rng()*(46+16*d));
+    else if(lane===3)width=Math.round(154+rng()*24);
+    else width=Math.round(clamp(112-20*d+(rng()-.5)*24,82,128));
 
     const probe=surface('platform',0,width,top);
     const env=jumpEnvelope(prev,probe,1);
@@ -175,9 +186,10 @@ export function getRunLevel(index){
     const desired=env.maxGap*RUN_ROUTE_MARGIN*ratio;
     const gap=Math.round(clamp(desired,76,205));
     const left=prev.right+gap,right=left+width;
-    const s=surface('platform',left,right,top);
+    const s=surface(kind,left,right,top);
     route.push(s);
-    platforms.push([Math.round((left+right)/2),top+9,width,18]);
+    if(kind==='floor')floors.push([left,right,top]);
+    else platforms.push([Math.round((left+right)/2),top+9,width,18]);
     prev=s;
   }
 
@@ -191,7 +203,7 @@ export function getRunLevel(index){
   floors.push([endStart,endEnd,endTop]);
 
   const level={
-    number:n,seed:n,name:runLevelName(n),archetype,difficulty:d,
+    number:n,seed:n,name:runLevelName(n),style,archetype,hazardTheme,difficulty:d,
     width:Math.ceil(endEnd+70),spawn:[82,615],goal:[Math.round(endStart+250),endTop],
     floors,platforms,walls,spikes,saws,lasers,route,spikeMeta,sawMeta,laserMeta
   };
@@ -239,6 +251,9 @@ export function validateRunLevel(level){
   const errors=[];
   if(!level||!Array.isArray(level.route)||level.route.length<3)return{ok:false,errors:['missing route']};
   if(!Number.isInteger(level.number)||level.number<1||level.number>RUN_LEVEL_COUNT)errors.push('bad level number');
+  if(level.spikeMeta.some(m=>m.surface===0))errors.push('spawn platform contains spikes');
+  if(level.sawMeta.some(m=>m.surface===0))errors.push('spawn platform contains saw');
+  if(level.laserMeta.some(m=>m.gap===0))errors.push('spawn jump contains laser');
   const first=level.route[0],last=level.route.at(-1);
   if(!(first.left<=level.spawn[0]&&first.right>=level.spawn[0]))errors.push('spawn unsupported');
   if(!(last.left<=level.goal[0]&&last.right>=level.goal[0]))errors.push('goal unsupported');
@@ -259,5 +274,8 @@ export function validateRunLevel(level){
 }
 
 export function runLevelSignature(level){
-  return JSON.stringify({floors:level.floors,platforms:level.platforms,spikes:level.spikes,saws:level.saws,lasers:level.lasers,goal:level.goal});
+  return JSON.stringify({style:level.style,hazardTheme:level.hazardTheme,route:level.route.map(s=>[s.kind,s.left,s.right,s.top]),spikes:level.spikes,saws:level.saws,lasers:level.lasers,goal:level.goal});
+}
+export function runStructuralProfile(level){
+  return JSON.stringify({style:level.style,hazardTheme:level.hazardTheme,kinds:level.route.map(s=>s.kind[0]).join(''),heights:level.route.slice(1,-1).map((s,i,a)=>i===0?Math.sign(s.top-level.route[0].top):Math.sign(s.top-a[i-1].top)).join(','),widths:level.route.slice(1,-1).map(s=>widthOf(s)>=176?'W':widthOf(s)>=132?'M':'N').join('')});
 }
