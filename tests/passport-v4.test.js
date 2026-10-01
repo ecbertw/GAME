@@ -12,8 +12,10 @@ test('Passport is a single digital document with four real achievement keys and 
  const views={passport:{innerHTML:''}};
  new Function('views','t','passportWord',line)(views,(pt,en)=>pt,()=> 'Passaporte');
  const html=views.passport.innerHTML;
- for(const id of ['rxCharacterSlot','rxCharacterFallback','rxProfileName','rxJumpBest','rxPulseBest','rxVipLevel','rxLevel','rxExpBar','rxExpText','rxPassportNumber','rxPassportTags','rxPassportTotalXp','rxPassportRemaining','rxPassportBadgeCount','rxProfileStatus'])
+ for(const id of ['rxProfileName','rxJumpBest','rxPulseBest','rxVipLevel','rxLevel','rxExpBar','rxExpText','rxPassportNumber','rxPassportTags','rxPassportTotalXp','rxPassportRemaining','rxPassportBadgeCount','rxProfileStatus'])
   assert.match(html,new RegExp('id="'+id+'"'),id);
+ assert.match(html,/rx-passport-seal-panel/);
+ assert.doesNotMatch(html,/rxCharacterSlot|rxCharacterFallback|Editar personagem/);
  assert.equal((html.match(/class="rx-achievement/g)||[]).length,4);
  for(const badge of ['first-100','skybound','explorer','pulse-10'])assert.match(html,new RegExp('data-badge="'+badge+'"'));
  assert.match(html,/rx-passport-document/);
@@ -21,15 +23,12 @@ test('Passport is a single digital document with four real achievement keys and 
  assert.match(source,/rxPassportBadgeCount/);
 });
 
-test('Passport character uses the wardrobe runner in moving preview mode and stops on leaving',()=>{
+test('Passport no longer loads or exposes the retired JUMP character editor',()=>{
  const source=read('redesign.js');
- const wardrobe=read('jump.js');
- assert.match(wardrobe,/moving:true,preview:true,identity:"wardrobe"/);
- assert.match(source,/moving:true,preview:true,identity:'passport-live'/);
- assert.match(source,/await window\.EixoJumpExactArt\.ready/);
- assert.match(source,/cancelAnimationFrame\(characterFrame\)/);
- assert.match(source,/imageSmoothingEnabled=true/);
- assert.match(source,/imageSmoothingQuality='high'/);
+ const css=read('passport-v4.css');
+ assert.match(source,/rx-passport-seal-panel/);
+ assert.match(css,/\.rx-passport-seal/);
+ assert.doesNotMatch(source,/passport-live|EixoJumpExactArt|rxCharacterSlot|rxCharacterFallback|data-rx-action="character"|characterFrame/);
 });
 
 test('Global and national podium medals are distinct and contain no visible label text',()=>{
@@ -51,7 +50,7 @@ test('Global and national podium medals are distinct and contain no visible labe
 
 test('Brand assets, versioned CSS, favicon, and VIP card showcase are connected',()=>{
  const html=read('index.html'),source=read('redesign.js');
- assert.match(html,/passport-v4\.css\?v=20260927-v312/);
+ assert.match(html,/passport-v4\.css\?v=20261001-runsite2/);
  assert.match(html,/favicon\.svg\?v=20260927-v312/);
  assert.match(html,/eixo-logo\.svg\?v=20260927-v312/);
  assert.match(source,/rx-vip-pass-front/);
