@@ -172,7 +172,7 @@ async function completeLevel(pool,player,data){
 }
 
 async function levelStatus(pool,playerId){
-  if(!playerId)return{unlockedLevel:1,completedLevel:0,times:{}};
+  if(!playerId)return{authenticated:false,unlockedLevel:1,completedLevel:0,times:{}};
 
   if(pool){
     const [best,timesQ]=await Promise.all([
@@ -183,7 +183,7 @@ async function levelStatus(pool,playerId){
     const unlockedLevel=completedLevel>=RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:completedLevel+1;
     const times={};
     for(const row of timesQ.rows)times[String(Number(row.level))]=Number(row.timeMs);
-    return{unlockedLevel,completedLevel,times};
+    return{authenticated:true,unlockedLevel,completedLevel,times};
   }
 
   const best=memoryBests.get(playerId);
@@ -194,7 +194,7 @@ async function levelStatus(pool,playerId){
     const [pid,level]=key.split(':');
     if(pid===playerId)times[level]=Number(value);
   }
-  return{unlockedLevel,completedLevel,times};
+  return{authenticated:true,unlockedLevel,completedLevel,times};
 }
 
 async function rankings(pool,playerId,limitRaw){
