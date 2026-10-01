@@ -235,3 +235,14 @@ test('replaying an older RUN level does not replace highest overall progress',()
   assert.match(service,/isLevelPersonalBest/);
   assert.match(service,/best_level DESC,rb\.best_time_ms ASC/);
 });
+
+
+test('background skyline reaches the bottom of the RUN playfield',()=>{
+  const bg=read('games/run/assets/neon-void/background.svg');
+  const css=read('games/run/run.css');
+  assert.match(bg,/M0 1080V332/);
+  assert.match(bg,/M1745 1080V445/);
+  assert.match(bg,/M0 720H1920M0 820H1920M0 930H1920M0 1030H1920/);
+  assert.doesNotMatch(bg,/M0 700V332/);
+  assert.match(css,/background\.svg\?v=20261001-bgfull1/);
+});
