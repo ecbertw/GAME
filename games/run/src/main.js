@@ -6,12 +6,13 @@ const config = {
   parent: 'run-root',
   width: 1280,
   height: 720,
-  backgroundColor: '#08090d',
+  backgroundColor: '#030711',
   pixelArt: false,
   antialias: true,
-  roundPixels: true,
+  roundPixels: false,
+  resolution: Math.min(window.devicePixelRatio || 1, 2),
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.ENVELOP,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   physics: {

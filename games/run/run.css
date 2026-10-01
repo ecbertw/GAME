@@ -1,29 +1,37 @@
 :root{
   color-scheme:dark;
+  background:#030711;
+  color:#f5fbff;
   font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  background:#08090d;
-  color:#f5f7fb;
 }
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08090d}
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  min-width:100%;
+  min-height:100%;
+  overflow:hidden;
+  background:#030711;
+}
 body{overscroll-behavior:none}
-.run-shell{height:100%;display:grid;grid-template-rows:54px 1fr;background:#08090d}
-.run-header{
-  display:flex;align-items:center;gap:18px;padding:0 18px;
-  background:#0b0c10;border-bottom:1px solid #262932;
-  box-shadow:0 12px 32px #0009;z-index:10
+.run-stage,#run-root{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+  background:#030711;
 }
-.run-brand{font-weight:950;font-style:italic;font-size:19px;letter-spacing:.04em;color:#fff;text-decoration:none;white-space:nowrap}
-.run-brand b{color:#ff3159;margin-left:5px}
-.run-mode,.run-rule{font-size:10px;font-weight:900;letter-spacing:.16em;color:#8d929f}
-.run-rule{color:#5f6470}
-.home-link{
-  margin-left:auto;color:#cbd0da;text-decoration:none;border:1px solid #30343d;
-  border-radius:7px;padding:7px 10px;font-size:10px;font-weight:900;letter-spacing:.08em
+#run-root canvas{
+  display:block!important;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  margin:0!important;
 }
-.home-link:hover{color:#fff;border-color:#626875}
-.run-stage{position:relative;min-height:0;overflow:hidden;background:#08090d}
-#run-root{position:absolute;inset:0}
-#run-root canvas{display:block!important;max-width:100%;max-height:100%;margin:auto}
-@media(max-width:900px){.run-rule{display:none}}
-@media(max-width:640px){.run-mode{display:none}.run-header{gap:10px;padding:0 10px}.home-link{font-size:9px;padding:6px 8px}}
+noscript{
+  position:fixed;inset:0;display:grid;place-items:center;
+  background:#030711;color:#f5fbff;font-weight:800
+}

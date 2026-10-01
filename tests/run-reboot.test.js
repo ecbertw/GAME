@@ -56,3 +56,21 @@ test('RUN persistence and ranking rules remain intact',()=>{
   assert.match(scene,/eixo\.run\.progress\.v1/);assert.match(scene,/localStorage\.getItem/);assert.match(scene,/localStorage\.setItem/);
   assert.match(service,/best_level DESC,rb\.best_time_ms ASC/);assert.match(service,/const RUN_LEVEL_COUNT=900/);
 });
+
+
+test('NEON VOID visual layer is edge-to-edge and keeps physics separate from the runner rig',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const main=read('games/run/src/main.js');
+  const css=read('games/run/run.css');
+  const html=read('games/run/index.html');
+  assert.match(main,/Phaser\.Scale\.ENVELOP/);
+  assert.match(css,/width:100vw/);
+  assert.match(css,/height:100vh/);
+  assert.doesNotMatch(html,/run-header/);
+  assert.match(scene,/createRunnerVisual/);
+  assert.match(scene,/updateRunnerVisual/);
+  assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
+  assert.match(scene,/movingPlatforms/);
+  assert.match(scene,/NEON VOID/);
+  assert.match(scene,/platformGlow/);
+});
