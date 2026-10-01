@@ -31,11 +31,11 @@ test('spawn stays clean and challenge placement never accidentally overlaps',()=
   }
 });
 
-test('levels use varied challenge counts and all six module families',()=>{
+test('levels use varied challenge counts and all eight module families',()=>{
   const api=levels(),profiles=new Set(),families=new Set(),styles=new Set(),themes=new Set();
   for(let i=0;i<900;i++){const L=api.getRunLevel(i);profiles.add(api.runChallengeProfile(L));styles.add(L.style);themes.add(L.theme);for(const c of L.challengeSlots)families.add(c.type)}
   assert.equal(styles.size,24);assert.equal(themes.size,8);assert.ok(profiles.size>=80,'profiles='+profiles.size);
-  for(const type of ['spike','saw','laser','mover','crusher','tunnel'])assert.ok(families.has(type),type+' missing');
+  for(const type of ['spike','saw','laser','mover','crusher','tunnel','swingLaser','pulseFloor'])assert.ok(families.has(type),type+' missing');
 });
 
 test('there are never more than two consecutive empty route pieces',()=>{
@@ -48,7 +48,7 @@ test('there are never more than two consecutive empty route pieces',()=>{
 
 test('moving platforms crushers and ceiling hazards are rendered by the scene',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/addMovingPlatform/);assert.match(scene,/addCrusher/);assert.match(scene,/addCeilingPlatform/);assert.match(scene,/addCeilingSpikes/);assert.match(scene,/updateDynamicPlatforms/);assert.match(scene,/type==='crusher'/);
+  assert.match(scene,/addMovingPlatform/);assert.match(scene,/addCrusher/);assert.match(scene,/addCeilingPlatform/);assert.match(scene,/addCeilingSpikes/);assert.match(scene,/addSwingLaser/);assert.match(scene,/addPulseFloor/);assert.match(scene,/updateDynamicPlatforms/);assert.match(scene,/type==='crusher'/);assert.match(scene,/type==='swingLaser'/);assert.match(scene,/type==='pulseFloor'/);
 });
 
 test('RUN persistence and ranking rules remain intact',()=>{
@@ -80,7 +80,7 @@ test('NEON VOID visual layer is edge-to-edge and keeps physics separate from the
 test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   const html=read('games/run/index.html');
-  for(const asset of ['background.svg','platform.svg','moving-platform.svg','spikes.svg','saw.svg','laser.svg','crusher.svg','exit.svg','stopwatch.svg','skull.svg']){
+  for(const asset of ['background.svg','platform.svg','moving-platform.svg','spikes.svg','saw.svg','laser.svg','swing-laser.svg','crusher.svg','exit.svg','stopwatch.svg','skull.svg']){
     assert.ok(fs.existsSync(path.join(ROOT,'games/run/assets/neon-void',asset)),asset+' missing');
   }
   assert.match(scene,/this\.load\.svg\('nv-bg'/);
@@ -121,4 +121,27 @@ test('spike artwork is baseline-aligned and ceiling platforms are mirrored corre
   assert.match(scene,/const baselineOffset=visualH\*\(6\/44\)/);
   assert.match(scene,/top\+baselineOffset/);
   assert.match(scene,/bottom-baselineOffset/);
+});
+
+
+test('moving platforms keep the runner physically on top and idle while riding',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  assert.match(scene,/const visualOffsetY=3/);
+  assert.match(scene,/this\.ridingPlatform=null/);
+  assert.match(scene,/pb\.position\.y=o\.body\.position\.y-pb\.height/);
+  assert.match(scene,/p\.y=pb\.position\.y\+pb\.halfHeight/);
+  assert.match(scene,/grounded=b\.blocked\.down\|\|b\.touching\.down\|\|!!this\.ridingPlatform/);
+  assert.match(scene,/inputMoving/);
+});
+
+test('new timed hazards are validated and rendered',()=>{
+  const levels=read('games/run/src/run-levels.js');
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  assert.match(levels,/addSwingLaser/);
+  assert.match(levels,/addPulseFloor/);
+  assert.match(levels,/period\*\.45<m\.requiredOff/);
+  assert.match(levels,/period\*\.44<m\.requiredOff/);
+  assert.match(scene,/this\.load\.svg\('nv-swing-laser'/);
+  assert.match(scene,/addSwingLaser\(spec\)/);
+  assert.match(scene,/addPulseFloor\(spec\)/);
 });
