@@ -129,6 +129,7 @@ body{overscroll-behavior:none}
 }
 .run-start-button:hover{background:#ad8ef5;color:#0d1020}
 .run-start-note{margin:18px 0 0;color:#71849c;font:600 10px/1.5 Inter,Arial,sans-serif}
+.run-start-status{min-height:16px;margin:9px 0 0;color:#ff8096;font:800 10px/1.4 Inter,Arial,sans-serif;letter-spacing:.3px}.run-clear-pb.is-error{color:#ff8096}
 
 .run-start-side{
   min-width:0;display:flex;flex-direction:column;padding:28px;border:1px solid #3f4e68;
