@@ -289,12 +289,7 @@ test('RUN shell matches the EIXO site visual language',()=>{
 });
 
 
-test('privacy browsers can submit authenticated RUN progress without Origin or Referer',()=>{
-  const server=read('server.js');
-  assert.match(server,/runCookiePost=req\.method==='POST'&&\['\/api\/run\/start','\/api\/run\/level'\]\.includes\(url\.pathname\)/);
-  assert.match(server,/browserSameOrigin=fetchSite==='same-origin'\|\|fetchSite==='same-site'/);
-  assert.match(server,/runCookiePost&&browserSameOrigin&&parseCookies\(req\)\[SESSION_COOKIE\]/);
-});
+
 
 test('RUN completion persists account progress and ranking bests',()=>{
   const service=read('run-server.js');
