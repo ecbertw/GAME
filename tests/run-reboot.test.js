@@ -92,7 +92,7 @@ test('THE LABORATORY SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-lab1/);
+  assert.match(html,/20261001-lab2/);
 });
 
 
@@ -226,7 +226,9 @@ test('level selector unlocks completed levels and preserves per-level PBs',()=>{
   assert.match(scene,/RUN_LEVEL_BESTS_KEY/);
   assert.match(scene,/Math\.max\(current,Math\.floor\(Number\(level\)\|\|1\)\)/);
   assert.match(scene,/body:JSON\.stringify\(\{level:requested\}\)/);
-  assert.match(css,/background:[\s\S]*background\.svg\?v=20261001-lab1[\s\S]*center center \/ cover no-repeat/);
+  assert.match(css,/background-image:url\('\/games\/run\/assets\/neon-void\/background\.svg\?v=20261001-lab2'\)/);
+  assert.match(css,/background-position:center center/);
+  assert.match(css,/background-size:cover/);
   assert.match(server,/url\.pathname==='\/api\/run\/levels'/);
   assert.match(service,/CREATE TABLE IF NOT EXISTS run_level_bests/);
   assert.match(service,/async function levelStatus/);
@@ -248,7 +250,7 @@ test('The Laboratory background is full-height modular and gameplay-safe',()=>{
   for(const id of ['lab-far','lab-atrium','lab-glass','lab-pods','lab-walkways','lab-emblem','lab-foreground'])assert.match(bg,new RegExp('id="'+id+'"'));
   assert.match(bg,/linearGradient id="glass"/);
   assert.match(bg,/filter id="cyanGlow"/);
-  assert.match(css,/background:[\s\S]*background\.svg\?v=20261001-lab1[\s\S]*center center \/ cover no-repeat/);
+  assert.match(css,/background:[\s\S]*background\.svg\?v=20261001-lab2[\s\S]*center center \/ cover no-repeat/);
 });
 
 
