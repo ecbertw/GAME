@@ -73,8 +73,15 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   configureViewport(){
-    const pxW=Math.max(640,Number(this.scale.width)||1280);
-    const pxH=Math.max(360,Number(this.scale.height)||720);
+    const root=document.getElementById('run-root');
+    const rect=root&&root.getBoundingClientRect?root.getBoundingClientRect():null;
+    const pxW=Math.max(640,Math.round((rect&&rect.width)||window.innerWidth||1280));
+    const pxH=Math.max(360,Math.round((rect&&rect.height)||Math.max(360,(window.innerHeight||772)-52)));
+
+    if(Math.abs(Number(this.scale.width)-pxW)>1||Math.abs(Number(this.scale.height)-pxH)>1){
+      this.scale.resize(pxW,pxH);
+    }
+
     const zoom=pxH/720;
     this.uiZoom=zoom;
     this.uiWorldWidth=pxW/zoom;
@@ -308,14 +315,21 @@ export class HardcoreRunScene extends Phaser.Scene {
     const x=spec[0],y=spec[1],w=spec[2],h=spec[3],axis=spec[4],range=spec[5],period=spec[6],phase=spec[7]||0;
     const r=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(6);
     r.__isPlatform=true;
-    this.physics.add.existing(r,true);
-    // The bright top rail in the SVG sits 22/92 into the texture. With a
-    // 46px render height, centering the image 3px below the body aligns that
-    // rail with the physics top (y - h/2) instead of letting the player sink.
+    r.__isMovingPlatform=true;
+
+    this.physics.add.existing(r);
+    r.body.setAllowGravity(false);
+    r.body.setImmovable(true);
+    r.body.setSize(w,h,true);
+    r.body.setVelocity(0,0);
+    if(r.body.setFriction)r.body.setFriction(1,1);
+
     const visualOffsetY=3;
     const visual=this.add.image(x,y+visualOffsetY,'nv-moving').setDepth(9).setDisplaySize(Math.max(92,w+18),46);
-    r.__isMovingPlatform=true;
-    r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;r.visual=visual;r.visualYOffset=visualOffsetY;
+
+    r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;
+    r.visual=visual;r.visualYOffset=visualOffsetY;
+
     this.levelObjects.push(r,visual);
     this.dynamicPlatforms.push(r);
     return r;
@@ -465,10 +479,8 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   createRunnerVisual(x,y){
     const c=this.add.container(x,y).setDepth(40);
-    const glow=this.add.graphics();
     const body=this.add.graphics();
-    c.add([glow,body]);
-    c.glowGraphics=glow;
+    c.add(body);
     c.bodyGraphics=body;
     this.playerVisual=c;
     this.runnerPhase=0;
@@ -480,105 +492,71 @@ export class HardcoreRunScene extends Phaser.Scene {
   updateRunnerVisual(time,delta=16){
     const p=this.player,c=this.playerVisual;
     if(!p||!p.body||!c)return;
+
     const b=p.body;
     const grounded=b.blocked.down||b.touching.down||!!this.ridingPlatform;
     const speed=Math.abs(b.velocity.x);
     if(b.velocity.x>8)this.runnerFacing=1;
     else if(b.velocity.x<-8)this.runnerFacing=-1;
 
-    this.runnerPhase+=(delta||16)*(0.0048+Math.min(1,speed/RUN_PHYSICS.runSpeed)*0.0108);
-    c.x=p.x;c.y=p.y;c.scaleX=this.runnerFacing;
-
-    const g=c.bodyGraphics,halo=c.glowGraphics;
-    g.clear();halo.clear();
-
     const inputMoving=!!(this.keys&&((this.keys.left.isDown||this.keys.a.isDown)!==(this.keys.right.isDown||this.keys.d.isDown)));
     const moving=grounded&&inputMoving&&speed>28;
+    if(moving)this.runnerPhase+=(delta||16)*(0.0045+Math.min(1,speed/RUN_PHYSICS.runSpeed)*0.0105);
+
+    c.x=p.x;c.y=p.y+1;c.scaleX=this.runnerFacing;
+
+    const g=c.bodyGraphics;
+    g.clear();
+
     const phase=this.runnerPhase;
-    const stride=moving?Math.sin(phase)*10.2:0;
-    const bounce=moving?Math.abs(Math.sin(phase))*1.4:0;
-    const lean=grounded?Math.min(2.2,speed/145):b.velocity.y<0?2.2:1.0;
+    const stride=moving?Math.sin(phase)*9:0;
+    const lift=moving?Math.max(0,Math.sin(phase*2))*1.5:0;
+    const lean=grounded?Math.min(.13,speed/2600):(b.velocity.y<0?.10:.03);
+    const shoulder={x:lean*22,y:-9-lift};
+    const hip={x:0,y:3-lift};
 
-    const hip={x:-1+lean*.16,y:3-bounce};
-    const shoulder={x:1+lean,y:-9-bounce};
-
-    let lk,rk,lf,rf,le,re,lh,rh;
+    let lf,rf,lh,rh,lk,rk,le,re;
     if(!grounded){
-      if(b.velocity.y<30){
-        lk={x:-8,y:8};lf={x:-13,y:16};
-        rk={x:7,y:7};rf={x:13,y:11};
-        le={x:7,y:-7};lh={x:13,y:-14};
-        re={x:-6,y:-5};rh={x:-12,y:-10};
+      if(b.velocity.y<20){
+        lf={x:-7,y:15};rf={x:9,y:10};lk={x:-10,y:8};rk={x:5,y:7};
+        lh={x:8,y:-18};rh={x:-8,y:-13};le={x:6,y:-12};re={x:-7,y:-8};
       }else{
-        lk={x:-5,y:10};lf={x:-9,y:20};
-        rk={x:5,y:10};rf={x:9,y:19};
-        le={x:-4,y:-1};lh={x:-8,y:6};
-        re={x:5,y:-2};rh={x:10,y:4};
+        lf={x:-7,y:20};rf={x:7,y:18};lk={x:-4,y:10};rk={x:5,y:10};
+        lh={x:-7,y:4};rh={x:8,y:2};le={x:-4,y:-4};re={x:6,y:-3};
       }
     }else{
-      lk={x:stride*.52-2,y:11-bounce};
-      lf={x:stride,y:21};
-      rk={x:-stride*.52+2,y:11-bounce};
-      rf={x:-stride,y:21};
-      le={x:-stride*.42+2,y:-2-bounce};
-      lh={x:-stride*.78+3,y:5-bounce};
-      re={x:stride*.42-2,y:-2-bounce};
-      rh={x:stride*.78-3,y:5-bounce};
+      lf={x:stride,y:20};rf={x:-stride,y:20};
+      lk={x:stride*.48-2,y:11-lift};rk={x:-stride*.48+2,y:11-lift};
+      lh={x:-stride*.72,y:4-lift};rh={x:stride*.72,y:4-lift};
+      le={x:-stride*.42,y:-2-lift};re={x:stride*.42,y:-2-lift};
     }
 
-    const capsule=(gfx,a,b,width,color,alpha=1)=>{
-      gfx.lineStyle(width,color,alpha);
-      gfx.lineBetween(a.x,a.y,b.x,b.y);
-      gfx.fillStyle(color,alpha);
-      gfx.fillCircle(a.x,a.y,width/2);
-      gfx.fillCircle(b.x,b.y,width/2);
-    };
+    const BLACK=0x000000,OUTLINE=0xdff8ff;
 
     const limb=(a,k,f,alpha=1)=>{
-      capsule(halo,a,k,8.5,C.cyan,.085*alpha);
-      capsule(halo,k,f,8.5,C.cyan,.085*alpha);
-      capsule(g,a,k,4.5,C.player,alpha);
-      capsule(g,k,f,4.2,C.player,alpha);
-      g.fillStyle(C.player,alpha).fillEllipse(f.x,f.y+1,6.2,3.5);
+      g.lineStyle(6,OUTLINE,.78*alpha);
+      g.lineBetween(a.x,a.y,k.x,k.y);
+      g.lineBetween(k.x,k.y,f.x,f.y);
+      g.lineStyle(4,BLACK,alpha);
+      g.lineBetween(a.x,a.y,k.x,k.y);
+      g.lineBetween(k.x,k.y,f.x,f.y);
+      g.fillStyle(BLACK,alpha).fillCircle(k.x,k.y,2.6);
+      g.fillStyle(BLACK,alpha).fillEllipse(f.x,f.y+1,6,3.4);
     };
 
-    // rear limbs
-    limb({x:hip.x-2,y:hip.y},rk,rf,.48);
-    limb({x:shoulder.x-2,y:shoulder.y+1},re,rh,.48);
+    limb({x:hip.x-2,y:hip.y},rk,rf,.52);
+    limb({x:shoulder.x-2,y:shoulder.y},re,rh,.52);
 
-    // soft silhouette glow
-    halo.fillStyle(C.cyan,.07);
-    halo.fillEllipse(shoulder.x,shoulder.y-1,18,24);
-    halo.fillEllipse(hip.x,hip.y+1,15,16);
+    g.lineStyle(9,OUTLINE,.78);
+    g.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
+    g.lineStyle(7,BLACK,1);
+    g.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
 
-    // torso: wider shoulders, tapered waist, rounded silhouette
-    const torso=[
-      {x:shoulder.x-6.8,y:shoulder.y-1},
-      {x:shoulder.x-5.2,y:shoulder.y+8},
-      {x:hip.x-3.8,y:hip.y+2},
-      {x:hip.x+3.8,y:hip.y+2},
-      {x:shoulder.x+5.4,y:shoulder.y+8},
-      {x:shoulder.x+6.8,y:shoulder.y-1}
-    ];
-    g.fillStyle(C.player,1);
-    g.fillPoints(torso,true);
-    g.fillCircle(shoulder.x-5.8,shoulder.y+1,2.3);
-    g.fillCircle(shoulder.x+5.8,shoulder.y+1,2.3);
-    g.fillCircle(hip.x,hip.y+1,4.2);
-
-    // cyan seam / chest mark, no facial features
-    g.lineStyle(1.4,C.cyan,.78);
-    g.lineBetween(shoulder.x-2.8,shoulder.y+2,shoulder.x+3.7,shoulder.y+4.5);
-
-    // front limbs
     limb({x:hip.x+2,y:hip.y},lk,lf,1);
-    limb({x:shoulder.x+2,y:shoulder.y+1},le,lh,1);
+    limb({x:shoulder.x+2,y:shoulder.y},le,lh,1);
 
-    // neck and faceless head
-    capsule(g,{x:shoulder.x+1.2,y:shoulder.y-2},{x:shoulder.x+1.7,y:shoulder.y-5},3.5,C.player,1);
-    halo.fillStyle(C.cyan,.08).fillEllipse(shoulder.x+2.4,shoulder.y-11.2,12.5,14.5);
-    g.fillStyle(C.player,1).fillEllipse(shoulder.x+2.4,shoulder.y-11.2,9.5,11.5);
-    g.lineStyle(1,0xb7f2ff,.50).strokeEllipse(shoulder.x+2.4,shoulder.y-11.2,9.5,11.5);
+    g.fillStyle(OUTLINE,.82).fillCircle(shoulder.x+2,shoulder.y-9,6.5);
+    g.fillStyle(BLACK,1).fillCircle(shoulder.x+2,shoulder.y-9,5);
   }
 
   showLevelCard(index,name){
@@ -699,7 +677,7 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   update(time,delta){
     if(!this.player) return;
-    this.updateDynamicPlatforms(time);
+    this.updateDynamicPlatforms(time,delta);
     this.updateDynamicHazards(time);
     this.updateRunnerVisual(time,delta);
 
@@ -713,7 +691,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const b=this.player.body;
     const left=this.keys.left.isDown||this.keys.a.isDown;
     const right=this.keys.right.isDown||this.keys.d.isDown;
-    const grounded=b.blocked.down||b.touching.down;
+    const grounded=b.blocked.down||b.touching.down||!!this.ridingPlatform;
     const wallLeft=b.blocked.left||b.touching.left;
     const wallRight=b.blocked.right||b.touching.right;
 
@@ -746,46 +724,52 @@ export class HardcoreRunScene extends Phaser.Scene {
     if(this.player.y>770||this.player.x<-80) this.killPlayer(false);
   }
 
-  updateDynamicPlatforms(time){
-    this.ridingPlatform=null;
+  updateDynamicPlatforms(time,delta=16){
     const p=this.player;
+    const dt=Math.max(.004,Math.min(.05,(Number(delta)||16)/1000));
+    let riding=null;
 
     for(const o of this.dynamicPlatforms){
-      if(!o||!o.body) continue;
+      if(!o||!o.body)continue;
 
       const wave=Math.sin(((time+o.phase)%o.period)/o.period*Math.PI*2);
-      const nx=o.axis==='x'?o.baseX+wave*o.range:o.baseX;
-      const ny=o.axis==='y'?o.baseY+wave*o.range:o.baseY;
-      const dx=nx-o.x,dy=ny-o.y;
+      const targetX=o.axis==='x'?o.baseX+wave*o.range:o.baseX;
+      const targetY=o.axis==='y'?o.baseY+wave*o.range:o.baseY;
+      const vx=(targetX-o.x)/dt;
+      const vy=(targetY-o.y)/dt;
 
-      const oldTop=o.body.position.y;
-      let riding=false;
-      if(p&&p.body&&p.body.enable&&!this.dead){
-        const pb=p.body;
-        const playerBottom=pb.position.y+pb.height;
-        const playerLeft=pb.position.x;
-        const playerRight=pb.position.x+pb.width;
-        const platformLeft=o.body.position.x;
-        const platformRight=o.body.position.x+o.body.width;
-        const horizontalOverlap=playerRight>platformLeft+3&&playerLeft<platformRight-3;
-        riding=horizontalOverlap&&Math.abs(playerBottom-oldTop)<=7&&pb.velocity.y>=-35;
+      // Arcade moves this dynamic immovable body through the collision solver.
+      o.body.setVelocity(vx,vy);
+
+      if(o.visual){
+        o.visual.x=o.x;
+        o.visual.y=o.y+(o.visualYOffset||0);
       }
 
-      o.x=nx;o.y=ny;
-      if(o.visual){o.visual.x=nx;o.visual.y=ny+(o.visualYOffset||0);}
-      o.body.updateFromGameObject();
+      if(p&&p.body&&p.body.enable&&!this.dead){
+        const pb=p.body,ob=o.body;
+        const horizontal=pb.right>ob.left+3&&pb.left<ob.right-3;
+        const feetGap=Math.abs(pb.bottom-ob.top);
+        const onTop=horizontal&&feetGap<=10&&pb.velocity.y>=-45;
 
-      if(riding&&p&&p.body){
-        const pb=p.body;
-        pb.position.x+=dx;
-        // Always keep the player's physical feet exactly on the platform.
-        pb.position.y=o.body.position.y-pb.height;
-        if(pb.velocity.y>0)pb.velocity.y=0;
-        p.x=pb.position.x+pb.halfWidth;
-        p.y=pb.position.y+pb.halfHeight;
-        this.ridingPlatform=o;
+        if(onTop){
+          riding=o;
+
+          // Explicit horizontal carry; vertical separation is handled by
+          // Arcade, with a small downward snap to avoid a one-frame gap.
+          if(Math.abs(vx)>1){
+            pb.position.x+=vx*dt;
+            p.x=pb.position.x+pb.halfWidth;
+          }
+          if(vy>0&&feetGap<=10){
+            pb.position.y=ob.top-pb.height;
+            p.y=pb.position.y+pb.halfHeight;
+          }
+        }
       }
     }
+
+    this.ridingPlatform=riding;
   }
 
   updateDynamicHazards(time){
