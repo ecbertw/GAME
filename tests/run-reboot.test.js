@@ -92,7 +92,7 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-eixosite3/);
+  assert.match(html,/20261001-progressfix2/);
 });
 
 
@@ -301,4 +301,21 @@ test('RUN completion persists account progress and ranking bests',()=>{
   assert.match(service,/INSERT INTO run_bests\(player_id,best_level,best_time_ms/);
   assert.match(service,/INSERT INTO run_level_bests\(player_id,level,best_time_ms/);
   assert.match(service,/bestLevel\+1/);
+});
+
+
+test('RUN mutations accept privacy browsers with the secure session cookie even without fetch metadata',()=>{
+  const server=read('server.js');
+  assert.match(server,/runCookiePost&&parseCookies\(req\)\[SESSION_COOKIE\]/);
+  assert.doesNotMatch(server,/runCookiePost&&browserSameOrigin/);
+  assert.match(server,/if\(fetchSite==='cross-site'\)return json\(res,403/);
+});
+
+test('RUN shows persistence failures instead of silently losing progress',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const html=read('games/run/index.html');
+  assert.match(html,/id="run-start-status"/);
+  assert.match(scene,/PROGRESSO NÃO GUARDADO/);
+  assert.match(scene,/await this\.refreshLevelStatus\(\)/);
+  assert.match(scene,/PROGRESSO ONLINE INDISPONÍVEL/);
 });
