@@ -32,3 +32,12 @@ test('all ranking surfaces display podium medals with fixed finishes and VIP lab
  }
  for(const selector of ['world-2','.world-3','.rank-medal-label'])assert.ok(css.includes(selector),selector);
 });
+
+test('RUN rankings keep the complete-ranking action visible and render in-page',()=>{
+ const js=read('redesign.js');
+ assert.match(js,/data-rx-board="run">RUN<\/button>/);
+ assert.match(js,/fullRankButton\.hidden=false/);
+ assert.match(js,/async function refreshRunRankings\(\)/);
+ assert.match(js,/runRankView\.classList\.add\('is-full'\)/);
+ assert.doesNotMatch(js,/fullRankButton\.hidden=rankGame==='run'/);
+});
