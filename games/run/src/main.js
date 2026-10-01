@@ -11,7 +11,7 @@ const config = {
   scale: {
     mode: Phaser.Scale.RESIZE,
     width: window.innerWidth,
-    height: window.innerHeight,
+    height: Math.max(360, window.innerHeight - 52),
   },
   physics: {
     default: 'arcade',
