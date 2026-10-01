@@ -27,7 +27,9 @@ test('RUN contains twelve levels with a timer that resets only after a clear',()
   assert.match(scene,/this\.time\.now-this\.levelStartedAt/);
   assert.match(scene,/loadLevel\(this\.levelIndex\+1,\{resetClock:true\}\)/);
   assert.match(scene,/loadLevel\(this\.levelIndex\)/);
-  assert.doesNotMatch(scene,/runStartedAt|deathText|DEATHS/);
+  assert.doesNotMatch(scene,/runStartedAt/);
+  assert.match(scene,/deathText/);
+  assert.match(scene,/DEATHS  0/);
 });
 
 test('RUN ranking prioritizes highest level and then fastest level time',()=>{
@@ -124,9 +126,12 @@ test('RUN level geometry stays inside the real jump envelope',()=>{
 });
 
 
-test('RUN UI never displays a death counter and ranking rows include level plus time',()=>{
+test('RUN keeps the death HUD but never paints a red death square',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.doesNotMatch(scene,/DEATHS|deathText/);
+  assert.match(scene,/DEATHS  0/);
+  assert.match(scene,/this\.deaths\+=1/);
+  assert.match(scene,/this\.player\.setVisible\(false\)/);
+  assert.doesNotMatch(scene,/this\.player\.setFillStyle\(C\.hazard/);
   assert.match(scene,/L'\+String\(p\.level\|\|0\)/);
   assert.match(scene,/RANKING = HIGHEST LEVEL · FASTEST TIME/);
   assert.match(scene,/\/api\/run\/level/);

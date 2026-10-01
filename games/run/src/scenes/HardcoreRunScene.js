@@ -105,6 +105,7 @@ export class HardcoreRunScene extends Phaser.Scene {
   constructor(){
     super('HardcoreRun');
     this.levelIndex=0;
+    this.deaths=0;
     this.runActive=false;
     this.finished=false;
     this.starting=false;
@@ -156,9 +157,10 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.nameText=this.add.text(126,25,'FIRST BLOOD', {fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#8f96a3'});
     this.timerText=this.add.text(640,18,'00:00.000',{fontFamily:'Arial Black,Arial',fontSize:'28px',color:'#ffffff'}).setOrigin(.5,0);
     this.pbText=this.add.text(1230,21,'PB  --:--.---',{fontFamily:'Arial Black,Arial',fontSize:'13px',color:'#8f96a3'}).setOrigin(1,0);
+    this.deathText=this.add.text(1230,43,'DEATHS  0',{fontFamily:'Arial Black,Arial',fontSize:'10px',color:'#ff3159'}).setOrigin(1,0);
     this.progressBase=this.add.rectangle(640,80,760,3,0x2a2d34,.85);
     this.progressFill=this.add.rectangle(260,80,0,3,C.accent,1).setOrigin(0,.5);
-    this.hud.add([bar,this.levelText,this.nameText,this.timerText,this.pbText,this.progressBase,this.progressFill]);
+    this.hud.add([bar,this.levelText,this.nameText,this.timerText,this.pbText,this.deathText,this.progressBase,this.progressFill]);
 
     this.controls=this.add.text(30,686,'A/D ou ←/→  MOVE   ·   SPACE/W/↑  JUMP + WALL JUMP   ·   R  RESTART   ·   H  HOME',{
       fontFamily:'Arial Black,Arial',fontSize:'10px',color:'#676d79',letterSpacing:1
@@ -361,8 +363,10 @@ export class HardcoreRunScene extends Phaser.Scene {
   killPlayer(manual){
     if(!this.runActive||this.finished||this.dead||this.levelLocked) return;
     this.dead=true;
+    this.deaths+=1;
+    this.deathText.setText('DEATHS  '+this.deaths);
     this.player.body.enable=false;
-    this.player.setFillStyle(C.hazard,1);
+    this.player.setVisible(false);
     this.cameras.main.shake(85,.004);
     this.cameras.main.flash(70,255,49,89,false);
     const msg=this.add.text(640,355,manual?'RESTART':'DEAD',{fontFamily:'Arial Black,Arial',fontSize:'32px',color:'#ff3159'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
