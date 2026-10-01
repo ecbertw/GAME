@@ -221,7 +221,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     for(const f of L.floors||[]) this.addFloor(f[0],f[1],f[2]);
     for(const p of L.platforms||[]) this.addPlatform(p[0],p[1],p[2],p[3]);
     for(const w of L.walls||[]) this.addPlatform(w[0],w[1],w[2],w[3]);
-    for(const c of L.ceilings||[]) this.addPlatform(c[0],c[1],c[2],c[3]);
+    for(const c of L.ceilings||[]) this.addCeilingPlatform(c[0],c[1],c[2],c[3]);
     for(const p of L.movingPlatforms||[]) this.addMovingPlatform(p);
     for(const s of L.spikes||[]) this.addSpikes(s[0],s[1],s[2]);
     for(const s of L.ceilingSpikes||[]) this.addCeilingSpikes(s[0],s[1],s[2]);
@@ -279,6 +279,26 @@ export class HardcoreRunScene extends Phaser.Scene {
     return r;
   }
 
+
+  addCeilingPlatform(x,y,w,h){
+    const r=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(5);
+    r.__isPlatform=true;
+    this.physics.add.existing(r,true);
+
+    // Ceiling artwork is the floor artwork mirrored vertically: the bright
+    // walkable-looking edge belongs on the underside, not on the top.
+    const bottom=y+h/2;
+    const visualH=Math.min(50,Math.max(38,h+24));
+    const cap=this.add.image(x,bottom,'nv-platform')
+      .setOrigin(.5,1)
+      .setFlipY(true)
+      .setDepth(7)
+      .setDisplaySize(w,visualH);
+
+    this.levelObjects.push(r,cap);
+    return r;
+  }
+
   addMovingPlatform(spec){
     const x=spec[0],y=spec[1],w=spec[2],h=spec[3],axis=spec[4],range=spec[5],period=spec[6],phase=spec[7]||0;
     const r=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(6);
@@ -296,7 +316,17 @@ export class HardcoreRunScene extends Phaser.Scene {
     const sensor=this.add.rectangle(x,bottom+h/2,width,h,0x000000,0).setDepth(9);
     sensor.__isHazard=true;
     this.physics.add.existing(sensor,true);
-    const visual=this.add.image(x,bottom,'nv-spikes').setOrigin(.5,1).setFlipY(true).setDepth(12).setDisplaySize(width,38);
+
+    // After flipY the spike baseline sits 6/44 of the texture height from
+    // the visual top. Pull the texture up by that amount so the baseline
+    // touches the underside of the ceiling and the teeth point downward.
+    const visualH=38;
+    const baselineOffset=visualH*(6/44);
+    const visual=this.add.image(x,bottom-baselineOffset,'nv-spikes')
+      .setOrigin(.5,0)
+      .setFlipY(true)
+      .setDepth(12)
+      .setDisplaySize(width,visualH);
     this.levelObjects.push(sensor,visual);
   }
 
@@ -316,7 +346,15 @@ export class HardcoreRunScene extends Phaser.Scene {
     const sensor=this.add.rectangle(x,top-h/2,width,h,0x000000,0).setDepth(9);
     sensor.__isHazard=true;
     this.physics.add.existing(sensor,true);
-    const visual=this.add.image(x,top,'nv-spikes').setOrigin(.5,1).setDepth(12).setDisplaySize(width,38);
+
+    // The SVG has 6 transparent units below its baseline. Move the image
+    // down by the scaled margin so the visible base sits exactly on top.
+    const visualH=38;
+    const baselineOffset=visualH*(6/44);
+    const visual=this.add.image(x,top+baselineOffset,'nv-spikes')
+      .setOrigin(.5,1)
+      .setDepth(12)
+      .setDisplaySize(width,visualH);
     this.levelObjects.push(sensor,visual);
   }
 
