@@ -92,7 +92,7 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-progressfix2/);
+  assert.match(html,/20261001-spikeflush1/);
 });
 
 
@@ -115,14 +115,16 @@ test('public EIXO presentation promotes RUN and PULSE instead of old JUMP',()=>{
 });
 
 
-test('spike artwork is baseline-aligned and ceiling platforms are mirrored correctly',()=>{
+test('spike artwork is flush with floor and ceiling surfaces',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const spikes=read('games/run/assets/neon-void/spikes.svg');
   assert.match(scene,/for\(const c of L\.ceilings\|\|\[\]\) this\.addCeilingPlatform/);
   assert.match(scene,/addCeilingPlatform\(x,y,w,h\)/);
-  assert.match(scene,/setFlipY\(true\)/);
-  assert.match(scene,/const baselineOffset=visualH\*\(6\/44\)/);
-  assert.match(scene,/top\+baselineOffset/);
-  assert.match(scene,/bottom-baselineOffset/);
+  assert.match(scene,/this\.add\.image\(x,top,'nv-spikes'\)\s*\.setOrigin\(\.5,1\)/);
+  assert.match(scene,/this\.add\.image\(x,bottom,'nv-spikes'\)\s*\.setOrigin\(\.5,0\)\s*\.setFlipY\(true\)/);
+  assert.doesNotMatch(scene,/baselineOffset/);
+  assert.match(spikes,/M0 44H320/);
+  assert.match(spikes,/M0 44L10 5/);
 });
 
 
