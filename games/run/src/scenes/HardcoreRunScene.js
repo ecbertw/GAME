@@ -1,7 +1,8 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-hard100';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-hard100';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-levelselect1';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-levelselect1';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
+const RUN_LEVEL_BESTS_KEY='eixo.run.level-bests.v1';
 
 function readSavedLevel(){
   try{
@@ -14,11 +15,32 @@ function readSavedLevel(){
 
 function saveLevel(level){
   try{
-    localStorage.setItem(RUN_PROGRESS_KEY,JSON.stringify({
-      level:Phaser.Math.Clamp(Math.floor(Number(level)||1),1,RUN_LEVEL_COUNT),
-      updatedAt:Date.now()
-    }));
-  }catch(_){}
+    const current=readSavedLevel();
+    const next=Phaser.Math.Clamp(Math.max(current,Math.floor(Number(level)||1)),1,RUN_LEVEL_COUNT);
+    localStorage.setItem(RUN_PROGRESS_KEY,JSON.stringify({level:next,updatedAt:Date.now()}));
+    return next;
+  }catch(_){return readSavedLevel()}
+}
+
+function readLevelBests(){
+  try{
+    const raw=localStorage.getItem(RUN_LEVEL_BESTS_KEY);
+    const data=raw?JSON.parse(raw):{};
+    return data&&typeof data==='object'?data:{};
+  }catch(_){return{}}
+}
+
+function saveLevelBest(level,timeMs){
+  const n=Phaser.Math.Clamp(Math.floor(Number(level)||1),1,RUN_LEVEL_COUNT);
+  const ms=Math.max(1,Math.floor(Number(timeMs)||0));
+  const all=readLevelBests();
+  const previous=Number(all[String(n)]);
+  const isPersonalBest=!Number.isFinite(previous)||ms<previous;
+  if(isPersonalBest){
+    all[String(n)]=ms;
+    try{localStorage.setItem(RUN_LEVEL_BESTS_KEY,JSON.stringify(all));}catch(_){}
+  }
+  return{isPersonalBest,bestMs:isPersonalBest?ms:previous};
 }
 
 const C = {
@@ -57,6 +79,10 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.runnerPhase=0;
     this.awaitingClearChoice=false;
     this.lastClearResult=null;
+    this.selectedLevel=readSavedLevel();
+    this.maxUnlockedLevel=readSavedLevel();
+    this.completedLevel=Math.max(0,this.maxUnlockedLevel-1);
+    this.levelTimes=readLevelBests();
   }
 
   preload(){
@@ -117,8 +143,10 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.createHud();
     this.createStartOverlay();
     this.createClearOverlay();
-    this.loadLevel(readSavedLevel()-1);
+    this.createLevelSelector();
+    this.loadLevel(this.selectedLevel-1);
     this.refreshLeaderboard();
+    this.refreshLevelStatus();
 
     this.input.keyboard.on('keydown-SPACE',()=>this.queueJump());
     this.input.keyboard.on('keydown-W',()=>this.queueJump());
@@ -151,9 +179,11 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.startOverlayEl=document.getElementById('run-start-overlay');
     this.startRankingEl=document.getElementById('run-start-ranking');
     this.startPromptEl=document.getElementById('run-start-prompt');
+    this.startSelectedEl=document.getElementById('run-start-selected');
 
     if(this.startRankingEl)this.startRankingEl.textContent='WORLD TOP\nLOADING...';
     if(this.startPromptEl)this.startPromptEl.textContent='SPACE / ENTER / CLICK  —  START';
+    this.updateSelectedLevelUi();
 
     if(this.startOverlayEl){
       this.startOverlayEl.classList.remove('is-hidden');
@@ -161,6 +191,121 @@ export class HardcoreRunScene extends Phaser.Scene {
         if(!this.runActive&&!this.finished)this.requestStart();
       });
     }
+  }
+
+  createLevelSelector(){
+    this.levelOverlayEl=document.getElementById('run-level-overlay');
+    this.levelGridEl=document.getElementById('run-level-grid');
+    this.levelSummaryEl=document.getElementById('run-level-summary');
+
+    const open=document.getElementById('run-open-levels');
+    const close=document.getElementById('run-level-close');
+    if(open)open.addEventListener('pointerdown',e=>{e.stopPropagation();this.openLevelSelector();});
+    if(close)close.addEventListener('pointerdown',e=>{e.stopPropagation();this.closeLevelSelector();});
+    if(this.levelOverlayEl)this.levelOverlayEl.addEventListener('pointerdown',e=>e.stopPropagation());
+
+    this.renderLevelSelector();
+  }
+
+  updateSelectedLevelUi(){
+    const level=Phaser.Math.Clamp(Math.floor(Number(this.selectedLevel)||1),1,RUN_LEVEL_COUNT);
+    if(this.startSelectedEl)this.startSelectedEl.textContent='SELECTED · LEVEL '+String(level).padStart(3,'0');
+    if(this.startPromptEl&&!this.starting)this.startPromptEl.textContent='START LEVEL '+String(level).padStart(3,'0');
+    this.updateLevelPbHud();
+  }
+
+  updateLevelPbHud(){
+    const level=this.levelIndex+1;
+    const ms=Number(this.levelTimes&&this.levelTimes[String(level)]);
+    if(Number.isFinite(ms))this.pbText.setText('PB  '+formatTime(ms));
+    else if(this.practice)this.pbText.setText('PRACTICE');
+    else this.pbText.setText('PB  --:--.---');
+  }
+
+  openLevelSelector(){
+    if(!this.levelOverlayEl)return;
+    this.renderLevelSelector();
+    this.levelOverlayEl.classList.remove('is-hidden');
+  }
+
+  closeLevelSelector(){
+    if(this.levelOverlayEl)this.levelOverlayEl.classList.add('is-hidden');
+  }
+
+  renderLevelSelector(){
+    if(this.levelSummaryEl)this.levelSummaryEl.textContent='UNLOCKED '+String(this.maxUnlockedLevel).padStart(3,'0')+' / '+String(RUN_LEVEL_COUNT);
+    if(!this.levelGridEl)return;
+
+    const items=[];
+    for(let level=1;level<=RUN_LEVEL_COUNT;level++){
+      const unlocked=level<=this.maxUnlockedLevel;
+      const completed=level<=this.completedLevel;
+      const selected=level===this.selectedLevel;
+      const ms=Number(this.levelTimes&&this.levelTimes[String(level)]);
+      const sub=Number.isFinite(ms)?formatTime(ms):(completed?'CLEARED':unlocked?'CURRENT':'LOCKED');
+      items.push(
+        '<button type="button" class="run-level-cell'+(selected?' is-selected':'')+(completed?' is-complete':'')+'" data-level="'+level+'" '+(unlocked?'':'disabled')+'>'+
+        '<strong>'+String(level).padStart(3,'0')+'</strong><span>'+sub+'</span></button>'
+      );
+    }
+    this.levelGridEl.innerHTML=items.join('');
+    this.levelGridEl.querySelectorAll('[data-level]:not([disabled])').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        e.stopPropagation();
+        this.selectLevel(Number(btn.dataset.level));
+      });
+    });
+  }
+
+  selectLevel(level){
+    const n=Phaser.Math.Clamp(Math.floor(Number(level)||1),1,RUN_LEVEL_COUNT);
+    if(n>this.maxUnlockedLevel)return;
+    this.selectedLevel=n;
+    this.closeLevelSelector();
+
+    // Selection is a pre-run action. If the clear screen was open, end that
+    // attempt locally and show the start screen for the newly selected level.
+    if(this.awaitingClearChoice){
+      this.hideClearOverlay();
+      this.awaitingClearChoice=false;
+      this.runActive=false;
+      this.finished=false;
+      this.attemptId=null;
+    }
+
+    if(!this.runActive){
+      this.loadLevel(n-1);
+      if(this.startOverlayEl)this.startOverlayEl.classList.remove('is-hidden');
+    }
+    this.updateSelectedLevelUi();
+  }
+
+  async refreshLevelStatus(){
+    const localUnlocked=readSavedLevel();
+    const localTimes=readLevelBests();
+    let remote=null;
+    try{
+      const res=await fetch('/api/run/levels',{credentials:'same-origin',cache:'no-store'});
+      if(res.ok)remote=await res.json();
+    }catch(_){}
+
+    const remoteUnlocked=Math.floor(Number(remote&&remote.unlockedLevel)||1);
+    const remoteCompleted=Math.floor(Number(remote&&remote.completedLevel)||0);
+    this.maxUnlockedLevel=Phaser.Math.Clamp(Math.max(localUnlocked,remoteUnlocked),1,RUN_LEVEL_COUNT);
+    this.completedLevel=Phaser.Math.Clamp(Math.max(Math.max(0,localUnlocked-1),remoteCompleted),0,RUN_LEVEL_COUNT);
+
+    const merged={...localTimes};
+    const remoteTimes=remote&&remote.times&&typeof remote.times==='object'?remote.times:{};
+    for(const [level,value] of Object.entries(remoteTimes)){
+      const ms=Number(value),old=Number(merged[level]);
+      if(Number.isFinite(ms)&&(!Number.isFinite(old)||ms<old))merged[level]=ms;
+    }
+    this.levelTimes=merged;
+
+    if(this.selectedLevel>this.maxUnlockedLevel)this.selectedLevel=this.maxUnlockedLevel;
+    this.renderLevelSelector();
+    this.updateSelectedLevelUi();
+    return remote;
   }
 
   createClearOverlay(){
@@ -185,31 +330,45 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   async requestStart(){
-    if(this.starting||this.runActive||this.finished) return;
+    if(this.starting||this.runActive||this.finished)return;
     this.starting=true;
     if(this.startPromptEl)this.startPromptEl.textContent='STARTING...';
+
+    const requested=Phaser.Math.Clamp(Math.floor(Number(this.selectedLevel)||1),1,this.maxUnlockedLevel||1);
     let runId=null;
+    this.practice=false;
+
     try{
-      const res=await fetch('/api/run/start',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:'{}'});
+      const res=await fetch('/api/run/start',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'same-origin',
+        body:JSON.stringify({level:requested})
+      });
       if(res.ok){
         const data=await res.json();
         runId=data.runId||null;
-        const serverLevel=Phaser.Math.Clamp(Math.floor(Number(data.level)||1),1,RUN_LEVEL_COUNT);
+        const serverLevel=Phaser.Math.Clamp(Math.floor(Number(data.level)||requested),1,RUN_LEVEL_COUNT);
+        if(Number.isFinite(Number(data.unlockedLevel)))this.maxUnlockedLevel=Math.max(this.maxUnlockedLevel,Math.floor(Number(data.unlockedLevel)));
+        this.selectedLevel=serverLevel;
         if(serverLevel!==this.levelIndex+1)this.loadLevel(serverLevel-1);
-        saveLevel(serverLevel);
       }else{
         this.practice=true;
+        if(requested!==this.levelIndex+1)this.loadLevel(requested-1);
       }
     }catch(_){
       this.practice=true;
+      if(requested!==this.levelIndex+1)this.loadLevel(requested-1);
     }
+
     this.attemptId=runId;
     this.runActive=true;
     this.starting=false;
     this.levelStartedAt=this.time.now;
     if(this.startOverlayEl)this.startOverlayEl.classList.add('is-hidden');
+    this.closeLevelSelector();
     this.controls.setAlpha(.78);
-    if(this.practice) this.pbText.setText('PRACTICE');
+    this.updateLevelPbHud();
   }
 
   clearLevel(){
@@ -258,6 +417,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.levelText.setText('LEVEL '+String(this.levelIndex+1).padStart(3,'0')+' / '+String(RUN_LEVEL_COUNT).padStart(3,'0'));
     this.nameText.setText(L.name+'  ·  NEON VOID');
     this.setProgress((this.levelIndex+1)/RUN_LEVEL_COUNT);
+    this.updateLevelPbHud();
     this.cameras.main.startFollow(this.player,true,.11,.08,-Math.min(260,this.uiWidth()*.18),20);
     this.cameras.main.scrollX=0;
     if(resetClock&&this.runActive) this.levelStartedAt=this.time.now;
@@ -615,13 +775,21 @@ export class HardcoreRunScene extends Phaser.Scene {
       }catch(_){}
     }
 
-    if(level<RUN_LEVEL_COUNT)saveLevel(level+1);
-    else saveLevel(RUN_LEVEL_COUNT);
+    const localResult=saveLevelBest(level,levelTimeMs);
+    const localUnlocked=level<RUN_LEVEL_COUNT?saveLevel(level+1):saveLevel(RUN_LEVEL_COUNT);
+    this.maxUnlockedLevel=Math.max(this.maxUnlockedLevel,localUnlocked);
+    this.completedLevel=Math.max(this.completedLevel,level);
+
+    const serverLevelPb=serverResult&&Number(serverResult.levelPbMs);
+    const bestMs=Number.isFinite(serverLevelPb)?serverLevelPb:localResult.bestMs;
+    if(Number.isFinite(bestMs))this.levelTimes[String(level)]=bestMs;
+    this.renderLevelSelector();
 
     this.lastClearResult={level,timeMs:levelTimeMs,serverResult};
     this.awaitingClearChoice=true;
 
-    const suffix=serverResult&&serverResult.isPersonalBest?'NEW PERSONAL BEST':'LEVEL CLEAR';
+    const isLevelPb=!!(serverResult&&serverResult.isLevelPersonalBest)||localResult.isPersonalBest;
+    const suffix=isLevelPb?'NEW LEVEL PB':'LEVEL CLEAR';
     if(this.clearTitleEl)this.clearTitleEl.textContent='LEVEL '+String(level).padStart(3,'0')+' CLEAR';
     if(this.clearTimeEl)this.clearTimeEl.textContent=formatTime(levelTimeMs);
     if(this.clearPbEl)this.clearPbEl.textContent=suffix;
@@ -634,7 +802,9 @@ export class HardcoreRunScene extends Phaser.Scene {
     if(!this.awaitingClearChoice||!this.lastClearResult)return;
     this.hideClearOverlay();
     this.awaitingClearChoice=false;
+    this.selectedLevel=this.lastClearResult.level;
     this.loadLevel(this.lastClearResult.level-1,{resetClock:true});
+    this.updateSelectedLevelUi();
     this.timerText.setText('00:00.000');
   }
 
@@ -647,7 +817,9 @@ export class HardcoreRunScene extends Phaser.Scene {
       this.finishRun(result.timeMs,result.serverResult);
       return;
     }
+    this.selectedLevel=result.level+1;
     this.loadLevel(result.level,{resetClock:true});
+    this.updateSelectedLevelUi();
     this.timerText.setText('00:00.000');
   }
 
@@ -693,12 +865,14 @@ export class HardcoreRunScene extends Phaser.Scene {
       const res=await fetch('/api/run/rankings?limit=10',{credentials:'same-origin'});
       if(res.ok){
         this.rankingData=await res.json();
-        if(this.rankingData.me&&this.rankingData.me.timeMs&&!this.practice){
-          this.pbText.setText('PB  L'+String(this.rankingData.me.level||0).padStart(3,'0')+' · '+formatTime(Number(this.rankingData.me.timeMs)));
+        if(this.rankingData.me&&Number.isFinite(Number(this.rankingData.me.level))){
+          const remoteUnlocked=Number(this.rankingData.me.level)>=RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:Number(this.rankingData.me.level)+1;
+          this.maxUnlockedLevel=Math.max(this.maxUnlockedLevel,remoteUnlocked);
         }
       }
     }catch(_){}
     if(this.startRankingEl)this.startRankingEl.textContent=this.leaderboardText();
+    this.updateLevelPbHud();
     return this.rankingData;
   }
 
