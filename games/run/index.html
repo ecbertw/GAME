@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#030711">
   <meta name="description" content="EIXO RUN — Neon Void hardcore precision platformer.">
   <title>EIXO RUN — Neon Void</title>
-  <link rel="stylesheet" href="/games/run/run.css?v=20261001-platformfix2">
+  <link rel="stylesheet" href="/games/run/run.css?v=20261001-centred3">
 </head>
 <body>
   <header class="run-site-nav">
@@ -21,11 +21,29 @@
     </nav>
     <a class="run-site-exit" href="/">EIXO HOME</a>
   </header>
+
   <main class="run-stage">
     <div id="run-root" aria-label="EIXO RUN game"></div>
+
+    <section id="run-start-overlay" class="run-start-overlay" aria-label="RUN start">
+      <div class="run-start-card">
+        <div class="run-start-kicker">EIXO ARCADE</div>
+        <h1>RUN <span>//</span></h1>
+        <div class="run-start-sub">NEON VOID</div>
+        <div class="run-start-rule"></div>
+        <p class="run-start-copy">900 HARDCORE LEVELS<br>HIGHEST LEVEL · FASTEST TIME</p>
+        <pre id="run-start-ranking" class="run-start-ranking">WORLD TOP
+LOADING...</pre>
+        <button id="run-start-prompt" class="run-start-button" type="button">SPACE / ENTER / CLICK — START</button>
+        <div class="run-start-rule danger"></div>
+        <p class="run-start-note">LOGIN FOR GLOBAL RANKING · PRACTICE WORKS OFFLINE</p>
+      </div>
+    </section>
+
     <noscript>JavaScript is required to play EIXO RUN.</noscript>
   </main>
+
   <script src="/vendor/phaser.min.js"></script>
-  <script type="module" src="/games/run/src/main.js?v=20261001-platformfix2"></script>
+  <script type="module" src="/games/run/src/main.js?v=20261001-centred3"></script>
 </body>
 </html>
