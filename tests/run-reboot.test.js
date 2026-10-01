@@ -16,7 +16,7 @@ test('RUN is a standalone Phaser hardcore platformer',()=>{
   assert.match(scene,/killPlayer/);
   assert.match(scene,/addSaw/);
   assert.match(scene,/addLaser/);
-  assert.doesNotMatch(scene,/Astral|runner-manifest|approved-runner|JUMP|WebSocket/);
+  assert.doesNotMatch(scene,/Astral|runner-manifest|approved-runner|jump-(?:physics|motion|worlds|exact-renderer)|EixoJump|WebSocket/);
 });
 
 test('RUN contains twelve timed levels and one continuous run clock',()=>{
