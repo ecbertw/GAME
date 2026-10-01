@@ -1,4 +1,5 @@
 import { HardcoreRunScene } from './scenes/HardcoreRunScene.js';
+import { RUN_PHYSICS } from './run-config.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -16,7 +17,7 @@ const config = {
   physics: {
     default: 'arcade',
     arcade: {
-      gravity: { y: 1700 },
+      gravity: { y: RUN_PHYSICS.gravityY },
       debug: false,
       fps: 120,
       fixedStep: true,

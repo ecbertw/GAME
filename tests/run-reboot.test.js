@@ -57,3 +57,66 @@ test('RUN no longer depends on the old visual asset stack',()=>{
   assert.doesNotMatch(index,/MOVEMENT LAB|PRIVATE BUILD|ASTRAL/);
   assert.doesNotMatch(main,/MovementLabScene|FirstLightScene/);
 });
+
+
+test('RUN level geometry stays inside the real jump envelope',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const cfg=read('games/run/src/run-config.js');
+  const block=scene.match(/const LEVELS = (\[[\s\S]*?\n\]);\n\nconst C/);
+  assert.ok(block,'LEVELS block not found');
+  const levels=Function('return '+block[1])();
+  const number=name=>{
+    const m=cfg.match(new RegExp(name+'\\s*:\\s*(\\d+)'));
+    assert.ok(m,'missing '+name);
+    return Number(m[1]);
+  };
+  const gravity=number('gravityY');
+  const speed=number('runSpeed');
+  const jump=number('jumpSpeed');
+  const margin=.80;
+
+  const surfaces=level=>{
+    const out=[];
+    for(const [a,b,top] of level.floors||[])out.push({kind:'floor',left:a,right:b,top});
+    for(const [x,y,w,h] of level.platforms||[])out.push({kind:'platform',left:x-w/2,right:x+w/2,top:y-h/2});
+    return out;
+  };
+  const canReach=(a,b)=>{
+    if(b.right<a.left-1)return false;
+    const gap=Math.max(0,b.left-a.right);
+    const rise=a.top-b.top;
+    const disc=jump*jump-2*gravity*rise;
+    if(disc<0)return false;
+    const flight=(jump+Math.sqrt(disc))/gravity;
+    return gap<=speed*flight*margin;
+  };
+
+  for(const level of levels){
+    const nodes=surfaces(level);
+    const starts=[];
+    nodes.forEach((s,i)=>{if(s.left<=level.spawn[0]&&s.right>=level.spawn[0])starts.push(i)});
+    assert.ok(starts.length,level.name+' has no spawn support');
+    const seen=new Set(starts),queue=[...starts];
+    while(queue.length){
+      const i=queue.shift();
+      nodes.forEach((s,j)=>{
+        if(j!==i&&!seen.has(j)&&canReach(nodes[i],s)){seen.add(j);queue.push(j)}
+      });
+    }
+    const goals=[];
+    nodes.forEach((s,i)=>{
+      if(s.left-30<=level.goal[0]&&s.right+30>=level.goal[0]&&Math.abs(s.top-level.goal[1])<=40)goals.push(i);
+    });
+    assert.ok(goals.some(i=>seen.has(i)),level.name+' has no reachable route to EXIT');
+    nodes.forEach((s,i)=>{
+      if(s.kind==='platform')assert.ok(seen.has(i),level.name+' contains an unreachable visible platform');
+    });
+  }
+
+  const first=levels[0];
+  const p0={left:first.platforms[0][0]-first.platforms[0][2]/2,right:first.platforms[0][0]+first.platforms[0][2]/2,top:first.platforms[0][1]-first.platforms[0][3]/2};
+  const p1={left:first.platforms[1][0]-first.platforms[1][2]/2,right:first.platforms[1][0]+first.platforms[1][2]/2,top:first.platforms[1][1]-first.platforms[1][3]/2};
+  assert.ok(canReach(p0,p1),'FIRST BLOOD elevated platform chain must be jumpable');
+  assert.ok(speed*(2*jump/gravity)>290,'same-height jump range unexpectedly low');
+  assert.ok((jump*jump)/(2*gravity)>120,'jump height unexpectedly low');
+});
