@@ -158,7 +158,7 @@ test('RUN start overlay and HUD are DOM-centered and the initial runner is resto
   assert.match(html,/id="run-start-overlay"/);
   assert.match(html,/id="run-start-ranking"/);
   assert.match(css,/display:flex;align-items:center;justify-content:center/);
-  assert.match(css,/background:[\s\S]*background\.svg/);
+  assert.match(css,/background-image:[\s\S]*background\.svg/);
   assert.match(main,/transparent: true/);
   assert.match(html,/id="run-game-hud"/);
   assert.match(html,/id="run-hud-deaths"/);
