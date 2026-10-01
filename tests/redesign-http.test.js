@@ -10,7 +10,10 @@ test('redesign pages and assets load while server files stay private', {timeout:
   const manifest=await fetch(base+'/assets/game-v300/hero-parts.json');assert.equal(manifest.status,200,'the production server must serve the character atlas manifest');
   assert.match(manifest.headers.get('content-type'),/application\/json/);const rig=await manifest.json();assert.ok(rig.parts.head.rect&&rig.parts.torso.rect&&rig.parts.cape.rect);
   const sprite=await fetch(base+'/assets/game-v300/'+rig.image);assert.equal(sprite.status,200);assert.match(sprite.headers.get('content-type'),/image\/png/);
-  for(const route of ['/','/jump','/pulse','/passport','/rankings','/rooms','/vip']){const r=await fetch(base+route);assert.equal(r.status,200,route);assert.match(await r.text(),/redesign.js/);}
+  for(const route of ['/','/pulse','/passport','/rankings','/rooms','/vip']){const r=await fetch(base+route);assert.equal(r.status,200,route);assert.match(await r.text(),/redesign.js/);}
+  const runPage=await fetch(base+'/run');assert.equal(runPage.status,200,'/run');assert.match(await runPage.text(),/EIXO RUN|run-site-nav/);
+  const oldJump=await fetch(base+'/jump',{redirect:'manual'});assert.equal(oldJump.status,308,'/jump');assert.equal(oldJump.headers.get('location'),'/run');
+  for(const route of ['/run-lab','/run-admin','/run-lab/admin']){const r=await fetch(base+route,{redirect:'manual'});assert.equal(r.status,308,route);assert.equal(r.headers.get('location'),'/run');}
   for(const file of ['/.env','/.git/HEAD','/server.js','/auth-server.js','/jump-server.js','/package.json','/ops/deploy/eixo-deploy.sh'])assert.equal((await fetch(base+file)).status,404,file);
   const redirect=await fetch(base+'/passport/?view=profile',{redirect:'manual'});assert.equal(redirect.status,308);assert.equal(redirect.headers.get('location'),'/passport?view=profile');
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');const assets=[...html.matchAll(/(?:src|href)="([^"#]+\.(?:js|css|svg)(?:\?[^" ]*)?)"/g)].map(m=>m[1]).filter(p=>!p.startsWith('http'));
