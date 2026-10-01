@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-noticecenter1';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-noticecenter1';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-eixosite3';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-eixosite3';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 const RUN_LEVEL_BESTS_KEY='eixo.run.level-bests.v1';
@@ -104,7 +104,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const root=document.getElementById('run-root');
     const rect=root&&root.getBoundingClientRect?root.getBoundingClientRect():null;
     const pxW=Math.max(640,Math.round((rect&&rect.width)||window.innerWidth||1280));
-    const pxH=Math.max(360,Math.round((rect&&rect.height)||Math.max(360,(window.innerHeight||788)-68)));
+    const pxH=Math.max(360,Math.round((rect&&rect.height)||Math.max(360,(window.innerHeight||796)-76)));
 
     if(Math.abs(Number(this.scale.width)-pxW)>1||Math.abs(Number(this.scale.height)-pxH)>1){
       this.scale.resize(pxW,pxH);
@@ -210,8 +210,8 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   updateSelectedLevelUi(){
     const level=Phaser.Math.Clamp(Math.floor(Number(this.selectedLevel)||1),1,RUN_LEVEL_COUNT);
-    if(this.startSelectedEl)this.startSelectedEl.textContent='SELECTED · LEVEL '+String(level).padStart(3,'0');
-    if(this.startPromptEl&&!this.starting)this.startPromptEl.textContent='START LEVEL '+String(level).padStart(3,'0');
+    if(this.startSelectedEl)this.startSelectedEl.textContent='LEVEL '+String(level).padStart(3,'0');
+    if(this.startPromptEl&&!this.starting)this.startPromptEl.textContent='JOGAR NÍVEL '+String(level).padStart(3,'0')+' ↗';
     this.updateLevelPbHud();
   }
 
