@@ -5,6 +5,7 @@ const config = {
   parent: 'run-root',
   width: 1280,
   height: 720,
+  resolution: Math.min(window.devicePixelRatio || 1, 2),
   backgroundColor: '#08152c',
   pixelArt: false,
   antialias: true,
