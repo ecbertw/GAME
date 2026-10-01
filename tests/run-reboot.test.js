@@ -8,21 +8,21 @@ const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
 function physics(){const src=read('games/run/src/run-config.js').replace('export const RUN_PHYSICS','const RUN_PHYSICS');return Function(src+';return RUN_PHYSICS;')()}
 function levels(){const src=read('games/run/src/run-levels.js').replace("import { RUN_PHYSICS } from './run-config.js';",'').replaceAll('export const ','const ').replaceAll('export function ','function ');return Function('RUN_PHYSICS',src+';return{RUN_LEVEL_COUNT,RUN_STYLE_COUNT,RUN_THEME_COUNT,getRunLevel,validateRunLevel,runLevelSignature,runChallengeProfile,jumpEnvelope};')(physics())}
 
-test('all 900 modular levels are deterministic unique and solvable',()=>{
+test('all 100 hardcore levels are deterministic unique and solvable',()=>{
   const api=levels(),sigs=new Set();
-  for(let i=0;i<900;i++){
+  for(let i=0;i<100;i++){
     const L=api.getRunLevel(i),v=api.validateRunLevel(L);
     assert.deepEqual(api.getRunLevel(i),L);
     assert.equal(v.ok,true,'L'+(i+1)+': '+v.errors.join('; '));
     sigs.add(api.runLevelSignature(L));
     for(let j=0;j<L.route.length-1;j++)assert.equal(api.jumpEnvelope(L.route[j],L.route[j+1]).reachable,true,'L'+(i+1)+' jump '+j);
   }
-  assert.equal(sigs.size,900);
+  assert.equal(sigs.size,100);
 });
 
 test('spawn stays clean and challenge placement never accidentally overlaps',()=>{
   const api=levels();
-  for(let i=0;i<900;i++){
+  for(let i=0;i<100;i++){
     const L=api.getRunLevel(i),surfaces=new Set(),gaps=new Set();
     for(const c of L.challengeSlots){
       if(c.surface!==undefined){assert.notEqual(c.surface,0,'L'+(i+1)+' spawn challenge');assert.equal(surfaces.has(c.surface),false,'L'+(i+1)+' overlapping surface');surfaces.add(c.surface)}
@@ -33,14 +33,14 @@ test('spawn stays clean and challenge placement never accidentally overlaps',()=
 
 test('levels use varied challenge counts and all eight module families',()=>{
   const api=levels(),profiles=new Set(),families=new Set(),styles=new Set(),themes=new Set();
-  for(let i=0;i<900;i++){const L=api.getRunLevel(i);profiles.add(api.runChallengeProfile(L));styles.add(L.style);themes.add(L.theme);for(const c of L.challengeSlots)families.add(c.type)}
+  for(let i=0;i<100;i++){const L=api.getRunLevel(i);profiles.add(api.runChallengeProfile(L));styles.add(L.style);themes.add(L.theme);for(const c of L.challengeSlots)families.add(c.type)}
   assert.equal(styles.size,24);assert.equal(themes.size,8);assert.ok(profiles.size>=80,'profiles='+profiles.size);
   for(const type of ['spike','saw','laser','mover','crusher','tunnel','swingLaser','pulseFloor'])assert.ok(families.has(type),type+' missing');
 });
 
 test('there are never more than two consecutive empty route pieces',()=>{
   const api=levels();
-  for(let i=0;i<900;i++){
+  for(let i=0;i<100;i++){
     const L=api.getRunLevel(i),ss=new Set(L.challengeSlots.filter(x=>x.surface!==undefined).map(x=>x.surface)),gg=new Set(L.challengeSlots.filter(x=>x.gap!==undefined).map(x=>x.gap));let run=0;
     for(let s=1;s<L.route.length-1;s++){run=(ss.has(s)||gg.has(s-1)||gg.has(s))?0:run+1;assert.ok(run<=2,'L'+(i+1)+' has '+run+' empty pieces')}
   }
@@ -54,7 +54,7 @@ test('moving platforms crushers and ceiling hazards are rendered by the scene',(
 test('RUN persistence and ranking rules remain intact',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js'),service=read('run-server.js');
   assert.match(scene,/eixo\.run\.progress\.v1/);assert.match(scene,/localStorage\.getItem/);assert.match(scene,/localStorage\.setItem/);
-  assert.match(service,/best_level DESC,rb\.best_time_ms ASC/);assert.match(service,/const RUN_LEVEL_COUNT=900/);
+  assert.match(service,/best_level DESC,rb\.best_time_ms ASC/);assert.match(service,/const RUN_LEVEL_COUNT=100/);
 });
 
 
@@ -64,7 +64,7 @@ test('NEON VOID visual layer is edge-to-edge and keeps physics separate from the
   const css=read('games/run/run.css');
   const html=read('games/run/index.html');
   assert.match(main,/Phaser\.Scale\.RESIZE/);
-  assert.match(css,/\.run-stage\{[\s\S]*position:fixed;left:0;right:0;top:52px;bottom:0/);
+  assert.match(css,/\.run-stage\{[\s\S]*position:fixed;left:0;right:0;top:68px;bottom:0/);
   assert.match(css,/#run-root\{position:absolute;inset:0;z-index:1;overflow:hidden;background:transparent\}/);
   assert.match(html,/class="run-site-nav"/);
   assert.match(html,/href="\/pulse">PULSE/);
@@ -91,7 +91,7 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-centred3/);
+  assert.match(html,/20261001-hard100/);
 });
 
 
@@ -150,7 +150,7 @@ test('new timed hazards are validated and rendered',()=>{
 });
 
 
-test('RUN start overlay is DOM-centered, background is CSS-owned and runner is solid black',()=>{
+test('RUN start overlay and HUD are DOM-centered and the initial runner is restored',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   const html=read('games/run/index.html');
   const css=read('games/run/run.css');
@@ -160,8 +160,10 @@ test('RUN start overlay is DOM-centered, background is CSS-owned and runner is s
   assert.match(css,/display:flex;align-items:center;justify-content:center/);
   assert.match(css,/background:[\s\S]*background\.svg/);
   assert.match(main,/transparent: true/);
-  assert.match(scene,/const BLACK=0x000000/);
-  assert.doesNotMatch(scene,/glowGraphics/);
+  assert.match(html,/id="run-game-hud"/);
+  assert.match(html,/id="run-hud-deaths"/);
+  assert.match(scene,/c\.glowGraphics=glow/);
+  assert.match(scene,/g\.fillStyle\(C\.player,1\)\.fillCircle/);
 });
 
 
@@ -171,4 +173,34 @@ test('DOM start overlay does not use Phaser camera coordinates',()=>{
   assert.match(start,/getElementById\('run-start-overlay'\)/);
   assert.doesNotMatch(start,/this\.add\.rectangle/);
   assert.doesNotMatch(start,/uiCenterX/);
+});
+
+
+test('completed levels can be retried before moving on',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const service=read('run-server.js');
+  const html=read('games/run/index.html');
+  assert.match(html,/id="run-clear-retry"/);
+  assert.match(html,/id="run-clear-next"/);
+  assert.match(scene,/retryClearedLevel\(\)/);
+  assert.match(scene,/nextAfterClear\(\)/);
+  assert.match(scene,/this\.awaitingClearChoice=true/);
+  assert.match(service,/const isRetry=level===completedLevel/);
+});
+
+test('100-level generator is hardcore from level one',()=>{
+  const api=levels();
+  let minChallenges=999,minFamilies=999,maxEmpty=0;
+  for(let i=0;i<100;i++){
+    const L=api.getRunLevel(i);
+    minChallenges=Math.min(minChallenges,L.challengeSlots.length);
+    minFamilies=Math.min(minFamilies,new Set(L.challengeSlots.map(x=>x.type)).size);
+    const ss=new Set(L.challengeSlots.filter(x=>x.surface!==undefined).map(x=>x.surface));
+    const gg=new Set(L.challengeSlots.filter(x=>x.gap!==undefined).map(x=>x.gap));
+    let empty=0;
+    for(let j=1;j<L.route.length-1;j++){empty=(ss.has(j)||gg.has(j-1)||gg.has(j))?0:empty+1;maxEmpty=Math.max(maxEmpty,empty);}
+  }
+  assert.ok(minChallenges>=9,'min challenges '+minChallenges);
+  assert.ok(minFamilies>=3,'min families '+minFamilies);
+  assert.ok(maxEmpty<=1,'max empty '+maxEmpty);
 });
