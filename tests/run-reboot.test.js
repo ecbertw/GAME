@@ -64,7 +64,8 @@ test('NEON VOID visual layer is edge-to-edge and keeps physics separate from the
   const css=read('games/run/run.css');
   const html=read('games/run/index.html');
   assert.match(main,/Phaser\.Scale\.RESIZE/);
-  assert.match(css,/\.run-stage,#run-root\{position:fixed;left:0;right:0;top:52px;bottom:0/);
+  assert.match(css,/\.run-stage\{[\s\S]*position:fixed;left:0;right:0;top:52px;bottom:0/);
+  assert.match(css,/#run-root\{position:absolute;inset:0;z-index:1;overflow:hidden;background:transparent\}/);
   assert.match(html,/class="run-site-nav"/);
   assert.match(html,/href="\/pulse">PULSE/);
   assert.match(html,/href="\/run" aria-current="page">RUN/);
