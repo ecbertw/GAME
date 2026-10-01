@@ -95,3 +95,24 @@ body.eixo-modern{--rx-bg:#080d15;--rx-panel:#111a29;--rx-panel-2:#162235;--rx-li
 @media(max-width:480px){.eixo-modern .topbar{padding:14px 16px}.eixo-modern .rx-nav{gap:16px}.rx-page h1{font-size:36px;letter-spacing:-1.5px}.rx-hero-copy h1{font-size:38px}.rx-hero-copy p:not(.rx-eyebrow){font-size:14px}.rx-game-card{min-height:190px}.eixo-modern .modal-backdrop,.eixo-modern .acct-overlay,.eixo-modern .admin-overlay{padding:10px!important}.eixo-modern .modal-card,.eixo-modern .acct-card,.eixo-modern .admin-card{width:100%;padding:18px!important;border-radius:15px!important}.eixo-modern .modal-card h2,.eixo-modern .acct-card h2,.eixo-modern .admin-card h2{font-size:22px!important}.eixo-modern .vip-letter-heading,.eixo-modern .vip-letter-row{grid-template-columns:48px 1fr 1fr;gap:6px}}
 @media(prefers-reduced-motion:reduce){.eixo-boot-screen span:after,.rx-character-loading i{animation:none}}
 .rx-character-loading.is-empty i{width:54px;height:54px;border:1px solid #61718b;border-top-color:#61718b;animation:none;position:relative}.rx-character-loading.is-empty i:after{content:'✦';position:absolute;inset:0;display:grid;place-items:center;color:#a98bf5;font-style:normal;font-size:18px}
+
+
+/* Native RUN ranking surface inside the EIXO rankings page. */
+.rx-run-ranking-view{width:100%}
+.rx-run-boards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.rx-run-board{min-width:0;border:1px solid #3a4961;border-radius:7px;background:#121c2b;overflow:hidden}
+.rx-run-board-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:18px 20px;border-bottom:1px solid #29384d;color:#eef3ff}
+.rx-run-board-head strong{font:800 12px/1 Inter,Arial,sans-serif}
+.rx-run-board-head small{font:700 8px/1 Inter,Arial,sans-serif;color:#71839a;text-transform:uppercase}
+.rx-run-board ol{list-style:none;padding:0 20px;margin:0}
+.rx-run-rank-row{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:14px;align-items:center;min-height:58px;border-bottom:1px solid #29384d}
+.rx-run-rank-row:last-child{border-bottom:0}
+.rx-run-rank-pos{font:800 11px/1 Inter,Arial,sans-serif;color:#e6c85c}
+.rx-run-rank-player{display:flex;flex-direction:column;gap:5px;min-width:0}
+.rx-run-rank-player b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 14px/1.2 Inter,Arial,sans-serif;color:#f2f5fb}
+.rx-run-rank-player small{font:700 9px/1 Inter,Arial,sans-serif;color:#73869e}
+.rx-run-rank-result{display:flex;align-items:flex-end;gap:12px;text-align:right}
+.rx-run-rank-result strong{font:800 12px/1 Inter,Arial,sans-serif;color:#bca9ff}
+.rx-run-rank-result small{font:800 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace;color:#d9e2ee}
+.rx-run-rank-empty,.rx-run-ranking-loading{padding:28px 20px;color:#8294aa;font:600 12px/1.6 Inter,Arial,sans-serif}
+@media(max-width:850px){.rx-run-boards{grid-template-columns:1fr}.rx-run-rank-result{flex-direction:column;gap:4px}}
