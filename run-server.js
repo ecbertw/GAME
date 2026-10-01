@@ -202,13 +202,22 @@ async function rankings(pool,playerId,limitRaw){
   if(pool){
     const q=await pool.query('SELECT rb.player_id AS "playerId",p.name,p.country,rb.best_level AS level,rb.best_time_ms AS "timeMs",rb.updated_at AS "updatedAt",ROW_NUMBER() OVER (ORDER BY rb.best_level DESC,rb.best_time_ms ASC,rb.updated_at ASC,rb.player_id ASC) AS rank FROM run_bests rb JOIN players p ON p.id=rb.player_id WHERE rb.best_level>0 ORDER BY rb.best_level DESC,rb.best_time_ms ASC,rb.updated_at ASC,rb.player_id ASC');
     const all=q.rows.map(r=>({...r,level:Number(r.level),timeMs:Number(r.timeMs),rank:Number(r.rank)}));
-    const me=playerId?all.find(r=>r.playerId===playerId)||null:null;
-    return{players:all.slice(0,limit),me,total:all.length};
+    const baseMe=playerId?all.find(r=>r.playerId===playerId)||null:null;
+    const country=String(baseMe?.country||'').toUpperCase();
+    const countryAll=country?all.filter(r=>String(r.country||'').toUpperCase()===country).map((r,i)=>({...r,countryRank:i+1})):[];
+    const countryMe=baseMe&&country?countryAll.find(r=>r.playerId===baseMe.playerId)||null:null;
+    const me=baseMe?{...baseMe,countryRank:countryMe?.countryRank||null}:null;
+    return{players:all.slice(0,limit),countryPlayers:countryAll.slice(0,limit),country,me,total:all.length,countryTotal:countryAll.length};
   }
   const all=[...memoryBests.values()]
     .sort((a,b)=>b.level-a.level||a.timeMs-b.timeMs||a.updatedAt-b.updatedAt)
     .map((r,i)=>({...r,rank:i+1}));
-  return{players:all.slice(0,limit),me:playerId?all.find(r=>r.playerId===playerId)||null:null,total:all.length};
+  const baseMe=playerId?all.find(r=>r.playerId===playerId)||null:null;
+  const country=String(baseMe?.country||'').toUpperCase();
+  const countryAll=country?all.filter(r=>String(r.country||'').toUpperCase()===country).map((r,i)=>({...r,countryRank:i+1})):[];
+  const countryMe=baseMe&&country?countryAll.find(r=>r.playerId===baseMe.playerId)||null:null;
+  const me=baseMe?{...baseMe,countryRank:countryMe?.countryRank||null}:null;
+  return{players:all.slice(0,limit),countryPlayers:countryAll.slice(0,limit),country,me,total:all.length,countryTotal:countryAll.length};
 }
 
 module.exports={initDb,start,completeLevel,levelStatus,rankings};
