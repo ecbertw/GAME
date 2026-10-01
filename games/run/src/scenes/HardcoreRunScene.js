@@ -314,8 +314,10 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.clearTimeEl=document.getElementById('run-clear-time');
     this.clearPbEl=document.getElementById('run-clear-pb');
     const retry=document.getElementById('run-clear-retry');
+    const levels=document.getElementById('run-clear-levels');
     const next=document.getElementById('run-clear-next');
     if(retry)retry.addEventListener('click',e=>{e.stopPropagation();this.retryClearedLevel();});
+    if(levels)levels.addEventListener('click',e=>{e.stopPropagation();this.openLevelSelector();});
     if(next)next.addEventListener('click',e=>{e.stopPropagation();this.nextAfterClear();});
   }
 
