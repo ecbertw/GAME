@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#030711">
   <meta name="description" content="EIXO RUN — 100 hardcore Neon Void levels.">
   <title>EIXO RUN — Neon Void</title>
-  <link rel="stylesheet" href="/games/run/run.css?v=20261001-bgfull1">
+  <link rel="stylesheet" href="/games/run/run.css?v=20261001-noticecenter1">
 </head>
 <body>
   <header class="run-site-nav">
@@ -20,6 +20,13 @@
 
   <main class="run-stage">
     <div id="run-root" aria-label="EIXO RUN game"></div>
+
+    <div id="run-notice-overlay" class="run-notice-overlay is-hidden" aria-live="polite" aria-atomic="true">
+      <div class="run-notice-inner">
+        <div id="run-notice-kicker" class="run-notice-kicker"></div>
+        <div id="run-notice-title" class="run-notice-title"></div>
+      </div>
+    </div>
 
     <section id="run-game-hud" class="run-game-hud" aria-label="RUN HUD">
       <div class="run-hud-brand">RUN <span>//</span></div>
@@ -74,6 +81,6 @@ LOADING...</pre>
     <noscript>JavaScript is required to play EIXO RUN.</noscript>
   </main>
   <script src="/vendor/phaser.min.js"></script>
-  <script type="module" src="/games/run/src/main.js?v=20261001-levelselect1"></script>
+  <script type="module" src="/games/run/src/main.js?v=20261001-noticecenter1"></script>
 </body>
 </html>
