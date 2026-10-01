@@ -57,6 +57,7 @@ function updateActive(){
  nav.querySelectorAll('a').forEach(a=>{if(a.dataset.rxRoute===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
  rankTabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.rxScope===rankScope)));
  document.querySelectorAll('[data-rx-board]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.rxBoard===rankGame)));
+ const fullRankButton=views.rankings?.querySelector?.('[data-rx-action="full-ranking"]');if(fullRankButton)fullRankButton.hidden=rankGame==='run';
  document.querySelectorAll('[data-rx-roomgame]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.rxRoomgame===roomGame)));
  const gameName=route==='pulse'?'PULSE':'JUMP',pulse=route==='pulse';
  gameMast.querySelector('[data-rx-game-name]').textContent=gameName;gameMast.querySelector('[data-rx-game-mode]').textContent=gameName;
@@ -65,6 +66,35 @@ function updateActive(){
  if(route==='pulse'){const copy=intro.querySelector('[data-i18n="aboutText"]');if(copy)copy.textContent=t(' — Acerta no centro, soma pontos e supera o teu recorde.',' — Hit the center, score points and beat your best.');}
  const gamePage=['jump','pulse'].includes(route);boards.querySelectorAll('.board').forEach((e,i)=>e.hidden=gamePage&&((rankScope==='world')!==(i===0)));
 }
+function formatRunRankTime(ms){
+ const n=Math.max(0,Math.floor(Number(ms)||0)),min=Math.floor(n/60000),sec=Math.floor((n%60000)/1000),milli=n%1000;
+ return String(min).padStart(2,'0')+':'+String(sec).padStart(2,'0')+'.'+String(milli).padStart(3,'0');
+}
+function runRankRows(rows,{country=false}={}){
+ if(!Array.isArray(rows)||!rows.length)return '<li class="rx-run-rank-empty">'+t('Ainda não há tempos registados.','No times recorded yet.')+'</li>';
+ return rows.slice(0,50).map((p,i)=>{
+   const pos=country?Number(p.countryRank||i+1):Number(p.rank||i+1);
+   return '<li class="rx-run-rank-row"><span class="rx-run-rank-pos">'+String(pos).padStart(2,'0')+'</span><span class="rx-run-rank-player"><b>'+escHtml(p.name||'PLAYER')+'</b><small>'+flag(p.country)+' '+escHtml(String(p.country||'').toUpperCase())+'</small></span><span class="rx-run-rank-result"><strong>L'+String(Number(p.level)||0).padStart(3,'0')+'</strong><small>'+formatRunRankTime(p.timeMs)+'</small></span></li>';
+ }).join('');
+}
+async function refreshRunRankings(){
+ runRankView.innerHTML='<div class="rx-run-ranking-loading">'+t('A carregar ranking RUN…','Loading RUN ranking…')+'</div>';
+ try{
+   const res=await fetch('/api/run/rankings?limit=50',{credentials:'same-origin',cache:'no-store'});
+   if(!res.ok)throw Error('ranking');
+   const data=await res.json();
+   const country=String(data.country||data.me?.country||'').toUpperCase();
+   const nationalTitle=country?'TOP '+escHtml(country):t('TOP NACIONAL','NATIONAL TOP');
+   const nationalFlag=country?flag(country):'🌐';
+   runRankView.innerHTML=
+     '<section class="rx-run-boards">'+
+       '<article class="rx-run-board"><div class="rx-run-board-head"><span>🌐</span><strong>'+t('TOP MUNDIAL','WORLD TOP')+'</strong><small>'+(data.me?.rank? t('O teu rank é ','Your rank is ')+data.me.rank:'')+'</small></div><ol>'+runRankRows(data.players||[])+'</ol></article>'+
+       '<article class="rx-run-board"><div class="rx-run-board-head"><span>'+nationalFlag+'</span><strong>'+nationalTitle+'</strong><small>'+(data.me?.countryRank? t('O teu rank é ','Your rank is ')+data.me.countryRank:'')+'</small></div><ol>'+runRankRows(data.countryPlayers||[],{country:true})+'</ol></article>'+
+     '</section>';
+ }catch(_){
+   runRankView.innerHTML='<div class="rx-run-ranking-loading">'+t('Ranking RUN temporariamente indisponível.','RUN ranking temporarily unavailable.')+'</div>';
+ }
+}
 function readRoute(){const path=location.pathname.replace(/\/$/,'')||'/';return Object.keys(paths).find(k=>paths[k]===path)||'home';}
 function navigate(next,{history=true}={}){
  if(!routes.includes(next))next='home';
@@ -72,7 +102,15 @@ function navigate(next,{history=true}={}){
  if(history&&location.pathname!==paths[next])window.history.pushState({},'',paths[next]);
  for(const [k,e] of Object.entries(views))if(k!=='pulse')e.hidden=k!==(next==='pulse'?'jump':next);
  if(old!==next)window.scrollTo({top:0,behavior:'instant'});
- if(next==='rankings'){rankMount.append(boards);boards.querySelectorAll('.board').forEach(e=>e.hidden=false);}else rankWrap.append(boards);
+ if(next==='rankings'){
+   if(rankGame==='run'){
+     if(boards.parentNode!==rankWrap)rankWrap.append(boards);
+     rankMount.replaceChildren(runRankView);
+   }else{
+     rankMount.replaceChildren(boards);
+     boards.querySelectorAll('.board').forEach(e=>e.hidden=false);
+   }
+ }else if(boards.parentNode!==rankWrap)rankWrap.append(boards);
  document.title='EIXO — '+({home:t('Início','Home'),jump:'JUMP',pulse:'PULSE',passport:passportWord(),rankings:'Rankings',rooms:t('Salas','Rooms'),vip:'VIP'})[next];
  queue=queue.catch(()=>{}).then(async()=>{
    if(route!==next)return;
@@ -80,7 +118,10 @@ function navigate(next,{history=true}={}){
    if(old!==next||!playing)await window.eixoJump.suspend();
    if(route!==next)return;
    if(playing)await window.eixoJump.switchGame(next,{play:true});
-   else if(next==='rankings')await window.eixoJump.switchGame(rankGame,{play:false});
+   else if(next==='rankings'){
+     if(rankGame==='run')await refreshRunRankings();
+     else await window.eixoJump.switchGame('pulse',{play:false});
+   }
    else if(next==='rooms')await window.eixoJump.switchGame(roomGame,{play:false});
    if(route!==next)return;
    updateActive();window.dispatchEvent(new Event('resize'));
@@ -127,7 +168,7 @@ async function action(type){
  if(type==='vip-store'){if(window.EixoVipStore?.open)return window.EixoVipStore.open();return window.eixoOpenVip?.();}
  if(type==='rooms'){await navigate(roomGame);if(roomGame==='jump')return window.eixoJump.openRooms();return window.eixoOpenRooms?.();}
  if(type==='create-room'){await navigate(roomGame);$('createRoomButton').click();return;}
- if(type==='full-ranking'){document.querySelector('.action.blue').click();return;}
+ if(type==='full-ranking'){if(rankGame==='run')return refreshRunRankings();document.querySelector('.action.blue').click();return;}
  if(type==='sound'){window.EixoAudio?.toggleMenu?.();return;}
  if(type==='fullscreen'){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch(_){notify(t('O ecrã inteiro não está disponível neste navegador.','Fullscreen is not available in this browser.'));}return;}
 }
