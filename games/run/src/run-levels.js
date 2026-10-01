@@ -1,281 +1,34 @@
 import { RUN_PHYSICS } from './run-config.js';
-
-export const RUN_LEVEL_COUNT=900;
-export const RUN_ROUTE_MARGIN=.82;
-export const RUN_MIN_SAFE_EDGE=46;
-export const RUN_STYLE_COUNT=24;
-
+export const RUN_LEVEL_COUNT=900;export const RUN_ROUTE_MARGIN=.82;export const RUN_STYLE_COUNT=24;export const RUN_THEME_COUNT=8;export const RUN_MIN_SAFE_EDGE=48;
 const PREFIXES=['ASH','BLACK','COLD','DARK','DEAD','DUST','ECHO','FROST','GLASS','GRIM','IRON','LAST','LOST','NEON','NIGHT','NULL','PALE','RED','RIFT','RUST','SHARP','SILENT','STEEL','STONE','VOID','WHITE','WILD','ZERO','BROKEN','FINAL'];
 const SUFFIXES=['BRIDGE','CAGE','CHASM','CIRCUIT','CLIMB','CORRIDOR','CUT','DROP','EDGE','FALL','FAULT','GATE','GRID','KNIFE','LINE','MAZE','NEEDLE','PATH','PIT','RAIL','RIFT','RUN','SHAFT','SPIRE','STEP','THREAD','TOWER','TRIAL','WALL','ZONE'];
-
-function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
-function mulberry32(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
-function rngFor(n){return mulberry32((0xA53C9E21^Math.imul(n,0x85EBCA6B)^Math.imul(n+17,0xC2B2AE35))>>>0)}
-function surface(kind,left,right,top){return{kind,left:Math.round(left),right:Math.round(right),top:Math.round(top)}}
-function widthOf(s){return s.right-s.left}
-function gapBetween(a,b){return Math.max(0,b.left-a.right)}
-
-export function runLevelName(n){
-  n=clamp(Math.floor(Number(n)||1),1,RUN_LEVEL_COUNT);
-  const z=n-1;
-  return PREFIXES[Math.floor(z/30)]+' '+SUFFIXES[z%30];
-}
-
-export function jumpEnvelope(a,b,margin=RUN_ROUTE_MARGIN){
-  const rise=a.top-b.top;
-  const disc=RUN_PHYSICS.jumpSpeed**2-2*RUN_PHYSICS.gravityY*rise;
-  if(disc<0)return{reachable:false,gap:gapBetween(a,b),maxGap:0,flight:0,rise};
-  const flight=(RUN_PHYSICS.jumpSpeed+Math.sqrt(disc))/RUN_PHYSICS.gravityY;
-  const maxGap=RUN_PHYSICS.runSpeed*flight*margin;
-  const gap=gapBetween(a,b);
-  return{reachable:gap<=maxGap,gap,maxGap,flight,rise};
-}
-
-function nextTop(style,i,count,prev,d,rng){
-  const archetype=style%8,variant=Math.floor(style/8);
-  const rise=44+Math.round(20*d)+variant*3,drop=48+Math.round(24*d)+variant*3;
-  let sign;
-  switch(archetype){
-    case 0: sign=i%2===0?-1:1; break;                         // zig-zag
-    case 1: sign=i<count*.66?-1:1; break;                     // climb
-    case 2: sign=i<count*.58?1:-1; break;                     // drop then recover
-    case 3: sign=(i%4===0||i%4===1)?-1:1; break;              // double steps
-    case 4: sign=rng()<.62?-1:1; break;                       // jagged ascent
-    case 5: sign=rng()<.38?-1:1; break;                       // jagged descent
-    case 6: sign=i%3===0?-1:(rng()<.5?-1:1); break;           // pulse
-    default: sign=rng()<.5?-1:1;                              // void
-  }
-  if(prev>=638&&sign>0)sign=-1;
-  if(prev<=365&&sign<0)sign=1;
-  let mag=22+rng()*(24+22*d);
-  if(archetype===6)mag*=.78;
-  if(variant===1){mag*=.88;if(i%5===4)sign*=-1;}
-  if(variant===2){mag*=1.08;if(i%4===2)sign*=-1;}
-  if(prev>=638&&sign>0)sign=-1;
-  if(prev<=365&&sign<0)sign=1;
-  const delta=sign<0?-Math.min(rise,mag):Math.min(drop,mag);
-  return Math.round(clamp(prev+delta,350,650));
-}
-
-function addSpike(level,surfaceIndex,rng){
-  const s=level.route[surfaceIndex],w=widthOf(s);
-  if(w<132)return false;
-  const safe=RUN_MIN_SAFE_EDGE+2+Math.round(rng()*8);
-  const maxSpike=w-safe*2;
-  if(maxSpike<34)return false;
-  const spikeW=Math.round(clamp(38+rng()*Math.min(54,maxSpike-30),34,maxSpike));
-  const offset=(rng()-.5)*Math.max(0,maxSpike-spikeW);
-  const x=Math.round((s.left+s.right)/2+offset);
-  level.spikes.push([x,s.top,spikeW]);
-  level.spikeMeta.push({surface:surfaceIndex,x,width:spikeW,safe});
-  return true;
-}
-
-function addSaw(level,surfaceIndex,rng,d){
-  const s=level.route[surfaceIndex],w=widthOf(s);
-  if(w<176)return false;
-  const r=Math.round(17+5*d+rng()*2);
-  const edge=RUN_MIN_SAFE_EDGE+8;
-  const maxRange=Math.floor(w/2-r-edge);
-  if(maxRange<12)return false;
-  const range=Math.round(clamp(18+22*d+rng()*16,12,maxRange));
-  const x=Math.round((s.left+s.right)/2);
-  const y=Math.round(s.top-(r+10)); // always above the platform, never below it
-  const period=Math.round(1420-180*d+rng()*360);
-  const phase=Math.round(rng()*period);
-  level.saws.push([x,y,r,'x',range,period,phase]);
-  level.sawMeta.push({surface:surfaceIndex,x,y,r,range,edge});
-  return true;
-}
-
-function addLaser(level,gapIndex,rng,d){
-  if(gapIndex<0||gapIndex>=level.route.length-1)return false;
-  const a=level.route[gapIndex],b=level.route[gapIndex+1];
-  const gap=gapBetween(a,b);
-  if(gap<72)return false;
-  const env=jumpEnvelope(a,b);
-  const top=Math.max(90,Math.min(a.top,b.top)-190);
-  const bottom=Math.max(a.top,b.top)+4;
-  const h=Math.round(bottom-top);
-  const x=Math.round((a.right+b.left)/2);
-  const requiredOff=env.flight*1000+220;
-  const period=Math.round(Math.max(1750-180*d+rng()*260,requiredOff/.42+120));
-  const phase=Math.round(rng()*period);
-  level.lasers.push([x,Math.round((top+bottom)/2),10,h,period,phase]);
-  level.laserMeta.push({gap:gapIndex,x,top,bottom,period,requiredOff});
-  return true;
-}
-
-function decorateHardcore(level,rng,d){
-  const platformIndices=[];
-  const wideIndices=[];
-  for(let i=1;i<level.route.length-1;i++){
-    platformIndices.push(i);
-    if(widthOf(level.route[i])>=176)wideIndices.push(i);
-  }
-
-  // Spawn surface is always completely clean.
-  let spikeCount=0;
-  for(const i of platformIndices){
-    const chance=.28+.18*d+(level.archetype===3?.14:0);
-    if(rng()<chance&&addSpike(level,i,rng))spikeCount++;
-  }
-  while(spikeCount<2){
-    const candidate=platformIndices.find(i=>!level.spikeMeta.some(m=>m.surface===i)&&widthOf(level.route[i])>=132);
-    if(candidate===undefined)break;
-    if(addSpike(level,candidate,rng))spikeCount++; else break;
-  }
-
-  let sawCount=0;
-  const sawOrder=[...wideIndices].sort((a,b)=>((a+level.number)%5)-((b+level.number)%5));
-  for(const i of sawOrder){
-    const chance=.20+.20*d+(level.archetype===5?.18:0);
-    if((sawCount===0||rng()<chance)&&addSaw(level,i,rng,d))sawCount++;
-    if(sawCount>=1+Math.floor(d*2))break;
-  }
-  if(sawCount===0){
-    const i=wideIndices[0];
-    if(i!==undefined&&addSaw(level,i,rng,d))sawCount++;
-  }
-
-  let laserCount=0;
-  const gaps=[];
-  for(let i=1;i<level.route.length-1;i++)if(gapBetween(level.route[i],level.route[i+1])>=72)gaps.push(i);
-  const start=(level.number*3)%Math.max(1,gaps.length);
-  for(let k=0;k<gaps.length;k++){
-    const i=gaps[(start+k)%gaps.length];
-    const chance=.18+.22*d+(level.archetype===6?.20:0);
-    if((laserCount===0||rng()<chance)&&addLaser(level,i,rng,d))laserCount++;
-    if(laserCount>=1+Math.floor(d*2))break;
-  }
-
-  // Late levels get denser mixed hazards, but never remove the guaranteed waiting/landing zones.
-  const extraBudget=Math.floor(d*3);
-  for(let n=0;n<extraBudget;n++){
-    const choice=Math.floor(rng()*3);
-    if(choice===0&&platformIndices.length)addSpike(level,platformIndices[Math.floor(rng()*platformIndices.length)],rng);
-    else if(choice===1&&wideIndices.length)addSaw(level,wideIndices[Math.floor(rng()*wideIndices.length)],rng,d);
-    else if(gaps.length)addLaser(level,gaps[Math.floor(rng()*gaps.length)],rng,d);
-  }
-}
-
-export function getRunLevel(index){
-  const idx=Math.floor(Number(index));
-  if(!Number.isFinite(idx)||idx<0||idx>=RUN_LEVEL_COUNT)throw new RangeError('RUN level index out of range.');
-  const n=idx+1,d=idx/(RUN_LEVEL_COUNT-1),rng=rngFor(n),style=(n-1)%RUN_STYLE_COUNT,archetype=style%8,hazardTheme=(Math.imul(n,5)+Math.floor((n-1)/RUN_STYLE_COUNT))%6;
-  const floors=[[0,360,650]],platforms=[],walls=[],spikes=[],saws=[],lasers=[];
-  const spikeMeta=[],sawMeta=[],laserMeta=[];
-  const route=[surface('floor',0,360,650)];
-  const steps=12+(style%4)+Math.floor(d*3)+Math.floor(rng()*2);
-  let prev=route[0];
-
-  for(let i=0;i<steps;i++){
-    const top=nextTop(style,i,steps,prev.top,d,rng);
-    const family=Math.floor(style/8);
-    const kind=(family===0?'platform':family===1&&i%4===2?'floor':family===2&&i%3===1?'floor':'platform');
-    const lane=(i+style)%4;
-    let width;
-    if(kind==='floor')width=Math.round(220+rng()*105);
-    else if(lane===1)width=Math.round(198+rng()*(46+16*d));
-    else if(lane===3)width=Math.round(154+rng()*24);
-    else width=Math.round(clamp(112-20*d+(rng()-.5)*24,82,128));
-
-    const probe=surface('platform',0,width,top);
-    const env=jumpEnvelope(prev,probe,1);
-    const ratio=clamp(.74+.06*d+rng()*.10+(archetype===7?.025:0),.72,.90);
-    const desired=env.maxGap*RUN_ROUTE_MARGIN*ratio;
-    const gap=Math.round(clamp(desired,76,205));
-    const left=prev.right+gap,right=left+width;
-    const s=surface(kind,left,right,top);
-    route.push(s);
-    if(kind==='floor')floors.push([left,right,top]);
-    else platforms.push([Math.round((left+right)/2),top+9,width,18]);
-    prev=s;
-  }
-
-  const endTop=prev.top,endWidth=380;
-  const endProbe=surface('floor',0,endWidth,endTop);
-  const endEnv=jumpEnvelope(prev,endProbe,1);
-  const endRatio=clamp(.76+.05*d+rng()*.08,.74,.88);
-  const endGap=Math.round(clamp(endEnv.maxGap*RUN_ROUTE_MARGIN*endRatio,78,205));
-  const endStart=prev.right+endGap,endEnd=endStart+endWidth;
-  route.push(surface('floor',endStart,endEnd,endTop));
-  floors.push([endStart,endEnd,endTop]);
-
-  const level={
-    number:n,seed:n,name:runLevelName(n),style,archetype,hazardTheme,difficulty:d,
-    width:Math.ceil(endEnd+70),spawn:[82,615],goal:[Math.round(endStart+250),endTop],
-    floors,platforms,walls,spikes,saws,lasers,route,spikeMeta,sawMeta,laserMeta
-  };
-
-  decorateHardcore(level,rng,d);
-  return level;
-}
-
-function validateSpikes(level,errors){
-  const sameHeightRange=RUN_PHYSICS.runSpeed*(2*RUN_PHYSICS.jumpSpeed/RUN_PHYSICS.gravityY)*.70;
-  for(const m of level.spikeMeta){
-    const s=level.route[m.surface];
-    if(!s){errors.push('spike missing surface');continue}
-    const leftSafe=(m.x-m.width/2)-s.left;
-    const rightSafe=s.right-(m.x+m.width/2);
-    if(leftSafe<RUN_MIN_SAFE_EDGE||rightSafe<RUN_MIN_SAFE_EDGE)errors.push('spike removes safe landing/takeoff zone on '+m.surface);
-    if(m.width+30>sameHeightRange)errors.push('spike strip too wide on '+m.surface);
-    const spec=level.spikes.find(x=>x[0]===m.x&&x[2]===m.width);
-    if(!spec||spec[1]!==s.top)errors.push('spike not on top of platform '+m.surface);
-  }
-}
-
-function validateSaws(level,errors){
-  for(const m of level.sawMeta){
-    const s=level.route[m.surface];
-    if(!s){errors.push('saw missing surface');continue}
-    if(m.y+m.r>=s.top-4)errors.push('saw is not visibly above platform '+m.surface);
-    const minX=m.x-m.range-m.r,maxX=m.x+m.range+m.r;
-    if(minX-s.left<RUN_MIN_SAFE_EDGE||s.right-maxX<RUN_MIN_SAFE_EDGE)errors.push('saw removes waiting zone on '+m.surface);
-    if(!(m.x>s.left&&m.x<s.right))errors.push('saw not over platform '+m.surface);
-  }
-}
-
-function validateLasers(level,errors){
-  for(const m of level.laserMeta){
-    const a=level.route[m.gap],b=level.route[m.gap+1];
-    if(!a||!b){errors.push('laser missing gap');continue}
-    if(!(m.x>a.right&&m.x<b.left))errors.push('laser not inside route gap '+m.gap);
-    if(m.bottom<Math.max(a.top,b.top))errors.push('laser does not reach platform height '+m.gap);
-    if(m.period*.42<m.requiredOff)errors.push('laser off-window too short '+m.gap);
-  }
-}
-
-export function validateRunLevel(level){
-  const errors=[];
-  if(!level||!Array.isArray(level.route)||level.route.length<3)return{ok:false,errors:['missing route']};
-  if(!Number.isInteger(level.number)||level.number<1||level.number>RUN_LEVEL_COUNT)errors.push('bad level number');
-  if(level.spikeMeta.some(m=>m.surface===0))errors.push('spawn platform contains spikes');
-  if(level.sawMeta.some(m=>m.surface===0))errors.push('spawn platform contains saw');
-  if(level.laserMeta.some(m=>m.gap===0))errors.push('spawn jump contains laser');
-  const first=level.route[0],last=level.route.at(-1);
-  if(!(first.left<=level.spawn[0]&&first.right>=level.spawn[0]))errors.push('spawn unsupported');
-  if(!(last.left<=level.goal[0]&&last.right>=level.goal[0]))errors.push('goal unsupported');
-  for(let i=0;i<level.route.length-1;i++){
-    const a=level.route[i],b=level.route[i+1];
-    if(b.left<=a.right)errors.push('route not strictly forward '+i);
-    const env=jumpEnvelope(a,b);
-    if(!env.reachable)errors.push('unreachable jump '+i+' gap='+env.gap.toFixed(1)+' max='+env.maxGap.toFixed(1));
-    if(b.kind==='platform'&&widthOf(b)<82)errors.push('landing too narrow '+(i+1));
-  }
-  validateSpikes(level,errors);
-  validateSaws(level,errors);
-  validateLasers(level,errors);
-  if(level.spikes.length<2)errors.push('not enough spikes');
-  if(level.saws.length<1)errors.push('missing saw challenge');
-  if(level.lasers.length<1)errors.push('missing laser challenge');
-  return{ok:errors.length===0,errors};
-}
-
-export function runLevelSignature(level){
-  return JSON.stringify({style:level.style,hazardTheme:level.hazardTheme,route:level.route.map(s=>[s.kind,s.left,s.right,s.top]),spikes:level.spikes,saws:level.saws,lasers:level.lasers,goal:level.goal});
-}
-export function runStructuralProfile(level){
-  return JSON.stringify({style:level.style,hazardTheme:level.hazardTheme,kinds:level.route.map(s=>s.kind[0]).join(''),heights:level.route.slice(1,-1).map((s,i,a)=>i===0?Math.sign(s.top-level.route[0].top):Math.sign(s.top-a[i-1].top)).join(','),widths:level.route.slice(1,-1).map(s=>widthOf(s)>=176?'W':widthOf(s)>=132?'M':'N').join('')});
-}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}function mulberry32(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}function rngFor(n){return mulberry32((0xA53C9E21^Math.imul(n,0x85EBCA6B)^Math.imul(n+17,0xC2B2AE35))>>>0)}function surface(kind,left,right,top){return{kind,left:Math.round(left),right:Math.round(right),top:Math.round(top)}}function widthOf(s){return s.right-s.left}function gapBetween(a,b){return Math.max(0,b.left-a.right)}function shuffled(values,rng){const a=[...values];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+export function runLevelName(n){n=clamp(Math.floor(Number(n)||1),1,RUN_LEVEL_COUNT);const z=n-1;return PREFIXES[Math.floor(z/30)]+' '+SUFFIXES[z%30]}
+export function jumpEnvelope(a,b,margin=RUN_ROUTE_MARGIN){const rise=a.top-b.top,disc=RUN_PHYSICS.jumpSpeed**2-2*RUN_PHYSICS.gravityY*rise;if(disc<0)return{reachable:false,gap:gapBetween(a,b),maxGap:0,flight:0,rise};const flight=(RUN_PHYSICS.jumpSpeed+Math.sqrt(disc))/RUN_PHYSICS.gravityY,maxGap=RUN_PHYSICS.runSpeed*flight*margin,gap=gapBetween(a,b);return{reachable:gap<=maxGap,gap,maxGap,flight,rise}}
+function nextTop(style,i,count,prev,d,rng){const shape=style%12,variant=Math.floor(style/12),maxRise=48+Math.round(18*d)+variant*4,maxDrop=52+Math.round(20*d)+variant*4;let sign=1;switch(shape){case 0:sign=i%2===0?-1:1;break;case 1:sign=i<count*.68?-1:1;break;case 2:sign=i<count*.58?1:-1;break;case 3:sign=i%4<2?-1:1;break;case 4:sign=i%5<3?-1:1;break;case 5:sign=i%5<2?1:-1;break;case 6:sign=i<count/2?-1:1;break;case 7:sign=i<count/2?1:-1;break;case 8:sign=i%3<2?-1:1;break;case 9:sign=i%3===0?1:-1;break;case 10:sign=rng()<.56?-1:1;break;default:sign=(i+Math.floor(rng()*3))%2===0?-1:1}if(prev>=638&&sign>0)sign=-1;if(prev<=372&&sign<0)sign=1;let mag=22+rng()*(26+22*d);if(shape===8||shape===9)mag*=.80;if(variant===1&&i%4===2)mag*=1.08;return Math.round(clamp(prev+(sign<0?-Math.min(maxRise,mag):Math.min(maxDrop,mag)),365,650))}
+function routeKind(style,i){const family=Math.floor(style/8);if(family===0)return'platform';if(family===1)return i%4===2?'floor':'platform';return i%3===1?'floor':'platform'}function routeWidth(style,i,d,rng,kind){if(kind==='floor')return Math.round(235+rng()*115);const lane=(i+style)%5;if(lane===1)return Math.round(208+rng()*(52+18*d));if(lane===3)return Math.round(158+rng()*24);const base=96+(style%4)*6;return Math.round(clamp(base-10*d+(rng()-.5)*24,82,132))}function maxGapFor(a,b){return jumpEnvelope({top:a,left:0,right:0},{top:b,left:0,right:0}).maxGap}
+function removeStaticPlatform(level,i){const s=level.route[i],x=Math.round((s.left+s.right)/2),y=s.top+9,w=widthOf(s),idx=level.platforms.findIndex(p=>p[0]===x&&p[1]===y&&p[2]===w);if(idx>=0)level.platforms.splice(idx,1);return idx>=0}function reserveSurface(level,i,type){if(i<=0||i>=level.route.length-1||level.occupiedSurfaces.has(i))return false;level.occupiedSurfaces.add(i);level.challengeSlots.push({type,surface:i});return true}function reserveGap(level,i,type){if(i<=0||i>=level.route.length-1||level.occupiedGaps.has(i))return false;level.occupiedGaps.add(i);level.challengeSlots.push({type,gap:i});return true}
+function addSpike(level,i,rng){const s=level.route[i];if(!s||widthOf(s)<146||level.occupiedSurfaces.has(i))return false;const w=widthOf(s),safe=RUN_MIN_SAFE_EDGE+3+Math.round(rng()*7),max=w-safe*2;if(max<38)return false;const sw=Math.round(clamp(40+rng()*Math.min(58,max-30),38,max)),x=Math.round((s.left+s.right)/2+(rng()-.5)*Math.max(0,max-sw));if(!reserveSurface(level,i,'spike'))return false;level.spikes.push([x,s.top,sw]);level.spikeMeta.push({surface:i,x,width:sw,safe,source:'spike'});return true}
+function addSaw(level,i,rng,d){const s=level.route[i];if(!s||widthOf(s)<196||level.occupiedSurfaces.has(i))return false;const w=widthOf(s),r=Math.round(17+5*d+rng()*3),edge=RUN_MIN_SAFE_EDGE+10,maxRange=Math.floor(w/2-r-edge);if(maxRange<14)return false;const axis=(level.style+i)%4===0?'y':'x';let range,x=Math.round((s.left+s.right)/2),y;if(axis==='x'){range=Math.round(clamp(18+24*d+rng()*18,14,maxRange));y=Math.round(s.top-(r+11))}else{range=Math.round(12+8*d+rng()*8);y=Math.round(s.top-(r+15+range))}const period=Math.round(1350-110*d+rng()*390),phase=Math.round(rng()*period);if(!reserveSurface(level,i,'saw'))return false;level.saws.push([x,y,r,axis,range,period,phase]);level.sawMeta.push({surface:i,x,y,r,axis,range,edge});return true}
+function addLaser(level,i,rng,d){const a=level.route[i],b=level.route[i+1];if(!a||!b||gapBetween(a,b)<78||level.occupiedGaps.has(i)||i===0)return false;const env=jumpEnvelope(a,b),top=Math.max(84,Math.min(a.top,b.top)-205),bottom=Math.max(a.top,b.top)+5,x=Math.round((a.right+b.left)/2),h=Math.round(bottom-top),requiredOff=env.flight*1000+245,period=Math.round(Math.max(1800-110*d+rng()*300,requiredOff/.42+150)),phase=Math.round(rng()*period);if(!reserveGap(level,i,'laser'))return false;level.lasers.push([x,Math.round((top+bottom)/2),10,h,period,phase]);level.laserMeta.push({gap:i,x,top,bottom,period,requiredOff});return true}
+function addMover(level,i,rng,d){const s=level.route[i];if(!s||s.kind!=='platform'||widthOf(s)>180||level.occupiedSurfaces.has(i))return false;if(!removeStaticPlatform(level,i))return false;const w=widthOf(s),axis=((level.number+i)%3===0&&s.top<610)?'y':'x',range=axis==='y'?Math.round(28+20*d+rng()*18):Math.round(24+18*d+rng()*16),period=Math.round(1750-120*d+rng()*550),phase=Math.round(rng()*period);if(!reserveSurface(level,i,'mover'))return false;level.movingPlatforms.push([Math.round((s.left+s.right)/2),s.top+9,w,18,axis,range,period,phase]);level.moverMeta.push({surface:i,axis,range,period});return true}
+function addCrusher(level,i,rng,d){const s=level.route[i];if(!s||widthOf(s)<220||level.occupiedSurfaces.has(i))return false;const w=Math.round(48+rng()*18),h=Math.round(62+rng()*10),x=Math.round((s.left+s.right)/2),edge=(widthOf(s)-w)/2;if(edge<RUN_MIN_SAFE_EDGE+12)return false;const upBottom=s.top-86,upY=Math.round(upBottom-h/2),range=Math.round(80+rng()*8),period=Math.round(1800-80*d+rng()*450),phase=Math.round(rng()*period);if(!reserveSurface(level,i,'crusher'))return false;level.crushers.push([x,upY,w,h,range,period,phase]);level.crusherMeta.push({surface:i,x,w,h,upY,range,period,edge});return true}
+function addTunnel(level,i,rng){const s=level.route[i];if(!s||s.kind!=='floor'||widthOf(s)<250||level.occupiedSurfaces.has(i))return false;const w=widthOf(s),x=Math.round((s.left+s.right)/2),ceilingBottom=s.top-118,ceilingW=Math.round(w-18),ceilingH=18,floorSpikeW=Math.round(38+rng()*12),ceilSpikeW=Math.round(42+rng()*12),floorX=Math.round(s.left+w*.30),ceilX=Math.round(s.left+w*.70);if(!reserveSurface(level,i,'tunnel'))return false;level.ceilings.push([x,ceilingBottom-ceilingH/2,ceilingW,ceilingH]);level.spikes.push([floorX,s.top,floorSpikeW]);level.spikeMeta.push({surface:i,x:floorX,width:floorSpikeW,safe:null,source:'tunnel'});level.ceilingSpikes.push([ceilX,ceilingBottom,ceilSpikeW]);level.tunnelMeta.push({surface:i,ceilingBottom,floorX,floorSpikeW,ceilX,ceilSpikeW});return true}
+const THEME_ORDERS=[['spike','spike','mover','saw','laser','crusher'],['saw','saw','laser','saw','spike','mover'],['laser','laser','mover','laser','spike','crusher'],['mover','mover','crusher','laser','spike','saw'],['crusher','crusher','tunnel','spike','laser','mover'],['tunnel','mover','tunnel','crusher','spike','saw'],['spike','saw','laser','mover','crusher','tunnel'],['mover','laser','saw','crusher','spike','laser']];
+function candidateSets(level){const spikes=[],saws=[],movers=[],crushers=[],tunnels=[],gaps=[];for(let i=1;i<level.route.length-1;i++){const s=level.route[i],w=widthOf(s);if(w>=146)spikes.push(i);if(w>=196)saws.push(i);if(s.kind==='platform'&&w<=180)movers.push(i);if(w>=220)crushers.push(i);if(s.kind==='floor'&&w>=250)tunnels.push(i);if(gapBetween(level.route[i],level.route[i+1])>=78)gaps.push(i)}return{spikes,saws,movers,crushers,tunnels,gaps}}
+function tryType(level,type,c,rng,d,preferred=null){if(type==='laser'){const list=preferred!==null?[preferred-1,preferred].filter(i=>c.gaps.includes(i)):shuffled(c.gaps,rng);for(const i of list)if(addLaser(level,i,rng,d))return true;return false}const key=type==='spike'?'spikes':type==='saw'?'saws':type==='mover'?'movers':type==='crusher'?'crushers':type==='tunnel'?'tunnels':null;if(!key)return false;const list=preferred!==null&&c[key].includes(preferred)?[preferred]:shuffled(c[key],rng);for(const i of list){const ok=type==='spike'?addSpike(level,i,rng):type==='saw'?addSaw(level,i,rng,d):type==='mover'?addMover(level,i,rng,d):type==='crusher'?addCrusher(level,i,rng,d):addTunnel(level,i,rng);if(ok)return true}return false}
+function forceSurfaceChallenge(level,i,rng,d){if(level.occupiedSurfaces.has(i))return true;const s=level.route[i],w=widthOf(s);if(s.kind==='platform'&&w<=180&&addMover(level,i,rng,d))return true;if(w>=220&&addCrusher(level,i,rng,d))return true;if(w>=196&&addSaw(level,i,rng,d))return true;if(w>=146&&addSpike(level,i,rng))return true;return false}
+function isCovered(level,i){return level.occupiedSurfaces.has(i)||level.occupiedGaps.has(i-1)||level.occupiedGaps.has(i)}
+function decorateChallenges(level,rng,d){const c=candidateSets(level),order=THEME_ORDERS[level.theme],interior=Math.max(1,level.route.length-2),target=Math.max(6,Math.round(interior*(.58+.08*d)));for(let a=0;level.challengeSlots.length<target&&a<target*12;a++)tryType(level,order[a%order.length],c,rng,d);let empty=0;for(let i=1;i<level.route.length-1;i++){if(isCovered(level,i)){empty=0;continue}empty++;if(empty>=3){if(forceSurfaceChallenge(level,i,rng,d))empty=0;else if(addLaser(level,i-1,rng,d)||addLaser(level,i,rng,d))empty=0}}const families=new Set(level.challengeSlots.map(x=>x.type));if(families.size<2)for(const type of ['mover','crusher','laser','saw','spike','tunnel'])if(!families.has(type)&&tryType(level,type,c,rng,d)){families.add(type);if(families.size>=2)break}}
+export function getRunLevel(index){const idx=Math.floor(Number(index));if(!Number.isFinite(idx)||idx<0||idx>=RUN_LEVEL_COUNT)throw new RangeError('RUN level index out of range.');const n=idx+1,d=idx/(RUN_LEVEL_COUNT-1),rng=rngFor(n),style=(Math.imul(n,11)+Math.floor(n/17))%RUN_STYLE_COUNT,theme=(Math.imul(n,7)+Math.floor(n/13))%RUN_THEME_COUNT;const floors=[[0,380,650]],platforms=[],walls=[],spikes=[],saws=[],lasers=[],movingPlatforms=[],crushers=[],ceilings=[],ceilingSpikes=[],spikeMeta=[],sawMeta=[],laserMeta=[],moverMeta=[],crusherMeta=[],tunnelMeta=[],challengeSlots=[],route=[surface('floor',0,380,650)],occupiedSurfaces=new Set(),occupiedGaps=new Set();const steps=12+(style%5)+Math.floor(d*4)+Math.floor(rng()*3);let prev=route[0];for(let i=0;i<steps;i++){const top=nextTop(style,i,steps,prev.top,d,rng),kind=routeKind(style,i),width=routeWidth(style,i,d,rng,kind),maxGap=maxGapFor(prev.top,top),rhythm=((i+style)%4===0)?-.035:((i+style)%4===2)?.025:0,ratio=clamp(.75+.07*d+rng()*.10+rhythm,.72,.91),gap=Math.round(clamp(maxGap*ratio,84,214)),left=prev.right+gap,right=left+width,s=surface(kind,left,right,top);route.push(s);if(kind==='floor')floors.push([left,right,top]);else platforms.push([Math.round((left+right)/2),top+9,width,18]);prev=s}const endTop=prev.top,endWidth=400,endMax=maxGapFor(prev.top,endTop),endGap=Math.round(clamp(endMax*clamp(.77+.05*d+rng()*.08,.74,.89),88,214)),endStart=prev.right+endGap,endEnd=endStart+endWidth;route.push(surface('floor',endStart,endEnd,endTop));floors.push([endStart,endEnd,endTop]);const level={number:n,seed:n,name:runLevelName(n),style,theme,difficulty:d,width:Math.ceil(endEnd+80),spawn:[82,615],goal:[Math.round(endStart+270),endTop],floors,platforms,walls,spikes,saws,lasers,movingPlatforms,crushers,ceilings,ceilingSpikes,route,spikeMeta,sawMeta,laserMeta,moverMeta,crusherMeta,tunnelMeta,challengeSlots,occupiedSurfaces,occupiedGaps};decorateChallenges(level,rng,d);return level}
+function validateRoute(level,e){const first=level.route[0],last=level.route.at(-1);if(!(first.left<=level.spawn[0]&&first.right>=level.spawn[0]))e.push('spawn unsupported');if(!(last.left<=level.goal[0]&&last.right>=level.goal[0]))e.push('goal unsupported');for(let i=0;i<level.route.length-1;i++){const a=level.route[i],b=level.route[i+1];if(b.left<=a.right)e.push('route not forward '+i);if(!jumpEnvelope(a,b).reachable)e.push('unreachable jump '+i);if(b.kind==='platform'&&widthOf(b)<82)e.push('landing too narrow '+(i+1))}}
+function validateChallenges(level,e){if(level.challengeSlots.some(x=>x.surface===0||x.gap===0))e.push('spawn zone challenged');const ss=new Set(),gg=new Set();for(const c of level.challengeSlots){if(c.surface!==undefined){if(ss.has(c.surface))e.push('surface overlap '+c.surface);ss.add(c.surface)}if(c.gap!==undefined){if(gg.has(c.gap))e.push('gap overlap '+c.gap);gg.add(c.gap)}}let empty=0,max=0;for(let i=1;i<level.route.length-1;i++){empty=(ss.has(i)||gg.has(i-1)||gg.has(i))?0:empty+1;max=Math.max(max,empty)}if(max>2)e.push('too many empty route pieces '+max);if(new Set(level.challengeSlots.map(x=>x.type)).size<2)e.push('challenge variety');if(level.challengeSlots.length<6)e.push('challenge density')}
+function validateSpikes(level,e){const normal=RUN_PHYSICS.runSpeed*(2*RUN_PHYSICS.jumpSpeed/RUN_PHYSICS.gravityY)*.70;for(const m of level.spikeMeta){const s=level.route[m.surface];if(!s){e.push('spike missing');continue}if(m.source==='spike'){const l=(m.x-m.width/2)-s.left,r=s.right-(m.x+m.width/2);if(l<RUN_MIN_SAFE_EDGE||r<RUN_MIN_SAFE_EDGE)e.push('spike edge '+m.surface)}if(m.width+30>normal)e.push('spike wide '+m.surface)}}
+function validateSaws(level,e){const maxRise=RUN_PHYSICS.jumpSpeed**2/(2*RUN_PHYSICS.gravityY);for(const m of level.sawMeta){const s=level.route[m.surface];if(!s){e.push('saw missing');continue}const lowCenter=m.axis==='y'?m.y+m.range:m.y;if(lowCenter+m.r>=s.top-6)e.push('saw platform '+m.surface);const passTop=lowCenter-m.r;if(s.top-passTop>maxRise*.82)e.push('saw tall '+m.surface);const hr=m.axis==='x'?m.range:0,min=m.x-hr-m.r,max=m.x+hr+m.r;if(min-s.left<RUN_MIN_SAFE_EDGE||s.right-max<RUN_MIN_SAFE_EDGE)e.push('saw edge '+m.surface)}}
+function validateLasers(level,e){for(const m of level.laserMeta){const a=level.route[m.gap],b=level.route[m.gap+1];if(!a||!b)e.push('laser missing');else{if(!(m.x>a.right&&m.x<b.left))e.push('laser gap '+m.gap);if(m.bottom<Math.max(a.top,b.top))e.push('laser short '+m.gap);if(m.period*.42<m.requiredOff)e.push('laser timing '+m.gap)}}}
+function validateMovers(level,e){for(const m of level.moverMeta){const s=level.route[m.surface];if(!s||s.kind!=='platform')e.push('mover anchor '+m.surface);if(m.period<1500||m.period>2800)e.push('mover period '+m.surface);if(m.range>68)e.push('mover range '+m.surface)}}
+function validateCrushers(level,e){for(const m of level.crusherMeta){const s=level.route[m.surface];if(!s){e.push('crusher missing');continue}const upBottom=m.upY+m.h/2,downBottom=upBottom+m.range;if(s.top-upBottom<70)e.push('crusher clearance '+m.surface);if(downBottom<s.top-12)e.push('crusher reach '+m.surface);if(m.edge<RUN_MIN_SAFE_EDGE)e.push('crusher edge '+m.surface);if(m.period<1500)e.push('crusher period '+m.surface)}}
+function validateTunnels(level,e){for(const m of level.tunnelMeta){const s=level.route[m.surface];if(!s||s.kind!=='floor')e.push('tunnel anchor '+m.surface);if(s.top-m.ceilingBottom<108)e.push('tunnel low '+m.surface);const overlap=Math.max(0,Math.min(m.floorX+m.floorSpikeW/2,m.ceilX+m.ceilSpikeW/2)-Math.max(m.floorX-m.floorSpikeW/2,m.ceilX-m.ceilSpikeW/2));if(overlap>0)e.push('tunnel overlap '+m.surface)}}
+export function validateRunLevel(level){const e=[];if(!level||!Array.isArray(level.route)||level.route.length<3)return{ok:false,errors:['missing route']};validateRoute(level,e);validateChallenges(level,e);validateSpikes(level,e);validateSaws(level,e);validateLasers(level,e);validateMovers(level,e);validateCrushers(level,e);validateTunnels(level,e);return{ok:e.length===0,errors:e}}
+export function runLevelSignature(level){return JSON.stringify({style:level.style,theme:level.theme,route:level.route.map(s=>[s.kind,s.left,s.right,s.top]),challenges:level.challengeSlots,spikes:level.spikes,saws:level.saws,lasers:level.lasers,movers:level.movingPlatforms,crushers:level.crushers,ceilings:level.ceilings,ceilingSpikes:level.ceilingSpikes})}
+export function runChallengeProfile(level){const c={};for(const x of level.challengeSlots)c[x.type]=(c[x.type]||0)+1;return JSON.stringify(c)}

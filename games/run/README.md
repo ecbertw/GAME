@@ -1,23 +1,32 @@
 # EIXO RUN
 
-RUN contains 900 deterministic hardcore levels.
+RUN now uses a deterministic **challenge-module generator** for 900 hardcore levels.
 
-## Persistence
-- Practice / no account: current level is stored in browser localStorage and survives refreshes and normal deploys on the same browser and domain.
-- Logged in: the server resumes the latest unfinished PostgreSQL attempt.
-- A stale unfinished attempt can never pull a player behind their recorded best: server resume uses the higher of the unfinished current level and best completed level + 1.
-- Authenticated server progress takes precedence over local browser progress for ranking integrity.
+## Design model
+Hazards are no longer sprinkled independently. Every route slot can own one certified challenge:
+- spike lane;
+- moving saw;
+- timed laser gate;
+- moving/elevator platform;
+- overhead crusher;
+- tunnel with a floor hazard and a separate ceiling hazard.
 
-## Level safety
-All 900 levels are automatically regenerated and validated:
-- the spawn surface is completely hazard-free;
-- the first jump never contains a laser;
-- every mandatory jump is inside the actual RUN physics envelope;
-- every level contains at least 2 spike zones, 1 saw and 1 laser;
-- saws are above their platform;
-- lasers have a verified OFF window long enough for the required crossing.
+A surface cannot accidentally receive both a saw and spikes. The only top+bottom combination is the dedicated tunnel module, where the two hazards are intentionally offset and validated.
 
 ## Variety
-There are 24 structural styles and 6 hazard themes. The route can mix narrow precision platforms, medium hazard platforms, wide saw platforms and thick floor islands, with different climb/descent/zig-zag/fractured height patterns. The current 900-level set has hundreds of distinct structural profiles in addition to 900 unique geometries.
+- 24 route styles.
+- 8 challenge themes.
+- Variable challenge counts instead of exactly one of every hazard.
+- Static precision platforms, thick floor islands, moving platforms, elevators, crusher corridors and low-ceiling tunnel sections.
+- The generator rejects runs with more than two consecutive unchallenged route pieces.
 
-Ranking remains highest completed level first, then fastest time for that level.
+## Solvability
+All 900 levels are validated against the actual RUN movement physics. Dynamic modules are constrained so they always pass through a certified route state:
+- moving platforms cross their mathematically reachable base position;
+- vertical saws have a passable low position;
+- lasers have a verified OFF window;
+- crushers have safe high clearance and a lethal low position;
+- tunnel floor/ceiling hazards never overlap;
+- spawn and the first jump remain hazard-free.
+
+Progress persistence and the Level + fastest-time ranking are unchanged.

@@ -48,6 +48,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.levelObjects=[];
     this.levelLinks=[];
     this.dynamicHazards=[];
+    this.dynamicPlatforms=[];
   }
 
   create(){
@@ -162,6 +163,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.levelObjects.forEach(x=>{ try{x.destroy();}catch(_){} });
     this.levelObjects=[];
     this.dynamicHazards=[];
+    this.dynamicPlatforms=[];
     this.goalTrigger=null;
   }
 
@@ -178,9 +180,13 @@ export class HardcoreRunScene extends Phaser.Scene {
     for(const f of L.floors||[]) this.addFloor(f[0],f[1],f[2]);
     for(const p of L.platforms||[]) this.addPlatform(p[0],p[1],p[2],p[3]);
     for(const w of L.walls||[]) this.addPlatform(w[0],w[1],w[2],w[3]);
+    for(const c of L.ceilings||[]) this.addPlatform(c[0],c[1],c[2],c[3]);
+    for(const p of L.movingPlatforms||[]) this.addMovingPlatform(p);
     for(const s of L.spikes||[]) this.addSpikes(s[0],s[1],s[2]);
+    for(const s of L.ceilingSpikes||[]) this.addCeilingSpikes(s[0],s[1],s[2]);
     for(const s of L.saws||[]) this.addSaw(s);
     for(const l of L.lasers||[]) this.addLaser(l);
+    for(const c of L.crushers||[]) this.addCrusher(c);
 
     this.createGoal(L.goal[0],L.goal[1]);
     this.createPlayer(L.spawn[0],L.spawn[1]);
@@ -218,6 +224,44 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.physics.add.existing(r,true);
     this.levelObjects.push(r);
     return r;
+  }
+
+  addMovingPlatform(spec){
+    const x=spec[0],y=spec[1],w=spec[2],h=spec[3],axis=spec[4],range=spec[5],period=spec[6],phase=spec[7]||0;
+    const r=this.add.rectangle(x,y,w,h,0xcfd4de,.98).setDepth(6);
+    r.setStrokeStyle(2,0xffffff,.8);
+    r.__isPlatform=true;
+    this.physics.add.existing(r,true);
+    r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;r.lastX=x;r.lastY=y;
+    this.levelObjects.push(r);
+    this.dynamicPlatforms.push(r);
+    return r;
+  }
+
+  addCeilingSpikes(x,bottom,width){
+    const h=24;
+    const sensor=this.add.rectangle(x,bottom+h/2,width,h,C.hazard,.12).setDepth(9);
+    sensor.__isHazard=true;
+    this.physics.add.existing(sensor,true);
+    const g=this.add.graphics().setDepth(10);
+    const count=Math.max(2,Math.floor(width/22)),step=width/count;
+    g.fillStyle(C.hazard,1);
+    for(let i=0;i<count;i++){
+      const left=x-width/2+i*step;
+      g.fillTriangle(left,bottom,left+step/2,bottom+h,left+step,bottom);
+    }
+    this.levelObjects.push(sensor,g);
+  }
+
+  addCrusher(spec){
+    const x=spec[0],y=spec[1],w=spec[2],h=spec[3],range=spec[4],period=spec[5],phase=spec[6]||0;
+    const block=this.add.rectangle(x,y,w,h,C.hazard,.96).setDepth(12);
+    block.setStrokeStyle(3,0x6c1027,1);
+    block.__isHazard=true;
+    this.physics.add.existing(block,true);
+    block.baseY=y;block.range=range;block.period=period;block.phase=phase;
+    this.levelObjects.push(block);
+    this.dynamicHazards.push({type:'crusher',obj:block});
   }
 
   addSpikes(x,top,width){
@@ -406,6 +450,7 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   update(time){
     if(!this.player) return;
+    this.updateDynamicPlatforms(time);
     this.updateDynamicHazards(time);
 
     if(this.runActive&&!this.finished){
@@ -451,6 +496,25 @@ export class HardcoreRunScene extends Phaser.Scene {
     if(this.player.y>770||this.player.x<-80) this.killPlayer(false);
   }
 
+  updateDynamicPlatforms(time){
+    for(const o of this.dynamicPlatforms){
+      if(!o||!o.body) continue;
+      const wave=Math.sin(((time+o.phase)%o.period)/o.period*Math.PI*2);
+      const nx=o.axis==='x'?o.baseX+wave*o.range:o.baseX;
+      const ny=o.axis==='y'?o.baseY+wave*o.range:o.baseY;
+      const dx=nx-o.x,dy=ny-o.y;
+      const p=this.player;
+      const oldTop=o.y-o.displayHeight/2;
+      const riding=!!(p&&p.body&&p.body.enable&&!this.dead&&Math.abs((p.y+19)-oldTop)<12&&p.x>o.x-o.displayWidth/2-8&&p.x<o.x+o.displayWidth/2+8&&p.body.velocity.y>=-30);
+      o.x=nx;o.y=ny;
+      o.body.updateFromGameObject();
+      if(riding){
+        p.x+=dx;p.y+=dy;
+        p.body.position.x+=dx;p.body.position.y+=dy;
+      }
+    }
+  }
+
   updateDynamicHazards(time){
     for(const d of this.dynamicHazards){
       const o=d.obj;
@@ -469,6 +533,11 @@ export class HardcoreRunScene extends Phaser.Scene {
           o.setAlpha(on ? .98 : .13);
           o.glow.setAlpha(on ? .18 : .035);
         }
+      }else if(d.type==='crusher'){
+        const phase=((time+o.phase)%o.period)/o.period;
+        const drop=(1-Math.cos(phase*Math.PI*2))*.5;
+        o.y=o.baseY+drop*o.range;
+        o.body.updateFromGameObject();
       }
     }
   }
