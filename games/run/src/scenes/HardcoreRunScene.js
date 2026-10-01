@@ -105,8 +105,6 @@ export class HardcoreRunScene extends Phaser.Scene {
   constructor(){
     super('HardcoreRun');
     this.levelIndex=0;
-    this.deaths=0;
-    this.splits=[];
     this.runActive=false;
     this.finished=false;
     this.starting=false;
@@ -158,10 +156,9 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.nameText=this.add.text(126,25,'FIRST BLOOD', {fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#8f96a3'});
     this.timerText=this.add.text(640,18,'00:00.000',{fontFamily:'Arial Black,Arial',fontSize:'28px',color:'#ffffff'}).setOrigin(.5,0);
     this.pbText=this.add.text(1230,21,'PB  --:--.---',{fontFamily:'Arial Black,Arial',fontSize:'13px',color:'#8f96a3'}).setOrigin(1,0);
-    this.deathText=this.add.text(1230,43,'DEATHS  0',{fontFamily:'Arial Black,Arial',fontSize:'10px',color:'#ff3159'}).setOrigin(1,0);
     this.progressBase=this.add.rectangle(640,80,760,3,0x2a2d34,.85);
     this.progressFill=this.add.rectangle(260,80,0,3,C.accent,1).setOrigin(0,.5);
-    this.hud.add([bar,this.levelText,this.nameText,this.timerText,this.pbText,this.deathText,this.progressBase,this.progressFill]);
+    this.hud.add([bar,this.levelText,this.nameText,this.timerText,this.pbText,this.progressBase,this.progressFill]);
 
     this.controls=this.add.text(30,686,'A/D ou ←/→  MOVE   ·   SPACE/W/↑  JUMP + WALL JUMP   ·   R  RESTART   ·   H  HOME',{
       fontFamily:'Arial Black,Arial',fontSize:'10px',color:'#676d79',letterSpacing:1
@@ -173,7 +170,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.startTitle=this.add.text(640,150,'RUN',{fontFamily:'Arial Black,Arial',fontSize:'92px',fontStyle:'italic',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2001);
     this.startTitle.setShadow(8,8,'#ff3159',0,true,true);
     this.startSub=this.add.text(640,225,'HARDCORE PLATFORMER',{fontFamily:'Arial Black,Arial',fontSize:'16px',color:'#ff3159',letterSpacing:5}).setOrigin(.5).setScrollFactor(0).setDepth(2001);
-    this.startRules=this.add.text(640,285,'12 LEVELS · ONE CLOCK · EVERY DEATH COSTS TIME\nNO CHECKPOINTS INSIDE A LEVEL · FASTEST TOTAL TIME WINS',{
+    this.startRules=this.add.text(640,285,'12 LEVELS · EACH LEVEL HAS ITS OWN CLOCK\nRANKING = HIGHEST LEVEL · FASTEST TIME',{
       fontFamily:'Arial Black,Arial',fontSize:'13px',color:'#b5bac5',align:'center',lineSpacing:10
     }).setOrigin(.5).setScrollFactor(0).setDepth(2001);
     this.startRanking=this.add.text(640,380,'WORLD TOP\nLOADING...',{
@@ -212,7 +209,6 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.attemptId=runId;
     this.runActive=true;
     this.starting=false;
-    this.runStartedAt=this.time.now;
     this.levelStartedAt=this.time.now;
     this.startObjects.forEach(o=>o.setVisible(false));
     this.controls.setAlpha(.78);
@@ -229,7 +225,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.goalTrigger=null;
   }
 
-  loadLevel(index){
+  loadLevel(index,{resetClock=false}={}){
     this.clearLevel();
     this.levelIndex=index;
     this.dead=false;
@@ -254,7 +250,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.progressFill.width=760*(index/LEVELS.length);
     this.cameras.main.startFollow(this.player,true,.11,.08,-230,20);
     this.cameras.main.scrollX=0;
-    this.levelStartedAt=this.time.now;
+    if(resetClock&&this.runActive) this.levelStartedAt=this.time.now;
 
     this.showLevelCard(index,L.name);
   }
@@ -365,8 +361,6 @@ export class HardcoreRunScene extends Phaser.Scene {
   killPlayer(manual){
     if(!this.runActive||this.finished||this.dead||this.levelLocked) return;
     this.dead=true;
-    this.deaths+=1;
-    this.deathText.setText('DEATHS  '+this.deaths);
     this.player.body.enable=false;
     this.player.setFillStyle(C.hazard,1);
     this.cameras.main.shake(85,.004);
@@ -378,55 +372,60 @@ export class HardcoreRunScene extends Phaser.Scene {
     });
   }
 
-  completeLevel(){
+  async completeLevel(){
     if(!this.runActive||this.finished||this.dead||this.levelLocked) return;
     this.levelLocked=true;
-    const elapsed=this.time.now-this.runStartedAt;
-    this.splits.push(Math.round(elapsed));
-    this.progressFill.width=760*((this.levelIndex+1)/LEVELS.length);
+    const level=this.levelIndex+1;
+    let levelTimeMs=Math.max(1,Math.round(this.time.now-this.levelStartedAt));
+    this.timerText.setText(formatTime(levelTimeMs));
+    this.progressFill.width=760*(level/LEVELS.length);
     this.player.body.setVelocity(0,0);
     this.player.body.enable=false;
 
-    if(this.levelIndex===LEVELS.length-1){
-      this.finishRun();
-      return;
-    }
-    const clear=this.add.text(640,348,'CLEAR',{fontFamily:'Arial Black,Arial',fontSize:'42px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
-    this.time.delayedCall(320,()=>{
-      clear.destroy();
-      this.loadLevel(this.levelIndex+1);
-    });
-  }
-
-  async finishRun(){
-    this.finished=true;
-    this.runActive=false;
-    let finalMs=Math.round(this.time.now-this.runStartedAt);
     let serverResult=null;
     if(this.attemptId){
       try{
-        const res=await fetch('/api/run/finish',{
+        const res=await fetch('/api/run/level',{
           method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-          body:JSON.stringify({runId:this.attemptId,timeMs:finalMs,deaths:this.deaths,splits:this.splits})
+          body:JSON.stringify({runId:this.attemptId,level,timeMs:levelTimeMs})
         });
         if(res.ok){
           serverResult=await res.json();
-          if(Number.isFinite(serverResult.timeMs)) finalMs=serverResult.timeMs;
+          if(Number.isFinite(serverResult.timeMs)) levelTimeMs=serverResult.timeMs;
+          this.timerText.setText(formatTime(levelTimeMs));
+          await this.refreshLeaderboard();
         }
       }catch(_){}
     }
-    this.timerText.setText(formatTime(finalMs));
-    await this.refreshLeaderboard();
-    this.showFinishOverlay(finalMs,serverResult);
+
+    if(level===LEVELS.length){
+      this.finishRun(levelTimeMs,serverResult);
+      return;
+    }
+
+    const suffix=serverResult&&serverResult.isPersonalBest?' · NEW PB':'';
+    const clear=this.add.text(640,348,'CLEAR · '+formatTime(levelTimeMs)+suffix,{fontFamily:'Arial Black,Arial',fontSize:'30px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
+    this.time.delayedCall(420,()=>{
+      clear.destroy();
+      this.loadLevel(this.levelIndex+1,{resetClock:true});
+      this.timerText.setText('00:00.000');
+    });
   }
 
-  showFinishOverlay(finalMs,result){
+  async finishRun(levelTimeMs,serverResult){
+    this.finished=true;
+    this.runActive=false;
+    this.timerText.setText(formatTime(levelTimeMs));
+    await this.refreshLeaderboard();
+    this.showFinishOverlay(levelTimeMs,serverResult);
+  }
+
+  showFinishOverlay(levelTimeMs,result){
     this.add.rectangle(640,360,1280,720,0x050609,.88).setScrollFactor(0).setDepth(2500);
-    this.add.text(640,145,'RUN COMPLETE',{fontFamily:'Arial Black,Arial',fontSize:'52px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
-    this.add.text(640,235,formatTime(finalMs),{fontFamily:'Arial Black,Arial',fontSize:'58px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
-    let note='DEATHS  '+this.deaths;
-    if(this.practice) note+='   ·   PRACTICE — NOT SUBMITTED';
-    else if(result&&result.isPersonalBest) note+='   ·   NEW PERSONAL BEST';
+    this.add.text(640,145,'LEVEL 12 COMPLETE',{fontFamily:'Arial Black,Arial',fontSize:'46px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
+    this.add.text(640,235,formatTime(levelTimeMs),{fontFamily:'Arial Black,Arial',fontSize:'58px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
+    let note=this.practice?'PRACTICE — NOT SUBMITTED':'LEVEL 12';
+    if(!this.practice&&result&&result.isPersonalBest) note+='   ·   NEW PERSONAL BEST';
     this.add.text(640,305,note,{fontFamily:'Arial Black,Arial',fontSize:'13px',color:this.practice?'#8f96a3':'#ff3159'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
     this.add.text(640,410,this.leaderboardText(),{fontFamily:'monospace',fontSize:'15px',color:'#e8eaf0',align:'left',lineSpacing:7}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
     this.add.text(640,590,'REFRESH PAGE TO RUN AGAIN   ·   H  EIXO HOME',{fontFamily:'Arial Black,Arial',fontSize:'12px',color:'#7b818d'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
@@ -439,11 +438,11 @@ export class HardcoreRunScene extends Phaser.Scene {
     rows.slice(0,7).forEach((p,i)=>{
       const pos=String(i+1).padStart(2,'0');
       const name=String(p.name||'PLAYER').slice(0,14).padEnd(14,' ');
-      lines.push(pos+'  '+name+'  '+formatTime(Number(p.timeMs)));
+      lines.push(pos+'  '+name+'  L'+String(p.level||0).padStart(2,'0')+'  '+formatTime(Number(p.timeMs)));
     });
     if(this.rankingData&&this.rankingData.me&&this.rankingData.me.timeMs){
       lines.push('');
-      lines.push('YOUR PB  '+formatTime(Number(this.rankingData.me.timeMs))+'  #'+this.rankingData.me.rank);
+      lines.push('YOUR PB  L'+String(this.rankingData.me.level||0).padStart(2,'0')+'  '+formatTime(Number(this.rankingData.me.timeMs))+'  #'+this.rankingData.me.rank);
     }
     return lines.join('\n');
   }
@@ -454,7 +453,7 @@ export class HardcoreRunScene extends Phaser.Scene {
       if(res.ok){
         this.rankingData=await res.json();
         if(this.rankingData.me&&this.rankingData.me.timeMs&&!this.practice){
-          this.pbText.setText('PB  '+formatTime(Number(this.rankingData.me.timeMs)));
+          this.pbText.setText('PB  L'+String(this.rankingData.me.level||0).padStart(2,'0')+' · '+formatTime(Number(this.rankingData.me.timeMs)));
         }
       }
     }catch(_){}
@@ -467,7 +466,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.updateDynamicHazards(time);
 
     if(this.runActive&&!this.finished){
-      const elapsed=this.time.now-this.runStartedAt;
+      const elapsed=this.time.now-this.levelStartedAt;
       this.timerText.setText(formatTime(elapsed));
     }
 

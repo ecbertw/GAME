@@ -19,23 +19,25 @@ test('RUN is a standalone Phaser hardcore platformer',()=>{
   assert.doesNotMatch(scene,/Astral|runner-manifest|approved-runner|jump-(?:physics|motion|worlds|exact-renderer)|EixoJump|WebSocket/);
 });
 
-test('RUN contains twelve timed levels and one continuous run clock',()=>{
+test('RUN contains twelve levels with a timer that resets only after a clear',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   const names=[...scene.matchAll(/name:'([^']+)'/g)].map(m=>m[1]);
   assert.equal(names.length,12);
-  assert.match(scene,/this\.runStartedAt=this\.time\.now/);
-  assert.match(scene,/this\.time\.now-this\.runStartedAt/);
-  assert.match(scene,/this\.splits\.push/);
-  assert.match(scene,/this\.deaths\+=1/);
+  assert.match(scene,/this\.levelStartedAt=this\.time\.now/);
+  assert.match(scene,/this\.time\.now-this\.levelStartedAt/);
+  assert.match(scene,/loadLevel\(this\.levelIndex\+1,\{resetClock:true\}\)/);
+  assert.match(scene,/loadLevel\(this\.levelIndex\)/);
+  assert.doesNotMatch(scene,/runStartedAt|deathText|DEATHS/);
 });
 
-test('RUN has its own server-side time leaderboard',()=>{
+test('RUN ranking prioritizes highest level and then fastest level time',()=>{
   const service=read('run-server.js');
-  assert.match(service,/CREATE TABLE IF NOT EXISTS run_attempts/);
-  assert.match(service,/CREATE TABLE IF NOT EXISTS run_bests/);
-  assert.match(service,/best_time_ms ASC/);
-  assert.match(service,/serverElapsed-2500/);
-  assert.match(service,/splits\.length!==12/);
+  assert.match(service,/best_level INTEGER NOT NULL DEFAULT 0/);
+  assert.match(service,/current_level INTEGER NOT NULL DEFAULT 1/);
+  assert.match(service,/best_level DESC,rb\.best_time_ms ASC/);
+  assert.match(service,/level>Number\(old\.best_level/);
+  assert.match(service,/level===Number\(old\.best_level/);
+  assert.doesNotMatch(service,/deaths-b\.deaths|serverElapsed/);
 });
 
 test('RUN public route and ranking APIs are wired into server',()=>{
@@ -43,7 +45,7 @@ test('RUN public route and ranking APIs are wired into server',()=>{
   assert.match(server,/require\('\.\/run-server'\)/);
   assert.match(server,/url\.pathname==='\/run'/);
   assert.match(server,/\/api\/run\/start/);
-  assert.match(server,/\/api\/run\/finish/);
+  assert.match(server,/\/api\/run\/level/);
   assert.match(server,/\/api\/run\/rankings/);
   assert.match(server,/runService\.initDb/);
 });
@@ -119,4 +121,13 @@ test('RUN level geometry stays inside the real jump envelope',()=>{
   assert.ok(canReach(p0,p1),'FIRST BLOOD elevated platform chain must be jumpable');
   assert.ok(speed*(2*jump/gravity)>290,'same-height jump range unexpectedly low');
   assert.ok((jump*jump)/(2*gravity)>120,'jump height unexpectedly low');
+});
+
+
+test('RUN UI never displays a death counter and ranking rows include level plus time',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  assert.doesNotMatch(scene,/DEATHS|deathText/);
+  assert.match(scene,/L'\+String\(p\.level\|\|0\)/);
+  assert.match(scene,/RANKING = HIGHEST LEVEL · FASTEST TIME/);
+  assert.match(scene,/\/api\/run\/level/);
 });
