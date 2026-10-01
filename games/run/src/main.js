@@ -1,5 +1,5 @@
-import { HardcoreRunScene } from './scenes/HardcoreRunScene.js?v=20261001-centred3';
-import { RUN_PHYSICS } from './run-config.js?v=20261001-centred3';
+import { HardcoreRunScene } from './scenes/HardcoreRunScene.js?v=20261001-hard100';
+import { RUN_PHYSICS } from './run-config.js?v=20261001-hard100';
 
 const config = {
   type: Phaser.AUTO,
@@ -11,7 +11,7 @@ const config = {
   scale: {
     mode: Phaser.Scale.RESIZE,
     width: window.innerWidth,
-    height: Math.max(360, window.innerHeight - 52),
+    height: Math.max(360, window.innerHeight - 68),
   },
   physics: {
     default: 'arcade',
