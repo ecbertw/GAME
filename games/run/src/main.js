@@ -1,10 +1,10 @@
-import { HardcoreRunScene } from './scenes/HardcoreRunScene.js?v=20261001-platformfix2';
-import { RUN_PHYSICS } from './run-config.js?v=20261001-platformfix2';
+import { HardcoreRunScene } from './scenes/HardcoreRunScene.js?v=20261001-centred3';
+import { RUN_PHYSICS } from './run-config.js?v=20261001-centred3';
 
 const config = {
   type: Phaser.AUTO,
   parent: 'run-root',
-  backgroundColor: '#030711',
+  transparent: true,
   pixelArt: false,
   antialias: true,
   roundPixels: false,
