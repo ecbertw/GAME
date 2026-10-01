@@ -4,16 +4,14 @@ import { RUN_PHYSICS } from './run-config.js';
 const config = {
   type: Phaser.AUTO,
   parent: 'run-root',
-  width: 1280,
-  height: 720,
   backgroundColor: '#030711',
   pixelArt: false,
   antialias: true,
   roundPixels: false,
-  resolution: Math.min(window.devicePixelRatio || 1, 2),
   scale: {
-    mode: Phaser.Scale.ENVELOP,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    mode: Phaser.Scale.RESIZE,
+    width: window.innerWidth,
+    height: window.innerHeight,
   },
   physics: {
     default: 'arcade',
