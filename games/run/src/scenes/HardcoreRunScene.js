@@ -391,69 +391,105 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   updateRunnerVisual(time,delta=16){
     const p=this.player,c=this.playerVisual;
-    if(!p||!p.body||!c) return;
+    if(!p||!p.body||!c)return;
     const b=p.body;
     const grounded=b.blocked.down||b.touching.down;
     const speed=Math.abs(b.velocity.x);
     if(b.velocity.x>8)this.runnerFacing=1;
     else if(b.velocity.x<-8)this.runnerFacing=-1;
 
-    this.runnerPhase+=(delta||16)*(0.0045+Math.min(1,speed/RUN_PHYSICS.runSpeed)*0.0105);
-    c.x=p.x;c.y=p.y+1;c.scaleX=this.runnerFacing;
+    this.runnerPhase+=(delta||16)*(0.0048+Math.min(1,speed/RUN_PHYSICS.runSpeed)*0.0108);
+    c.x=p.x;c.y=p.y;c.scaleX=this.runnerFacing;
 
     const g=c.bodyGraphics,halo=c.glowGraphics;
     g.clear();halo.clear();
 
-    const moving=speed>35;
+    const moving=grounded&&speed>28;
     const phase=this.runnerPhase;
-    const stride=grounded&&moving?Math.sin(phase)*9:0;
-    const lift=grounded&&moving?Math.max(0,Math.sin(phase*2))*2:0;
-    const lean=grounded?Math.min(.13,speed/2600):(b.velocity.y<0?.10:.03);
+    const stride=moving?Math.sin(phase)*10.2:0;
+    const bounce=moving?Math.abs(Math.sin(phase))*1.4:0;
+    const lean=grounded?Math.min(2.2,speed/145):b.velocity.y<0?2.2:1.0;
 
-    const shoulder={x:lean*22,y:-9-lift};
-    const hip={x:0,y:3-lift};
+    const hip={x:-1+lean*.16,y:3-bounce};
+    const shoulder={x:1+lean,y:-9-bounce};
 
-    let lf,rf,lh,rh,lk,rk,le,re;
+    let lk,rk,lf,rf,le,re,lh,rh;
     if(!grounded){
-      if(b.velocity.y<20){
-        lf={x:-7,y:15};rf={x:9,y:10};lk={x:-10,y:8};rk={x:5,y:7};
-        lh={x:8,y:-18};rh={x:-8,y:-13};le={x:6,y:-12};re={x:-7,y:-8};
+      if(b.velocity.y<30){
+        lk={x:-8,y:8};lf={x:-13,y:16};
+        rk={x:7,y:7};rf={x:13,y:11};
+        le={x:7,y:-7};lh={x:13,y:-14};
+        re={x:-6,y:-5};rh={x:-12,y:-10};
       }else{
-        lf={x:-7,y:20};rf={x:7,y:18};lk={x:-4,y:10};rk={x:5,y:10};
-        lh={x:-7,y:4};rh={x:8,y:2};le={x:-4,y:-4};re={x:6,y:-3};
+        lk={x:-5,y:10};lf={x:-9,y:20};
+        rk={x:5,y:10};rf={x:9,y:19};
+        le={x:-4,y:-1};lh={x:-8,y:6};
+        re={x:5,y:-2};rh={x:10,y:4};
       }
     }else{
-      lf={x:stride,y:20};rf={x:-stride,y:20};
-      lk={x:stride*.48-2,y:11-lift};rk={x:-stride*.48+2,y:11-lift};
-      lh={x:-stride*.72,y:4-lift};rh={x:stride*.72,y:4-lift};
-      le={x:-stride*.42,y:-2-lift};re={x:stride*.42,y:-2-lift};
+      lk={x:stride*.52-2,y:11-bounce};
+      lf={x:stride,y:21};
+      rk={x:-stride*.52+2,y:11-bounce};
+      rf={x:-stride,y:21};
+      le={x:-stride*.42+2,y:-2-bounce};
+      lh={x:-stride*.78+3,y:5-bounce};
+      re={x:stride*.42-2,y:-2-bounce};
+      rh={x:stride*.78-3,y:5-bounce};
     }
 
-    const drawLimb=(a,k,f,alpha=1)=>{
-      halo.lineStyle(9,C.cyan,.10*alpha);halo.lineBetween(a.x,a.y,k.x,k.y);halo.lineBetween(k.x,k.y,f.x,f.y);
-      g.lineStyle(5,C.player,alpha);g.lineBetween(a.x,a.y,k.x,k.y);g.lineBetween(k.x,k.y,f.x,f.y);
-      g.fillStyle(C.player,alpha).fillCircle(k.x,k.y,2.5);
+    const capsule=(gfx,a,b,width,color,alpha=1)=>{
+      gfx.lineStyle(width,color,alpha);
+      gfx.lineBetween(a.x,a.y,b.x,b.y);
+      gfx.fillStyle(color,alpha);
+      gfx.fillCircle(a.x,a.y,width/2);
+      gfx.fillCircle(b.x,b.y,width/2);
+    };
+
+    const limb=(a,k,f,alpha=1)=>{
+      capsule(halo,a,k,8.5,C.cyan,.085*alpha);
+      capsule(halo,k,f,8.5,C.cyan,.085*alpha);
+      capsule(g,a,k,4.5,C.player,alpha);
+      capsule(g,k,f,4.2,C.player,alpha);
+      g.fillStyle(C.player,alpha).fillEllipse(f.x,f.y+1,6.2,3.5);
     };
 
     // rear limbs
-    drawLimb({x:hip.x-2,y:hip.y},rk,rf,.58);
-    drawLimb({x:shoulder.x-2,y:shoulder.y},re,rh,.58);
+    limb({x:hip.x-2,y:hip.y},rk,rf,.48);
+    limb({x:shoulder.x-2,y:shoulder.y+1},re,rh,.48);
 
-    // torso glow + body
-    halo.lineStyle(11,C.cyan,.11);halo.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
-    g.lineStyle(7,C.player,1);g.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
+    // soft silhouette glow
+    halo.fillStyle(C.cyan,.07);
+    halo.fillEllipse(shoulder.x,shoulder.y-1,18,24);
+    halo.fillEllipse(hip.x,hip.y+1,15,16);
+
+    // torso: wider shoulders, tapered waist, rounded silhouette
+    const torso=[
+      {x:shoulder.x-6.8,y:shoulder.y-1},
+      {x:shoulder.x-5.2,y:shoulder.y+8},
+      {x:hip.x-3.8,y:hip.y+2},
+      {x:hip.x+3.8,y:hip.y+2},
+      {x:shoulder.x+5.4,y:shoulder.y+8},
+      {x:shoulder.x+6.8,y:shoulder.y-1}
+    ];
+    g.fillStyle(C.player,1);
+    g.fillPoints(torso,true);
+    g.fillCircle(shoulder.x-5.8,shoulder.y+1,2.3);
+    g.fillCircle(shoulder.x+5.8,shoulder.y+1,2.3);
+    g.fillCircle(hip.x,hip.y+1,4.2);
+
+    // cyan seam / chest mark, no facial features
+    g.lineStyle(1.4,C.cyan,.78);
+    g.lineBetween(shoulder.x-2.8,shoulder.y+2,shoulder.x+3.7,shoulder.y+4.5);
 
     // front limbs
-    drawLimb({x:hip.x+2,y:hip.y},lk,lf,1);
-    drawLimb({x:shoulder.x+2,y:shoulder.y},le,lh,1);
+    limb({x:hip.x+2,y:hip.y},lk,lf,1);
+    limb({x:shoulder.x+2,y:shoulder.y+1},le,lh,1);
 
-    // head
-    halo.fillStyle(C.cyan,.12).fillCircle(shoulder.x+2,shoulder.y-9,7);
-    g.fillStyle(C.player,1).fillCircle(shoulder.x+2,shoulder.y-9,5);
-    g.lineStyle(1,0x9df0ff,.8).strokeCircle(shoulder.x+2,shoulder.y-9,5);
-
-    // chest accent
-    g.fillStyle(C.cyan,.95).fillCircle(shoulder.x+1,shoulder.y+2,1.6);
+    // neck and faceless head
+    capsule(g,{x:shoulder.x+1.2,y:shoulder.y-2},{x:shoulder.x+1.7,y:shoulder.y-5},3.5,C.player,1);
+    halo.fillStyle(C.cyan,.08).fillEllipse(shoulder.x+2.4,shoulder.y-11.2,12.5,14.5);
+    g.fillStyle(C.player,1).fillEllipse(shoulder.x+2.4,shoulder.y-11.2,9.5,11.5);
+    g.lineStyle(1,0xb7f2ff,.50).strokeEllipse(shoulder.x+2.4,shoulder.y-11.2,9.5,11.5);
   }
 
   showLevelCard(index,name){
