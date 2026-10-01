@@ -51,6 +51,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.levelLinks=[];
     this.dynamicHazards=[];
     this.dynamicPlatforms=[];
+    this.ridingPlatform=null;
     this.playerVisual=null;
     this.runnerFacing=1;
     this.runnerPhase=0;
@@ -204,6 +205,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.levelObjects=[];
     this.dynamicHazards=[];
     this.dynamicPlatforms=[];
+    this.ridingPlatform=null;
     this.goalTrigger=null;
   }
 
@@ -304,8 +306,13 @@ export class HardcoreRunScene extends Phaser.Scene {
     const r=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(6);
     r.__isPlatform=true;
     this.physics.add.existing(r,true);
-    const visual=this.add.image(x,y-4,'nv-moving').setDepth(9).setDisplaySize(Math.max(92,w+18),46);
-    r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;r.visual=visual;r.visualYOffset=-4;
+    // The bright top rail in the SVG sits 22/92 into the texture. With a
+    // 46px render height, centering the image 3px below the body aligns that
+    // rail with the physics top (y - h/2) instead of letting the player sink.
+    const visualOffsetY=3;
+    const visual=this.add.image(x,y+visualOffsetY,'nv-moving').setDepth(9).setDisplaySize(Math.max(92,w+18),46);
+    r.__isMovingPlatform=true;
+    r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;r.visual=visual;r.visualYOffset=visualOffsetY;
     this.levelObjects.push(r,visual);
     this.dynamicPlatforms.push(r);
     return r;
@@ -335,7 +342,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const block=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(12);
     block.__isHazard=true;
     this.physics.add.existing(block,true);
-    const visual=this.add.image(x,y,'nv-crusher').setDepth(15).setDisplaySize(Math.max(110,w+58),Math.max(105,h+74));
+    const visual=this.add.image(x,y,'nv-crusher').setDepth(15).setDisplaySize(Math.max(72,w+16),Math.max(82,h+18));
     block.baseY=y;block.range=range;block.period=period;block.phase=phase;block.visual=visual;
     this.levelObjects.push(block,visual);
     this.dynamicHazards.push({type:'crusher',obj:block});
@@ -431,7 +438,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const p=this.player,c=this.playerVisual;
     if(!p||!p.body||!c)return;
     const b=p.body;
-    const grounded=b.blocked.down||b.touching.down;
+    const grounded=b.blocked.down||b.touching.down||!!this.ridingPlatform;
     const speed=Math.abs(b.velocity.x);
     if(b.velocity.x>8)this.runnerFacing=1;
     else if(b.velocity.x<-8)this.runnerFacing=-1;
@@ -442,7 +449,8 @@ export class HardcoreRunScene extends Phaser.Scene {
     const g=c.bodyGraphics,halo=c.glowGraphics;
     g.clear();halo.clear();
 
-    const moving=grounded&&speed>28;
+    const inputMoving=!!(this.keys&&((this.keys.left.isDown||this.keys.a.isDown)!==(this.keys.right.isDown||this.keys.d.isDown)));
+    const moving=grounded&&inputMoving&&speed>28;
     const phase=this.runnerPhase;
     const stride=moving?Math.sin(phase)*10.2:0;
     const bounce=moving?Math.abs(Math.sin(phase))*1.4:0;
@@ -696,21 +704,43 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   updateDynamicPlatforms(time){
+    this.ridingPlatform=null;
+    const p=this.player;
+
     for(const o of this.dynamicPlatforms){
       if(!o||!o.body) continue;
+
       const wave=Math.sin(((time+o.phase)%o.period)/o.period*Math.PI*2);
       const nx=o.axis==='x'?o.baseX+wave*o.range:o.baseX;
       const ny=o.axis==='y'?o.baseY+wave*o.range:o.baseY;
       const dx=nx-o.x,dy=ny-o.y;
-      const p=this.player;
-      const oldTop=o.y-o.displayHeight/2;
-      const riding=!!(p&&p.body&&p.body.enable&&!this.dead&&Math.abs((p.y+19)-oldTop)<12&&p.x>o.x-o.displayWidth/2-8&&p.x<o.x+o.displayWidth/2+8&&p.body.velocity.y>=-30);
+
+      const oldTop=o.body.position.y;
+      let riding=false;
+      if(p&&p.body&&p.body.enable&&!this.dead){
+        const pb=p.body;
+        const playerBottom=pb.position.y+pb.height;
+        const playerLeft=pb.position.x;
+        const playerRight=pb.position.x+pb.width;
+        const platformLeft=o.body.position.x;
+        const platformRight=o.body.position.x+o.body.width;
+        const horizontalOverlap=playerRight>platformLeft+3&&playerLeft<platformRight-3;
+        riding=horizontalOverlap&&Math.abs(playerBottom-oldTop)<=7&&pb.velocity.y>=-35;
+      }
+
       o.x=nx;o.y=ny;
       if(o.visual){o.visual.x=nx;o.visual.y=ny+(o.visualYOffset||0);}
       o.body.updateFromGameObject();
-      if(riding){
-        p.x+=dx;p.y+=dy;
-        p.body.position.x+=dx;p.body.position.y+=dy;
+
+      if(riding&&p&&p.body){
+        const pb=p.body;
+        pb.position.x+=dx;
+        // Always keep the player's physical feet exactly on the platform.
+        pb.position.y=o.body.position.y-pb.height;
+        if(pb.velocity.y>0)pb.velocity.y=0;
+        p.x=pb.position.x+pb.halfWidth;
+        p.y=pb.position.y+pb.halfHeight;
+        this.ridingPlatform=o;
       }
     }
   }
