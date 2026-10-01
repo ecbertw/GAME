@@ -1,182 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
 <defs>
-  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#030711"/>
-    <stop offset=".42" stop-color="#07172a"/>
-    <stop offset=".72" stop-color="#07111f"/>
-    <stop offset="1" stop-color="#040811"/>
-  </linearGradient>
-  <radialGradient id="nebula" cx=".62" cy=".28" r=".62">
-    <stop offset="0" stop-color="#2f4f8d" stop-opacity=".22"/>
-    <stop offset=".45" stop-color="#1f3769" stop-opacity=".08"/>
-    <stop offset="1" stop-color="#07111f" stop-opacity="0"/>
-  </radialGradient>
-  <radialGradient id="planet" cx=".38" cy=".32">
-    <stop offset="0" stop-color="#2a5b96"/>
-    <stop offset=".55" stop-color="#173d73"/>
-    <stop offset="1" stop-color="#07162d"/>
-  </radialGradient>
-  <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#4b7fb0" stop-opacity="0"/>
-    <stop offset=".5" stop-color="#4b7fb0" stop-opacity=".08"/>
-    <stop offset="1" stop-color="#4b7fb0" stop-opacity="0"/>
-  </linearGradient>
-  <pattern id="grid" width="96" height="96" patternUnits="userSpaceOnUse">
-    <path d="M96 0H0V96" fill="none" stroke="#1c3855" stroke-width="1" opacity=".22"/>
-  </pattern>
-  <pattern id="windows" width="54" height="38" patternUnits="userSpaceOnUse">
-    <rect x="8" y="10" width="4" height="11" rx="2" fill="#2b6689" opacity=".28"/>
-    <rect x="29" y="5" width="3" height="8" rx="1.5" fill="#386f90" opacity=".20"/>
-  </pattern>
-  <filter id="glowBlue" x="-120%" y="-120%" width="340%" height="340%">
-    <feGaussianBlur stdDeviation="7" result="b"/>
-    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
-  <filter id="glowRed" x="-120%" y="-120%" width="340%" height="340%">
-    <feGaussianBlur stdDeviation="5" result="b"/>
-    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
-  <filter id="soft" x="-20%" y="-30%" width="140%" height="160%">
-    <feGaussianBlur stdDeviation="18"/>
-  </filter>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef6fb"/><stop offset=".58" stop-color="#d8e8f2"/><stop offset="1" stop-color="#b9ccd8"/></linearGradient>
+<linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dff8ff" stop-opacity=".7"/><stop offset=".48" stop-color="#8fd9eb" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity=".42"/></linearGradient>
+<linearGradient id="panel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f8fbfd"/><stop offset="1" stop-color="#c7d3dc"/></linearGradient>
+<radialGradient id="mist"><stop stop-color="#fff" stop-opacity=".8"/><stop offset="1" stop-color="#d8e9f3" stop-opacity="0"/></radialGradient>
+<filter id="cyanGlow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<pattern id="glassGrid" width="128" height="128" patternUnits="userSpaceOnUse"><path d="M128 0H0V128" fill="none" stroke="#7ba3b8" stroke-width="1" opacity=".12"/></pattern>
 </defs>
-
-<rect width="1920" height="1080" fill="url(#sky)"/>
-<rect width="1920" height="1080" fill="url(#nebula)"/>
-<rect width="1920" height="1080" fill="url(#grid)"/>
-
-<!-- distant stars -->
-<g fill="#87b8dd" opacity=".34">
-  <circle cx="98" cy="118" r="1.4"/><circle cx="182" cy="80" r="1"/><circle cx="272" cy="154" r="1.2"/>
-  <circle cx="384" cy="92" r="1"/><circle cx="508" cy="132" r="1.3"/><circle cx="612" cy="70" r="1"/>
-  <circle cx="744" cy="144" r="1.4"/><circle cx="844" cy="88" r="1.1"/><circle cx="963" cy="125" r="1.3"/>
-  <circle cx="1105" cy="76" r="1"/><circle cx="1228" cy="131" r="1.5"/><circle cx="1364" cy="94" r="1"/>
-  <circle cx="1487" cy="148" r="1.2"/><circle cx="1632" cy="84" r="1.1"/><circle cx="1785" cy="128" r="1.4"/>
-</g>
-
-<!-- moon / planet -->
-<g opacity=".95">
-  <circle cx="1540" cy="288" r="228" fill="url(#planet)" stroke="#3778bd" stroke-width="3"/>
-  <path d="M1308 298c66-148 226-235 385-210" fill="none" stroke="#8bc4f7" stroke-width="2" opacity=".18"/>
-  <path d="M1298 308c91-83 253-121 406-73" fill="none" stroke="#6b9ac5" stroke-width="1.5" opacity=".14"/>
-  <ellipse cx="1540" cy="288" rx="278" ry="72" fill="none" stroke="#446f9b" stroke-width="2" opacity=".12" transform="rotate(-12 1540 288)"/>
-</g>
-
-<!-- soft atmospheric layers -->
-<path d="M0 382C360 330 620 405 910 364s540-118 1010-63v265H0z" fill="url(#haze)" opacity=".46"/>
-<ellipse cx="980" cy="620" rx="920" ry="210" fill="#183553" opacity=".05" filter="url(#soft)"/>
-
-<!-- FAR CITY -->
-<g id="far-city" fill="#06111e" stroke="#102a42" stroke-width="1.5" opacity=".82">
-  <path d="M0 1080V430h74V352h40V1080z"/>
-  <path d="M95 1080V515h104V414h43V1080z"/>
-  <path d="M210 1080V456h88V344h35V1080z"/>
-  <path d="M325 1080V540h84V430h48V1080z"/>
-  <path d="M445 1080V402h92V285h31V1080z"/>
-  <path d="M560 1080V505h116V384h44V1080z"/>
-  <path d="M690 1080V438h82V320h36V1080z"/>
-  <path d="M790 1080V526h96V406h44V1080z"/>
-  <path d="M925 1080V470h104V326h38V1080z"/>
-  <path d="M1052 1080V540h96V430h44V1080z"/>
-  <path d="M1180 1080V412h96V298h38V1080z"/>
-  <path d="M1298 1080V505h102V382h48V1080z"/>
-  <path d="M1430 1080V448h86V342h36V1080z"/>
-  <path d="M1548 1080V536h108V396h46V1080z"/>
-  <path d="M1694 1080V420h92V312h42V1080z"/>
-  <path d="M1800 1080V492h120V372h0V1080z"/>
-</g>
-
-<!-- far windows -->
-<g opacity=".52">
-  <rect x="0" y="430" width="1920" height="650" fill="url(#windows)"/>
-</g>
-
-<!-- MID CITY / machinery -->
-<g id="mid-city" fill="#071521" stroke="#173650" stroke-width="2">
-  <path d="M0 1080V650h138V575h90v505z"/>
-  <path d="M182 1080V704h126V596h72v484z"/>
-  <path d="M374 1080V625h146V542h74v538z"/>
-  <path d="M602 1080V682h120V578h72v502z"/>
-  <path d="M804 1080V640h132V548h70v532z"/>
-  <path d="M1018 1080V700h128V610h78v470z"/>
-  <path d="M1240 1080V642h136V532h76v548z"/>
-  <path d="M1468 1080V694h128V590h72v490z"/>
-  <path d="M1684 1080V628h122V540h68v540z"/>
-</g>
-
-<!-- industrial ribs and conduits -->
-<g fill="none" stroke="#183a57" opacity=".75">
-  <path d="M0 728H1920M0 824H1920M0 930H1920M0 1028H1920" stroke-width="2"/>
-  <path d="M118 690V1080M278 690V1080M474 690V1080M676 690V1080M866 690V1080M1078 690V1080M1278 690V1080M1492 690V1080M1702 690V1080" stroke-width="2"/>
-  <path d="M48 930l80-72 92 72 88-74 98 74 92-68 88 68" stroke-width="3" opacity=".38"/>
-  <path d="M1090 964l82-76 90 76 86-70 92 70 92-72 84 72" stroke-width="3" opacity=".35"/>
-</g>
-
-<!-- transit beams -->
-<g stroke="#0a1c2d" stroke-width="28">
-  <path d="M-40 300h585l135 96h270"/>
-  <path d="M148 365h470l142-92h320"/>
-  <path d="M1155 326h392l128-82h280"/>
-  <path d="M1220 454h390l130 92h220"/>
-</g>
-<g stroke="#244862" stroke-width="3">
-  <path d="M-40 286h585l135 96h270"/>
-  <path d="M148 351h470l142-92h320"/>
-  <path d="M1155 312h392l128-82h280"/>
-</g>
-
-<!-- foreground towers -->
-<g id="foreground" fill="#040a12" stroke="#10283e" stroke-width="2">
-  <path d="M0 1080V842h170v238z"/>
-  <path d="M214 1080V914h164v166z"/>
-  <path d="M430 1080V862h186v218z"/>
-  <path d="M684 1080V936h156v144z"/>
-  <path d="M904 1080V850h194v230z"/>
-  <path d="M1160 1080V910h166v170z"/>
-  <path d="M1392 1080V846h184v234z"/>
-  <path d="M1638 1080V918h182v162z"/>
-  <path d="M1840 1080V868h80v212z"/>
-</g>
-
-<!-- cyan / red architectural lights -->
-<g fill="#45c6eb" filter="url(#glowBlue)" opacity=".48">
-  <rect x="92" y="520" width="4" height="34" rx="2"/>
-  <rect x="342" y="610" width="4" height="31" rx="2"/>
-  <rect x="568" y="486" width="4" height="36" rx="2"/>
-  <rect x="818" y="575" width="4" height="30" rx="2"/>
-  <rect x="1098" y="512" width="4" height="36" rx="2"/>
-  <rect x="1354" y="598" width="4" height="31" rx="2"/>
-  <rect x="1594" y="500" width="4" height="36" rx="2"/>
-  <rect x="1810" y="574" width="4" height="30" rx="2"/>
-  <rect x="272" y="882" width="4" height="30" rx="2"/>
-  <rect x="742" y="960" width="4" height="28" rx="2"/>
-  <rect x="1230" y="874" width="4" height="32" rx="2"/>
-  <rect x="1718" y="956" width="4" height="28" rx="2"/>
-</g>
-<g fill="#ff3159" filter="url(#glowRed)" opacity=".82">
-  <rect x="118" y="442" width="6" height="21" rx="2"/>
-  <rect x="468" y="430" width="6" height="19" rx="2"/>
-  <rect x="1036" y="372" width="6" height="22" rx="2"/>
-  <rect x="1642" y="404" width="6" height="23" rx="2"/>
-  <rect x="350" y="806" width="5" height="22" rx="2"/>
-  <rect x="880" y="900" width="5" height="22" rx="2"/>
-  <rect x="1458" y="804" width="5" height="24" rx="2"/>
-  <rect x="1812" y="920" width="5" height="23" rx="2"/>
-</g>
-
-<!-- signage -->
-<g opacity=".45">
-  <rect x="528" y="720" width="92" height="26" rx="4" fill="#061b2a" stroke="#2d6584"/>
-  <path d="M544 733h58" stroke="#52d6ff" stroke-width="2" filter="url(#glowBlue)"/>
-  <rect x="1308" y="744" width="105" height="28" rx="4" fill="#160c18" stroke="#6f2945"/>
-  <path d="M1326 758h68" stroke="#ff3159" stroke-width="2" filter="url(#glowRed)"/>
-</g>
-
-<!-- distant light bridge -->
-<path d="M968 266L1558 102" stroke="#8dc9ff" stroke-width="3" opacity=".42" filter="url(#glowBlue)"/>
-<path d="M1050 284L1664 118" stroke="#365c80" stroke-width="1.5" opacity=".28"/>
-
-<!-- lower atmosphere -->
-<rect y="748" width="1920" height="332" fill="#020711" opacity=".12"/>
-<rect y="980" width="1920" height="100" fill="#02050a" opacity=".18"/>
+<rect width="1920" height="1080" fill="url(#sky)"/><rect width="1920" height="1080" fill="url(#glassGrid)"/><ellipse cx="960" cy="590" rx="780" ry="360" fill="url(#mist)" opacity=".58"/>
+<g id="lab-far" opacity=".48" fill="#a9bdc9" stroke="#8fa7b5" stroke-width="3"><path d="M70 1080V260h210v820z"/><path d="M315 1080V390h165v690z"/><path d="M520 1080V210h225v870z"/><path d="M810 1080V330h160v750z"/><path d="M1020 1080V170h220v910z"/><path d="M1280 1080V365h175v715z"/><path d="M1510 1080V240h245v840z"/><path d="M1780 1080V420h140v660z"/></g>
+<g opacity=".48" stroke="#7898aa" stroke-width="7" fill="none"><path d="M0 308h500v52H0M670 268h440v48H670M1260 332h660v52h-660"/><path d="M180 510h580v42H180M935 492h620v44H935"/></g>
+<g id="lab-atrium" fill="url(#panel)" stroke="#8fa4b2" stroke-width="3"><path d="M0 470h290v44H0z"/><path d="M118 514h44v566h-44z"/><path d="M420 322h300v48H420z"/><path d="M468 370h44v710h-44z"/><path d="M650 370h44v710h-44z"/><path d="M1060 430h410v50h-410z"/><path d="M1120 480h48v600h-48z"/><path d="M1408 480h48v600h-48z"/><path d="M1600 300h320v52h-320z"/><path d="M1660 352h48v728h-48z"/></g>
+<g fill="#293844" opacity=".85"><path d="M0 500h290v20H0z"/><path d="M420 352h300v20H420z"/><path d="M1060 460h410v22h-410z"/><path d="M1600 330h320v22h-320z"/></g>
+<g id="lab-glass" fill="url(#glass)" stroke="#79a4b8" stroke-width="2"><rect x="180" y="580" width="260" height="310" rx="5"/><rect x="760" y="560" width="230" height="340" rx="5"/><rect x="1200" y="610" width="270" height="280" rx="5"/><rect x="1515" y="560" width="240" height="330" rx="5"/></g>
+<g stroke="#839cac" stroke-width="4" opacity=".8"><path d="M310 580v310M875 560v340M1335 610v280M1635 560v330"/></g>
+<g id="lab-pods"><g fill="#b8edfa" fill-opacity=".34" stroke="#7aa4b5" stroke-width="3"><rect x="555" y="530" width="118" height="360" rx="46"/><rect x="895" y="630" width="92" height="260" rx="36"/><rect x="1470" y="690" width="80" height="200" rx="30"/></g><g fill="#263744"><rect x="548" y="530" width="132" height="22" rx="11"/><rect x="548" y="868" width="132" height="22" rx="11"/><rect x="888" y="630" width="106" height="20" rx="10"/><rect x="888" y="870" width="106" height="20" rx="10"/></g><g fill="#00e5ff" filter="url(#cyanGlow)"><rect x="582" y="536" width="64" height="5" rx="2"/><rect x="915" y="636" width="52" height="4" rx="2"/></g></g>
+<g id="lab-plants" fill="#4c7857" opacity=".78"><circle cx="606" cy="727" r="30"/><circle cx="578" cy="747" r="22"/><circle cx="634" cy="752" r="24"/><circle cx="932" cy="766" r="26"/><circle cx="910" cy="787" r="19"/><circle cx="954" cy="790" r="20"/><circle cx="1505" cy="790" r="21"/><circle cx="1487" cy="806" r="16"/><circle cx="1523" cy="808" r="17"/></g>
+<g id="lab-walkways" fill="none" stroke="#607987" stroke-width="5"><path d="M95 650h330M95 650v-55M425 650v-55M1170 560h340M1170 560v-60M1510 560v-60"/><path d="M90 595h340M1165 500h350"/></g>
+<g id="lab-emblem" transform="translate(1560 250)" opacity=".58"><circle r="180" fill="none" stroke="#86b6cd" stroke-width="6"/><circle r="138" fill="none" stroke="#b3d3e1" stroke-width="2"/><circle r="108" fill="#dce8ee" stroke="#93aab5" stroke-width="3"/><path d="M0-58 52 38h-104z" fill="none" stroke="#748b98" stroke-width="14"/><path d="M0-25 23 18h-46z" fill="#8fa3ad"/><path d="M0-180v34M156-90l-30 18M156 90l-30-18M0 180v-34M-156 90l30-18M-156-90l30 18" stroke="#00dff6" stroke-width="6" filter="url(#cyanGlow)"/></g>
+<g fill="#00dff6" filter="url(#cyanGlow)" opacity=".78"><rect x="158" y="535" width="6" height="72" rx="3"/><rect x="505" y="415" width="6" height="72" rx="3"/><rect x="1158" y="520" width="6" height="76" rx="3"/><rect x="1698" y="390" width="6" height="80" rx="3"/><rect x="330" y="842" width="74" height="5" rx="2"/><rect x="1040" y="825" width="80" height="5" rx="2"/><rect x="1600" y="870" width="72" height="5" rx="2"/></g>
+<g id="lab-foreground" opacity=".58"><path d="M0 930h1920v150H0z" fill="#8196a3"/><path d="M0 954h1920v126H0z" fill="#aabac4"/><path d="M0 994h1920v86H0z" fill="#6c8290" opacity=".48"/><path d="M0 930h1920" stroke="#e8f8ff" stroke-width="5"/></g>
 </svg>

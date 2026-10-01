@@ -1,13 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="220" height="160" viewBox="0 0 220 160">
-<defs>
-  <linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#454c58"/><stop offset=".48" stop-color="#282e38"/><stop offset="1" stop-color="#11161e"/></linearGradient>
-  <filter id="g" x="-30%" y="-40%" width="160%" height="180%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-</defs>
-<rect x="7" y="8" width="206" height="134" rx="7" fill="url(#m)" stroke="#778291" stroke-width="3"/>
-<rect x="20" y="23" width="180" height="72" rx="3" fill="#222833" stroke="#3c4552" stroke-width="2"/>
-<g stroke="#566171" stroke-width="2" opacity=".75"><path d="M27 28l42 62M69 28L27 90M151 28l42 62M193 28l-42 62"/></g>
-<rect x="18" y="103" width="184" height="27" rx="2" fill="#401421" stroke="#a62943" stroke-width="2"/>
-<rect x="14" y="132" width="192" height="10" rx="2" fill="#ff3159" filter="url(#g)"/>
-<path d="M110 43l-17 20h34zM110 70L93 90h34z" fill="#ff3159" filter="url(#g)"/>
-<circle cx="35" cy="116" r="4" fill="#ff6a83" filter="url(#g)"/><circle cx="185" cy="116" r="4" fill="#ff6a83" filter="url(#g)"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="160" viewBox="0 0 180 160"><defs><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f8fbfd"/><stop offset="1" stop-color="#b9c8d1"/></linearGradient><filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M58 0h64v28H58z" fill="#202c35" stroke="#677a86" stroke-width="2"/><path d="M18 28h144l12 12v82l-12 12H18L6 122V40z" fill="url(#w)" stroke="#748893" stroke-width="3"/><rect x="18" y="47" width="144" height="66" rx="4" fill="#18232c"/><path d="M52 67h76" stroke="#ff3159" stroke-width="6" filter="url(#g)"/><path d="M18 134h144l-12 24-10-24-10 24-10-24-10 24-10-24-10 24-10-24-10 24-10-24-10 24-10-24-10 24-10-24-10 24z" fill="#ff3159" stroke="#ff9bad" stroke-width="1.5"/></svg>
