@@ -314,3 +314,10 @@ test('RUN shows persistence failures instead of silently losing progress',()=>{
   assert.match(scene,/await this\.refreshLevelStatus\(\)/);
   assert.match(scene,/PROGRESSO ONLINE INDISPONÍVEL/);
 });
+
+
+test('level status unlocks exactly the level after the recorded best',()=>{
+  const service=read('run-server.js');
+  assert.match(service,/const completedLevel=Math\.max\(0,Math\.min\(RUN_LEVEL_COUNT,Number\(best\.rows\[0\]\?\.best_level\)\|\|0\)\);/);
+  assert.match(service,/const unlockedLevel=completedLevel>=RUN_LEVEL_COUNT\?RUN_LEVEL_COUNT:completedLevel\+1;/);
+});
