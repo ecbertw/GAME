@@ -7,21 +7,43 @@
   <meta name="description" content="EIXO RUN — 100 níveis hardcore no Neon Void.">
   <title>EIXO — RUN</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg?v=20260927-v312">
-  <link rel="stylesheet" href="/games/run/run.css?v=20261001-bgdetail2">
+  <link rel="stylesheet" href="/games/run/run.css?v=20261001-runfix3">
 </head>
 <body>
   <header class="run-site-nav">
-    <a class="run-site-brand" href="/" aria-label="EIXO">
-      <img src="/eixo-logo.svg?v=20260927-v312" width="116" height="36" alt="EIXO">
-    </a>
-    <nav aria-label="EIXO">
-      <a href="/">Início</a>
-      <a href="/passport">Passaporte</a>
-      <a href="/rankings">Rankings</a>
-      <a href="/rooms">Salas</a>
-      <a href="/vip">VIP</a>
-    </nav>
-    <span class="run-site-pill">RUN</span>
+    <div class="run-site-left">
+      <a class="run-site-brand" href="/" aria-label="EIXO">
+        <img src="/eixo-logo.svg?v=20260927-v312" width="108" height="36" alt="EIXO">
+      </a>
+      <nav aria-label="Navegação principal">
+        <a href="/">Início</a>
+        <a href="/passport">Passaporte</a>
+        <a href="/rankings">Rankings</a>
+        <a href="/rooms">Salas</a>
+        <a href="/vip">VIP</a>
+      </nav>
+      <div class="run-sound-area">
+        <button id="runSoundButton" class="run-sound-button" type="button" aria-haspopup="true" aria-expanded="false">♪ SOM <span>⌄</span></button>
+        <div id="runSoundMenu" class="run-top-menu run-sound-menu">
+          <label>Som do Site <input id="runSiteVolume" type="range" min="0" max="1" step="0.01"></label>
+          <label>Som do Jogo <input id="runGameVolume" type="range" min="0" max="1" step="0.01"></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="run-site-right">
+      <div class="run-player-area">
+        <button id="runPlayerButton" class="run-player-button" type="button" aria-haspopup="true" aria-expanded="false"><span id="runPlayerName">PLAYER</span><span class="run-chevron">⌄</span></button>
+        <div id="runPlayerMenu" class="run-top-menu run-player-menu">
+          <a href="/passport">Passaporte</a>
+          <a href="/">Definições</a>
+        </div>
+      </div>
+      <a class="run-vip-top-button" href="/vip">VIP</a>
+      <div class="run-country-area">
+        <button id="runCountryButton" class="run-country-button" type="button"><span id="runCountryFlag">🇵🇹</span><span id="runCountryName">PORTUGAL</span><span class="run-chevron">⌄</span></button>
+      </div>
+    </div>
   </header>
 
   <main class="run-stage">
@@ -100,7 +122,8 @@ LOADING...</pre>
     <noscript>É necessário JavaScript para jogar EIXO RUN.</noscript>
   </main>
 
+  <script src="/games/run/run-shell.js?v=20261001-runfix3"></script>
   <script src="/vendor/phaser.min.js"></script>
-  <script type="module" src="/games/run/src/main.js?v=20261001-spikeflush1"></script>
+  <script type="module" src="/games/run/src/main.js?v=20261001-runfix3"></script>
 </body>
 </html>
