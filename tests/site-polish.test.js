@@ -15,11 +15,13 @@ test('homepage and VIP visuals do not use old runner or old winter screenshot',(
  assert.match(css,/\.rx-hero-core/);assert.match(css,/\.rx-game-card/);
  assert.doesNotMatch(css,/snow\.webp|runner\.webp/);
 });
-test('Passport retains original JUMP character renderer and real progress plus badges',()=>{
- const js=read('redesign.js');
- for(const id of ['rxLevel','rxExpText','rxExpBar','rxCharacterSlot','rxCharacterFallback'])assert.ok(js.includes(id),id);
+test('Passport uses EIXO identity seal without the retired JUMP character editor',()=>{
+ const js=read('redesign.js'),css=read('passport-v4.css');
+ for(const id of ['rxLevel','rxExpText','rxExpBar'])assert.ok(js.includes(id),id);
  for(const badge of ['first-100','skybound','explorer'])assert.ok(js.includes(badge),badge);
- assert.match(js,/await window\.EixoJumpExactArt\.ready/);
+ assert.match(js,/rx-passport-seal-panel/);
+ assert.match(css,/\.rx-passport-seal/);
+ assert.doesNotMatch(js,/rxCharacterSlot|rxCharacterFallback|EixoJumpExactArt|Editar personagem|data-rx-action="character"/);
  assert.match(js,/rx-badge-symbol/);
  assert.match(js,/rx-level-disc/);
 });
