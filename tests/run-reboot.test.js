@@ -90,7 +90,7 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-platformfix2/);
+  assert.match(html,/20261001-centred3/);
 });
 
 
@@ -124,13 +124,13 @@ test('spike artwork is baseline-aligned and ceiling platforms are mirrored corre
 });
 
 
-test('moving platforms use dynamic immovable physics and the runner idles while riding',()=>{
+test('moving platforms use stable sinusoidal dynamic physics and the runner idles while riding',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   assert.match(scene,/const visualOffsetY=3/);
-  assert.match(scene,/this\.physics\.add\.existing\(r\);/);
   assert.match(scene,/r\.body\.setAllowGravity\(false\)/);
   assert.match(scene,/r\.body\.setImmovable\(true\)/);
-  assert.match(scene,/o\.body\.setVelocity\(vx,vy\)/);
+  assert.match(scene,/const idealSpeed=cosine\*/);
+  assert.match(scene,/Phaser\.Math\.Clamp\(idealSpeed\+errX\*5,-300,300\)/);
   assert.match(scene,/this\.ridingPlatform=riding/);
   assert.match(scene,/grounded=b\.blocked\.down\|\|b\.touching\.down\|\|!!this\.ridingPlatform/);
   assert.match(scene,/inputMoving/);
@@ -149,12 +149,25 @@ test('new timed hazards are validated and rendered',()=>{
 });
 
 
-test('RUN start overlay uses the real DOM viewport and black runner has no aura',()=>{
+test('RUN start overlay is DOM-centered, background is CSS-owned and runner is solid black',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/getElementById\('run-root'\)/);
-  assert.match(scene,/getBoundingClientRect/);
-  assert.match(scene,/this\.scale\.resize\(pxW,pxH\)/);
+  const html=read('games/run/index.html');
+  const css=read('games/run/run.css');
+  const main=read('games/run/src/main.js');
+  assert.match(html,/id="run-start-overlay"/);
+  assert.match(html,/id="run-start-ranking"/);
+  assert.match(css,/display:flex;align-items:center;justify-content:center/);
+  assert.match(css,/background:[\s\S]*background\.svg/);
+  assert.match(main,/transparent: true/);
   assert.match(scene,/const BLACK=0x000000/);
-  assert.doesNotMatch(scene,/c\.glowGraphics=glow/);
-  assert.doesNotMatch(scene,/soft silhouette glow/);
+  assert.doesNotMatch(scene,/glowGraphics/);
+});
+
+
+test('DOM start overlay does not use Phaser camera coordinates',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const start=scene.slice(scene.indexOf('  createStartOverlay(){'),scene.indexOf('  queueJump(){'));
+  assert.match(start,/getElementById\('run-start-overlay'\)/);
+  assert.doesNotMatch(start,/this\.add\.rectangle/);
+  assert.doesNotMatch(start,/uiCenterX/);
 });
