@@ -65,7 +65,7 @@ test('hardcore hazards are meaningful from Level 001 onward',()=>{
 
 test('scene destroys the old player before loading another level',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/if\(this\.player\)\{ try\{this\.player\.destroy\(\);\}catch\(_\)\{\}\}/);
+  assert.match(scene,/if\(this\.player\)\s*\{\s*try\s*\{\s*this\.player\.destroy\(\);\s*\}\s*catch\(_\)\s*\{\s*\}\s*\}/);
   assert.match(scene,/this\.player=null/);
   assert.match(scene,/DEATHS  0/);
   assert.doesNotMatch(scene,/this\.player\.setFillStyle\(C\.hazard/);
