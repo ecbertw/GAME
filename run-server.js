@@ -20,6 +20,7 @@ async function initDb(pool){
   await pool.query('CREATE INDEX IF NOT EXISTS run_bests_progress_idx ON run_bests(best_level DESC,best_time_ms ASC,updated_at ASC)');
   await pool.query('CREATE TABLE IF NOT EXISTS run_level_bests(player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,level INTEGER NOT NULL,best_time_ms INTEGER NOT NULL,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(player_id,level))');
   await pool.query('CREATE INDEX IF NOT EXISTS run_level_bests_player_idx ON run_level_bests(player_id,level)');
+  await pool.query("INSERT INTO run_bests(player_id,best_level,best_time_ms,deaths,splits,updated_at) SELECT DISTINCT ON(player_id) player_id,level,best_time_ms,0,'[]'::jsonb,updated_at FROM run_level_bests ORDER BY player_id,level DESC,best_time_ms ASC ON CONFLICT(player_id) DO UPDATE SET best_level=EXCLUDED.best_level,best_time_ms=EXCLUDED.best_time_ms,deaths=0,splits='[]'::jsonb,updated_at=EXCLUDED.updated_at WHERE EXCLUDED.best_level>run_bests.best_level OR (EXCLUDED.best_level=run_bests.best_level AND EXCLUDED.best_time_ms<run_bests.best_time_ms)");
   await pool.query('UPDATE run_bests SET best_level=LEAST(best_level,$1) WHERE best_level>$1',[RUN_LEVEL_COUNT]);
   await pool.query('UPDATE run_attempts SET current_level=LEAST(current_level,$1),completed_level=LEAST(completed_level,$1) WHERE current_level>$1 OR completed_level>$1',[RUN_LEVEL_COUNT]);
 }
@@ -89,8 +90,7 @@ async function start(pool,player,ip,options={}){
 
 async function completeLevel(pool,player,data){
   if(!player||!player.id)throw bad('Login required.',401);
-  const runId=String(data&&data.runId||'');
-  if(!runId)throw bad('RUN attempt required.');
+  const runId=String(data&&data.runId||'').trim();
   const level=cleanLevel(data&&data.level);
   const timeMs=cleanTime(data&&data.timeMs);
 
@@ -98,23 +98,42 @@ async function completeLevel(pool,player,data){
     const client=await pool.connect();
     try{
       await client.query('BEGIN');
-      const q=await client.query('SELECT id,player_id,current_level,completed_level,finished_at,splits FROM run_attempts WHERE id=$1 FOR UPDATE',[runId]);
-      if(!q.rowCount||q.rows[0].player_id!==player.id)throw bad('Invalid RUN attempt.',409);
-      const currentLevel=Number(q.rows[0].current_level)||1;
-      const completedLevel=Number(q.rows[0].completed_level)||0;
-      const isRetry=level===completedLevel&&currentLevel===Math.min(RUN_LEVEL_COUNT,level+1);
-      if(q.rows[0].finished_at&&!isRetry)throw bad('RUN attempt already finished.',409);
-      if(currentLevel!==level&&!isRetry)throw bad('RUN level out of sequence.',409);
 
-      const times=Array.isArray(q.rows[0].splits)?q.rows[0].splits.slice(0,RUN_LEVEL_COUNT):[];
-      const previous=Number(times[level-1]);
-      times[level-1]=Number.isFinite(previous)?Math.min(previous,timeMs):timeMs;
-      const finished=level===RUN_LEVEL_COUNT;
-      const nextLevel=finished?RUN_LEVEL_COUNT:Math.max(currentLevel,level+1);
-      await client.query(
-        'UPDATE run_attempts SET completed_level=GREATEST(completed_level,$1),current_level=$2,client_time_ms=$3,splits=$4::jsonb,finished_at=NULL WHERE id=$5',
-        [level,nextLevel,times[level-1],JSON.stringify(times),runId]
-      );
+      let attemptRow=null;
+      let times=[];
+      if(runId){
+        const q=await client.query('SELECT id,player_id,current_level,completed_level,finished_at,splits FROM run_attempts WHERE id=$1 FOR UPDATE',[runId]);
+        if(q.rowCount&&q.rows[0].player_id===player.id)attemptRow=q.rows[0];
+      }
+
+      const before=await client.query('SELECT best_level,best_time_ms FROM run_bests WHERE player_id=$1 FOR UPDATE',[player.id]);
+      const old=before.rows[0]||null;
+      const bestLevel=Math.max(0,Math.min(RUN_LEVEL_COUNT,Number(old?.best_level)||0));
+      const unlockedLevel=bestLevel>=RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:bestLevel+1;
+
+      let usedAttempt=false;
+      if(attemptRow){
+        const currentLevel=Number(attemptRow.current_level)||1;
+        const completedLevel=Number(attemptRow.completed_level)||0;
+        const isRetry=level===completedLevel&&currentLevel===Math.min(RUN_LEVEL_COUNT,level+1);
+        const sequenceOk=(currentLevel===level||isRetry)&&(!attemptRow.finished_at||isRetry);
+        if(sequenceOk){
+          usedAttempt=true;
+          times=Array.isArray(attemptRow.splits)?attemptRow.splits.slice(0,RUN_LEVEL_COUNT):[];
+          const previous=Number(times[level-1]);
+          times[level-1]=Number.isFinite(previous)?Math.min(previous,timeMs):timeMs;
+          const nextLevel=level===RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:Math.max(currentLevel,level+1);
+          await client.query(
+            'UPDATE run_attempts SET completed_level=GREATEST(completed_level,$1),current_level=$2,client_time_ms=$3,splits=$4::jsonb,finished_at=NULL WHERE id=$5',
+            [level,nextLevel,times[level-1],JSON.stringify(times),attemptRow.id]
+          );
+        }
+      }
+
+      // Recovery path: an authenticated player may replay any completed level
+      // or complete exactly the next unlocked level, even if start/runId was
+      // lost. This never permits skipping ahead.
+      if(!usedAttempt&&level>unlockedLevel)throw bad('RUN level is locked.',409);
 
       const levelBefore=await client.query('SELECT best_time_ms FROM run_level_bests WHERE player_id=$1 AND level=$2 FOR UPDATE',[player.id,level]);
       const oldLevelMs=levelBefore.rowCount?Number(levelBefore.rows[0].best_time_ms):null;
@@ -124,24 +143,27 @@ async function completeLevel(pool,player,data){
         [player.id,level,timeMs]
       );
 
-      const before=await client.query('SELECT best_level,best_time_ms FROM run_bests WHERE player_id=$1 FOR UPDATE',[player.id]);
-      const old=before.rows[0]||null;
-      const isPersonalBest=!old||level>Number(old.best_level||0)||(level===Number(old.best_level||0)&&timeMs<Number(old.best_time_ms));
-
+      const isPersonalBest=!old||level>bestLevel||(level===bestLevel&&timeMs<Number(old.best_time_ms));
       if(isPersonalBest){
         await client.query(
-          'INSERT INTO run_bests(player_id,best_level,best_time_ms,deaths,splits,updated_at) VALUES($1,$2,$3,0,$4::jsonb,NOW()) ON CONFLICT(player_id) DO UPDATE SET best_level=EXCLUDED.best_level,best_time_ms=EXCLUDED.best_time_ms,deaths=0,splits=EXCLUDED.splits,updated_at=NOW()',
+          "INSERT INTO run_bests(player_id,best_level,best_time_ms,deaths,splits,updated_at) VALUES($1,$2,$3,0,$4::jsonb,NOW()) ON CONFLICT(player_id) DO UPDATE SET best_level=EXCLUDED.best_level,best_time_ms=EXCLUDED.best_time_ms,deaths=0,splits=EXCLUDED.splits,updated_at=NOW()",
           [player.id,level,timeMs,JSON.stringify(times)]
         );
       }
 
       await client.query('COMMIT');
       const board=await rankings(pool,player.id,20);
+      const storedLevel=Math.max(bestLevel,level);
+      const nextUnlocked=storedLevel>=RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:storedLevel+1;
       return{
-        ok:true,level,timeMs,finished,isPersonalBest,isLevelPersonalBest,levelPbMs:isLevelPersonalBest?timeMs:oldLevelMs,
+        ok:true,level,timeMs,finished:level===RUN_LEVEL_COUNT,
+        isPersonalBest,isLevelPersonalBest,
+        levelPbMs:isLevelPersonalBest?timeMs:oldLevelMs,
         rank:board.me?board.me.rank:null,
         pbLevel:board.me?board.me.level:null,
-        pbMs:board.me?board.me.timeMs:null
+        pbMs:board.me?board.me.timeMs:null,
+        unlockedLevel:nextUnlocked,
+        recoveredAttempt:!usedAttempt
       };
     }catch(e){
       try{await client.query('ROLLBACK')}catch(_){}
@@ -149,26 +171,42 @@ async function completeLevel(pool,player,data){
     }finally{client.release()}
   }
 
-  const attempt=memoryAttempts.get(runId);
-  if(!attempt||attempt.playerId!==player.id)throw bad('Invalid RUN attempt.',409);
-  const isRetry=level===attempt.completedLevel&&attempt.currentLevel===Math.min(RUN_LEVEL_COUNT,level+1);
-  if(attempt.currentLevel!==level&&!isRetry)throw bad('RUN level out of sequence.',409);
-  const previous=Number(attempt.times[level-1]);
-  attempt.times[level-1]=Number.isFinite(previous)?Math.min(previous,timeMs):timeMs;
-  attempt.completedLevel=Math.max(attempt.completedLevel,level);
-  attempt.currentLevel=level===RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:Math.max(attempt.currentLevel,level+1);
-  attempt.finished=false;
+  const old=memoryBests.get(player.id);
+  const bestLevel=Math.max(0,Math.min(RUN_LEVEL_COUNT,Number(old?.level)||0));
+  const unlockedLevel=bestLevel>=RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:bestLevel+1;
+  let attempt=runId?memoryAttempts.get(runId):null;
+  let usedAttempt=false;
+
+  if(attempt&&attempt.playerId===player.id){
+    const isRetry=level===attempt.completedLevel&&attempt.currentLevel===Math.min(RUN_LEVEL_COUNT,level+1);
+    if(attempt.currentLevel===level||isRetry){
+      usedAttempt=true;
+      const previous=Number(attempt.times[level-1]);
+      attempt.times[level-1]=Number.isFinite(previous)?Math.min(previous,timeMs):timeMs;
+      attempt.completedLevel=Math.max(attempt.completedLevel,level);
+      attempt.currentLevel=level===RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:Math.max(attempt.currentLevel,level+1);
+      attempt.finished=false;
+    }
+  }
+  if(!usedAttempt&&level>unlockedLevel)throw bad('RUN level is locked.',409);
 
   const levelKey=player.id+':'+level;
   const oldLevelMs=Number(memoryLevelBests.get(levelKey));
   const isLevelPersonalBest=!Number.isFinite(oldLevelMs)||timeMs<oldLevelMs;
   if(isLevelPersonalBest)memoryLevelBests.set(levelKey,timeMs);
 
-  const old=memoryBests.get(player.id);
-  const isPersonalBest=!old||level>old.level||(level===old.level&&timeMs<old.timeMs);
+  const isPersonalBest=!old||level>bestLevel||(level===bestLevel&&timeMs<old.timeMs);
   if(isPersonalBest)memoryBests.set(player.id,{playerId:player.id,name:player.name,country:player.country,level,timeMs,updatedAt:Date.now()});
   const board=await rankings(null,player.id,20);
-  return{ok:true,level,timeMs,finished:level===RUN_LEVEL_COUNT,isPersonalBest,isLevelPersonalBest,levelPbMs:isLevelPersonalBest?timeMs:oldLevelMs,rank:board.me?.rank||null,pbLevel:board.me?.level||null,pbMs:board.me?.timeMs||null};
+  const storedLevel=Math.max(bestLevel,level);
+  return{
+    ok:true,level,timeMs,finished:level===RUN_LEVEL_COUNT,
+    isPersonalBest,isLevelPersonalBest,
+    levelPbMs:isLevelPersonalBest?timeMs:oldLevelMs,
+    rank:board.me?.rank||null,pbLevel:board.me?.level||null,pbMs:board.me?.timeMs||null,
+    unlockedLevel:storedLevel>=RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:storedLevel+1,
+    recoveredAttempt:!usedAttempt
+  };
 }
 
 async function levelStatus(pool,playerId){
@@ -198,6 +236,9 @@ async function levelStatus(pool,playerId){
 }
 
 async function rankings(pool,playerId,limitRaw){
+  if(pool){
+    await pool.query("INSERT INTO run_bests(player_id,best_level,best_time_ms,deaths,splits,updated_at) SELECT DISTINCT ON(player_id) player_id,level,best_time_ms,0,'[]'::jsonb,updated_at FROM run_level_bests ORDER BY player_id,level DESC,best_time_ms ASC ON CONFLICT(player_id) DO UPDATE SET best_level=EXCLUDED.best_level,best_time_ms=EXCLUDED.best_time_ms,deaths=0,splits='[]'::jsonb,updated_at=EXCLUDED.updated_at WHERE EXCLUDED.best_level>run_bests.best_level OR (EXCLUDED.best_level=run_bests.best_level AND EXCLUDED.best_time_ms<run_bests.best_time_ms)");
+  }
   const limit=Math.max(1,Math.min(50,Math.floor(Number(limitRaw)||20)));
   if(pool){
     const q=await pool.query('SELECT rb.player_id AS "playerId",p.name,p.country,rb.best_level AS level,rb.best_time_ms AS "timeMs",rb.updated_at AS "updatedAt",ROW_NUMBER() OVER (ORDER BY rb.best_level DESC,rb.best_time_ms ASC,rb.updated_at ASC,rb.player_id ASC) AS rank FROM run_bests rb JOIN players p ON p.id=rb.player_id WHERE rb.best_level>0 ORDER BY rb.best_level DESC,rb.best_time_ms ASC,rb.updated_at ASC,rb.player_id ASC');
