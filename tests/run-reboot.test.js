@@ -235,7 +235,8 @@ test('level selector unlocks completed levels and preserves per-level PBs',()=>{
 
 test('replaying an older RUN level does not replace highest overall progress',()=>{
   const service=read('run-server.js');
-  assert.match(service,/level>Number\(old\.best_level\|\|0\)\|\|\(level===Number\(old\.best_level\|\|0\)&&timeMs<Number\(old\.best_time_ms\)\)/);
+  assert.match(service,/const bestLevel=Math\.max\(0,Math\.min\(RUN_LEVEL_COUNT,Number\(old\?\.best_level\)\|\|0\)\)/);
+  assert.match(service,/const isPersonalBest=!old\|\|level>bestLevel\|\|\(level===bestLevel&&timeMs<Number\(old\.best_time_ms\)\)/);
   assert.match(service,/isLevelPersonalBest/);
   assert.match(service,/best_level DESC,rb\.best_time_ms ASC/);
 });
