@@ -63,7 +63,7 @@ test('NEON VOID visual layer is edge-to-edge and keeps physics separate from the
   const main=read('games/run/src/main.js');
   const css=read('games/run/run.css');
   const html=read('games/run/index.html');
-  assert.match(main,/Phaser\.Scale\.ENVELOP/);
+  assert.match(main,/Phaser\.Scale\.RESIZE/);
   assert.match(css,/width:100vw/);
   assert.match(css,/height:100vh/);
   assert.doesNotMatch(html,/run-header/);
@@ -72,5 +72,22 @@ test('NEON VOID visual layer is edge-to-edge and keeps physics separate from the
   assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
   assert.match(scene,/movingPlatforms/);
   assert.match(scene,/NEON VOID/);
-  assert.match(scene,/platformGlow/);
+  assert.match(scene,/nv-platform/);
+});
+
+
+test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const html=read('games/run/index.html');
+  for(const asset of ['background.svg','platform.svg','moving-platform.svg','spikes.svg','saw.svg','laser.svg','crusher.svg','exit.svg','stopwatch.svg','skull.svg']){
+    assert.ok(fs.existsSync(path.join(ROOT,'games/run/assets/neon-void',asset)),asset+' missing');
+  }
+  assert.match(scene,/this\.load\.svg\('nv-bg'/);
+  assert.match(scene,/this\.load\.svg\('nv-platform'/);
+  assert.match(scene,/this\.add\.image\(x,y,'nv-saw'\)/);
+  assert.match(scene,/this\.add\.image\(x,y,'nv-crusher'\)/);
+  assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
+  assert.doesNotMatch(scene,/speed streaks/);
+  assert.doesNotMatch(scene,/const tail=18\+speed/);
+  assert.match(html,/neonvoid-svg2/);
 });
