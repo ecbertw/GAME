@@ -478,9 +478,9 @@ function captureNative(selector,callback){
 function init(){
  const main=document.querySelector('.site-shell main');frame=document.querySelector('.game-frame');if(!main||!frame)return;
  const switcher=document.createElement('nav');switcher.id='eixoGameSwitcher';switcher.className='eixo-game-switcher';switcher.setAttribute('aria-label','EIXO games');
- switcher.innerHTML='<button type="button" data-game="pulse" class="active">PULSE</button><button type="button" data-game="jump">JUMP</button><button type="button" data-game="eat">EAT <span>SOON</span></button>';
+ switcher.innerHTML='<button type="button" data-game="pulse" class="active">PULSE</button><button type="button" data-game="run">RUN</button><button type="button" data-game="eat">EAT <span>SOON</span></button>';
  main.insertBefore(switcher,$('gameIntro'));
- switcher.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>switchGame(b.dataset.game));
+ switcher.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>{if(b.dataset.game==='run'){location.href='/run';return;}switchGame(b.dataset.game);});
  const root=document.createElement('div');root.id='jumpRoot';root.className='jump-root hidden';
  root.innerHTML='<canvas id="jumpCanvas" width="1920" height="1080" aria-label="JUMP online platformer"></canvas><canvas id="jump3dCanvas" width="960" height="540" aria-hidden="true"></canvas>'+
  '<div class="jump-hud"><div><small>'+txt('height')+'</small><strong id="jumpHeight">000</strong></div><div id="jumpWorld">ASTRAL · ONLINE</div></div>'+
