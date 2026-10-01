@@ -64,9 +64,10 @@ test('NEON VOID visual layer is edge-to-edge and keeps physics separate from the
   const css=read('games/run/run.css');
   const html=read('games/run/index.html');
   assert.match(main,/Phaser\.Scale\.RESIZE/);
-  assert.match(css,/width:100vw/);
-  assert.match(css,/height:100vh/);
-  assert.doesNotMatch(html,/run-header/);
+  assert.match(css,/\.run-stage,#run-root\{position:fixed;left:0;right:0;top:52px;bottom:0/);
+  assert.match(html,/class="run-site-nav"/);
+  assert.match(html,/href="\/pulse">PULSE/);
+  assert.match(html,/href="\/run" aria-current="page">RUN/);
   assert.match(scene,/createRunnerVisual/);
   assert.match(scene,/updateRunnerVisual/);
   assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
@@ -90,4 +91,23 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
   assert.match(html,/neonvoid-svg2/);
+});
+
+
+test('retired RUN lab routes and old public JUMP route no longer expose separate games',()=>{
+  const server=read('server.js');
+  assert.match(server,/\['\/run-lab','\/run-admin','\/run-lab\/admin','\/jump'\]/);
+  assert.match(server,/Location:'\/run'/);
+  assert.equal(fs.existsSync(path.join(ROOT,'games/run/admin.html')),false);
+  assert.equal(fs.existsSync(path.join(ROOT,'games/run/src/admin-main.js')),false);
+});
+
+test('public EIXO presentation promotes RUN and PULSE instead of old JUMP',()=>{
+  const home=read('redesign.js');
+  const jumpShell=read('jump.js');
+  assert.match(home,/<h2>RUN<\/h2>/);
+  assert.match(home,/href="\/run"/);
+  assert.match(home,/RUN \/ '+t\('NÍVEL','LEVEL'\)/);
+  assert.match(jumpShell,/data-game="run">RUN/);
+  assert.doesNotMatch(jumpShell,/data-game="jump">JUMP/);
 });
