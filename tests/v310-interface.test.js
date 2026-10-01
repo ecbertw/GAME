@@ -15,11 +15,10 @@ test('modern shell is active before legacy markup can paint',()=>{
  assert.match(js,/classList\.remove\('eixo-booting'\)/);
 });
 
-test('passport waits for the current renderer instead of showing the old runner',()=>{
+test('passport uses the EIXO identity seal instead of the retired JUMP runner',()=>{
  const js=read('redesign.js');
- assert.match(js,/rx-character-loading/);
- assert.doesNotMatch(js,/rx-original-runner" id="rxCharacterFallback/);
- assert.match(js,/await window\.EixoJumpExactArt\.ready/);
+ assert.match(js,/rx-passport-seal-panel/);
+ assert.doesNotMatch(js,/rx-character-loading|rxCharacterFallback|EixoJumpExactArt|data-rx-action="character"/);
 });
 
 test('contemporary interface covers every requested surface',()=>{
