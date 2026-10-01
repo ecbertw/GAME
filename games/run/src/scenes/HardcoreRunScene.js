@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-progressfix2';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-progressfix2';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-spikeflush1';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-spikeflush1';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 const RUN_LEVEL_BESTS_KEY='eixo.run.level-bests.v1';
@@ -90,7 +90,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.load.svg('nv-bg',base+'background.svg');
     this.load.svg('nv-platform',base+'platform.svg');
     this.load.svg('nv-moving',base+'moving-platform.svg');
-    this.load.svg('nv-spikes',base+'spikes.svg');
+    this.load.svg('nv-spikes',base+'spikes.svg?v=20261001-spikeflush1');
     this.load.svg('nv-saw',base+'saw.svg');
     this.load.svg('nv-laser',base+'laser.svg');
     this.load.svg('nv-swing-laser',base+'swing-laser.svg');
@@ -526,12 +526,11 @@ export class HardcoreRunScene extends Phaser.Scene {
     sensor.__isHazard=true;
     this.physics.add.existing(sensor,true);
 
-    // After flipY the spike baseline sits 6/44 of the texture height from
-    // the visual top. Pull the texture up by that amount so the baseline
-    // touches the underside of the ceiling and the teeth point downward.
+    // The SVG baseline is physically at the bottom edge of its viewBox.
+    // With flipY + origin top, y=bottom means the spike base is flush with
+    // the underside of the ceiling with no visual gap.
     const visualH=38;
-    const baselineOffset=visualH*(6/44);
-    const visual=this.add.image(x,bottom-baselineOffset,'nv-spikes')
+    const visual=this.add.image(x,bottom,'nv-spikes')
       .setOrigin(.5,0)
       .setFlipY(true)
       .setDepth(12)
@@ -556,11 +555,10 @@ export class HardcoreRunScene extends Phaser.Scene {
     sensor.__isHazard=true;
     this.physics.add.existing(sensor,true);
 
-    // The SVG has 6 transparent units below its baseline. Move the image
-    // down by the scaled margin so the visible base sits exactly on top.
+    // The spike baseline is exactly the bottom edge of the SVG. The origin
+    // is therefore pinned directly to the platform/floor surface.
     const visualH=38;
-    const baselineOffset=visualH*(6/44);
-    const visual=this.add.image(x,top+baselineOffset,'nv-spikes')
+    const visual=this.add.image(x,top,'nv-spikes')
       .setOrigin(.5,1)
       .setDepth(12)
       .setDisplaySize(width,visualH);
