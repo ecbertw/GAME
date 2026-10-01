@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-eixosite3';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-eixosite3';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-progressfix2';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-progressfix2';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 const RUN_LEVEL_BESTS_KEY='eixo.run.level-bests.v1';
@@ -181,6 +181,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.startRankingEl=document.getElementById('run-start-ranking');
     this.startPromptEl=document.getElementById('run-start-prompt');
     this.startSelectedEl=document.getElementById('run-start-selected');
+    this.startStatusEl=document.getElementById('run-start-status');
 
     if(this.startRankingEl)this.startRankingEl.textContent='WORLD TOP\nLOADING...';
     if(this.startPromptEl)this.startPromptEl.textContent='SPACE / ENTER / CLICK  —  START';
@@ -336,7 +337,8 @@ export class HardcoreRunScene extends Phaser.Scene {
   async requestStart(){
     if(this.starting||this.runActive||this.finished)return;
     this.starting=true;
-    if(this.startPromptEl)this.startPromptEl.textContent='STARTING...';
+    if(this.startPromptEl)this.startPromptEl.textContent='A INICIAR...';
+    if(this.startStatusEl)this.startStatusEl.textContent='';
 
     const requested=Phaser.Math.Clamp(Math.floor(Number(this.selectedLevel)||1),1,this.maxUnlockedLevel||1);
     let runId=null;
@@ -357,11 +359,14 @@ export class HardcoreRunScene extends Phaser.Scene {
         this.selectedLevel=serverLevel;
         if(serverLevel!==this.levelIndex+1)this.loadLevel(serverLevel-1);
       }else{
+        const data=await res.json().catch(()=>({}));
         this.practice=true;
+        if(this.startStatusEl)this.startStatusEl.textContent=(res.status===401?'INICIA SESSÃO PARA GUARDAR O PROGRESSO':'PROGRESSO ONLINE INDISPONÍVEL · '+String(data.error||res.status));
         if(requested!==this.levelIndex+1)this.loadLevel(requested-1);
       }
     }catch(_){
       this.practice=true;
+      if(this.startStatusEl)this.startStatusEl.textContent='PROGRESSO ONLINE INDISPONÍVEL';
       if(requested!==this.levelIndex+1)this.loadLevel(requested-1);
     }
 
@@ -796,6 +801,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.player.body.enable=false;
 
     let serverResult=null;
+    let saveError='';
     if(this.attemptId){
       try{
         const res=await fetch('/api/run/level',{
@@ -807,8 +813,16 @@ export class HardcoreRunScene extends Phaser.Scene {
           if(Number.isFinite(serverResult.timeMs))levelTimeMs=serverResult.timeMs;
           this.timerText.setText(formatTime(levelTimeMs));
           await this.refreshLeaderboard();
+          await this.refreshLevelStatus();
+        }else{
+          const data=await res.json().catch(()=>({}));
+          saveError=String(data.error||('HTTP '+res.status));
         }
-      }catch(_){}
+      }catch(_){
+        saveError='NETWORK';
+      }
+    }else if(!this.practice){
+      saveError='NO ATTEMPT';
     }
 
     const localResult=saveLevelBest(level,levelTimeMs);
@@ -825,10 +839,13 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.awaitingClearChoice=true;
 
     const isLevelPb=!!(serverResult&&serverResult.isLevelPersonalBest)||localResult.isPersonalBest;
-    const suffix=isLevelPb?'NEW LEVEL PB':'LEVEL CLEAR';
+    const suffix=saveError?'PROGRESSO NÃO GUARDADO · '+saveError:(isLevelPb?'NOVO PB DO NÍVEL':'NÍVEL CONCLUÍDO');
     if(this.clearTitleEl)this.clearTitleEl.textContent='LEVEL '+String(level).padStart(3,'0')+' CLEAR';
     if(this.clearTimeEl)this.clearTimeEl.textContent=formatTime(levelTimeMs);
-    if(this.clearPbEl)this.clearPbEl.textContent=suffix;
+    if(this.clearPbEl){
+      this.clearPbEl.textContent=suffix;
+      this.clearPbEl.classList.toggle('is-error',!!saveError);
+    }
     const next=document.getElementById('run-clear-next');
     if(next)next.textContent=level>=RUN_LEVEL_COUNT?'FINISH RUN':'NEXT LEVEL';
     if(this.clearOverlayEl)this.clearOverlayEl.classList.remove('is-hidden');
