@@ -291,8 +291,9 @@ export class HardcoreRunScene extends Phaser.Scene {
 
     const remoteUnlocked=Math.floor(Number(remote&&remote.unlockedLevel)||1);
     const remoteCompleted=Math.floor(Number(remote&&remote.completedLevel)||0);
-    this.maxUnlockedLevel=Phaser.Math.Clamp(Math.max(localUnlocked,remoteUnlocked),1,RUN_LEVEL_COUNT);
-    this.completedLevel=Phaser.Math.Clamp(Math.max(Math.max(0,localUnlocked-1),remoteCompleted),0,RUN_LEVEL_COUNT);
+    const authenticated=!!(remote&&remote.authenticated);
+    this.maxUnlockedLevel=Phaser.Math.Clamp(authenticated?remoteUnlocked:Math.max(localUnlocked,remoteUnlocked),1,RUN_LEVEL_COUNT);
+    this.completedLevel=Phaser.Math.Clamp(authenticated?remoteCompleted:Math.max(Math.max(0,localUnlocked-1),remoteCompleted),0,RUN_LEVEL_COUNT);
 
     const merged={...localTimes};
     const remoteTimes=remote&&remote.times&&typeof remote.times==='object'?remote.times:{};
