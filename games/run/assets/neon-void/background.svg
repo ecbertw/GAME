@@ -1,104 +1,182 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
 <defs>
   <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#02050a"/>
-    <stop offset=".42" stop-color="#061326"/>
-    <stop offset="1" stop-color="#03070e"/>
+    <stop offset="0" stop-color="#030711"/>
+    <stop offset=".42" stop-color="#07172a"/>
+    <stop offset=".72" stop-color="#07111f"/>
+    <stop offset="1" stop-color="#040811"/>
   </linearGradient>
-  <radialGradient id="planet">
-    <stop offset="0" stop-color="#204f86"/>
-    <stop offset=".62" stop-color="#0d2d59"/>
-    <stop offset="1" stop-color="#06142c"/>
+  <radialGradient id="nebula" cx=".62" cy=".28" r=".62">
+    <stop offset="0" stop-color="#2f4f8d" stop-opacity=".22"/>
+    <stop offset=".45" stop-color="#1f3769" stop-opacity=".08"/>
+    <stop offset="1" stop-color="#07111f" stop-opacity="0"/>
   </radialGradient>
-  <filter id="b" x="-60%" y="-60%" width="220%" height="220%">
-    <feGaussianBlur stdDeviation="8" result="x"/>
-    <feMerge><feMergeNode in="x"/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
-  <filter id="r" x="-60%" y="-60%" width="220%" height="220%">
-    <feGaussianBlur stdDeviation="5" result="x"/>
-    <feMerge><feMergeNode in="x"/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
+  <radialGradient id="planet" cx=".38" cy=".32">
+    <stop offset="0" stop-color="#2a5b96"/>
+    <stop offset=".55" stop-color="#173d73"/>
+    <stop offset="1" stop-color="#07162d"/>
+  </radialGradient>
+  <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#4b7fb0" stop-opacity="0"/>
+    <stop offset=".5" stop-color="#4b7fb0" stop-opacity=".08"/>
+    <stop offset="1" stop-color="#4b7fb0" stop-opacity="0"/>
+  </linearGradient>
   <pattern id="grid" width="96" height="96" patternUnits="userSpaceOnUse">
-    <path d="M96 0H0V96" fill="none" stroke="#163451" stroke-width="1" opacity=".34"/>
+    <path d="M96 0H0V96" fill="none" stroke="#1c3855" stroke-width="1" opacity=".22"/>
   </pattern>
+  <pattern id="windows" width="54" height="38" patternUnits="userSpaceOnUse">
+    <rect x="8" y="10" width="4" height="11" rx="2" fill="#2b6689" opacity=".28"/>
+    <rect x="29" y="5" width="3" height="8" rx="1.5" fill="#386f90" opacity=".20"/>
+  </pattern>
+  <filter id="glowBlue" x="-120%" y="-120%" width="340%" height="340%">
+    <feGaussianBlur stdDeviation="7" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="glowRed" x="-120%" y="-120%" width="340%" height="340%">
+    <feGaussianBlur stdDeviation="5" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="soft" x="-20%" y="-30%" width="140%" height="160%">
+    <feGaussianBlur stdDeviation="18"/>
+  </filter>
 </defs>
 
 <rect width="1920" height="1080" fill="url(#sky)"/>
-<circle cx="1530" cy="300" r="235" fill="url(#planet)" stroke="#2c69a9" stroke-width="3" opacity=".92"/>
-<path d="M1306 303c76-154 245-242 405-206" fill="none" stroke="#6ea2d4" stroke-width="2" opacity=".28"/>
+<rect width="1920" height="1080" fill="url(#nebula)"/>
 <rect width="1920" height="1080" fill="url(#grid)"/>
 
-<!-- Skyline now continues all the way to the bottom of the asset. -->
-<g fill="#030912" stroke="#0f263d" stroke-width="2">
-  <path d="M0 1080V332h90V245h34V1080z"/>
-  <path d="M86 1080V398h130V316h55V1080z"/>
-  <path d="M250 1080V480h76V355h44V1080z"/>
-  <path d="M338 1080V410h88V292h36V1080z"/>
-  <path d="M448 1080V475h130V361h38V1080z"/>
-  <path d="M611 1080V335h72V232h30V1080z"/>
-  <path d="M705 1080V442h116V349h54V1080z"/>
-  <path d="M830 1080V515h110V394h45V1080z"/>
-  <path d="M1000 1080V365h98V258h38V1080z"/>
-  <path d="M1120 1080V468h87V330h49V1080z"/>
-  <path d="M1278 1080V390h92V281h35V1080z"/>
-  <path d="M1428 1080V455h102V340h48V1080z"/>
-  <path d="M1592 1080V380h92V270h36V1080z"/>
-  <path d="M1745 1080V445h115V315h60V1080z"/>
+<!-- distant stars -->
+<g fill="#87b8dd" opacity=".34">
+  <circle cx="98" cy="118" r="1.4"/><circle cx="182" cy="80" r="1"/><circle cx="272" cy="154" r="1.2"/>
+  <circle cx="384" cy="92" r="1"/><circle cx="508" cy="132" r="1.3"/><circle cx="612" cy="70" r="1"/>
+  <circle cx="744" cy="144" r="1.4"/><circle cx="844" cy="88" r="1.1"/><circle cx="963" cy="125" r="1.3"/>
+  <circle cx="1105" cy="76" r="1"/><circle cx="1228" cy="131" r="1.5"/><circle cx="1364" cy="94" r="1"/>
+  <circle cx="1487" cy="148" r="1.2"/><circle cx="1632" cy="84" r="1.1"/><circle cx="1785" cy="128" r="1.4"/>
 </g>
 
-<!-- Lower industrial structure so the playfield never becomes an empty dark strip. -->
-<g fill="none" stroke="#102a42" stroke-width="2" opacity=".78">
-  <path d="M0 720H1920M0 820H1920M0 930H1920M0 1030H1920"/>
-  <path d="M122 700V1080M282 700V1080M512 700V1080M690 700V1080M894 700V1080M1116 700V1080M1328 700V1080M1548 700V1080M1764 700V1080"/>
+<!-- moon / planet -->
+<g opacity=".95">
+  <circle cx="1540" cy="288" r="228" fill="url(#planet)" stroke="#3778bd" stroke-width="3"/>
+  <path d="M1308 298c66-148 226-235 385-210" fill="none" stroke="#8bc4f7" stroke-width="2" opacity=".18"/>
+  <path d="M1298 308c91-83 253-121 406-73" fill="none" stroke="#6b9ac5" stroke-width="1.5" opacity=".14"/>
+  <ellipse cx="1540" cy="288" rx="278" ry="72" fill="none" stroke="#446f9b" stroke-width="2" opacity=".12" transform="rotate(-12 1540 288)"/>
 </g>
 
-<g fill="#071522" stroke="#16344e" stroke-width="2" opacity=".92">
-  <rect x="42" y="760" width="120" height="92"/>
-  <rect x="210" y="842" width="88" height="118"/>
-  <rect x="390" y="735" width="148" height="104"/>
-  <rect x="616" y="825" width="112" height="132"/>
-  <rect x="785" y="748" width="128" height="92"/>
-  <rect x="1018" y="842" width="142" height="116"/>
-  <rect x="1220" y="748" width="108" height="112"/>
-  <rect x="1410" y="822" width="156" height="138"/>
-  <rect x="1652" y="752" width="118" height="102"/>
-  <rect x="1792" y="858" width="94" height="114"/>
+<!-- soft atmospheric layers -->
+<path d="M0 382C360 330 620 405 910 364s540-118 1010-63v265H0z" fill="url(#haze)" opacity=".46"/>
+<ellipse cx="980" cy="620" rx="920" ry="210" fill="#183553" opacity=".05" filter="url(#soft)"/>
+
+<!-- FAR CITY -->
+<g id="far-city" fill="#06111e" stroke="#102a42" stroke-width="1.5" opacity=".82">
+  <path d="M0 1080V430h74V352h40V1080z"/>
+  <path d="M95 1080V515h104V414h43V1080z"/>
+  <path d="M210 1080V456h88V344h35V1080z"/>
+  <path d="M325 1080V540h84V430h48V1080z"/>
+  <path d="M445 1080V402h92V285h31V1080z"/>
+  <path d="M560 1080V505h116V384h44V1080z"/>
+  <path d="M690 1080V438h82V320h36V1080z"/>
+  <path d="M790 1080V526h96V406h44V1080z"/>
+  <path d="M925 1080V470h104V326h38V1080z"/>
+  <path d="M1052 1080V540h96V430h44V1080z"/>
+  <path d="M1180 1080V412h96V298h38V1080z"/>
+  <path d="M1298 1080V505h102V382h48V1080z"/>
+  <path d="M1430 1080V448h86V342h36V1080z"/>
+  <path d="M1548 1080V536h108V396h46V1080z"/>
+  <path d="M1694 1080V420h92V312h42V1080z"/>
+  <path d="M1800 1080V492h120V372h0V1080z"/>
 </g>
 
-<g stroke="#0d2336" stroke-width="20">
-  <path d="M0 235h560l128 95h235"/>
-  <path d="M148 285h490l120-76h300"/>
-  <path d="M1170 260h392l118-74h240"/>
-  <path d="M1230 360h410l118 85h162"/>
-</g>
-<g stroke="#213a50" stroke-width="3">
-  <path d="M0 224h560l128 95h235"/>
-  <path d="M148 274h490l120-76h300"/>
-  <path d="M1170 249h392l118-74h240"/>
+<!-- far windows -->
+<g opacity=".52">
+  <rect x="0" y="430" width="1920" height="650" fill="url(#windows)"/>
 </g>
 
-<g fill="#ff3159" filter="url(#r)">
-  <rect x="118" y="386" width="6" height="20"/>
-  <rect x="466" y="399" width="6" height="18"/>
-  <rect x="1042" y="314" width="6" height="18"/>
-  <rect x="1642" y="338" width="6" height="22"/>
-  <rect x="268" y="792" width="5" height="24"/>
-  <rect x="706" y="884" width="5" height="22"/>
-  <rect x="1288" y="792" width="5" height="26"/>
-  <rect x="1736" y="902" width="5" height="24"/>
+<!-- MID CITY / machinery -->
+<g id="mid-city" fill="#071521" stroke="#173650" stroke-width="2">
+  <path d="M0 1080V650h138V575h90v505z"/>
+  <path d="M182 1080V704h126V596h72v484z"/>
+  <path d="M374 1080V625h146V542h74v538z"/>
+  <path d="M602 1080V682h120V578h72v502z"/>
+  <path d="M804 1080V640h132V548h70v532z"/>
+  <path d="M1018 1080V700h128V610h78v470z"/>
+  <path d="M1240 1080V642h136V532h76v548z"/>
+  <path d="M1468 1080V694h128V590h72v490z"/>
+  <path d="M1684 1080V628h122V540h68v540z"/>
 </g>
 
-<g fill="#35bdf1" filter="url(#b)" opacity=".55">
-  <rect x="356" y="530" width="4" height="34"/>
-  <rect x="808" y="468" width="4" height="34"/>
-  <rect x="1218" y="540" width="4" height="34"/>
-  <rect x="1518" y="495" width="4" height="34"/>
-  <rect x="102" y="868" width="4" height="34"/>
-  <rect x="520" y="932" width="4" height="30"/>
-  <rect x="1102" y="862" width="4" height="32"/>
-  <rect x="1536" y="946" width="4" height="30"/>
+<!-- industrial ribs and conduits -->
+<g fill="none" stroke="#183a57" opacity=".75">
+  <path d="M0 728H1920M0 824H1920M0 930H1920M0 1028H1920" stroke-width="2"/>
+  <path d="M118 690V1080M278 690V1080M474 690V1080M676 690V1080M866 690V1080M1078 690V1080M1278 690V1080M1492 690V1080M1702 690V1080" stroke-width="2"/>
+  <path d="M48 930l80-72 92 72 88-74 98 74 92-68 88 68" stroke-width="3" opacity=".38"/>
+  <path d="M1090 964l82-76 90 76 86-70 92 70 92-72 84 72" stroke-width="3" opacity=".35"/>
 </g>
 
-<path d="M1018 252l560-155" stroke="#74bfff" stroke-width="3" opacity=".5" filter="url(#b)"/>
-<rect y="700" width="1920" height="380" fill="#02050a" opacity=".10"/>
+<!-- transit beams -->
+<g stroke="#0a1c2d" stroke-width="28">
+  <path d="M-40 300h585l135 96h270"/>
+  <path d="M148 365h470l142-92h320"/>
+  <path d="M1155 326h392l128-82h280"/>
+  <path d="M1220 454h390l130 92h220"/>
+</g>
+<g stroke="#244862" stroke-width="3">
+  <path d="M-40 286h585l135 96h270"/>
+  <path d="M148 351h470l142-92h320"/>
+  <path d="M1155 312h392l128-82h280"/>
+</g>
+
+<!-- foreground towers -->
+<g id="foreground" fill="#040a12" stroke="#10283e" stroke-width="2">
+  <path d="M0 1080V842h170v238z"/>
+  <path d="M214 1080V914h164v166z"/>
+  <path d="M430 1080V862h186v218z"/>
+  <path d="M684 1080V936h156v144z"/>
+  <path d="M904 1080V850h194v230z"/>
+  <path d="M1160 1080V910h166v170z"/>
+  <path d="M1392 1080V846h184v234z"/>
+  <path d="M1638 1080V918h182v162z"/>
+  <path d="M1840 1080V868h80v212z"/>
+</g>
+
+<!-- cyan / red architectural lights -->
+<g fill="#45c6eb" filter="url(#glowBlue)" opacity=".48">
+  <rect x="92" y="520" width="4" height="34" rx="2"/>
+  <rect x="342" y="610" width="4" height="31" rx="2"/>
+  <rect x="568" y="486" width="4" height="36" rx="2"/>
+  <rect x="818" y="575" width="4" height="30" rx="2"/>
+  <rect x="1098" y="512" width="4" height="36" rx="2"/>
+  <rect x="1354" y="598" width="4" height="31" rx="2"/>
+  <rect x="1594" y="500" width="4" height="36" rx="2"/>
+  <rect x="1810" y="574" width="4" height="30" rx="2"/>
+  <rect x="272" y="882" width="4" height="30" rx="2"/>
+  <rect x="742" y="960" width="4" height="28" rx="2"/>
+  <rect x="1230" y="874" width="4" height="32" rx="2"/>
+  <rect x="1718" y="956" width="4" height="28" rx="2"/>
+</g>
+<g fill="#ff3159" filter="url(#glowRed)" opacity=".82">
+  <rect x="118" y="442" width="6" height="21" rx="2"/>
+  <rect x="468" y="430" width="6" height="19" rx="2"/>
+  <rect x="1036" y="372" width="6" height="22" rx="2"/>
+  <rect x="1642" y="404" width="6" height="23" rx="2"/>
+  <rect x="350" y="806" width="5" height="22" rx="2"/>
+  <rect x="880" y="900" width="5" height="22" rx="2"/>
+  <rect x="1458" y="804" width="5" height="24" rx="2"/>
+  <rect x="1812" y="920" width="5" height="23" rx="2"/>
+</g>
+
+<!-- signage -->
+<g opacity=".45">
+  <rect x="528" y="720" width="92" height="26" rx="4" fill="#061b2a" stroke="#2d6584"/>
+  <path d="M544 733h58" stroke="#52d6ff" stroke-width="2" filter="url(#glowBlue)"/>
+  <rect x="1308" y="744" width="105" height="28" rx="4" fill="#160c18" stroke="#6f2945"/>
+  <path d="M1326 758h68" stroke="#ff3159" stroke-width="2" filter="url(#glowRed)"/>
+</g>
+
+<!-- distant light bridge -->
+<path d="M968 266L1558 102" stroke="#8dc9ff" stroke-width="3" opacity=".42" filter="url(#glowBlue)"/>
+<path d="M1050 284L1664 118" stroke="#365c80" stroke-width="1.5" opacity=".28"/>
+
+<!-- lower atmosphere -->
+<rect y="748" width="1920" height="332" fill="#020711" opacity=".12"/>
+<rect y="980" width="1920" height="100" fill="#02050a" opacity=".18"/>
 </svg>
