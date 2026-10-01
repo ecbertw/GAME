@@ -91,7 +91,7 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-levelselect1/);
+  assert.match(html,/20261001-noticecenter1/);
 });
 
 
@@ -245,4 +245,26 @@ test('background skyline reaches the bottom of the RUN playfield',()=>{
   assert.match(bg,/M0 720H1920M0 820H1920M0 930H1920M0 1030H1920/);
   assert.doesNotMatch(bg,/M0 700V332/);
   assert.match(css,/background\.svg\?v=20261001-bgfull1/);
+});
+
+
+test('transient RUN notices are DOM-centered instead of camera-positioned',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const html=read('games/run/index.html');
+  const css=read('games/run/run.css');
+
+  assert.match(html,/id="run-notice-overlay"/);
+  assert.match(html,/id="run-notice-title"/);
+  assert.match(scene,/createNoticeOverlay\(\)/);
+  assert.match(scene,/showCenteredNotice\(\{/);
+  assert.match(scene,/title:manual\?'RESTART':'DEAD'/);
+
+  assert.match(css,/\.run-notice-inner\{position:absolute;left:50%;top:50%;transform:translate\(-50%,-50%\)/);
+
+  const death=scene.slice(scene.indexOf('  killPlayer(manual){'),scene.indexOf('  async completeLevel(){'));
+  assert.doesNotMatch(death,/this\.add\.text/);
+
+  const card=scene.slice(scene.indexOf('  showLevelCard(index,name){'),scene.indexOf('  killPlayer(manual){'));
+  assert.doesNotMatch(card,/uiCenterX/);
+  assert.doesNotMatch(card,/this\.add\.text/);
 });
