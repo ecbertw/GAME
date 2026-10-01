@@ -17,6 +17,8 @@ async function initDb(pool){
   await pool.query('CREATE TABLE IF NOT EXISTS run_bests(player_id UUID PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,best_time_ms INTEGER NOT NULL,deaths INTEGER NOT NULL DEFAULT 0,splits JSONB NOT NULL DEFAULT \'[]\'::jsonb,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
   await pool.query('ALTER TABLE run_bests ADD COLUMN IF NOT EXISTS best_level INTEGER NOT NULL DEFAULT 0');
   await pool.query('CREATE INDEX IF NOT EXISTS run_bests_progress_idx ON run_bests(best_level DESC,best_time_ms ASC,updated_at ASC)');
+  await pool.query('UPDATE run_bests SET best_level=LEAST(best_level,$1) WHERE best_level>$1',[RUN_LEVEL_COUNT]);
+  await pool.query('UPDATE run_attempts SET current_level=LEAST(current_level,$1),completed_level=LEAST(completed_level,$1) WHERE current_level>$1 OR completed_level>$1',[RUN_LEVEL_COUNT]);
 }
 
 function hashIp(ip){return crypto.createHash('sha256').update(String(ip||'')).digest('hex')}
