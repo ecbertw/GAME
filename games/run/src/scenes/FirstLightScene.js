@@ -122,38 +122,61 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   createAstralBackdrop() {
-    // Full FIRST LIGHT environment reconstructed from the approved art board.
-    this.add.rectangle(640, 360, 1280, 720, 0x0b2452, 1)
+    // Native 1280×720 composition. Every strip is transparent except the sky,
+    // so the layers overlap instead of creating horizontal seams.
+    this.add.rectangle(640, 360, 1280, 720, 0x58a6dc, 1)
       .setScrollFactor(0)
-      .setDepth(-1400);
+      .setDepth(-1500);
 
-    this.add.image(640, 360, ASTRAL_BG.world)
+    const sky = this.add.image(640, 0, ASTRAL_BG.sky)
+      .setOrigin(0.5, 0)
       .setScrollFactor(0)
-      .setDepth(-1360)
-      .setDisplaySize(1280, 720);
+      .setDepth(-1450);
+    const skySource = this.textures.get(ASTRAL_BG.sky).getSourceImage();
+    sky.setScale(1280 / skySource.width);
 
-    // Subtle extra parallax fragments keep the world alive without hiding
-    // the canonical environment composition.
-    for (let i = 0; i < 10; i += 1) {
-      const x = 420 + i * 1120;
-      const island = this.add.image(x, 350 + (i % 3) * 38, ASTRAL_OBJ.floatingIsland)
-        .setScrollFactor(0.16)
-        .setDepth(-920)
-        .setDisplaySize(145 + (i % 3) * 26, 70 + (i % 3) * 13)
-        .setAlpha(0.34)
-        .setTint(0xd9e9ff);
-      if (i % 2) island.setFlipX(true);
+    const cloudSource = this.textures.get(ASTRAL_BG.clouds).getSourceImage();
+    const cloudScale = 1280 / cloudSource.width;
+    for (let i = -1; i < 9; i += 1) {
+      this.add.image(640 + i * 1280, 182, ASTRAL_BG.clouds)
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0.04)
+        .setDepth(-1320)
+        .setScale(cloudScale)
+        .setAlpha(0.96);
     }
 
-    for (let i = 0; i < 8; i += 1) {
-      const x = 280 + i * 1380;
-      const cluster = this.add.image(x, 720, ASTRAL_OBJ.crystalCluster)
+    const farSource = this.textures.get(ASTRAL_BG.far).getSourceImage();
+    const farScale = 1280 / farSource.width;
+    for (let i = -1; i < 9; i += 1) {
+      this.add.image(640 + i * 1260, 286, ASTRAL_BG.far)
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0.10)
+        .setDepth(-1120)
+        .setScale(farScale)
+        .setAlpha(0.90);
+    }
+
+    const midSource = this.textures.get(ASTRAL_BG.mid).getSourceImage();
+    const midScale = 1280 / midSource.width;
+    for (let i = -1; i < 9; i += 1) {
+      this.add.image(640 + i * 1240, 405, ASTRAL_BG.mid)
+        .setOrigin(0.5, 0)
+        .setScrollFactor(0.22)
+        .setDepth(-850)
+        .setScale(midScale)
+        .setAlpha(0.98);
+    }
+
+    const foregroundSource = this.textures.get(ASTRAL_BG.foreground).getSourceImage();
+    const foregroundScale = 1280 / foregroundSource.width;
+    for (let i = -1; i < 10; i += 1) {
+      this.add.image(640 + i * 1200, 720, ASTRAL_BG.foreground)
         .setOrigin(0.5, 1)
-        .setScrollFactor(1.03)
+        .setScrollFactor(0.88)
         .setDepth(82)
-        .setDisplaySize(145 + (i % 2) * 25, 115 + (i % 2) * 20)
-        .setAlpha(0.86);
-      if (i % 2) cluster.setFlipX(true);
+        .setScale(foregroundScale)
+        .setAlpha(0.94);
     }
 
     this.drawForegroundMotes();
@@ -256,37 +279,41 @@ export class FirstLightScene extends Phaser.Scene {
 
   addAstralPlatform(x, y, width, height, { large = false, waterfall = false, alt = false } = {}) {
     const container = this.add.container(x, y).setDepth(5);
-    const frame = width >= 560 ? ASTRAL_OBJ.platformLarge : width >= 245 ? ASTRAL_OBJ.platformMedium : ASTRAL_OBJ.platformSmall;
-    // All three gameplay sizes use the same approved canonical platform art.
-    // Preserve its native aspect ratio instead of stretching the small/medium variants.
-    const sourceImage = this.textures.get(frame).getSourceImage();
-    const ratio = sourceImage.height / sourceImage.width;
-    const artWidth = width + (frame === ASTRAL_OBJ.platformLarge ? 80 : 44);
-    const rawHeight = artWidth * ratio;
-    const artHeight = Phaser.Math.Clamp(rawHeight, frame === ASTRAL_OBJ.platformLarge ? 220 : 125, 365);
+    const key = width >= 500
+      ? ASTRAL_OBJ.platformLarge
+      : width >= 240
+        ? ASTRAL_OBJ.platformMedium
+        : ASTRAL_OBJ.platformSmall;
 
-    const art = this.add.image(0, -height / 2 - 12, frame)
+    const source = this.textures.get(key).getSourceImage();
+    const targetWidth = width + (width >= 500 ? 34 : 20);
+    const scale = targetWidth / source.width;
+    const art = this.add.image(0, -height / 2 - 8, key)
       .setOrigin(0.5, 0)
-      .setDisplaySize(artWidth, artHeight)
-      .setAlpha(alt ? 0.96 : 1);
-    if (alt) art.setTint(0xf0e8ff);
+      .setScale(scale)
+      .setAlpha(alt ? 0.95 : 1);
+    if (alt) art.setTint(0xf4ecff);
     container.add(art);
 
     if (waterfall) {
-      const wfWidth = Math.min(150, Math.max(72, width * 0.18));
-      const wf = this.add.image(width * 0.23, -height / 2 + 14, ASTRAL_OBJ.waterfall)
-        .setOrigin(0.5, 0.04)
-        .setDisplaySize(wfWidth, wfWidth * (385 / 255))
-        .setAlpha(0.92);
+      const wfSource = this.textures.get(ASTRAL_OBJ.waterfall).getSourceImage();
+      const wfTargetWidth = Phaser.Math.Clamp(width * 0.17, 58, 105);
+      const wfScale = wfTargetWidth / wfSource.width;
+      const wf = this.add.image(width * 0.23, -height / 2 + 10, ASTRAL_OBJ.waterfall)
+        .setOrigin(0.5, 0.05)
+        .setScale(wfScale)
+        .setAlpha(0.88);
       container.add(wf);
-      this.tweens.add({ targets: wf, alpha: 0.72, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: wf, alpha: 0.68, duration: 1150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
 
     if (large && Math.floor(x / 400) % 2 === 0) {
-      const cluster = this.add.image(-width * 0.31, -height / 2 - 8, ASTRAL_OBJ.crystalCluster)
+      const clusterSource = this.textures.get(ASTRAL_OBJ.crystalCluster).getSourceImage();
+      const clusterScale = 105 / clusterSource.width;
+      const cluster = this.add.image(-width * 0.30, -height / 2 + 8, ASTRAL_OBJ.crystalCluster)
         .setOrigin(0.5, 1)
-        .setDisplaySize(126, 99)
-        .setAlpha(0.96);
+        .setScale(clusterScale)
+        .setAlpha(0.92);
       container.add(cluster);
     }
 
@@ -297,7 +324,6 @@ export class FirstLightScene extends Phaser.Scene {
     this.platforms.push(container);
     return container;
   }
-
   addVines(container, width, height) {
     const g = this.add.graphics();
     const count = Math.max(2, Math.floor(width / 180));
@@ -323,17 +349,16 @@ export class FirstLightScene extends Phaser.Scene {
 
   addMovingPlatform(x, y, width, height, rangeX = 0, duration = 1700, rangeY = 0) {
     const visual = this.add.container(x, y).setDepth(8);
-    const artWidth = width + 78;
-    const movingSource = this.textures.get(ASTRAL_OBJ.platformMoving).getSourceImage();
-    const movingRatio = movingSource.height / movingSource.width;
-    const art = this.add.image(0, -height / 2 - 10, ASTRAL_OBJ.platformMoving)
+    const source = this.textures.get(ASTRAL_OBJ.platformMoving).getSourceImage();
+    const scale = (width + 24) / source.width;
+    const art = this.add.image(0, -height / 2 - 7, ASTRAL_OBJ.platformMoving)
       .setOrigin(0.5, 0)
-      .setDisplaySize(artWidth, artWidth * movingRatio);
+      .setScale(scale);
     visual.add(art);
 
-    const glow = this.add.ellipse(0, height * 0.5 + 28, width * 0.78, 22, 0x35e9ff, 0.10);
+    const glow = this.add.ellipse(0, height * 0.5 + 24, width * 0.68, 18, 0x35e9ff, 0.09);
     visual.add(glow);
-    this.tweens.add({ targets: glow, alpha: 0.03, scaleX: 1.16, duration: 720, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: glow, alpha: 0.025, scaleX: 1.12, duration: 760, yoyo: true, repeat: -1 });
 
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
@@ -356,23 +381,25 @@ export class FirstLightScene extends Phaser.Scene {
     });
     return visual;
   }
-
   addDangerCrystals(x, y, width) {
     const container = this.add.container(x, y).setDepth(10);
-    const art = this.add.image(0, 4, ASTRAL_OBJ.spikes)
+    const source = this.textures.get(ASTRAL_OBJ.dangerCrystal).getSourceImage();
+    const scale = (width + 20) / source.width;
+    const art = this.add.image(0, 5, ASTRAL_OBJ.dangerCrystal)
       .setOrigin(0.5, 1)
-      .setDisplaySize(width + 46, Math.max(86, (width + 46) * (313 / 360)));
+      .setScale(scale);
     container.add(art);
     const bodyObject = this.add.rectangle(x, y - 18, width, 42, 0xff0000, 0);
     this.physics.add.existing(bodyObject, true);
     container.bodyObject = bodyObject;
     this.hazards.push(container);
   }
-
   addBreakableBlock(x, y, width, height) {
     const container = this.add.container(x, y).setDepth(9);
+    const breakSource = this.textures.get(ASTRAL_OBJ.breakable).getSourceImage();
+    const breakScale = (width * 1.16) / breakSource.width;
     const art = this.add.image(0, 0, ASTRAL_OBJ.breakable)
-      .setDisplaySize(width * 1.42, height * 1.26);
+      .setScale(breakScale);
     container.add(art);
     const bodyObject = this.add.rectangle(x, y, width, height, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
@@ -394,7 +421,8 @@ export class FirstLightScene extends Phaser.Scene {
 
   addShard(x, y, index) {
     const container = this.add.container(x, y).setDepth(16);
-    const art = this.add.image(0, 0, ASTRAL_OBJ.shard).setDisplaySize(44, 74);
+    const shardSource = this.textures.get(ASTRAL_OBJ.shard).getSourceImage();
+    const art = this.add.image(0, 0, ASTRAL_OBJ.shard).setScale(38 / shardSource.width);
     container.add(art);
     const bodyObject = this.add.rectangle(x, y, 34, 54, 0xffffff, 0);
     this.physics.add.existing(bodyObject, true);
@@ -417,8 +445,9 @@ export class FirstLightScene extends Phaser.Scene {
 
   addCheckpoint(x, y, spawn, index) {
     const container = this.add.container(x, y).setDepth(15);
-    const art = this.add.image(0, -45, ASTRAL_OBJ.checkpointOff)
-      .setDisplaySize(88, 181);
+    const cpSource = this.textures.get(ASTRAL_OBJ.checkpointOff).getSourceImage();
+    const art = this.add.image(0, -43, ASTRAL_OBJ.checkpointOff)
+      .setScale(176 / cpSource.height);
     container.add(art);
     const trigger = this.add.rectangle(x, y, 100, 160, 0xffffff, 0);
     this.physics.add.existing(trigger, true);
@@ -437,7 +466,8 @@ export class FirstLightScene extends Phaser.Scene {
       }
     });
     cp.active = true;
-    cp.art.setTexture(ASTRAL_OBJ.checkpointOn).clearTint().setAlpha(1).setDisplaySize(88, 204);
+    const cpOnSource = this.textures.get(ASTRAL_OBJ.checkpointOn).getSourceImage();
+    cp.art.setTexture(ASTRAL_OBJ.checkpointOn).clearTint().setAlpha(1).setScale(188 / cpOnSource.height);
     this.checkpointSpawn = { ...cp.spawn };
     this.checkpointIndex = cp.index;
     this.hud.setCheckpoint(cp.index);
