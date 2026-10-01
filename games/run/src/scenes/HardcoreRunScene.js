@@ -1,91 +1,5 @@
 import { RUN_PHYSICS } from '../run-config.js';
-
-const LEVELS = [
-  {
-    name:'FIRST BLOOD', width:1900, spawn:[82,615], goal:[1810,650],
-    floors:[[0,430,650],[520,900,650],[1000,1350,650],[1460,1900,650]],
-    platforms:[[665,565,150,22],[1010,560,148,22]],
-    spikes:[[250,650,74],[745,650,76],[1190,650,78],[1635,650,84]]
-  },
-  {
-    name:'NEEDLES', width:2150, spawn:[82,615], goal:[2070,650],
-    floors:[[0,2150,650]],
-    platforms:[[460,555,126,20],[825,550,130,20],[1180,560,130,20],[1540,550,126,20],[1840,560,118,20]],
-    spikes:[[270,650,105],[590,650,125],[950,650,135],[1310,650,125],[1665,650,128],[1940,650,92]]
-  },
-  {
-    name:'STAIRCASE', width:2200, spawn:[80,615], goal:[2110,500],
-    floors:[[0,420,650],[500,820,620],[900,1220,590],[1300,1600,555],[1690,2200,500]],
-    platforms:[[420,555,92,20],[840,525,92,20],[1260,490,92,20],[1645,440,92,20]],
-    spikes:[[300,650,78],[665,620,70],[1050,590,72],[1445,555,70],[1870,500,95]]
-  },
-  {
-    name:'THE SHAFT', width:2050, spawn:[82,615], goal:[1970,650],
-    floors:[[0,430,650],[720,1080,650],[1370,1710,650],[1790,2050,650]],
-    platforms:[[500,575,115,20],[615,495,105,20],[1130,565,110,20],[1240,485,105,20],[1325,405,95,20],[1685,520,90,20]],
-    walls:[[680,545,24,210],[1095,545,24,210],[1360,500,24,300],[1740,565,24,170]],
-    spikes:[[300,650,82],[830,650,90],[1500,650,90],[1885,650,70]]
-  },
-  {
-    name:'THREAD', width:2380, spawn:[80,615], goal:[2290,650],
-    floors:[[0,330,650],[520,810,650],[1010,1300,650],[1510,1800,650],[2010,2380,650]],
-    platforms:[[410,575,78,18],[905,550,72,18],[1405,575,72,18],[1905,550,72,18]],
-    spikes:[[190,650,72],[650,650,96],[1140,650,100],[1645,650,102],[2170,650,92]],
-    saws:[[750,500,21,'y',130,1500,0],[1260,465,21,'y',145,1650,350],[1760,485,22,'y',140,1450,700]]
-  },
-  {
-    name:'TEETH', width:2450, spawn:[80,615], goal:[2360,650],
-    floors:[[0,2450,650]],
-    platforms:[[410,555,105,20],[775,560,110,20],[1135,555,105,20],[1500,560,112,20],[1850,555,106,20],[2170,560,100,20]],
-    spikes:[[250,650,100],[540,650,130],[900,650,140],[1250,650,140],[1620,650,135],[1980,650,130],[2250,650,80]],
-    saws:[[675,575,22,'x',95,1350,0],[1040,570,23,'x',90,1450,420],[1430,575,23,'x',90,1300,740],[1785,570,23,'x',95,1400,220]]
-  },
-  {
-    name:'NO FLOOR', width:2500, spawn:[80,615], goal:[2410,650],
-    floors:[[0,290,650],[2220,2500,650]],
-    platforms:[[390,590,110,18],[555,515,90,18],[715,570,86,18],[865,485,84,18],[1020,555,82,18],[1170,470,82,18],[1325,545,82,18],[1480,460,82,18],[1635,535,82,18],[1790,450,84,18],[1950,530,90,18],[2100,585,105,18]],
-    saws:[[635,405,21,'x',85,1500,200],[1250,390,21,'x',90,1450,600],[1870,390,22,'x',90,1350,900]]
-  },
-  {
-    name:'ASCENT', width:2200, spawn:[80,615], goal:[2110,315],
-    floors:[[0,390,650],[1860,2200,315]],
-    platforms:[[470,575,112,20],[615,505,108,20],[760,435,104,20],[905,365,100,20],[1050,455,98,20],[1195,385,94,20],[1340,315,94,20],[1485,405,94,20],[1630,350,94,20],[1775,295,110,20]],
-    walls:[[1015,510,20,250],[1450,430,20,260]],
-    spikes:[[235,650,75],[1980,315,78]],
-    saws:[[1110,300,21,'y',120,1450,0],[1555,250,21,'y',100,1320,500]]
-  },
-  {
-    name:'PULSE', width:2450, spawn:[80,615], goal:[2360,650],
-    floors:[[0,2450,650]],
-    platforms:[[430,555,110,20],[840,555,104,20],[1250,555,104,20],[1660,555,104,20],[2070,555,104,20]],
-    spikes:[[250,650,82],[605,650,90],[1015,650,90],[1425,650,90],[1835,650,90],[2225,650,82]],
-    lasers:[[735,505,10,145,1500,0],[1145,490,10,160,1450,450],[1555,505,10,145,1400,800],[1965,490,10,160,1350,200]]
-  },
-  {
-    name:'LOCKSTEP', width:2600, spawn:[80,615], goal:[2510,650],
-    floors:[[0,390,650],[500,830,620],[940,1260,590],[1370,1690,620],[1800,2120,590],[2230,2600,650]],
-    platforms:[[445,550,76,18],[885,530,76,18],[1315,520,76,18],[1745,530,76,18],[2175,550,76,18]],
-    spikes:[[250,650,82],[650,620,92],[1090,590,92],[1520,620,92],[1950,590,92],[2390,650,85]],
-    saws:[[760,480,22,'x',105,1280,0],[1200,445,22,'x',105,1240,350],[1630,480,22,'x',105,1200,700],[2060,445,22,'x',105,1160,150]],
-    lasers:[[900,470,9,120,1250,250],[1760,470,9,120,1180,650]]
-  },
-  {
-    name:'NO REST', width:2800, spawn:[80,615], goal:[2710,650],
-    floors:[[0,320,650],[470,740,650],[900,1170,650],[1330,1600,650],[1760,2030,650],[2190,2460,650],[2580,2800,650]],
-    platforms:[[390,555,72,18],[820,555,70,18],[1250,555,70,18],[1680,555,70,18],[2110,555,70,18],[2520,555,70,18]],
-    spikes:[[170,650,72],[575,650,82],[1000,650,82],[1430,650,82],[1860,650,82],[2290,650,82],[2660,650,70]],
-    saws:[[690,505,22,'y',115,1200,0],[1120,470,22,'y',120,1160,300],[1550,505,22,'y',115,1120,600],[1980,470,22,'y',120,1080,900],[2410,505,22,'y',115,1040,150]],
-    lasers:[[785,500,9,150,1120,200],[1645,500,9,150,1080,500],[2500,500,9,150,1040,800]]
-  },
-  {
-    name:'THE LINE', width:3150, spawn:[80,615], goal:[3060,650],
-    floors:[[0,360,650],[490,780,650],[930,1210,620],[1360,1640,650],[1790,2070,600],[2220,2500,650],[2650,3150,650]],
-    platforms:[[425,550,70,18],[855,550,66,18],[1285,550,66,18],[1715,550,66,18],[2145,550,66,18],[2575,550,66,18]],
-    spikes:[[210,650,82],[600,650,95],[1030,620,92],[1470,650,92],[1900,600,92],[2330,650,92],[2820,650,130]],
-    saws:[[745,490,23,'x',100,1080,0],[1175,455,23,'x',100,1040,250],[1605,470,23,'x',100,1000,500],[2035,450,23,'x',100,960,750],[2465,470,23,'x',100,920,150]],
-    lasers:[[905,470,10,150,980,200],[1335,480,10,170,940,450],[1765,450,10,180,900,700],[2195,470,10,160,860,100],[2625,460,10,170,820,350]]
-  }
-];
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js';
 
 const C = {
   bg:0x08090d, grid:0x242730, platform:0xe9ecf2, platformEdge:0xffffff,
@@ -153,7 +67,7 @@ export class HardcoreRunScene extends Phaser.Scene {
   createHud(){
     this.hud=this.add.container(0,0).setScrollFactor(0).setDepth(1000);
     const bar=this.add.rectangle(640,42,1230,58,0x0c0e13,.94).setStrokeStyle(1,0x2c3038,.95);
-    this.levelText=this.add.text(40,25,'01 / 12', {fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#ffffff'});
+    this.levelText=this.add.text(40,25,'001 / 900', {fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#ffffff'});
     this.nameText=this.add.text(126,25,'FIRST BLOOD', {fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#8f96a3'});
     this.timerText=this.add.text(640,18,'00:00.000',{fontFamily:'Arial Black,Arial',fontSize:'28px',color:'#ffffff'}).setOrigin(.5,0);
     this.pbText=this.add.text(1230,21,'PB  --:--.---',{fontFamily:'Arial Black,Arial',fontSize:'13px',color:'#8f96a3'}).setOrigin(1,0);
@@ -172,7 +86,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.startTitle=this.add.text(640,150,'RUN',{fontFamily:'Arial Black,Arial',fontSize:'92px',fontStyle:'italic',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2001);
     this.startTitle.setShadow(8,8,'#ff3159',0,true,true);
     this.startSub=this.add.text(640,225,'HARDCORE PLATFORMER',{fontFamily:'Arial Black,Arial',fontSize:'16px',color:'#ff3159',letterSpacing:5}).setOrigin(.5).setScrollFactor(0).setDepth(2001);
-    this.startRules=this.add.text(640,285,'12 LEVELS · EACH LEVEL HAS ITS OWN CLOCK\nRANKING = HIGHEST LEVEL · FASTEST TIME',{
+    this.startRules=this.add.text(640,285,'900 LEVELS · EACH LEVEL HAS ITS OWN CLOCK\nRANKING = HIGHEST LEVEL · FASTEST TIME',{
       fontFamily:'Arial Black,Arial',fontSize:'13px',color:'#b5bac5',align:'center',lineSpacing:10
     }).setOrigin(.5).setScrollFactor(0).setDepth(2001);
     this.startRanking=this.add.text(640,380,'WORLD TOP\nLOADING...',{
@@ -232,7 +146,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.levelIndex=index;
     this.dead=false;
     this.levelLocked=false;
-    const L=LEVELS[index];
+    const L=getRunLevel(index);
     this.physics.world.setBounds(0,0,L.width,720);
     this.cameras.main.setBounds(0,0,L.width,720);
     this.drawGrid(L.width);
@@ -247,9 +161,9 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.createGoal(L.goal[0],L.goal[1]);
     this.createPlayer(L.spawn[0],L.spawn[1]);
 
-    this.levelText.setText(String(index+1).padStart(2,'0')+' / '+String(LEVELS.length).padStart(2,'0'));
+    this.levelText.setText(String(index+1).padStart(3,'0')+' / '+String(RUN_LEVEL_COUNT).padStart(3,'0'));
     this.nameText.setText(L.name);
-    this.progressFill.width=760*(index/LEVELS.length);
+    this.progressFill.width=760*(index/RUN_LEVEL_COUNT);
     this.cameras.main.startFollow(this.player,true,.11,.08,-230,20);
     this.cameras.main.scrollX=0;
     if(resetClock&&this.runActive) this.levelStartedAt=this.time.now;
@@ -354,7 +268,7 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   showLevelCard(index,name){
-    const n=this.add.text(640,260,'LEVEL '+String(index+1).padStart(2,'0'),{fontFamily:'Arial Black,Arial',fontSize:'14px',color:'#ff3159',letterSpacing:4}).setOrigin(.5).setScrollFactor(0).setDepth(1200);
+    const n=this.add.text(640,260,'LEVEL '+String(index+1).padStart(3,'0'),{fontFamily:'Arial Black,Arial',fontSize:'14px',color:'#ff3159',letterSpacing:4}).setOrigin(.5).setScrollFactor(0).setDepth(1200);
     const t=this.add.text(640,302,name,{fontFamily:'Arial Black,Arial',fontSize:'38px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(1200);
     n.setAlpha(0);t.setAlpha(0);
     this.tweens.add({targets:[n,t],alpha:1,duration:120,yoyo:true,hold:430,onComplete:()=>{n.destroy();t.destroy();}});
@@ -382,7 +296,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const level=this.levelIndex+1;
     let levelTimeMs=Math.max(1,Math.round(this.time.now-this.levelStartedAt));
     this.timerText.setText(formatTime(levelTimeMs));
-    this.progressFill.width=760*(level/LEVELS.length);
+    this.progressFill.width=760*(level/RUN_LEVEL_COUNT);
     this.player.body.setVelocity(0,0);
     this.player.body.enable=false;
 
@@ -402,7 +316,7 @@ export class HardcoreRunScene extends Phaser.Scene {
       }catch(_){}
     }
 
-    if(level===LEVELS.length){
+    if(level===RUN_LEVEL_COUNT){
       this.finishRun(levelTimeMs,serverResult);
       return;
     }
@@ -426,7 +340,7 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   showFinishOverlay(levelTimeMs,result){
     this.add.rectangle(640,360,1280,720,0x050609,.88).setScrollFactor(0).setDepth(2500);
-    this.add.text(640,145,'LEVEL 12 COMPLETE',{fontFamily:'Arial Black,Arial',fontSize:'46px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
+    this.add.text(640,145,'LEVEL '+RUN_LEVEL_COUNT+' COMPLETE',{fontFamily:'Arial Black,Arial',fontSize:'46px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
     this.add.text(640,235,formatTime(levelTimeMs),{fontFamily:'Arial Black,Arial',fontSize:'58px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
     let note=this.practice?'PRACTICE — NOT SUBMITTED':'LEVEL 12';
     if(!this.practice&&result&&result.isPersonalBest) note+='   ·   NEW PERSONAL BEST';

@@ -1,12 +1,13 @@
 'use strict';
 const crypto=require('crypto');
 
+const RUN_LEVEL_COUNT=900;
 const memoryAttempts=new Map();
 const memoryBests=new Map();
 
 function bad(message,status=400){const e=new Error(message);e.status=status;return e}
 function cleanTime(v){const n=Math.floor(Number(v));if(!Number.isFinite(n)||n<1000||n>60*60*1000)throw bad('Invalid RUN level time.');return n}
-function cleanLevel(v){const n=Math.floor(Number(v));if(!Number.isFinite(n)||n<1||n>12)throw bad('Invalid RUN level.');return n}
+function cleanLevel(v){const n=Math.floor(Number(v));if(!Number.isFinite(n)||n<1||n>RUN_LEVEL_COUNT)throw bad('Invalid RUN level.');return n}
 
 async function initDb(pool){
   await pool.query('CREATE TABLE IF NOT EXISTS run_attempts(id UUID PRIMARY KEY,player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),finished_at TIMESTAMPTZ,client_time_ms INTEGER,deaths INTEGER NOT NULL DEFAULT 0,splits JSONB NOT NULL DEFAULT \'[]\'::jsonb,created_ip_hash CHAR(64))');
@@ -47,12 +48,12 @@ async function completeLevel(pool,player,data){
       if(q.rows[0].finished_at)throw bad('RUN attempt already finished.',409);
       if(Number(q.rows[0].current_level)!==level)throw bad('RUN level out of sequence.',409);
 
-      const times=Array.isArray(q.rows[0].splits)?q.rows[0].splits.slice(0,12):[];
+      const times=Array.isArray(q.rows[0].splits)?q.rows[0].splits.slice(0,RUN_LEVEL_COUNT):[];
       times[level-1]=timeMs;
-      const finished=level===12;
+      const finished=level===RUN_LEVEL_COUNT;
       await client.query(
         'UPDATE run_attempts SET completed_level=$1,current_level=$2,client_time_ms=$3,splits=$4::jsonb,finished_at=CASE WHEN $5 THEN NOW() ELSE finished_at END WHERE id=$6',
-        [level,finished?12:level+1,timeMs,JSON.stringify(times),finished,runId]
+        [level,finished?RUN_LEVEL_COUNT:level+1,timeMs,JSON.stringify(times),finished,runId]
       );
 
       const before=await client.query('SELECT best_level,best_time_ms FROM run_bests WHERE player_id=$1 FOR UPDATE',[player.id]);
@@ -85,14 +86,14 @@ async function completeLevel(pool,player,data){
   if(attempt.currentLevel!==level)throw bad('RUN level out of sequence.',409);
   attempt.times[level-1]=timeMs;
   attempt.completedLevel=level;
-  attempt.currentLevel=level===12?12:level+1;
-  attempt.finished=level===12;
+  attempt.currentLevel=level===RUN_LEVEL_COUNT?12:level+1;
+  attempt.finished=level===RUN_LEVEL_COUNT;
 
   const old=memoryBests.get(player.id);
   const isPersonalBest=!old||level>old.level||(level===old.level&&timeMs<old.timeMs);
   if(isPersonalBest)memoryBests.set(player.id,{playerId:player.id,name:player.name,country:player.country,level,timeMs,updatedAt:Date.now()});
   const board=await rankings(null,player.id,20);
-  return{ok:true,level,timeMs,finished:level===12,isPersonalBest,rank:board.me?.rank||null,pbLevel:board.me?.level||null,pbMs:board.me?.timeMs||null};
+  return{ok:true,level,timeMs,finished:level===RUN_LEVEL_COUNT,isPersonalBest,rank:board.me?.rank||null,pbLevel:board.me?.level||null,pbMs:board.me?.timeMs||null};
 }
 
 async function rankings(pool,playerId,limitRaw){

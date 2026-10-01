@@ -1,30 +1,30 @@
 # EIXO RUN
 
-RUN is a self-contained minimal hardcore precision platformer.
+RUN now has **900 deterministic, unique hardcore levels**.
 
 ## Core loop
-- 12 short handcrafted levels.
-- Every level has its own timer.
-- Finishing a level resets the timer to zero for the next level.
-- Dying restarts the current level, but does not reset that level's timer.
-- Death counts are not displayed or used in ranking.
-- Movement is intentionally simple: left/right, jump, wall jump.
-- Hazards are visually consistent: red kills, white is solid, green is the exit.
+- 900 fixed levels: every player receives the exact same Level 001…900.
+- Each level has its own timer.
+- Clearing a level resets the timer for the next level.
+- Dying restarts the current level without resetting that level's timer.
+- Deaths remain visible in the HUD but do not affect ranking.
+- Ranking stays: highest completed level first, then fastest time on that level.
 
-## Ranking
-The public route is `/run`.
+## Solvability system
+The levels are generated from fixed seeds, but generation is constrained by the real RUN physics.
 
-The ranking is progression-first:
-1. Highest completed level.
-2. Fastest completion time for that level.
-3. Earlier stored record as the final tie-break.
+Every mandatory jump is kept inside a conservative 72% movement envelope calculated from:
+- gravity;
+- jump velocity;
+- horizontal run speed;
+- the exact height difference between take-off and landing.
 
-Example: Level 12 in 30s ranks above Level 12 in 40s, and both rank above Level 10 in 40s.
+The validator checks all 900 levels for spawn support, EXIT support, every mandatory jump, minimum landing width, laser off-windows and saw clearance. It also rejects duplicate geometry or duplicate names.
 
-Each player keeps one ranking record: their highest completed level and the best time they have recorded for that level.
+This makes the 900-level set reproducible and automatically testable. The architecture can be extended beyond 900 later by increasing the configured level count and passing the same validation.
 
 ## Controls
 - A/D or Left/Right: move
 - Space/W/Up: jump / wall jump
-- R: restart the current level
+- R: restart current level
 - H: return to EIXO
