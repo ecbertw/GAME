@@ -171,7 +171,7 @@ export function getRunLevel(index){
 
     const probe=surface('platform',0,width,top);
     const env=jumpEnvelope(prev,probe,1);
-    const ratio=clamp(.61+.10*d+rng()*.11+(archetype===7?.035:0),.60,.82);
+    const ratio=clamp(.74+.06*d+rng()*.10+(archetype===7?.025:0),.72,.90);
     const desired=env.maxGap*RUN_ROUTE_MARGIN*ratio;
     const gap=Math.round(clamp(desired,76,205));
     const left=prev.right+gap,right=left+width;
@@ -184,7 +184,7 @@ export function getRunLevel(index){
   const endTop=prev.top,endWidth=380;
   const endProbe=surface('floor',0,endWidth,endTop);
   const endEnv=jumpEnvelope(prev,endProbe,1);
-  const endRatio=clamp(.63+.08*d+rng()*.10,.62,.80);
+  const endRatio=clamp(.76+.05*d+rng()*.08,.74,.88);
   const endGap=Math.round(clamp(endEnv.maxGap*RUN_ROUTE_MARGIN*endRatio,78,205));
   const endStart=prev.right+endGap,endEnd=endStart+endWidth;
   route.push(surface('floor',endStart,endEnd,endTop));
