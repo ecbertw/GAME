@@ -57,7 +57,7 @@ function updateActive(){
  nav.querySelectorAll('a').forEach(a=>{if(a.dataset.rxRoute===route)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
  rankTabs.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.rxScope===rankScope)));
  document.querySelectorAll('[data-rx-board]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.rxBoard===rankGame)));
- const fullRankButton=views.rankings?.querySelector?.('[data-rx-action="full-ranking"]');if(fullRankButton)fullRankButton.hidden=rankGame==='run';
+ const fullRankButton=views.rankings?.querySelector?.('[data-rx-action="full-ranking"]');if(fullRankButton)fullRankButton.hidden=false;
  document.querySelectorAll('[data-rx-roomgame]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.rxRoomgame===roomGame)));
  const gameName=route==='pulse'?'PULSE':'JUMP',pulse=route==='pulse';
  gameMast.querySelector('[data-rx-game-name]').textContent=gameName;gameMast.querySelector('[data-rx-game-mode]').textContent=gameName;
@@ -168,7 +168,16 @@ async function action(type){
  if(type==='vip-store'){if(window.EixoVipStore?.open)return window.EixoVipStore.open();return window.eixoOpenVip?.();}
  if(type==='rooms'){await navigate(roomGame);if(roomGame==='jump')return window.eixoJump.openRooms();return window.eixoOpenRooms?.();}
  if(type==='create-room'){await navigate(roomGame);$('createRoomButton').click();return;}
- if(type==='full-ranking'){if(rankGame==='run')return refreshRunRankings();document.querySelector('.action.blue').click();return;}
+ if(type==='full-ranking'){
+   if(rankGame==='run'){
+     runRankView.classList.add('is-full');
+     refreshRunRankings();
+     rankMount.scrollIntoView({behavior:'smooth',block:'start'});
+     return;
+   }
+   document.querySelector('.action.blue').click();
+   return;
+ }
  if(type==='sound'){window.EixoAudio?.toggleMenu?.();return;}
  if(type==='fullscreen'){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch(_){notify(t('O ecrã inteiro não está disponível neste navegador.','Fullscreen is not available in this browser.'));}return;}
 }
