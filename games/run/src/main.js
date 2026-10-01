@@ -1,5 +1,5 @@
-import { HardcoreRunScene } from './scenes/HardcoreRunScene.js?v=20261001-hard100';
-import { RUN_PHYSICS } from './run-config.js?v=20261001-hard100';
+import { HardcoreRunScene } from './scenes/HardcoreRunScene.js?v=20261001-levelselect1';
+import { RUN_PHYSICS } from './run-config.js?v=20261001-levelselect1';
 
 const config = {
   type: Phaser.AUTO,
