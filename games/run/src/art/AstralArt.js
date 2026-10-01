@@ -11,6 +11,7 @@ export const ASTRAL_BG = Object.freeze({
   far: 'run-bg-far',
   mid: 'run-bg-mid',
   foreground: 'run-bg-foreground',
+  preview: 'run-bg-preview',
 });
 
 export const ASTRAL_OBJ = Object.freeze({
@@ -75,6 +76,24 @@ export function installAstralTextures(scene) {
   for (const [key, frameName] of bgMap) {
     createTextureFromFrame(scene, key, bgSource, ASTRAL_BACKGROUND_FRAMES[frameName]);
   }
+
+  // Compact 16:9 preview for HUD cards. Built from the same transparent
+  // layers, so UI artwork is never stretched from a panoramic strip.
+  if (scene.textures.exists(ASTRAL_BG.preview)) scene.textures.remove(ASTRAL_BG.preview);
+  const preview = scene.textures.createCanvas(ASTRAL_BG.preview, 512, 288);
+  const pctx = preview.getContext();
+  pctx.fillStyle = '#58a6dc';
+  pctx.fillRect(0, 0, 512, 288);
+  const drawLayer = (key, y, targetH) => {
+    const src = scene.textures.get(key).getSourceImage();
+    pctx.drawImage(src, 0, y, 512, targetH);
+  };
+  drawLayer(ASTRAL_BG.sky, 0, 74);
+  drawLayer(ASTRAL_BG.clouds, 62, 54);
+  drawLayer(ASTRAL_BG.far, 103, 63);
+  drawLayer(ASTRAL_BG.mid, 148, 83);
+  drawLayer(ASTRAL_BG.foreground, 224, 64);
+  preview.refresh();
 
   const objectMap = [
     [ASTRAL_OBJ.checkpointOn, 'checkpoint-on'],
