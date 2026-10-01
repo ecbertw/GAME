@@ -93,7 +93,6 @@ export class HardcoreRunScene extends Phaser.Scene {
   uiCenterX(){ return this.uiWidth()/2; }
 
   create(){
-    this.cameras.main.setBackgroundColor(C.bg);
     this.configureViewport();
     this.physics.world.setBounds(0,0,1280,720);
     this.keys=this.input.keyboard.addKeys({
