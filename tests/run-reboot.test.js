@@ -222,7 +222,7 @@ test('level selector unlocks completed levels and preserves per-level PBs',()=>{
   assert.match(scene,/RUN_LEVEL_BESTS_KEY/);
   assert.match(scene,/Math\.max\(current,Math\.floor\(Number\(level\)\|\|1\)\)/);
   assert.match(scene,/body:JSON\.stringify\(\{level:requested\}\)/);
-  assert.match(css,/background\.svg'\) center bottom \/ cover no-repeat/);
+  assert.match(css,/background-position:center center,center clamp\(72px,10vh,118px\)/);
   assert.match(server,/url\.pathname==='\/api\/run\/levels'/);
   assert.match(service,/CREATE TABLE IF NOT EXISTS run_level_bests/);
   assert.match(service,/async function levelStatus/);
