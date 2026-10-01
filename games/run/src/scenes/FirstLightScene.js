@@ -571,70 +571,79 @@ export class FirstLightScene extends Phaser.Scene {
       [1080,500,'SALTA'], [3180,540,'BOUNCE'], [3620,510,'ROTA ↑'],
       [5560,610,'SEGREDO ↓'], [7330,535,'BOOST'], [8850,540,'FINAL →'],
     ];
+    const source = this.textures.get(ASTRAL_OBJ.signMarker).getSourceImage();
+    const scale = 104 / source.width;
     for (const [x,y,label] of signs) {
-      const post = this.add.rectangle(x, y, 7, 72, 0x756044, 0.95).setDepth(7);
-      const plate = this.add.rectangle(x + 14, y - 42, 112, 38, 0x10233d, 0.96)
-        .setStrokeStyle(2, 0x44dfff, 0.78)
-        .setDepth(7);
-      const txt = this.add.text(x + 14, y - 43, label, {
+      const marker = this.add.image(x, y, ASTRAL_OBJ.signMarker)
+        .setOrigin(0.5, 1)
+        .setScale(scale)
+        .setDepth(7)
+        .setAlpha(0.96);
+      const txt = this.add.text(x + 3, y - 71, label, {
         fontFamily: 'Arial Black',
-        fontSize: '10px',
+        fontSize: '9px',
         color: '#efffff',
+        backgroundColor: '#07182dcc',
+        padding: { x: 5, y: 3 },
       }).setOrigin(.5).setDepth(8);
-      this.decor.push(post, plate, txt);
+      this.decor.push(marker, txt);
     }
   }
   decorateAstralWorld() {
-    const arches = [[1510,585,345],[4300,550,310],[6880,565,340],[8740,545,290]];
+    const archSource = this.textures.get(ASTRAL_OBJ.arch).getSourceImage();
+    const arches = [[1510,585,315],[4300,550,285],[6880,565,305],[8740,545,265]];
     for (const [x,y,w] of arches) {
       this.add.image(x, y, ASTRAL_OBJ.arch)
         .setOrigin(0.5,1)
-        .setDisplaySize(w, w * (491 / 477))
+        .setScale(w / archSource.width)
         .setDepth(2)
-        .setAlpha(0.97);
+        .setAlpha(0.91);
     }
 
-    const clusters = [[880,606,170],[1880,610,155],[3920,534,150],[6000,605,168],[8380,522,145],[9270,603,175]];
+    const clusterSource = this.textures.get(ASTRAL_OBJ.crystalCluster).getSourceImage();
+    const clusters = [[880,606,135],[1880,610,120],[3920,534,116],[6000,605,132],[8380,522,112],[9270,603,136]];
     for (const [x,y,w] of clusters) {
       const art = this.add.image(x, y, ASTRAL_OBJ.crystalCluster)
         .setOrigin(0.5,1)
-        .setDisplaySize(w, w * (281 / 356))
+        .setScale(w / clusterSource.width)
         .setDepth(7);
       this.tweens.add({ targets: art, alpha: 0.78, duration: 1200 + (x % 700), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
 
     const vegetation = [
-      [720,605,ASTRAL_OBJ.vegetationPink,120],[1760,605,ASTRAL_OBJ.vegetationGreen,115],
-      [3820,528,ASTRAL_OBJ.vegetationPink,105],[6120,602,ASTRAL_OBJ.vegetationGreen,118],
-      [8280,518,ASTRAL_OBJ.vegetationPink,102],[9340,600,ASTRAL_OBJ.vegetationGreen,116],
+      [720,605,ASTRAL_OBJ.vegetationPink,98],[1760,605,ASTRAL_OBJ.vegetationGreen,92],
+      [3820,528,ASTRAL_OBJ.vegetationPink,88],[6120,602,ASTRAL_OBJ.vegetationGreen,96],
+      [8280,518,ASTRAL_OBJ.vegetationPink,86],[9340,600,ASTRAL_OBJ.vegetationGreen,94],
     ];
-    for (const [x,y,frame,w] of vegetation) {
-      this.add.image(x, y, frame)
+    for (const [x,y,key,w] of vegetation) {
+      const source = this.textures.get(key).getSourceImage();
+      this.add.image(x, y, key)
         .setOrigin(0.5,1)
-        .setDisplaySize(w, w * 0.58)
-        .setDepth(6);
+        .setScale(w / source.width)
+        .setDepth(6)
+        .setAlpha(0.94);
     }
 
-    const routeBanners = [[1500,510],[4320,475],[6920,490],[8880,468]];
-    for (const [x,y] of routeBanners) {
-      this.add.rectangle(x, y - 72, 7, 145, 0x6f593e, 0.92).setDepth(4);
-      this.add.rectangle(x + 18, y - 108, 46, 82, 0x44227d, 0.94)
-        .setStrokeStyle(2, 0xf3c85b, 0.88)
-        .setDepth(5);
-      this.add.text(x + 18, y - 110, '✕', { fontFamily:'Arial Black', fontSize:'22px', color:'#eaffff' })
-        .setOrigin(.5).setDepth(6);
+    const bannerSource = this.textures.get(ASTRAL_OBJ.routeBanner).getSourceImage();
+    for (const [x,y] of [[1500,510],[4320,475],[6920,490],[8880,468]]) {
+      this.add.image(x, y, ASTRAL_OBJ.routeBanner)
+        .setOrigin(0.5,1)
+        .setScale(118 / bannerSource.height)
+        .setDepth(4)
+        .setAlpha(0.94);
     }
 
-    const foregroundIslands = [[360,760,190],[2700,766,215],[4720,758,185],[6600,765,205],[9600,760,190]];
-    for (const [x,y,w] of foregroundIslands) {
+    // A few mid-ground floating islands only; the dedicated foreground strip
+    // already supplies the near silhouette and should not be obscured.
+    const islandSource = this.textures.get(ASTRAL_OBJ.floatingIsland).getSourceImage();
+    for (const [x,y,w] of [[2380,505,120],[5900,470,110],[8260,500,118]]) {
       this.add.image(x, y, ASTRAL_OBJ.floatingIsland)
-        .setOrigin(0.5,0.15)
-        .setDisplaySize(w, w * (397 / 326))
-        .setDepth(82)
-        .setAlpha(0.86);
+        .setOrigin(0.5,0.25)
+        .setScale(w / islandSource.width)
+        .setDepth(1)
+        .setAlpha(0.72);
     }
   }
-
   handleMovementEvent(event) {
     if (event.type === 'jump') this.fx.jump(this.runner);
     if (event.type === 'skid') this.fx.skid(this.runner);
