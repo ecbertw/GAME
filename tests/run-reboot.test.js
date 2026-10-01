@@ -238,14 +238,19 @@ test('replaying an older RUN level does not replace highest overall progress',()
 });
 
 
-test('background skyline reaches the bottom of the RUN playfield',()=>{
+test('detailed Neon Void background fills the full RUN playfield',()=>{
   const bg=read('games/run/assets/neon-void/background.svg');
   const css=read('games/run/run.css');
-  assert.match(bg,/M0 1080V332/);
-  assert.match(bg,/M1745 1080V445/);
-  assert.match(bg,/M0 720H1920M0 820H1920M0 930H1920M0 1030H1920/);
-  assert.doesNotMatch(bg,/M0 700V332/);
-  assert.match(css,/background\.svg\?v=20261001-bgfull1/);
+  assert.match(bg,/id="far-city"/);
+  assert.match(bg,/id="mid-city"/);
+  assert.match(bg,/id="foreground"/);
+  assert.match(bg,/M0 1080V430/);
+  assert.match(bg,/M1840 1080V868/);
+  assert.match(bg,/M0 728H1920M0 824H1920M0 930H1920M0 1028H1920/);
+  assert.match(bg,/radialGradient id="planet"/);
+  assert.match(bg,/filter id="glowBlue"/);
+  assert.match(bg,/filter id="glowRed"/);
+  assert.match(css,/background\.svg\?v=20261001-bgdetail2/);
 });
 
 
