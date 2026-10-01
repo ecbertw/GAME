@@ -122,74 +122,37 @@ export class FirstLightScene extends Phaser.Scene {
   }
 
   createAstralBackdrop() {
-    // Canonical FIRST LIGHT sky from the approved art sheet.
-    this.add.rectangle(640, 360, 1280, 720, 0x79bfe9, 1)
+    // Full FIRST LIGHT environment reconstructed from the approved art board.
+    this.add.rectangle(640, 360, 1280, 720, 0x0b2452, 1)
       .setScrollFactor(0)
       .setDepth(-1400);
 
-    this.add.image(640, 150, ASTRAL_BG.sky)
+    this.add.image(640, 360, ASTRAL_BG.world)
       .setScrollFactor(0)
       .setDepth(-1360)
-      .setDisplaySize(1280, 300);
+      .setDisplaySize(1280, 720);
 
-    // Soft cloud horizon beneath the moon.
-    this.drawCloudBand(-1180, 0.04, 340, 0xffd9ef, 0.72);
-    this.drawCloudBand(-1160, 0.07, 390, 0xeed9ff, 0.56);
-
-    // Far celestial ruins built from the approved arch/platform/waterfall art.
-    for (let i = 0; i < 15; i += 1) {
-      const x = 260 + i * 720;
-      const y = 390 - (i % 4) * 30;
-      const arch = this.add.image(x, y, ASTRAL_OBJ.arch)
-        .setOrigin(0.5, 1)
-        .setScrollFactor(0.12)
-        .setDepth(-1020)
-        .setDisplaySize(150 + (i % 3) * 35, 154 + (i % 3) * 36)
-        .setAlpha(0.42)
-        .setTint(0xc7d7ff);
-      if (i % 2) arch.setFlipX(true);
-
-      const island = this.add.image(x + 220, y + 40, ASTRAL_OBJ.floatingIsland)
-        .setOrigin(0.5, 0.25)
-        .setScrollFactor(0.15)
-        .setDepth(-1010)
-        .setDisplaySize(150 + (i % 2) * 40, 86 + (i % 2) * 18)
-        .setAlpha(0.50)
-        .setTint(0xd8e4ff);
-      if (i % 3 === 0) island.setFlipX(true);
-    }
-
-    // Mid-depth ruins, waterfalls and floating fragments.
-    for (let i = 0; i < 12; i += 1) {
-      const x = 420 + i * 880;
-      const y = 520 - (i % 3) * 34;
-      const arch = this.add.image(x, y, ASTRAL_OBJ.arch)
-        .setOrigin(0.5, 1)
-        .setScrollFactor(0.28)
-        .setDepth(-760)
-        .setDisplaySize(245 + (i % 2) * 45, 252 + (i % 2) * 46)
-        .setAlpha(0.72)
-        .setTint(0xf2ecff);
-      if (i % 2) arch.setFlipX(true);
-
-      const fall = this.add.image(x + 185, y - 8, ASTRAL_OBJ.waterfall)
-        .setOrigin(0.5, 0.10)
-        .setScrollFactor(0.30)
-        .setDepth(-750)
-        .setDisplaySize(72, 122)
-        .setAlpha(0.58);
-      this.tweens.add({ targets: fall, alpha: 0.34, duration: 1450 + (i % 4) * 170, yoyo: true, repeat: -1 });
-    }
-
-    // Foreground vegetation/crystal silhouette.
+    // Subtle extra parallax fragments keep the world alive without hiding
+    // the canonical environment composition.
     for (let i = 0; i < 10; i += 1) {
-      const x = 140 + i * 1120;
+      const x = 420 + i * 1120;
+      const island = this.add.image(x, 350 + (i % 3) * 38, ASTRAL_OBJ.floatingIsland)
+        .setScrollFactor(0.16)
+        .setDepth(-920)
+        .setDisplaySize(145 + (i % 3) * 26, 70 + (i % 3) * 13)
+        .setAlpha(0.34)
+        .setTint(0xd9e9ff);
+      if (i % 2) island.setFlipX(true);
+    }
+
+    for (let i = 0; i < 8; i += 1) {
+      const x = 280 + i * 1380;
       const cluster = this.add.image(x, 720, ASTRAL_OBJ.crystalCluster)
         .setOrigin(0.5, 1)
         .setScrollFactor(1.03)
         .setDepth(82)
-        .setDisplaySize(150 + (i % 3) * 30, 118 + (i % 3) * 22)
-        .setAlpha(0.88);
+        .setDisplaySize(145 + (i % 2) * 25, 115 + (i % 2) * 20)
+        .setAlpha(0.86);
       if (i % 2) cluster.setFlipX(true);
     }
 
