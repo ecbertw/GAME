@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-centred3';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-centred3';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-hard100';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-hard100';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 
@@ -55,6 +55,8 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.playerVisual=null;
     this.runnerFacing=1;
     this.runnerPhase=0;
+    this.awaitingClearChoice=false;
+    this.lastClearResult=null;
   }
 
   preload(){
@@ -76,7 +78,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const root=document.getElementById('run-root');
     const rect=root&&root.getBoundingClientRect?root.getBoundingClientRect():null;
     const pxW=Math.max(640,Math.round((rect&&rect.width)||window.innerWidth||1280));
-    const pxH=Math.max(360,Math.round((rect&&rect.height)||Math.max(360,(window.innerHeight||772)-52)));
+    const pxH=Math.max(360,Math.round((rect&&rect.height)||Math.max(360,(window.innerHeight||788)-68)));
 
     if(Math.abs(Number(this.scale.width)-pxW)>1||Math.abs(Number(this.scale.height)-pxH)>1){
       this.scale.resize(pxW,pxH);
@@ -114,43 +116,35 @@ export class HardcoreRunScene extends Phaser.Scene {
 
     this.createHud();
     this.createStartOverlay();
+    this.createClearOverlay();
     this.loadLevel(readSavedLevel()-1);
     this.refreshLeaderboard();
 
     this.input.keyboard.on('keydown-SPACE',()=>this.queueJump());
     this.input.keyboard.on('keydown-W',()=>this.queueJump());
     this.input.keyboard.on('keydown-UP',()=>this.queueJump());
-    this.input.keyboard.on('keydown-ENTER',()=>{ if(!this.runActive&&!this.finished) this.requestStart(); });
-    this.input.keyboard.on('keydown-R',()=>{ if(this.runActive&&!this.finished&&!this.dead) this.killPlayer(true); });
+    this.input.keyboard.on('keydown-ENTER',()=>{ if(this.awaitingClearChoice)this.nextAfterClear(); else if(!this.runActive&&!this.finished)this.requestStart(); });
+    this.input.keyboard.on('keydown-R',()=>{ if(this.awaitingClearChoice)this.retryClearedLevel(); else if(this.runActive&&!this.finished&&!this.dead)this.killPlayer(true); });
     this.input.keyboard.on('keydown-H',()=>window.location.assign('/'));
     this.input.on('pointerdown',()=>{ if(!this.runActive&&!this.finished) this.requestStart(); });
   }
 
   createHud(){
-    const vw=this.uiWidth();
-    this.hud=this.add.container(0,0).setScrollFactor(0).setDepth(1000);
-    this.hudGlass=this.add.rectangle(vw/2,41,vw,82,0x01050b,.965);
-    this.hudLine=this.add.rectangle(vw/2,81,vw,1,0x547493,.72);
-    this.brandText=this.add.text(24,10,'RUN',{fontFamily:'Arial Black,Arial',fontSize:'35px',fontStyle:'italic',color:'#ffffff',letterSpacing:1});
-    this.brandText.setShadow(0,0,'#d9f7ff',7,true,true);
-    this.brandSlash=this.add.text(145,18,'//',{fontFamily:'Arial Black,Arial',fontSize:'23px',color:'#657487'});
-    this.levelText=this.add.text(198,13,'LEVEL 001',{fontFamily:'Arial Black,Arial',fontSize:'15px',color:'#f8fbff',letterSpacing:2});
-    this.nameText=this.add.text(198,40,'NEON VOID',{fontFamily:'monospace',fontSize:'10px',color:'#c1cad5',letterSpacing:6});
+    const bindText=id=>{
+      const el=document.getElementById(id);
+      return{setText(value){if(el)el.textContent=String(value);return this;},setAlpha(value){if(el)el.style.opacity=String(value);return this;}};
+    };
+    this.levelText=bindText('run-hud-level');
+    this.nameText=bindText('run-hud-name');
+    this.timerText=bindText('run-hud-time');
+    this.pbText=bindText('run-hud-pb');
+    this.deathText=bindText('run-hud-deaths');
+    this.controls=bindText('run-controls');
+    this.progressEl=document.getElementById('run-hud-progress-fill');
+  }
 
-    const timerX=Math.max(560,Math.min(vw-330,vw*.69));
-    this.timerIcon=this.add.image(timerX-132,34,'nv-stopwatch').setDisplaySize(40,40);
-    this.timerText=this.add.text(timerX-92,10,'00:00.000',{fontFamily:'monospace',fontSize:'27px',fontStyle:'bold',color:'#ffffff',letterSpacing:1});
-    this.pbText=this.add.text(timerX-88,45,'PB  --:--.---',{fontFamily:'monospace',fontSize:'11px',fontStyle:'bold',color:'#aeb9c8',letterSpacing:2});
-
-    this.hudDivider=this.add.rectangle(vw-248,40,1,42,0x8192a5,.62);
-    this.deathIcon=this.add.image(vw-190,39,'nv-skull').setDisplaySize(42,42);
-    this.deathLabel=this.add.text(vw-144,12,'DEATHS',{fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',color:'#cbd3df',letterSpacing:4});
-    this.deathText=this.add.text(vw-144,34,'0',{fontFamily:'Arial Black,Arial',fontSize:'24px',color:'#ffffff'});
-    this.progressBase=this.add.rectangle(vw/2,80,vw,2,0x17304a,.75);
-    this.progressFill=this.add.rectangle(0,80,0,2,C.cyan,1).setOrigin(0,.5);
-
-    this.hud.add([this.hudGlass,this.hudLine,this.brandText,this.brandSlash,this.levelText,this.nameText,this.timerIcon,this.timerText,this.pbText,this.hudDivider,this.deathIcon,this.deathLabel,this.deathText,this.progressBase,this.progressFill]);
-    this.controls=this.add.text(22,692,'A/D  MOVE    SPACE  JUMP    R  RESTART    H  HOME',{fontFamily:'monospace',fontSize:'9px',color:'#66778a',letterSpacing:1}).setScrollFactor(0).setDepth(1000);
+  setProgress(value){
+    if(this.progressEl)this.progressEl.style.width=(Phaser.Math.Clamp(Number(value)||0,0,1)*100).toFixed(2)+'%';
   }
 
   createStartOverlay(){
@@ -169,9 +163,25 @@ export class HardcoreRunScene extends Phaser.Scene {
     }
   }
 
+  createClearOverlay(){
+    this.clearOverlayEl=document.getElementById('run-clear-overlay');
+    this.clearTitleEl=document.getElementById('run-clear-title');
+    this.clearTimeEl=document.getElementById('run-clear-time');
+    this.clearPbEl=document.getElementById('run-clear-pb');
+    const retry=document.getElementById('run-clear-retry');
+    const next=document.getElementById('run-clear-next');
+    if(retry)retry.addEventListener('click',e=>{e.stopPropagation();this.retryClearedLevel();});
+    if(next)next.addEventListener('click',e=>{e.stopPropagation();this.nextAfterClear();});
+  }
+
+  hideClearOverlay(){
+    if(this.clearOverlayEl)this.clearOverlayEl.classList.add('is-hidden');
+  }
+
   queueJump(){
+    if(this.awaitingClearChoice){this.nextAfterClear();return;}
     this.jumpBufferUntil=this.time.now+RUN_PHYSICS.jumpBufferMs;
-    if(!this.runActive&&!this.finished) this.requestStart();
+    if(!this.runActive&&!this.finished)this.requestStart();
   }
 
   async requestStart(){
@@ -217,8 +227,10 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   loadLevel(index,{resetClock=false}={}){
+    this.hideClearOverlay();
+    this.awaitingClearChoice=false;
     this.clearLevel();
-    this.levelIndex=index;
+    this.levelIndex=Phaser.Math.Clamp(index,0,RUN_LEVEL_COUNT-1);
     this.dead=false;
     this.levelLocked=false;
     const L=getRunLevel(index);
@@ -245,7 +257,7 @@ export class HardcoreRunScene extends Phaser.Scene {
 
     this.levelText.setText('LEVEL '+String(index+1).padStart(3,'0')+' / '+String(RUN_LEVEL_COUNT).padStart(3,'0'));
     this.nameText.setText(L.name+'  ·  NEON VOID');
-    this.progressFill.width=this.uiWidth()*(index/RUN_LEVEL_COUNT);
+    this.setProgress((this.levelIndex+1)/RUN_LEVEL_COUNT);
     this.cameras.main.startFollow(this.player,true,.11,.08,-Math.min(260,this.uiWidth()*.18),20);
     this.cameras.main.scrollX=0;
     if(resetClock&&this.runActive) this.levelStartedAt=this.time.now;
@@ -482,9 +494,11 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   createRunnerVisual(x,y){
-    const c=this.add.container(x,y).setDepth(40).setScale(1.12);
+    const c=this.add.container(x,y).setDepth(40);
+    const glow=this.add.graphics();
     const body=this.add.graphics();
-    c.add(body);
+    c.add([glow,body]);
+    c.glowGraphics=glow;
     c.bodyGraphics=body;
     this.playerVisual=c;
     this.runnerPhase=0;
@@ -496,7 +510,6 @@ export class HardcoreRunScene extends Phaser.Scene {
   updateRunnerVisual(time,delta=16){
     const p=this.player,c=this.playerVisual;
     if(!p||!p.body||!c)return;
-
     const b=p.body;
     const grounded=b.blocked.down||b.touching.down||!!this.ridingPlatform;
     const speed=Math.abs(b.velocity.x);
@@ -504,77 +517,51 @@ export class HardcoreRunScene extends Phaser.Scene {
     else if(b.velocity.x<-8)this.runnerFacing=-1;
 
     const inputMoving=!!(this.keys&&((this.keys.left.isDown||this.keys.a.isDown)!==(this.keys.right.isDown||this.keys.d.isDown)));
-    const moving=grounded&&inputMoving&&speed>28;
+    const moving=grounded&&inputMoving&&speed>35;
     if(moving)this.runnerPhase+=(delta||16)*(0.0045+Math.min(1,speed/RUN_PHYSICS.runSpeed)*0.0105);
+    c.x=p.x;c.y=p.y+1;c.scaleX=this.runnerFacing;
 
-    c.x=p.x;c.y=p.y;c.scaleX=Math.abs(c.scaleX)*this.runnerFacing;
-
-    const g=c.bodyGraphics;
-    g.clear();
+    const g=c.bodyGraphics,halo=c.glowGraphics;
+    g.clear();halo.clear();
 
     const stride=moving?Math.sin(this.runnerPhase)*9:0;
-    const lift=moving?Math.max(0,Math.sin(this.runnerPhase*2))*1.4:0;
-    const lean=grounded?Math.min(2.0,speed/170):b.velocity.y<0?2.0:.7;
-    const hip={x:-1+lean*.12,y:3-lift};
-    const shoulder={x:1+lean,y:-9-lift};
+    const lift=moving?Math.max(0,Math.sin(this.runnerPhase*2))*2:0;
+    const lean=grounded?Math.min(.13,speed/2600):(b.velocity.y<0?.10:.03);
+    const shoulder={x:lean*22,y:-9-lift};
+    const hip={x:0,y:3-lift};
 
     let lf,rf,lh,rh,lk,rk,le,re;
     if(!grounded){
       if(b.velocity.y<20){
-        lf={x:-8,y:16};rf={x:10,y:11};lk={x:-9,y:8};rk={x:5,y:7};
-        lh={x:9,y:-17};rh={x:-9,y:-12};le={x:6,y:-11};re={x:-7,y:-7};
+        lf={x:-7,y:15};rf={x:9,y:10};lk={x:-10,y:8};rk={x:5,y:7};
+        lh={x:8,y:-18};rh={x:-8,y:-13};le={x:6,y:-12};re={x:-7,y:-8};
       }else{
-        lf={x:-7,y:20};rf={x:7,y:19};lk={x:-4,y:10};rk={x:5,y:10};
-        lh={x:-8,y:5};rh={x:9,y:3};le={x:-4,y:-3};re={x:6,y:-2};
+        lf={x:-7,y:20};rf={x:7,y:18};lk={x:-4,y:10};rk={x:5,y:10};
+        lh={x:-7,y:4};rh={x:8,y:2};le={x:-4,y:-4};re={x:6,y:-3};
       }
     }else{
-      lf={x:stride,y:21};rf={x:-stride,y:21};
+      lf={x:stride,y:20};rf={x:-stride,y:20};
       lk={x:stride*.48-2,y:11-lift};rk={x:-stride*.48+2,y:11-lift};
       lh={x:-stride*.72,y:4-lift};rh={x:stride*.72,y:4-lift};
       le={x:-stride*.42,y:-2-lift};re={x:stride*.42,y:-2-lift};
     }
 
-    const BLACK=0x000000;
-
-    const capsule=(a,b,width)=>{
-      g.lineStyle(width,BLACK,1);
-      g.lineBetween(a.x,a.y,b.x,b.y);
-      g.fillStyle(BLACK,1);
-      g.fillCircle(a.x,a.y,width/2);
-      g.fillCircle(b.x,b.y,width/2);
+    const drawLimb=(a,k,f,alpha=1)=>{
+      halo.lineStyle(8,C.cyan,.07*alpha);halo.lineBetween(a.x,a.y,k.x,k.y);halo.lineBetween(k.x,k.y,f.x,f.y);
+      g.lineStyle(5,C.player,alpha);g.lineBetween(a.x,a.y,k.x,k.y);g.lineBetween(k.x,k.y,f.x,f.y);
+      g.fillStyle(C.player,alpha).fillCircle(k.x,k.y,2.5);
     };
 
-    const limb=(a,k,f,alpha=1)=>{
-      g.setAlpha(alpha);
-      capsule(a,k,6.4);
-      capsule(k,f,6.0);
-      g.fillStyle(BLACK,1).fillEllipse(f.x,f.y+1,7.5,4.4);
-      g.setAlpha(1);
-    };
-
-    // rear limbs
-    limb({x:hip.x-2,y:hip.y},rk,rf,.68);
-    limb({x:shoulder.x-3,y:shoulder.y+1},re,rh,.68);
-
-    // athletic tapered torso
-    g.fillStyle(BLACK,1);
-    g.fillPoints([
-      {x:shoulder.x-7.2,y:shoulder.y},
-      {x:shoulder.x-6.2,y:shoulder.y+8},
-      {x:hip.x-4.0,y:hip.y+3},
-      {x:hip.x+4.0,y:hip.y+3},
-      {x:shoulder.x+6.2,y:shoulder.y+8},
-      {x:shoulder.x+7.2,y:shoulder.y}
-    ],true);
-    g.fillEllipse(hip.x,hip.y+2,9,8);
-
-    // front limbs
-    limb({x:hip.x+2,y:hip.y},lk,lf,1);
-    limb({x:shoulder.x+3,y:shoulder.y+1},le,lh,1);
-
-    // neck + faceless head
-    capsule({x:shoulder.x+1,y:shoulder.y-2},{x:shoulder.x+1.4,y:shoulder.y-5},4.2);
-    g.fillStyle(BLACK,1).fillEllipse(shoulder.x+2,shoulder.y-11,11,13);
+    drawLimb({x:hip.x-2,y:hip.y},rk,rf,.58);
+    drawLimb({x:shoulder.x-2,y:shoulder.y},re,rh,.58);
+    halo.lineStyle(10,C.cyan,.07);halo.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
+    g.lineStyle(7,C.player,1);g.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
+    drawLimb({x:hip.x+2,y:hip.y},lk,lf,1);
+    drawLimb({x:shoulder.x+2,y:shoulder.y},le,lh,1);
+    halo.fillStyle(C.cyan,.08).fillCircle(shoulder.x+2,shoulder.y-9,7);
+    g.fillStyle(C.player,1).fillCircle(shoulder.x+2,shoulder.y-9,5);
+    g.lineStyle(1,0x9df0ff,.7).strokeCircle(shoulder.x+2,shoulder.y-9,5);
+    g.fillStyle(C.cyan,.9).fillCircle(shoulder.x+1,shoulder.y+2,1.5);
   }
 
   showLevelCard(index,name){
@@ -603,12 +590,12 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   async completeLevel(){
-    if(!this.runActive||this.finished||this.dead||this.levelLocked) return;
+    if(!this.runActive||this.finished||this.dead||this.levelLocked)return;
     this.levelLocked=true;
     const level=this.levelIndex+1;
     let levelTimeMs=Math.max(1,Math.round(this.time.now-this.levelStartedAt));
     this.timerText.setText(formatTime(levelTimeMs));
-    this.progressFill.width=this.uiWidth()*(level/RUN_LEVEL_COUNT);
+    this.setProgress(level/RUN_LEVEL_COUNT);
     this.player.body.setVelocity(0,0);
     this.player.body.enable=false;
 
@@ -621,27 +608,49 @@ export class HardcoreRunScene extends Phaser.Scene {
         });
         if(res.ok){
           serverResult=await res.json();
-          if(Number.isFinite(serverResult.timeMs)) levelTimeMs=serverResult.timeMs;
+          if(Number.isFinite(serverResult.timeMs))levelTimeMs=serverResult.timeMs;
           this.timerText.setText(formatTime(levelTimeMs));
           await this.refreshLeaderboard();
         }
       }catch(_){}
     }
 
-    if(level===RUN_LEVEL_COUNT){
-      this.finishRun(levelTimeMs,serverResult);
+    if(level<RUN_LEVEL_COUNT)saveLevel(level+1);
+    else saveLevel(RUN_LEVEL_COUNT);
+
+    this.lastClearResult={level,timeMs:levelTimeMs,serverResult};
+    this.awaitingClearChoice=true;
+
+    const suffix=serverResult&&serverResult.isPersonalBest?'NEW PERSONAL BEST':'LEVEL CLEAR';
+    if(this.clearTitleEl)this.clearTitleEl.textContent='LEVEL '+String(level).padStart(3,'0')+' CLEAR';
+    if(this.clearTimeEl)this.clearTimeEl.textContent=formatTime(levelTimeMs);
+    if(this.clearPbEl)this.clearPbEl.textContent=suffix;
+    const next=document.getElementById('run-clear-next');
+    if(next)next.textContent=level>=RUN_LEVEL_COUNT?'FINISH RUN':'NEXT LEVEL';
+    if(this.clearOverlayEl)this.clearOverlayEl.classList.remove('is-hidden');
+  }
+
+  retryClearedLevel(){
+    if(!this.awaitingClearChoice||!this.lastClearResult)return;
+    this.hideClearOverlay();
+    this.awaitingClearChoice=false;
+    this.loadLevel(this.lastClearResult.level-1,{resetClock:true});
+    this.timerText.setText('00:00.000');
+  }
+
+  nextAfterClear(){
+    if(!this.awaitingClearChoice||!this.lastClearResult)return;
+    const result=this.lastClearResult;
+    this.hideClearOverlay();
+    this.awaitingClearChoice=false;
+    if(result.level>=RUN_LEVEL_COUNT){
+      this.finishRun(result.timeMs,result.serverResult);
       return;
     }
-
-    saveLevel(level===RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:level+1);
-    const suffix=serverResult&&serverResult.isPersonalBest?' · NEW PB':'';
-    const clear=this.add.text(this.uiCenterX(),348,'CLEAR · '+formatTime(levelTimeMs)+suffix,{fontFamily:'Arial Black,Arial',fontSize:'30px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
-    this.time.delayedCall(420,()=>{
-      clear.destroy();
-      this.loadLevel(this.levelIndex+1,{resetClock:true});
-      this.timerText.setText('00:00.000');
-    });
+    this.loadLevel(result.level,{resetClock:true});
+    this.timerText.setText('00:00.000');
   }
+
 
   async finishRun(levelTimeMs,serverResult){
     this.finished=true;
@@ -699,7 +708,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.updateDynamicHazards(time);
     this.updateRunnerVisual(time,delta);
 
-    if(this.runActive&&!this.finished){
+    if(this.runActive&&!this.finished&&!this.awaitingClearChoice){
       const elapsed=this.time.now-this.levelStartedAt;
       this.timerText.setText(formatTime(elapsed));
     }
