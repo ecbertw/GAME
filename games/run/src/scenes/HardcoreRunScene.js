@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-spikeflush1';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-spikeflush1';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-runfix3';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-runfix3';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 const RUN_LEVEL_BESTS_KEY='eixo.run.level-bests.v1';
@@ -453,7 +453,11 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.physics.add.existing(r,true);
     const top=y-h/2;
     const visualH=solidFloor?Math.min(92,Math.max(58,h*.30)):Math.min(50,Math.max(38,h+24));
-    const cap=this.add.image(x,top,'nv-platform').setOrigin(.5,0).setDepth(7).setDisplaySize(w,visualH);
+    // platform.svg places its bright walkable edge at y=11 of a 96px viewBox.
+    // Shift the artwork upward so that edge, the physics top and spike base
+    // are all exactly the same world coordinate.
+    const surfaceOffset=visualH*(11/96);
+    const cap=this.add.image(x,top-surfaceOffset,'nv-platform').setOrigin(.5,0).setDepth(7).setDisplaySize(w,visualH);
     if(solidFloor&&h>visualH){
       const bodyH=h-visualH;
       const body=this.add.rectangle(x,top+visualH+bodyH/2,w,bodyH,0x070c13,1).setDepth(5);
@@ -480,7 +484,8 @@ export class HardcoreRunScene extends Phaser.Scene {
     // walkable-looking edge belongs on the underside, not on the top.
     const bottom=y+h/2;
     const visualH=Math.min(50,Math.max(38,h+24));
-    const cap=this.add.image(x,bottom,'nv-platform')
+    const surfaceOffset=visualH*(11/96);
+    const cap=this.add.image(x,bottom+surfaceOffset,'nv-platform')
       .setOrigin(.5,1)
       .setFlipY(true)
       .setDepth(7)
@@ -800,27 +805,33 @@ export class HardcoreRunScene extends Phaser.Scene {
 
     let serverResult=null;
     let saveError='';
-    if(this.attemptId){
-      try{
-        const res=await fetch('/api/run/level',{
-          method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-          body:JSON.stringify({runId:this.attemptId,level,timeMs:levelTimeMs})
-        });
-        if(res.ok){
-          serverResult=await res.json();
-          if(Number.isFinite(serverResult.timeMs))levelTimeMs=serverResult.timeMs;
-          this.timerText.setText(formatTime(levelTimeMs));
-          await this.refreshLeaderboard();
-          await this.refreshLevelStatus();
+    let hasLocalAccount=false;
+    try{hasLocalAccount=!!JSON.parse(localStorage.getItem('eixo_player')||'null')?.id}catch(_){}
+    try{
+      const res=await fetch('/api/run/level',{
+        method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({runId:this.attemptId||null,level,timeMs:levelTimeMs})
+      });
+      if(res.ok){
+        serverResult=await res.json();
+        this.practice=false;
+        if(Number.isFinite(serverResult.timeMs))levelTimeMs=serverResult.timeMs;
+        if(Number.isFinite(Number(serverResult.unlockedLevel))){
+          this.maxUnlockedLevel=Math.max(this.maxUnlockedLevel,Math.floor(Number(serverResult.unlockedLevel)));
+        }
+        this.timerText.setText(formatTime(levelTimeMs));
+        await this.refreshLeaderboard();
+        await this.refreshLevelStatus();
+      }else{
+        const data=await res.json().catch(()=>({}));
+        if(res.status===401&&!hasLocalAccount){
+          this.practice=true;
         }else{
-          const data=await res.json().catch(()=>({}));
           saveError=String(data.error||('HTTP '+res.status));
         }
-      }catch(_){
-        saveError='NETWORK';
       }
-    }else if(!this.practice){
-      saveError='NO ATTEMPT';
+    }catch(_){
+      if(hasLocalAccount)saveError='NETWORK';
     }
 
     const localResult=saveLevelBest(level,levelTimeMs);
