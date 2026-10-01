@@ -287,3 +287,18 @@ test('RUN shell matches the EIXO site visual language',()=>{
   assert.match(css,/\.run-site-nav\{[\s\S]*background:#09111f/);
   assert.doesNotMatch(html,/>HOME<|>PULSE<|EIXO HOME/);
 });
+
+
+test('privacy browsers can submit authenticated RUN progress without Origin or Referer',()=>{
+  const server=read('server.js');
+  assert.match(server,/runCookiePost=req\.method==='POST'&&\['\/api\/run\/start','\/api\/run\/level'\]\.includes\(url\.pathname\)/);
+  assert.match(server,/browserSameOrigin=fetchSite==='same-origin'\|\|fetchSite==='same-site'/);
+  assert.match(server,/runCookiePost&&browserSameOrigin&&parseCookies\(req\)\[SESSION_COOKIE\]/);
+});
+
+test('RUN completion persists account progress and ranking bests',()=>{
+  const service=read('run-server.js');
+  assert.match(service,/INSERT INTO run_bests\(player_id,best_level,best_time_ms/);
+  assert.match(service,/INSERT INTO run_level_bests\(player_id,level,best_time_ms/);
+  assert.match(service,/bestLevel\+1/);
+});
