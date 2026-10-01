@@ -44,7 +44,7 @@ body{overscroll-behavior:none}
 .run-stage{
   position:fixed;left:0;right:0;top:76px;bottom:0;overflow:hidden;
   background-color:#07111f;
-  background-image:linear-gradient(180deg,#07101b10,#03071138),url('/games/run/assets/neon-void/background.svg?v=20261001-bgfull1');
+  background-image:linear-gradient(180deg,#07101b10,#03071138),url('/games/run/assets/neon-void/background.svg?v=20261001-bgdetail2');
   background-repeat:no-repeat,no-repeat;
   background-size:cover,cover;
   background-position:center center,center clamp(72px,10vh,118px)
