@@ -1,6 +1,26 @@
 import { RUN_PHYSICS } from '../run-config.js';
 import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js';
 
+const RUN_PROGRESS_KEY='eixo.run.progress.v1';
+
+function readSavedLevel(){
+  try{
+    const raw=localStorage.getItem(RUN_PROGRESS_KEY);
+    const data=raw?JSON.parse(raw):null;
+    const level=Math.floor(Number(data&&data.level));
+    return Number.isFinite(level)?Phaser.Math.Clamp(level,1,RUN_LEVEL_COUNT):1;
+  }catch(_){return 1}
+}
+
+function saveLevel(level){
+  try{
+    localStorage.setItem(RUN_PROGRESS_KEY,JSON.stringify({
+      level:Phaser.Math.Clamp(Math.floor(Number(level)||1),1,RUN_LEVEL_COUNT),
+      updatedAt:Date.now()
+    }));
+  }catch(_){}
+}
+
 const C = {
   bg:0x08090d, grid:0x242730, platform:0xe9ecf2, platformEdge:0xffffff,
   hazard:0xff3159, safe:0x69ff9c, player:0xf8fafc, accent:0xff3159, muted:0x8a909d
@@ -12,7 +32,7 @@ function formatTime(ms){
   const min=Math.floor(total/60000);
   const sec=Math.floor((total%60000)/1000);
   const milli=total%1000;
-  return String(min).padStart(3,'0')+':'+String(sec).padStart(3,'0')+'.'+String(milli).padStart(3,'0');
+  return String(min).padStart(2,'0')+':'+String(sec).padStart(2,'0')+'.'+String(milli).padStart(3,'0');
 }
 
 export class HardcoreRunScene extends Phaser.Scene {
@@ -52,7 +72,7 @@ export class HardcoreRunScene extends Phaser.Scene {
 
     this.createHud();
     this.createStartOverlay();
-    this.loadLevel(0);
+    this.loadLevel(readSavedLevel()-1);
     this.refreshLeaderboard();
 
     this.input.keyboard.on('keydown-SPACE',()=>this.queueJump());
@@ -116,6 +136,9 @@ export class HardcoreRunScene extends Phaser.Scene {
       if(res.ok){
         const data=await res.json();
         runId=data.runId||null;
+        const serverLevel=Phaser.Math.Clamp(Math.floor(Number(data.level)||1),1,RUN_LEVEL_COUNT);
+        if(serverLevel!==this.levelIndex+1)this.loadLevel(serverLevel-1);
+        saveLevel(serverLevel);
       }else{
         this.practice=true;
       }
@@ -322,6 +345,7 @@ export class HardcoreRunScene extends Phaser.Scene {
       return;
     }
 
+    saveLevel(level===RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:level+1);
     const suffix=serverResult&&serverResult.isPersonalBest?' · NEW PB':'';
     const clear=this.add.text(640,348,'CLEAR · '+formatTime(levelTimeMs)+suffix,{fontFamily:'Arial Black,Arial',fontSize:'30px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(1500);
     this.time.delayedCall(420,()=>{

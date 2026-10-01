@@ -1,39 +1,23 @@
 # EIXO RUN
 
-RUN has **900 deterministic hardcore levels** and a validator designed around the actual movement physics.
+RUN contains 900 deterministic hardcore levels.
 
-## Level design
-Every level is difficult from Level 001 onward. The generator combines:
-- narrow precision jumps and height changes;
-- wide challenge platforms with moving saws above the walking surface;
-- spike strips with explicit landing/take-off safety zones;
-- pulsing laser gates placed directly in mandatory gaps;
-- increasingly dense combinations of the three hazard families.
+## Persistence
+- Practice / no account: current level is stored in browser localStorage and survives refreshes and normal deploys on the same browser and domain.
+- Logged in: the server resumes the latest unfinished PostgreSQL attempt.
+- A stale unfinished attempt can never pull a player behind their recorded best: server resume uses the higher of the unfinished current level and best completed level + 1.
+- Authenticated server progress takes precedence over local browser progress for ranking integrity.
 
-Saws are never generated below platforms. Lasers must actually cross the mandatory route. Decorative route platforms are avoided: the generated platform chain is the route itself.
+## Level safety
+All 900 levels are automatically regenerated and validated:
+- the spawn surface is completely hazard-free;
+- the first jump never contains a laser;
+- every mandatory jump is inside the actual RUN physics envelope;
+- every level contains at least 2 spike zones, 1 saw and 1 laser;
+- saws are above their platform;
+- lasers have a verified OFF window long enough for the required crossing.
 
-## Solvability
-The 900-level set is deterministic, so all players see the same Level 001…900.
+## Variety
+There are 24 structural styles and 6 hazard themes. The route can mix narrow precision platforms, medium hazard platforms, wide saw platforms and thick floor islands, with different climb/descent/zig-zag/fractured height patterns. The current 900-level set has hundreds of distinct structural profiles in addition to 900 unique geometries.
 
-Automated validation checks:
-- every consecutive mandatory jump against real gravity, run speed, jump speed and height difference;
-- minimum landing-platform width;
-- spike clearances and safe take-off/landing zones;
-- saw height and safe waiting zones;
-- laser placement and a sufficiently long OFF window for a human crossing;
-- at least 2 spike challenges, 1 saw and 1 laser in every single level;
-- unique geometry across all 900 levels.
-
-The player object is also destroyed on every reload/level change, preventing the old white player rectangles from remaining behind.
-
-## Ranking
-Ranking remains:
-1. highest completed level;
-2. fastest time on that level;
-3. earlier stored record as the final tie-break.
-
-## Controls
-- A/D or Left/Right: move
-- Space/W/Up: jump / wall jump
-- R: restart current level
-- H: return to EIXO
+Ranking remains highest completed level first, then fastest time for that level.

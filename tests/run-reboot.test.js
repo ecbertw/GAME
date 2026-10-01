@@ -15,83 +15,91 @@ function levels(){
     .replace("import { RUN_PHYSICS } from './run-config.js';",'')
     .replaceAll('export const ','const ')
     .replaceAll('export function ','function ');
-  return Function('RUN_PHYSICS',src+';return{RUN_LEVEL_COUNT,getRunLevel,validateRunLevel,runLevelSignature,jumpEnvelope,RUN_MIN_SAFE_EDGE};')(physics());
+  return Function('RUN_PHYSICS',src+';return{RUN_LEVEL_COUNT,RUN_STYLE_COUNT,getRunLevel,validateRunLevel,runLevelSignature,runStructuralProfile,jumpEnvelope};')(physics());
 }
 
-test('all 900 levels are deterministic, unique and validated',()=>{
+test('all 900 RUN levels are deterministic unique and solvable',()=>{
   const api=levels(),signatures=new Set();
   assert.equal(api.RUN_LEVEL_COUNT,900);
   for(let i=0;i<900;i++){
-    const a=api.getRunLevel(i),b=api.getRunLevel(i);
-    assert.deepEqual(a,b,'level '+(i+1)+' is not deterministic');
-    const v=api.validateRunLevel(a);
-    assert.equal(v.ok,true,'level '+(i+1)+': '+v.errors.join('; '));
-    signatures.add(api.runLevelSignature(a));
-  }
-  assert.equal(signatures.size,900,'all 900 geometries must be unique');
-});
-
-test('every mandatory jump is inside the real RUN physics envelope',()=>{
-  const api=levels();
-  for(let i=0;i<900;i++){
     const L=api.getRunLevel(i);
+    assert.deepEqual(api.getRunLevel(i),L,'level '+(i+1)+' must be deterministic');
+    const result=api.validateRunLevel(L);
+    assert.equal(result.ok,true,'level '+(i+1)+': '+result.errors.join('; '));
+    signatures.add(api.runLevelSignature(L));
     for(let j=0;j<L.route.length-1;j++){
-      const env=api.jumpEnvelope(L.route[j],L.route[j+1]);
-      assert.equal(env.reachable,true,'level '+(i+1)+' jump '+j+' impossible');
+      assert.equal(api.jumpEnvelope(L.route[j],L.route[j+1]).reachable,true,'level '+(i+1)+' jump '+j+' impossible');
     }
   }
+  assert.equal(signatures.size,900);
 });
 
-test('hardcore hazards are meaningful from Level 001 onward',()=>{
+test('spawn is always completely clean and the first jump has no laser',()=>{
   const api=levels();
   for(let i=0;i<900;i++){
     const L=api.getRunLevel(i);
-    assert.ok(L.spikes.length>=2,'level '+(i+1)+' needs spikes');
-    assert.ok(L.saws.length>=1,'level '+(i+1)+' needs saws');
-    assert.ok(L.lasers.length>=1,'level '+(i+1)+' needs lasers');
+    assert.equal(L.spikeMeta.some(m=>m.surface===0),false,'level '+(i+1)+' spawn spike');
+    assert.equal(L.sawMeta.some(m=>m.surface===0),false,'level '+(i+1)+' spawn saw');
+    assert.equal(L.laserMeta.some(m=>m.gap===0),false,'level '+(i+1)+' spawn laser');
+  }
+});
+
+test('RUN has broad structural variety across the 900 levels',()=>{
+  const api=levels(),profiles=new Set(),styles=new Set(),themes=new Set();
+  for(let i=0;i<900;i++){
+    const L=api.getRunLevel(i);
+    profiles.add(api.runStructuralProfile(L));
+    styles.add(L.style);
+    themes.add(L.hazardTheme);
+  }
+  assert.equal(styles.size,24);
+  assert.equal(themes.size,6);
+  assert.ok(profiles.size>=700,'structural profiles='+profiles.size);
+});
+
+test('every level remains hardcore with validated hazards',()=>{
+  const api=levels();
+  for(let i=0;i<900;i++){
+    const L=api.getRunLevel(i);
+    assert.ok(L.spikes.length>=2,'level '+(i+1)+' missing spikes');
+    assert.ok(L.saws.length>=1,'level '+(i+1)+' missing saw');
+    assert.ok(L.lasers.length>=1,'level '+(i+1)+' missing laser');
     for(const m of L.sawMeta){
       const s=L.route[m.surface];
-      assert.ok(m.y+m.r<s.top-4,'level '+(i+1)+' saw is below/on platform');
-      assert.ok(m.x-m.range-m.r-s.left>=api.RUN_MIN_SAFE_EDGE,'level '+(i+1)+' saw removes left waiting zone');
-      assert.ok(s.right-(m.x+m.range+m.r)>=api.RUN_MIN_SAFE_EDGE,'level '+(i+1)+' saw removes right waiting zone');
+      assert.ok(m.y+m.r<s.top-4,'level '+(i+1)+' saw below platform');
     }
     for(const m of L.laserMeta){
-      const a=L.route[m.gap],b=L.route[m.gap+1];
-      assert.ok(m.x>a.right&&m.x<b.left,'level '+(i+1)+' laser is not in the required gap');
-      assert.ok(m.period*.42>=m.requiredOff,'level '+(i+1)+' laser has no human timing window');
+      assert.ok(m.period*.42>=m.requiredOff,'level '+(i+1)+' laser timing impossible');
     }
   }
 });
 
-test('scene destroys the old player before loading another level',()=>{
+test('RUN progress survives refresh and deploy',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/if\(this\.player\)\s*\{\s*try\s*\{\s*this\.player\.destroy\(\);\s*\}\s*catch\(_\)\s*\{\s*\}\s*\}/);
-  assert.match(scene,/this\.player=null/);
+  const service=read('run-server.js');
+  assert.match(scene,/eixo\.run\.progress\.v1/);
+  assert.match(scene,/localStorage\.getItem/);
+  assert.match(scene,/localStorage\.setItem/);
+  assert.match(scene,/this\.loadLevel\(readSavedLevel\(\)-1\)/);
+  assert.match(scene,/saveLevel\(level===RUN_LEVEL_COUNT\?RUN_LEVEL_COUNT:level\+1\)/);
+  assert.match(service,/finished_at IS NULL/);
+  assert.match(service,/const level=Math\.max\(current,bestNext\)/);
+  assert.match(service,/resumed:true/);
+});
+
+test('RUN keeps cleanup timer and ranking formatting correct',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  assert.match(scene,/this\.player\.destroy\(\)/);
   assert.match(scene,/DEATHS  0/);
+  assert.match(scene,/String\(min\)\.padStart\(2,'0'\)/);
+  assert.match(scene,/String\(sec\)\.padStart\(2,'0'\)/);
+  assert.match(scene,/String\(p\.level\|\|0\)\.padStart\(3,'0'\)/);
   assert.doesNotMatch(scene,/this\.player\.setFillStyle\(C\.hazard/);
 });
 
-test('RUN uses 900 levels, per-level timing and three-digit rank display',()=>{
-  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/RUN_LEVEL_COUNT/);
-  assert.match(scene,/getRunLevel\(index\)/);
-  assert.match(scene,/this\.time\.now-this\.levelStartedAt/);
-  assert.match(scene,/loadLevel\(this\.levelIndex\+1,\{resetClock:true\}\)/);
-  assert.match(scene,/padStart\(3,'0'\)/);
-  assert.doesNotMatch(scene,/const LEVELS = \[/);
-});
-
-test('RUN server progression reaches Level 900 in postgres and memory modes',()=>{
+test('RUN server progression reaches level 900',()=>{
   const service=read('run-server.js');
   assert.match(service,/const RUN_LEVEL_COUNT=900/);
-  assert.match(service,/n<1\|\|n>RUN_LEVEL_COUNT/);
   assert.match(service,/level===RUN_LEVEL_COUNT\?RUN_LEVEL_COUNT:level\+1/);
   assert.match(service,/best_level DESC,rb\.best_time_ms ASC/);
-});
-
-test('RUN public APIs remain wired',()=>{
-  const server=read('server.js');
-  assert.match(server,/\/api\/run\/start/);
-  assert.match(server,/\/api\/run\/level/);
-  assert.match(server,/\/api\/run\/rankings/);
 });

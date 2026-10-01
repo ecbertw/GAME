@@ -23,13 +23,43 @@ function hashIp(ip){return crypto.createHash('sha256').update(String(ip||'')).di
 
 async function start(pool,player,ip){
   if(!player||!player.id)throw bad('Login required.',401);
-  const runId=crypto.randomUUID();
+
   if(pool){
-    await pool.query('INSERT INTO run_attempts(id,player_id,created_ip_hash,current_level,completed_level) VALUES($1,$2,$3,1,0)',[runId,player.id,hashIp(ip)]);
-  }else{
-    memoryAttempts.set(runId,{id:runId,playerId:player.id,currentLevel:1,completedLevel:0,finished:false,times:[]});
+    const [best,existing]=await Promise.all([
+      pool.query('SELECT best_level FROM run_bests WHERE player_id=$1',[player.id]),
+      pool.query('SELECT id,current_level,completed_level FROM run_attempts WHERE player_id=$1 AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1',[player.id])
+    ]);
+    const bestLevel=Math.max(0,Math.min(RUN_LEVEL_COUNT,Number(best.rows[0]?.best_level)||0));
+    const bestNext=bestLevel>=RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:bestLevel+1;
+
+    if(existing.rowCount){
+      const row=existing.rows[0];
+      const current=Math.max(1,Math.min(RUN_LEVEL_COUNT,Number(row.current_level)||1));
+      const level=Math.max(current,bestNext);
+      if(level!==current){
+        await pool.query('UPDATE run_attempts SET current_level=$1,completed_level=GREATEST(completed_level,$2) WHERE id=$3',[level,Math.max(0,level-1),row.id]);
+      }
+      return{runId:row.id,level,resumed:true};
+    }
+
+    const level=bestNext,runId=crypto.randomUUID();
+    await pool.query('INSERT INTO run_attempts(id,player_id,created_ip_hash,current_level,completed_level) VALUES($1,$2,$3,$4,$5)',[runId,player.id,hashIp(ip),level,Math.max(0,level-1)]);
+    return{runId,level,resumed:false};
   }
-  return{runId,level:1};
+
+  const best=memoryBests.get(player.id);
+  const bestLevel=Math.max(0,Math.min(RUN_LEVEL_COUNT,Number(best?.level)||0));
+  const bestNext=bestLevel>=RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:bestLevel+1;
+  const existing=[...memoryAttempts.values()].reverse().find(a=>a.playerId===player.id&&!a.finished);
+  if(existing){
+    existing.currentLevel=Math.max(existing.currentLevel,bestNext);
+    existing.completedLevel=Math.max(existing.completedLevel,existing.currentLevel-1);
+    return{runId:existing.id,level:existing.currentLevel,resumed:true};
+  }
+
+  const runId=crypto.randomUUID();
+  memoryAttempts.set(runId,{id:runId,playerId:player.id,currentLevel:bestNext,completedLevel:Math.max(0,bestNext-1),finished:false,times:[]});
+  return{runId,level:bestNext,resumed:false};
 }
 
 async function completeLevel(pool,player,data){
