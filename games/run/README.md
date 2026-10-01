@@ -1,27 +1,36 @@
 # EIXO RUN
 
-RUN now has **900 deterministic, unique hardcore levels**.
+RUN has **900 deterministic hardcore levels** and a validator designed around the actual movement physics.
 
-## Core loop
-- 900 fixed levels: every player receives the exact same Level 001…900.
-- Each level has its own timer.
-- Clearing a level resets the timer for the next level.
-- Dying restarts the current level without resetting that level's timer.
-- Deaths remain visible in the HUD but do not affect ranking.
-- Ranking stays: highest completed level first, then fastest time on that level.
+## Level design
+Every level is difficult from Level 001 onward. The generator combines:
+- narrow precision jumps and height changes;
+- wide challenge platforms with moving saws above the walking surface;
+- spike strips with explicit landing/take-off safety zones;
+- pulsing laser gates placed directly in mandatory gaps;
+- increasingly dense combinations of the three hazard families.
 
-## Solvability system
-The levels are generated from fixed seeds, but generation is constrained by the real RUN physics.
+Saws are never generated below platforms. Lasers must actually cross the mandatory route. Decorative route platforms are avoided: the generated platform chain is the route itself.
 
-Every mandatory jump is kept inside a conservative 72% movement envelope calculated from:
-- gravity;
-- jump velocity;
-- horizontal run speed;
-- the exact height difference between take-off and landing.
+## Solvability
+The 900-level set is deterministic, so all players see the same Level 001…900.
 
-The validator checks all 900 levels for spawn support, EXIT support, every mandatory jump, minimum landing width, laser off-windows and saw clearance. It also rejects duplicate geometry or duplicate names.
+Automated validation checks:
+- every consecutive mandatory jump against real gravity, run speed, jump speed and height difference;
+- minimum landing-platform width;
+- spike clearances and safe take-off/landing zones;
+- saw height and safe waiting zones;
+- laser placement and a sufficiently long OFF window for a human crossing;
+- at least 2 spike challenges, 1 saw and 1 laser in every single level;
+- unique geometry across all 900 levels.
 
-This makes the 900-level set reproducible and automatically testable. The architecture can be extended beyond 900 later by increasing the configured level count and passing the same validation.
+The player object is also destroyed on every reload/level change, preventing the old white player rectangles from remaining behind.
+
+## Ranking
+Ranking remains:
+1. highest completed level;
+2. fastest time on that level;
+3. earlier stored record as the final tie-break.
 
 ## Controls
 - A/D or Left/Right: move

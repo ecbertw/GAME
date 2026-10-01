@@ -12,7 +12,7 @@ function formatTime(ms){
   const min=Math.floor(total/60000);
   const sec=Math.floor((total%60000)/1000);
   const milli=total%1000;
-  return String(min).padStart(2,'0')+':'+String(sec).padStart(2,'0')+'.'+String(milli).padStart(3,'0');
+  return String(min).padStart(3,'0')+':'+String(sec).padStart(3,'0')+'.'+String(milli).padStart(3,'0');
 }
 
 export class HardcoreRunScene extends Phaser.Scene {
@@ -134,10 +134,11 @@ export class HardcoreRunScene extends Phaser.Scene {
   clearLevel(){
     this.levelLinks.forEach(x=>{ try{x.destroy();}catch(_){} });
     this.levelLinks=[];
+    if(this.player){ try{this.player.destroy();}catch(_){} }
+    this.player=null;
     this.levelObjects.forEach(x=>{ try{x.destroy();}catch(_){} });
     this.levelObjects=[];
     this.dynamicHazards=[];
-    this.player=null;
     this.goalTrigger=null;
   }
 
@@ -342,7 +343,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.add.rectangle(640,360,1280,720,0x050609,.88).setScrollFactor(0).setDepth(2500);
     this.add.text(640,145,'LEVEL '+RUN_LEVEL_COUNT+' COMPLETE',{fontFamily:'Arial Black,Arial',fontSize:'46px',color:'#ffffff'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
     this.add.text(640,235,formatTime(levelTimeMs),{fontFamily:'Arial Black,Arial',fontSize:'58px',color:'#69ff9c'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
-    let note=this.practice?'PRACTICE — NOT SUBMITTED':'LEVEL 12';
+    let note=this.practice?'PRACTICE — NOT SUBMITTED':'LEVEL '+RUN_LEVEL_COUNT;
     if(!this.practice&&result&&result.isPersonalBest) note+='   ·   NEW PERSONAL BEST';
     this.add.text(640,305,note,{fontFamily:'Arial Black,Arial',fontSize:'13px',color:this.practice?'#8f96a3':'#ff3159'}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
     this.add.text(640,410,this.leaderboardText(),{fontFamily:'monospace',fontSize:'15px',color:'#e8eaf0',align:'left',lineSpacing:7}).setOrigin(.5).setScrollFactor(0).setDepth(2501);
@@ -354,13 +355,13 @@ export class HardcoreRunScene extends Phaser.Scene {
     if(!rows.length) return 'WORLD TOP\nNO TIMES YET';
     const lines=['WORLD TOP'];
     rows.slice(0,7).forEach((p,i)=>{
-      const pos=String(i+1).padStart(2,'0');
+      const pos=String(i+1).padStart(3,'0');
       const name=String(p.name||'PLAYER').slice(0,14).padEnd(14,' ');
-      lines.push(pos+'  '+name+'  L'+String(p.level||0).padStart(2,'0')+'  '+formatTime(Number(p.timeMs)));
+      lines.push(pos+'  '+name+'  L'+String(p.level||0).padStart(3,'0')+'  '+formatTime(Number(p.timeMs)));
     });
     if(this.rankingData&&this.rankingData.me&&this.rankingData.me.timeMs){
       lines.push('');
-      lines.push('YOUR PB  L'+String(this.rankingData.me.level||0).padStart(2,'0')+'  '+formatTime(Number(this.rankingData.me.timeMs))+'  #'+this.rankingData.me.rank);
+      lines.push('YOUR PB  L'+String(this.rankingData.me.level||0).padStart(3,'0')+'  '+formatTime(Number(this.rankingData.me.timeMs))+'  #'+this.rankingData.me.rank);
     }
     return lines.join('\n');
   }
@@ -371,7 +372,7 @@ export class HardcoreRunScene extends Phaser.Scene {
       if(res.ok){
         this.rankingData=await res.json();
         if(this.rankingData.me&&this.rankingData.me.timeMs&&!this.practice){
-          this.pbText.setText('PB  L'+String(this.rankingData.me.level||0).padStart(2,'0')+' · '+formatTime(Number(this.rankingData.me.timeMs)));
+          this.pbText.setText('PB  L'+String(this.rankingData.me.level||0).padStart(3,'0')+' · '+formatTime(Number(this.rankingData.me.timeMs)));
         }
       }
     }catch(_){}

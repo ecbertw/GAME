@@ -86,7 +86,7 @@ async function completeLevel(pool,player,data){
   if(attempt.currentLevel!==level)throw bad('RUN level out of sequence.',409);
   attempt.times[level-1]=timeMs;
   attempt.completedLevel=level;
-  attempt.currentLevel=level===RUN_LEVEL_COUNT?12:level+1;
+  attempt.currentLevel=level===RUN_LEVEL_COUNT?RUN_LEVEL_COUNT:level+1;
   attempt.finished=level===RUN_LEVEL_COUNT;
 
   const old=memoryBests.get(player.id);
