@@ -4,20 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#030711">
-  <meta name="description" content="EIXO RUN — Neon Void hardcore precision platformer.">
+  <meta name="description" content="EIXO RUN — 100 hardcore Neon Void levels.">
   <title>EIXO RUN — Neon Void</title>
-  <link rel="stylesheet" href="/games/run/run.css?v=20261001-centred3">
+  <link rel="stylesheet" href="/games/run/run.css?v=20261001-hard100">
 </head>
 <body>
   <header class="run-site-nav">
     <a class="run-site-brand" href="/" aria-label="EIXO home">EIXO<span>•</span></a>
     <nav aria-label="EIXO">
-      <a href="/">HOME</a>
-      <a href="/pulse">PULSE</a>
-      <a class="is-active" href="/run" aria-current="page">RUN</a>
-      <a href="/passport">PASSPORT</a>
-      <a href="/rankings">RANKINGS</a>
-      <a href="/vip">VIP</a>
+      <a href="/">HOME</a><a href="/pulse">PULSE</a><a class="is-active" href="/run" aria-current="page">RUN</a>
+      <a href="/passport">PASSPORT</a><a href="/rankings">RANKINGS</a><a href="/vip">VIP</a>
     </nav>
     <a class="run-site-exit" href="/">EIXO HOME</a>
   </header>
@@ -25,25 +21,42 @@
   <main class="run-stage">
     <div id="run-root" aria-label="EIXO RUN game"></div>
 
+    <section id="run-game-hud" class="run-game-hud" aria-label="RUN HUD">
+      <div class="run-hud-brand">RUN <span>//</span></div>
+      <div class="run-hud-level-block"><strong id="run-hud-level">LEVEL 001 / 100</strong><span id="run-hud-name">NEON VOID</span></div>
+      <div class="run-hud-time-block"><small>TIME</small><strong id="run-hud-time">00:00.000</strong><span id="run-hud-pb">PB --:--.---</span></div>
+      <div class="run-hud-deaths-block"><small>DEATHS</small><strong id="run-hud-deaths">0</strong></div>
+      <div class="run-hud-progress"><i id="run-hud-progress-fill"></i></div>
+    </section>
+    <div id="run-controls" class="run-controls">A/D MOVE · SPACE JUMP · R RESTART · H HOME</div>
+
     <section id="run-start-overlay" class="run-start-overlay" aria-label="RUN start">
       <div class="run-start-card">
-        <div class="run-start-kicker">EIXO ARCADE</div>
-        <h1>RUN <span>//</span></h1>
-        <div class="run-start-sub">NEON VOID</div>
+        <div class="run-start-kicker">EIXO ARCADE</div><h1>RUN <span>//</span></h1><div class="run-start-sub">NEON VOID</div>
         <div class="run-start-rule"></div>
-        <p class="run-start-copy">900 HARDCORE LEVELS<br>HIGHEST LEVEL · FASTEST TIME</p>
+        <p class="run-start-copy">100 HARDCORE LEVELS<br>HIGHEST LEVEL · FASTEST TIME</p>
         <pre id="run-start-ranking" class="run-start-ranking">WORLD TOP
 LOADING...</pre>
         <button id="run-start-prompt" class="run-start-button" type="button">SPACE / ENTER / CLICK — START</button>
-        <div class="run-start-rule danger"></div>
-        <p class="run-start-note">LOGIN FOR GLOBAL RANKING · PRACTICE WORKS OFFLINE</p>
+        <div class="run-start-rule danger"></div><p class="run-start-note">LOGIN FOR GLOBAL RANKING · PRACTICE WORKS OFFLINE</p>
+      </div>
+    </section>
+
+    <section id="run-clear-overlay" class="run-clear-overlay is-hidden" aria-label="Level complete">
+      <div class="run-clear-card">
+        <div id="run-clear-title" class="run-clear-title">LEVEL CLEAR</div>
+        <div id="run-clear-time" class="run-clear-time">00:00.000</div>
+        <div id="run-clear-pb" class="run-clear-pb">LEVEL CLEAR</div>
+        <div class="run-clear-actions">
+          <button id="run-clear-retry" type="button">R · RETRY LEVEL</button>
+          <button id="run-clear-next" type="button">ENTER · NEXT LEVEL</button>
+        </div>
       </div>
     </section>
 
     <noscript>JavaScript is required to play EIXO RUN.</noscript>
   </main>
-
   <script src="/vendor/phaser.min.js"></script>
-  <script type="module" src="/games/run/src/main.js?v=20261001-centred3"></script>
+  <script type="module" src="/games/run/src/main.js?v=20261001-hard100"></script>
 </body>
 </html>
