@@ -48,7 +48,7 @@ test('there are never more than two consecutive empty route pieces',()=>{
 
 test('moving platforms crushers and ceiling hazards are rendered by the scene',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/addMovingPlatform/);assert.match(scene,/addCrusher/);assert.match(scene,/addCeilingSpikes/);assert.match(scene,/updateDynamicPlatforms/);assert.match(scene,/type==='crusher'/);
+  assert.match(scene,/addMovingPlatform/);assert.match(scene,/addCrusher/);assert.match(scene,/addCeilingPlatform/);assert.match(scene,/addCeilingSpikes/);assert.match(scene,/updateDynamicPlatforms/);assert.match(scene,/type==='crusher'/);
 });
 
 test('RUN persistence and ranking rules remain intact',()=>{
@@ -110,4 +110,15 @@ test('public EIXO presentation promotes RUN and PULSE instead of old JUMP',()=>{
   assert.match(home,/RUN \/ '+t\('NÍVEL','LEVEL'\)/);
   assert.match(jumpShell,/data-game="run">RUN/);
   assert.doesNotMatch(jumpShell,/data-game="jump">JUMP/);
+});
+
+
+test('spike artwork is baseline-aligned and ceiling platforms are mirrored correctly',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  assert.match(scene,/for\(const c of L\.ceilings\|\|\[\]\) this\.addCeilingPlatform/);
+  assert.match(scene,/addCeilingPlatform\(x,y,w,h\)/);
+  assert.match(scene,/setFlipY\(true\)/);
+  assert.match(scene,/const baselineOffset=visualH\*\(6\/44\)/);
+  assert.match(scene,/top\+baselineOffset/);
+  assert.match(scene,/bottom-baselineOffset/);
 });
