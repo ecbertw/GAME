@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-lab1';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-lab1';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-lab2';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-lab2';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 const RUN_LEVEL_BESTS_KEY='eixo.run.level-bests.v1';
@@ -87,19 +87,19 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   preload(){
     const base='/games/run/assets/neon-void/';
-    this.load.svg('nv-bg',base+'background.svg?v=20261001-lab1');
-    this.load.svg('nv-platform',base+'platform.svg?v=20261001-lab1');
-    this.load.svg('nv-moving',base+'moving-platform.svg?v=20261001-lab1');
-    this.load.svg('nv-spikes',base+'spikes.svg?v=20261001-lab1');
-    this.load.svg('nv-saw',base+'saw.svg?v=20261001-lab1');
-    this.load.svg('nv-laser',base+'laser.svg?v=20261001-lab1');
-    this.load.svg('nv-swing-laser',base+'swing-laser.svg?v=20261001-lab1');
-    this.load.svg('nv-crusher',base+'crusher.svg?v=20261001-lab1');
-    this.load.svg('nv-exit',base+'exit.svg?v=20261001-lab1');
-    this.load.svg('lab-rail',base+'glass-rail.svg?v=20261001-lab1');
-    this.load.svg('lab-bracket',base+'support-bracket.svg?v=20261001-lab1');
-    this.load.svg('lab-wall-01',base+'wall-01.svg?v=20261001-lab1');
-    this.load.svg('lab-sign',base+'movement-sign.svg?v=20261001-lab1');
+    this.load.svg('nv-bg',base+'background.svg?v=20261001-lab2');
+    this.load.svg('nv-platform',base+'platform.svg?v=20261001-lab2');
+    this.load.svg('nv-moving',base+'moving-platform.svg?v=20261001-lab2');
+    this.load.svg('nv-spikes',base+'spikes.svg?v=20261001-lab2');
+    this.load.svg('nv-saw',base+'saw.svg?v=20261001-lab2');
+    this.load.svg('nv-laser',base+'laser.svg?v=20261001-lab2');
+    this.load.svg('nv-swing-laser',base+'swing-laser.svg?v=20261001-lab2');
+    this.load.svg('nv-crusher',base+'crusher.svg?v=20261001-lab2');
+    this.load.svg('nv-exit',base+'exit.svg?v=20261001-lab2');
+    this.load.svg('lab-rail',base+'glass-rail.svg?v=20261001-lab2');
+    this.load.svg('lab-bracket',base+'support-bracket.svg?v=20261001-lab2');
+    this.load.svg('lab-wall-01',base+'wall-01.svg?v=20261001-lab2');
+    this.load.svg('lab-sign',base+'movement-sign.svg?v=20261001-lab2');
     this.load.svg('nv-stopwatch',base+'stopwatch.svg');
     this.load.svg('nv-skull',base+'skull.svg');
   }
