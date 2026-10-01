@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-platformfix2';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-platformfix2';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 
