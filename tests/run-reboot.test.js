@@ -90,7 +90,7 @@ test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-site1/);
+  assert.match(html,/20261001-platformfix2/);
 });
 
 
@@ -124,12 +124,14 @@ test('spike artwork is baseline-aligned and ceiling platforms are mirrored corre
 });
 
 
-test('moving platforms keep the runner physically on top and idle while riding',()=>{
+test('moving platforms use dynamic immovable physics and the runner idles while riding',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   assert.match(scene,/const visualOffsetY=3/);
-  assert.match(scene,/this\.ridingPlatform=null/);
-  assert.match(scene,/pb\.position\.y=o\.body\.position\.y-pb\.height/);
-  assert.match(scene,/p\.y=pb\.position\.y\+pb\.halfHeight/);
+  assert.match(scene,/this\.physics\.add\.existing\(r\);/);
+  assert.match(scene,/r\.body\.setAllowGravity\(false\)/);
+  assert.match(scene,/r\.body\.setImmovable\(true\)/);
+  assert.match(scene,/o\.body\.setVelocity\(vx,vy\)/);
+  assert.match(scene,/this\.ridingPlatform=riding/);
   assert.match(scene,/grounded=b\.blocked\.down\|\|b\.touching\.down\|\|!!this\.ridingPlatform/);
   assert.match(scene,/inputMoving/);
 });
@@ -144,4 +146,15 @@ test('new timed hazards are validated and rendered',()=>{
   assert.match(scene,/this\.load\.svg\('nv-swing-laser'/);
   assert.match(scene,/addSwingLaser\(spec\)/);
   assert.match(scene,/addPulseFloor\(spec\)/);
+});
+
+
+test('RUN start overlay uses the real DOM viewport and black runner has no aura',()=>{
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  assert.match(scene,/getElementById\('run-root'\)/);
+  assert.match(scene,/getBoundingClientRect/);
+  assert.match(scene,/this\.scale\.resize\(pxW,pxH\)/);
+  assert.match(scene,/const BLACK=0x000000/);
+  assert.doesNotMatch(scene,/c\.glowGraphics=glow/);
+  assert.doesNotMatch(scene,/soft silhouette glow/);
 });
