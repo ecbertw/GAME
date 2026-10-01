@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#030711">
   <meta name="description" content="EIXO RUN — 100 hardcore Neon Void levels.">
   <title>EIXO RUN — Neon Void</title>
-  <link rel="stylesheet" href="/games/run/run.css?v=20261001-hard100">
+  <link rel="stylesheet" href="/games/run/run.css?v=20261001-levelselect1">
 </head>
 <body>
   <header class="run-site-nav">
@@ -35,10 +35,26 @@
         <div class="run-start-kicker">EIXO ARCADE</div><h1>RUN <span>//</span></h1><div class="run-start-sub">NEON VOID</div>
         <div class="run-start-rule"></div>
         <p class="run-start-copy">100 HARDCORE LEVELS<br>HIGHEST LEVEL · FASTEST TIME</p>
+        <div class="run-start-level-row">
+          <span id="run-start-selected" class="run-start-selected">SELECTED · LEVEL 001</span>
+          <button id="run-open-levels" class="run-level-open" type="button">SELECT LEVEL</button>
+        </div>
         <pre id="run-start-ranking" class="run-start-ranking">WORLD TOP
 LOADING...</pre>
-        <button id="run-start-prompt" class="run-start-button" type="button">SPACE / ENTER / CLICK — START</button>
+        <button id="run-start-prompt" class="run-start-button" type="button">START LEVEL 001</button>
         <div class="run-start-rule danger"></div><p class="run-start-note">LOGIN FOR GLOBAL RANKING · PRACTICE WORKS OFFLINE</p>
+      </div>
+    </section>
+
+
+    <section id="run-level-overlay" class="run-level-overlay is-hidden" aria-label="Select RUN level">
+      <div class="run-level-card">
+        <div class="run-level-head">
+          <div><small>RUN // NEON VOID</small><h2>SELECT LEVEL</h2><p id="run-level-summary">UNLOCKED 001 / 100</p></div>
+          <button id="run-level-close" type="button" aria-label="Close level selector">CLOSE ×</button>
+        </div>
+        <div id="run-level-grid" class="run-level-grid"></div>
+        <p class="run-level-note">Completed levels stay unlocked. Replay any available level to improve its personal best.</p>
       </div>
     </section>
 
@@ -49,6 +65,7 @@ LOADING...</pre>
         <div id="run-clear-pb" class="run-clear-pb">LEVEL CLEAR</div>
         <div class="run-clear-actions">
           <button id="run-clear-retry" type="button">R · RETRY LEVEL</button>
+          <button id="run-clear-levels" type="button">SELECT LEVEL</button>
           <button id="run-clear-next" type="button">ENTER · NEXT LEVEL</button>
         </div>
       </div>
@@ -57,6 +74,6 @@ LOADING...</pre>
     <noscript>JavaScript is required to play EIXO RUN.</noscript>
   </main>
   <script src="/vendor/phaser.min.js"></script>
-  <script type="module" src="/games/run/src/main.js?v=20261001-hard100"></script>
+  <script type="module" src="/games/run/src/main.js?v=20261001-levelselect1"></script>
 </body>
 </html>
