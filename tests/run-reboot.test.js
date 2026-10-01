@@ -115,13 +115,14 @@ test('public EIXO presentation promotes RUN and PULSE instead of old JUMP',()=>{
 });
 
 
-test('spike artwork is flush with floor and ceiling surfaces',()=>{
+test('spike artwork and platform edge share the exact physical surface',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   const spikes=read('games/run/assets/neon-void/spikes.svg');
-  assert.match(scene,/for\(const c of L\.ceilings\|\|\[\]\) this\.addCeilingPlatform/);
-  assert.match(scene,/addCeilingPlatform\(x,y,w,h\)/);
   assert.match(scene,/this\.add\.image\(x,top,'nv-spikes'\)\s*\.setOrigin\(\.5,1\)/);
   assert.match(scene,/this\.add\.image\(x,bottom,'nv-spikes'\)\s*\.setOrigin\(\.5,0\)\s*\.setFlipY\(true\)/);
+  assert.match(scene,/const surfaceOffset=visualH\*\(11\/96\)/);
+  assert.match(scene,/top-surfaceOffset,'nv-platform'/);
+  assert.match(scene,/bottom\+surfaceOffset,'nv-platform'/);
   assert.doesNotMatch(scene,/baselineOffset/);
   assert.match(spikes,/M0 44H320/);
   assert.match(spikes,/M0 44L10 5/);
@@ -286,18 +287,23 @@ test('RUN shell matches the EIXO site visual language',()=>{
   assert.match(html,/100 níveis hardcore/);
   assert.match(css,/\.run-start-card\{[\s\S]*border-radius:28px/);
   assert.match(css,/linear-gradient\(135deg,#172338f5,#111c2df2/);
-  assert.match(css,/\.run-site-nav\{[\s\S]*background:#09111f/);
+  assert.match(css,/\.run-site-nav\{[\s\S]*background:rgba\(9,15,26,.96\)/);
   assert.doesNotMatch(html,/>HOME<|>PULSE<|EIXO HOME/);
 });
 
 
 
 
-test('RUN completion persists account progress and ranking bests',()=>{
+test('RUN completion persists, recovers missing attempts and self-heals rankings',()=>{
   const service=read('run-server.js');
+  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   assert.match(service,/INSERT INTO run_bests\(player_id,best_level,best_time_ms/);
   assert.match(service,/INSERT INTO run_level_bests\(player_id,level,best_time_ms/);
-  assert.match(service,/bestLevel\+1/);
+  assert.match(service,/if\(!usedAttempt&&level>unlockedLevel\)throw bad\('RUN level is locked\.'/);
+  assert.match(service,/recoveredAttempt:!usedAttempt/);
+  assert.match(service,/SELECT DISTINCT ON\(player_id\) player_id,level,best_time_ms/);
+  assert.match(scene,/runId:this\.attemptId\|\|null/);
+  assert.match(scene,/serverResult\.unlockedLevel/);
 });
 
 
