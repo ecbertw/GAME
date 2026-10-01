@@ -1,20 +1,18 @@
-import { BG_SKY } from '../assets/astral-data/backdrops.js';
 import { SHARD, CHECKPOINT_ON, BREAKABLE, SPIKES } from '../assets/astral-data/objects-a.js';
 import { BOUNCE, SPEED, FINISH, CHEST_CLOSED, CHEST_OPEN, RELIC } from '../assets/astral-data/objects-b.js';
 import { ARCH, WATERFALL, CRYSTAL_CLUSTER } from '../assets/astral-data/objects-c.js';
-import { PLATFORM } from '../assets/astral-data/platform.js';
 
 export const ASTRAL_BG = Object.freeze({
-  sky: 'run-bg-sky',
-  world: 'run-bg-sky',
+  sky: 'run-bg-world',
+  world: 'run-bg-world',
 });
 
 export const ASTRAL_OBJ = Object.freeze({
-  platformLarge: 'run-platform-large',
-  platformMedium: 'run-platform-large',
-  platformSmall: 'run-platform-large',
-  platformMoving: 'run-platform-large',
-  floatingIsland: 'run-platform-large',
+  platformLarge: 'run-platform-real',
+  platformMedium: 'run-platform-real',
+  platformSmall: 'run-platform-real',
+  platformMoving: 'run-platform-real',
+  floatingIsland: 'run-platform-real',
   shard: 'run-shard',
   checkpointOff: 'run-checkpoint-on',
   checkpointOn: 'run-checkpoint-on',
@@ -38,8 +36,8 @@ export const ASTRAL_OBJ = Object.freeze({
 export function preloadAstralArt(scene) {
   const load=(key,data)=>scene.load.image(key,data);
 
-  load(ASTRAL_BG.sky, BG_SKY);
-  load(ASTRAL_OBJ.platformLarge, PLATFORM);
+  load(ASTRAL_BG.world, '/games/run/assets/final-real/first-light-bg.webp');
+  load(ASTRAL_OBJ.platformLarge, '/games/run/assets/final-real/platform.webp');
 
   load(ASTRAL_OBJ.shard, SHARD);
   load(ASTRAL_OBJ.checkpointOn, CHECKPOINT_ON);
