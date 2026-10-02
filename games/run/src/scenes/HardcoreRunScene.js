@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261002-prod1';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261002-prod1';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-lab2';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-lab2';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 const RUN_LEVEL_BESTS_KEY='eixo.run.level-bests.v1';
@@ -86,11 +86,22 @@ export class HardcoreRunScene extends Phaser.Scene {
   }
 
   preload(){
-    const legacy='/games/run/assets/neon-void/';
-    const prod='/games/run/assets/final/';
-    this.load.atlas('lab-art',prod+'lab-atlas.webp?v=20261002-prod1',prod+'lab-atlas.json?v=20261002-prod1');
-    this.load.svg('nv-stopwatch',legacy+'stopwatch.svg');
-    this.load.svg('nv-skull',legacy+'skull.svg');
+    const base='/games/run/assets/neon-void/';
+    this.load.svg('nv-bg',base+'background.svg?v=20261001-lab2');
+    this.load.svg('nv-platform',base+'platform.svg?v=20261001-lab2');
+    this.load.svg('nv-moving',base+'moving-platform.svg?v=20261001-lab2');
+    this.load.svg('nv-spikes',base+'spikes.svg?v=20261001-lab2');
+    this.load.svg('nv-saw',base+'saw.svg?v=20261001-lab2');
+    this.load.svg('nv-laser',base+'laser.svg?v=20261001-lab2');
+    this.load.svg('nv-swing-laser',base+'swing-laser.svg?v=20261001-lab2');
+    this.load.svg('nv-crusher',base+'crusher.svg?v=20261001-lab2');
+    this.load.svg('nv-exit',base+'exit.svg?v=20261001-lab2');
+    this.load.svg('lab-rail',base+'glass-rail.svg?v=20261001-lab2');
+    this.load.svg('lab-bracket',base+'support-bracket.svg?v=20261001-lab2');
+    this.load.svg('lab-wall-01',base+'wall-01.svg?v=20261001-lab2');
+    this.load.svg('lab-sign',base+'movement-sign.svg?v=20261001-lab2');
+    this.load.svg('nv-stopwatch',base+'stopwatch.svg');
+    this.load.svg('nv-skull',base+'skull.svg');
   }
 
   configureViewport(){
@@ -445,57 +456,46 @@ export class HardcoreRunScene extends Phaser.Scene {
     const r=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(5);
     r.__isPlatform=true;
     this.physics.add.existing(r,true);
-
     const top=y-h/2;
-    const frame=w<190?'platform-short':'platform';
-    const ratio=frame==='platform-short'?(136/357):(126/787);
-    const visualH=Phaser.Math.Clamp(w*ratio,34,solidFloor?90:70);
-    const cap=this.add.image(x,top,'lab-art',frame)
-      .setOrigin(.5,0).setDepth(7).setDisplaySize(w,visualH);
-
+    const visualH=solidFloor?Math.min(92,Math.max(58,h*.30)):Math.min(50,Math.max(38,h+24));
+    // platform.svg places its bright walkable edge at y=11 of a 96px viewBox.
+    // Shift the artwork upward so that edge, the physics top and spike base
+    // are all exactly the same world coordinate.
+    const surfaceOffset=visualH*(11/96);
+    const cap=this.add.image(x,top-surfaceOffset,'nv-platform').setOrigin(.5,0).setDepth(7).setDisplaySize(w,visualH);
     if(solidFloor&&h>visualH){
-      const bodyTop=top+visualH-2;
-      const bodyH=Math.max(0,h-visualH+2);
-      const body=this.add.rectangle(x,bodyTop+bodyH/2,w,bodyH,0x14202a,.98).setDepth(4);
-      body.setStrokeStyle(1,0x344754,.78);
-      this.levelObjects.push(body);
-
-      const supportW=Math.min(180,Math.max(104,w*.34));
-      const supportH=Math.min(112,Math.max(72,bodyH*.34));
-      for(let sx=x-w/2+supportW*.52;sx<x+w/2-supportW*.3;sx+=Math.max(210,supportW*1.55)){
-        const support=this.add.image(sx,bodyTop-1,'lab-art','support')
-          .setOrigin(.5,0).setDepth(6).setDisplaySize(supportW,supportH).setAlpha(.96);
-        this.levelObjects.push(support);
+      const bodyH=h-visualH;
+      const body=this.add.rectangle(x,top+visualH+bodyH/2,w,bodyH,0x070c13,1).setDepth(5);
+      body.setStrokeStyle(1,0x182332,.9);
+      const braces=this.add.graphics().setDepth(6);
+      braces.lineStyle(2,0x28364a,.48);
+      for(let bx=x-w/2+18;bx<x+w/2-18;bx+=72){
+        braces.lineBetween(bx,top+visualH+8,Math.min(bx+42,x+w/2-12),Math.min(top+h-10,top+visualH+64));
+        braces.lineBetween(Math.min(bx+42,x+w/2-12),top+visualH+8,bx,Math.min(top+h-10,top+visualH+64));
       }
-    }else{
-      if(w>=210&&((Math.floor(x/35)+this.levelIndex)%3===0)){
-        const support=this.add.image(x-w*.24,top+visualH-3,'lab-art','support')
-          .setOrigin(.5,0).setDepth(6)
-          .setDisplaySize(Math.min(154,w*.46),Math.min(94,w*.27));
-        this.levelObjects.push(support);
-      }
-      if(w>=235&&((Math.floor(x/45)+this.levelIndex)%4===0)){
-        const rail=this.add.image(x,top-3,'lab-art','glass')
-          .setOrigin(.5,1).setDepth(8).setAlpha(.90)
-          .setDisplaySize(Math.min(190,w*.72),42);
-        this.levelObjects.push(rail);
-      }
+      this.levelObjects.push(body,braces);
     }
-
     this.levelObjects.push(r,cap);
     return r;
   }
+
 
   addCeilingPlatform(x,y,w,h){
     const r=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(5);
     r.__isPlatform=true;
     this.physics.add.existing(r,true);
+
+    // Ceiling artwork is the floor artwork mirrored vertically: the bright
+    // walkable-looking edge belongs on the underside, not on the top.
     const bottom=y+h/2;
-    const frame=w<190?'platform-short':'platform';
-    const ratio=frame==='platform-short'?(136/357):(126/787);
-    const visualH=Phaser.Math.Clamp(w*ratio,34,70);
-    const cap=this.add.image(x,bottom,'lab-art',frame)
-      .setOrigin(.5,1).setFlipY(true).setDepth(7).setDisplaySize(w,visualH);
+    const visualH=Math.min(50,Math.max(38,h+24));
+    const surfaceOffset=visualH*(11/96);
+    const cap=this.add.image(x,bottom+surfaceOffset,'nv-platform')
+      .setOrigin(.5,1)
+      .setFlipY(true)
+      .setDepth(7)
+      .setDisplaySize(w,visualH);
+
     this.levelObjects.push(r,cap);
     return r;
   }
@@ -510,6 +510,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const r=this.add.rectangle(startX,startY,w,h,0x000000,0).setDepth(6);
     r.__isPlatform=true;
     r.__isMovingPlatform=true;
+
     this.physics.add.existing(r);
     r.body.setAllowGravity(false);
     r.body.setImmovable(true);
@@ -518,14 +519,13 @@ export class HardcoreRunScene extends Phaser.Scene {
     if(r.body.setFriction)r.body.setFriction(1,1);
     r.body.reset(startX,startY);
 
-    const visualW=Math.max(112,w+28);
-    const visualH=Phaser.Math.Clamp(visualW*(102/386),34,62);
-    const visualOffsetY=visualH/2-h/2;
-    const visual=this.add.image(startX,startY+visualOffsetY,'lab-art','moving')
-      .setDepth(9).setDisplaySize(visualW,visualH);
+    const visualH=48;
+    const visualOffsetY=18-h/2;
+    const visual=this.add.image(startX,startY+visualOffsetY,'nv-moving').setDepth(9).setDisplaySize(Math.max(104,w+20),visualH);
 
     r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;
     r.visual=visual;r.visualYOffset=visualOffsetY;
+
     this.levelObjects.push(r,visual);
     this.dynamicPlatforms.push(r);
     return r;
@@ -537,11 +537,15 @@ export class HardcoreRunScene extends Phaser.Scene {
     sensor.__isHazard=true;
     this.physics.add.existing(sensor,true);
 
-    const visualW=Math.max(width+18,82);
-    const visualH=Phaser.Math.Clamp(visualW*(133/337),38,64);
-    const embed=visualH*.52;
-    const visual=this.add.image(x,bottom-embed,'lab-art','spikes-ceiling')
-      .setOrigin(.5,0).setDepth(12).setDisplaySize(visualW,visualH);
+    // The SVG baseline is physically at the bottom edge of its viewBox.
+    // With flipY + origin top, y=bottom means the spike base is flush with
+    // the underside of the ceiling with no visual gap.
+    const visualH=38;
+    const visual=this.add.image(x,bottom,'nv-spikes')
+      .setOrigin(.5,0)
+      .setFlipY(true)
+      .setDepth(12)
+      .setDisplaySize(width,visualH);
     this.levelObjects.push(sensor,visual);
   }
 
@@ -550,9 +554,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const block=this.add.rectangle(x,y,w,h,0x000000,0).setDepth(12);
     block.__isHazard=true;
     this.physics.add.existing(block,true);
-    const visualW=Math.max(116,w+34);
-    const visualH=Math.max(h+26,visualW*(234/346));
-    const visual=this.add.image(x,y,'lab-art','crusher').setDepth(15).setDisplaySize(visualW,visualH);
+    const visual=this.add.image(x,y,'nv-crusher').setDepth(15).setDisplaySize(Math.max(72,w+16),Math.max(82,h+18));
     block.baseY=y;block.range=range;block.period=period;block.phase=phase;block.visual=visual;
     this.levelObjects.push(block,visual);
     this.dynamicHazards.push({type:'crusher',obj:block});
@@ -564,10 +566,13 @@ export class HardcoreRunScene extends Phaser.Scene {
     sensor.__isHazard=true;
     this.physics.add.existing(sensor,true);
 
-    const visualW=Math.max(width+20,80);
-    const visualH=Phaser.Math.Clamp(visualW*(99/510),34,54);
-    const visual=this.add.image(x,top+10,'lab-art','spikes-floor')
-      .setOrigin(.5,1).setDepth(12).setDisplaySize(visualW,visualH);
+    // The spike baseline is exactly the bottom edge of the SVG. The origin
+    // is therefore pinned directly to the platform/floor surface.
+    const visualH=38;
+    const visual=this.add.image(x,top,'nv-spikes')
+      .setOrigin(.5,1)
+      .setDepth(12)
+      .setDisplaySize(width,visualH);
     this.levelObjects.push(sensor,visual);
   }
 
@@ -576,8 +581,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     const saw=this.add.circle(x,y,r,0x000000,0).setDepth(12);
     saw.__isHazard=true;
     this.physics.add.existing(saw,true);
-    const size=(r+13)*2;
-    const visual=this.add.image(x,y,'lab-art','saw').setDepth(15).setDisplaySize(size,size);
+    const visual=this.add.image(x,y,'nv-saw').setDepth(15).setDisplaySize((r+9)*2,(r+9)*2);
     saw.baseX=x;saw.baseY=y;saw.axis=axis;saw.range=range;saw.period=period;saw.phase=phase;saw.visual=visual;
     this.levelObjects.push(saw,visual);
     this.dynamicHazards.push({type:'saw',obj:saw});
@@ -585,8 +589,7 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   addSwingLaser(spec){
     const pivotX=spec[0],pivotY=spec[1],length=spec[2],angleDeg=spec[3],period=spec[4],phase=spec[5]||0;
-    const visual=this.add.image(pivotX,pivotY,'lab-art','laser')
-      .setOrigin(.5,.08).setDepth(14).setDisplaySize(52,length+38);
+    const visual=this.add.image(pivotX,pivotY,'nv-swing-laser').setOrigin(.5,0).setDepth(14).setDisplaySize(42,length);
 
     const sensors=[];
     const count=Math.max(5,Math.min(9,Math.round(length/34)));
@@ -629,20 +632,15 @@ export class HardcoreRunScene extends Phaser.Scene {
     const beam=this.add.rectangle(x,y,w,h,C.hazard,0).setDepth(12);
     beam.__isHazard=true;
     this.physics.add.existing(beam,true);
-    const visualH=h+50;
-    const visualW=Phaser.Math.Clamp(visualH*(146/313),48,72);
-    const visual=this.add.image(x,y,'lab-art','laser').setDepth(14).setDisplaySize(visualW,visualH);
+    const visual=this.add.image(x,y,'nv-laser').setDepth(14).setDisplaySize(38,h+24);
     beam.period=period;beam.phase=phase;beam.visual=visual;beam.lastOn=true;
     this.levelObjects.push(beam,visual);
     this.dynamicHazards.push({type:'laser',obj:beam});
   }
 
   createGoal(x,top){
-    const visual=this.add.image(x,top,'lab-art','exit').setOrigin(.5,1).setDepth(12).setDisplaySize(118,160);
-    const label=this.add.text(x,top-178,'EXIT',{
-      fontFamily:'Inter,Arial,sans-serif',fontSize:'9px',fontStyle:'bold',
-      color:'#00dff6',letterSpacing:4
-    }).setOrigin(.5).setDepth(13);
+    const visual=this.add.image(x,top,'nv-exit').setOrigin(.5,1).setDepth(12).setDisplaySize(92,145);
+    const label=this.add.text(x,top-166,'EXIT',{fontFamily:'monospace',fontSize:'10px',fontStyle:'bold',color:'#76ffae',letterSpacing:4}).setOrigin(.5).setDepth(13);
     const trigger=this.add.rectangle(x,top-60,68,122,0x69ff9c,0);
     trigger.__isGoal=true;
     this.physics.add.existing(trigger,true);
@@ -741,9 +739,9 @@ export class HardcoreRunScene extends Phaser.Scene {
     g.lineStyle(2,C.cyan,1);g.lineBetween(shoulder.x+3,shoulder.y,hip.x-1,hip.y+3);
     drawLimb({x:hip.x+2,y:hip.y},lk,lf,1);
     drawLimb({x:shoulder.x+2,y:shoulder.y},le,lh,1);
-    g.fillStyle(0xf8fdff,1).fillCircle(shoulder.x+2,shoulder.y-9,6.2);
-    g.lineStyle(1,0xa7bac5,.95).strokeCircle(shoulder.x+2,shoulder.y-9,6.2);
-    g.lineStyle(2,C.cyan,.95).lineBetween(shoulder.x+4,shoulder.y-3,hip.x+2,hip.y+1);
+    g.fillStyle(0x17222b,1).fillCircle(shoulder.x+2,shoulder.y-9,7);
+    g.fillStyle(C.player,1).fillCircle(shoulder.x+2,shoulder.y-9,5.5);
+    g.lineStyle(1,0x526b79,.9).strokeCircle(shoulder.x+2,shoulder.y-9,5.5);
   }
 
   createNoticeOverlay(){

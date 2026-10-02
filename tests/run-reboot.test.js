@@ -75,26 +75,24 @@ test('THE LABORATORY visual layer is edge-to-edge and keeps physics separate fro
   assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
   assert.match(scene,/movingPlatforms/);
   assert.match(scene,/THE LABORATORY/);
-  assert.match(scene,/this\.load\.atlas\('lab-art'/);
+  assert.match(scene,/nv-platform/);
 });
 
 
-test('THE LABORATORY production art atlas is wired and speed tracks are removed',()=>{
+test('THE LABORATORY SVG asset pack is wired and speed tracks are removed',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   const html=read('games/run/index.html');
-  for(const asset of ['lab-atlas.webp','lab-atlas.json','background.webp']){
-    assert.ok(fs.existsSync(path.join(ROOT,'games/run/assets/final',asset)),asset+' missing');
+  for(const asset of ['background.svg','platform.svg','moving-platform.svg','spikes.svg','saw.svg','laser.svg','swing-laser.svg','crusher.svg','exit.svg','stopwatch.svg','skull.svg']){
+    assert.ok(fs.existsSync(path.join(ROOT,'games/run/assets/neon-void',asset)),asset+' missing');
   }
-  assert.match(scene,/this\.load\.atlas\('lab-art'/);
-  assert.match(scene,/const frame=w<190\?'platform-short':'platform'/);
-  assert.match(scene,/this\.add\.image\(x,top,'lab-art',frame\)/);
-  assert.match(scene,/'lab-art','moving'/);
-  assert.match(scene,/'lab-art','saw'/);
-  assert.match(scene,/'lab-art','crusher'/);
-  assert.match(scene,/'lab-art','exit'/);
+  assert.match(scene,/this\.load\.svg\('nv-bg'/);
+  assert.match(scene,/this\.load\.svg\('nv-platform'/);
+  assert.match(scene,/this\.add\.image\(x,y,'nv-saw'\)/);
+  assert.match(scene,/this\.add\.image\(x,y,'nv-crusher'\)/);
+  assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261002-prod1/);
+  assert.match(html,/20261001-lab2/);
 });
 
 
@@ -117,19 +115,23 @@ test('public EIXO presentation promotes RUN and PULSE instead of old JUMP',()=>{
 });
 
 
-test('production spikes stay visually seated on the physical surfaces',()=>{
+test('spike artwork and platform edge share the exact physical surface',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/this\.add\.image\(x,top\+10,'lab-art','spikes-floor'\)/);
-  assert.match(scene,/this\.add\.image\(x,bottom-embed,'lab-art','spikes-ceiling'\)/);
-  assert.match(scene,/this\.add\.image\(x,top,'lab-art',frame\)/);
-  assert.match(scene,/this\.add\.image\(x,bottom,'lab-art',frame\)/);
-  assert.doesNotMatch(scene,/surfaceOffset=visualH\*\(11\/96\)/);
+  const spikes=read('games/run/assets/neon-void/spikes.svg');
+  assert.match(scene,/this\.add\.image\(x,top,'nv-spikes'\)\s*\.setOrigin\(\.5,1\)/);
+  assert.match(scene,/this\.add\.image\(x,bottom,'nv-spikes'\)\s*\.setOrigin\(\.5,0\)\s*\.setFlipY\(true\)/);
+  assert.match(scene,/const surfaceOffset=visualH\*\(11\/96\)/);
+  assert.match(scene,/top-surfaceOffset,'nv-platform'/);
+  assert.match(scene,/bottom\+surfaceOffset,'nv-platform'/);
+  assert.doesNotMatch(scene,/baselineOffset/);
+  assert.match(spikes,/M0 44H320/);
+  assert.match(spikes,/M0 44L10 5/);
 });
 
 
 test('moving platforms use stable sinusoidal dynamic physics and the runner idles while riding',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/const visualOffsetY=visualH\/2-h\/2/);
+  assert.match(scene,/const visualOffsetY=18-h\/2/);
   assert.match(scene,/r\.body\.setAllowGravity\(false\)/);
   assert.match(scene,/r\.body\.setImmovable\(true\)/);
   assert.match(scene,/const idealSpeed=cosine\*/);
@@ -146,7 +148,7 @@ test('new timed hazards are validated and rendered',()=>{
   assert.match(levels,/addPulseFloor/);
   assert.match(levels,/period\*\.45<m\.requiredOff/);
   assert.match(levels,/period\*\.44<m\.requiredOff/);
-  assert.match(scene,/this\.load\.atlas\('lab-art'/);
+  assert.match(scene,/this\.load\.svg\('nv-swing-laser'/);
   assert.match(scene,/addSwingLaser\(spec\)/);
   assert.match(scene,/addPulseFloor\(spec\)/);
 });
@@ -160,12 +162,12 @@ test('RUN start overlay and HUD are DOM-centered and the initial runner is resto
   assert.match(html,/id="run-start-overlay"/);
   assert.match(html,/id="run-start-ranking"/);
   assert.match(css,/display:flex;align-items:center;justify-content:center/);
-  assert.match(css,/background-image:[\s\S]*background\.webp/);
+  assert.match(css,/background-image:[\s\S]*background\.svg/);
   assert.match(main,/transparent: true/);
   assert.match(html,/id="run-game-hud"/);
   assert.match(html,/id="run-hud-deaths"/);
   assert.match(scene,/c\.glowGraphics=glow/);
-  assert.match(scene,/g\.fillStyle\(C\.player,alpha\)\.fillCircle/);
+  assert.match(scene,/g\.fillStyle\(C\.player,1\)\.fillCircle/);
 });
 
 
@@ -224,7 +226,7 @@ test('level selector unlocks completed levels and preserves per-level PBs',()=>{
   assert.match(scene,/RUN_LEVEL_BESTS_KEY/);
   assert.match(scene,/Math\.max\(current,Math\.floor\(Number\(level\)\|\|1\)\)/);
   assert.match(scene,/body:JSON\.stringify\(\{level:requested\}\)/);
-  assert.match(css,/background-image:url\('\/games\/run\/assets\/final\/background\.webp\?v=20261002-prod1'\)/);
+  assert.match(css,/background-image:url\('\/games\/run\/assets\/neon-void\/background\.svg\?v=20261001-lab2'\)/);
   assert.match(css,/background-position:center center/);
   assert.match(css,/background-size:cover/);
   assert.match(server,/url\.pathname==='\/api\/run\/levels'/);
@@ -242,13 +244,13 @@ test('replaying an older RUN level does not replace highest overall progress',()
 });
 
 
-test('The Laboratory approved production background is full-height and gameplay-safe',()=>{
+test('The Laboratory background is full-height modular and gameplay-safe',()=>{
+  const bg=read('games/run/assets/neon-void/background.svg');
   const css=read('games/run/run.css');
-  assert.ok(fs.existsSync(path.join(ROOT,'games/run/assets/final/background.webp')));
-  assert.match(css,/background:[\s\S]*background\.webp\?v=20261002-prod1[\s\S]*center center \/ cover no-repeat/);
-  assert.match(css,/background-image:url\('\/games\/run\/assets\/final\/background\.webp\?v=20261002-prod1'\)/);
-  assert.match(css,/background-position:center center/);
-  assert.match(css,/background-size:cover/);
+  for(const id of ['lab-far','lab-atrium','lab-glass','lab-pods','lab-walkways','lab-emblem','lab-foreground'])assert.match(bg,new RegExp('id="'+id+'"'));
+  assert.match(bg,/linearGradient id="glass"/);
+  assert.match(bg,/filter id="cyanGlow"/);
+  assert.match(css,/background:[\s\S]*background\.svg\?v=20261001-lab2[\s\S]*center center \/ cover no-repeat/);
 });
 
 
@@ -281,7 +283,7 @@ test('RUN shell matches the EIXO site visual language',()=>{
   assert.match(html,/THE LABORATORY \/\/ RUN/);
   assert.match(html,/100 níveis hardcore/);
   assert.match(css,/\.run-start-card\{[\s\S]*border-radius:10px/);
-  assert.match(css,/linear-gradient\(90deg,rgba\(7,16,26,.97\) 0%,rgba\(9,19,30,.94\) 48%/);
+  assert.match(css,/linear-gradient\(135deg,rgba\(9,19,29,.97\),rgba\(15,28,39,.96\)/);
   assert.match(css,/\.run-site-nav\{[\s\S]*background:rgba\(9,15,26,.96\)/);
   assert.doesNotMatch(html,/>HOME<|>PULSE<|EIXO HOME/);
 });
@@ -342,15 +344,11 @@ test('RUN header mirrors the main EIXO navigation and account controls',()=>{
 });
 
 
-test('laboratory modular production pack is present and wired',()=>{
+test('laboratory modular SVG production pack is present and wired',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  const atlas=JSON.parse(read('games/run/assets/final/lab-atlas.json'));
-  const dir=path.join(ROOT,'games/run/assets/final');
-  for(const asset of ['lab-atlas.webp','lab-atlas.json','background.webp'])assert.ok(fs.existsSync(path.join(dir,asset)),asset+' missing');
-  for(const frame of ['platform','platform-short','moving','spikes-floor','spikes-ceiling','saw','laser','crusher','exit','support','glass']){
-    assert.ok(atlas.frames&&atlas.frames[frame],frame+' frame missing');
-  }
-  assert.match(scene,/this\.load\.atlas\('lab-art'/);
+  const dir=path.join(ROOT,'games/run/assets/neon-void');
+  for(const asset of ['glass-rail.svg','support-bracket.svg','wall-01.svg','movement-sign.svg'])assert.ok(fs.existsSync(path.join(dir,asset)),asset+' missing');
+  assert.match(scene,/lab-rail/);assert.match(scene,/lab-bracket/);assert.match(scene,/lab-wall-01/);assert.match(scene,/lab-sign/);
   assert.match(scene,/THE LABORATORY/);
 });
 
@@ -359,18 +357,5 @@ test('laboratory runner keeps invisible physics and uses white charcoal cyan vis
   assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
   assert.match(scene,/g\.fillStyle\(0x111a22,1\)/);
   assert.match(scene,/g\.lineStyle\(2,C\.cyan,1\)/);
-  assert.match(scene,/g\.fillStyle\(C\.player,alpha\)\.fillCircle/);
-});
-
-
-test('approved generated art is used as production texture data',()=>{
-  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  const css=read('games/run/run.css');
-  assert.match(scene,/lab-atlas\.webp\?v=20261002-prod1/);
-  assert.match(scene,/lab-atlas\.json\?v=20261002-prod1/);
-  assert.match(css,/assets\/final\/background\.webp\?v=20261002-prod1/);
-  assert.match(scene,/spikes-floor/);
-  assert.match(scene,/spikes-ceiling/);
-  assert.match(scene,/const visualOffsetY=visualH\/2-h\/2/);
-  assert.match(scene,/g\.fillStyle\(0xf8fdff,1\)\.fillCircle/);
+  assert.match(scene,/g\.fillStyle\(C\.player,1\)\.fillCircle/);
 });
