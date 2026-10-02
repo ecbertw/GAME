@@ -75,7 +75,7 @@ test('THE LABORATORY visual layer is edge-to-edge and keeps physics separate fro
   assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
   assert.match(scene,/movingPlatforms/);
   assert.match(scene,/THE LABORATORY/);
-  assert.match(scene,/nv-platform/);
+  assert.match(scene,/this\.load\.atlas\('lab-art'/);
 });
 
 
@@ -341,11 +341,13 @@ test('RUN header mirrors the main EIXO navigation and account controls',()=>{
 });
 
 
-test('laboratory modular SVG production pack is present and wired',()=>{
+test('laboratory modular production pack is present and wired',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  const dir=path.join(ROOT,'games/run/assets/neon-void');
-  for(const asset of ['glass-rail.svg','support-bracket.svg','wall-01.svg','movement-sign.svg'])assert.ok(fs.existsSync(path.join(dir,asset)),asset+' missing');
-  assert.match(scene,/lab-rail/);assert.match(scene,/lab-bracket/);assert.match(scene,/lab-wall-01/);assert.match(scene,/lab-sign/);
+  const dir=path.join(ROOT,'games/run/assets/final');
+  for(const asset of ['lab-atlas.webp','lab-atlas.json','background.webp'])assert.ok(fs.existsSync(path.join(dir,asset)),asset+' missing');
+  for(const frame of ['platform','platform-short','moving','spikes-floor','spikes-ceiling','saw','laser','crusher','exit','support','glass']){
+    assert.match(scene,new RegExp("'lab-art','"+frame+"'"));
+  }
   assert.match(scene,/THE LABORATORY/);
 });
 
