@@ -58,7 +58,7 @@ test('RUN persistence and ranking rules remain intact',()=>{
 });
 
 
-test('THE LABORATORY visual layer is edge-to-edge and keeps physics separate from the runner rig',()=>{
+test('NEON VOID visual layer is edge-to-edge and keeps physics separate from the runner rig',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   const main=read('games/run/src/main.js');
   const css=read('games/run/run.css');
@@ -74,12 +74,12 @@ test('THE LABORATORY visual layer is edge-to-edge and keeps physics separate fro
   assert.match(scene,/updateRunnerVisual/);
   assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
   assert.match(scene,/movingPlatforms/);
-  assert.match(scene,/THE LABORATORY/);
+  assert.match(scene,/NEON VOID/);
   assert.match(scene,/nv-platform/);
 });
 
 
-test('THE LABORATORY SVG asset pack is wired and speed tracks are removed',()=>{
+test('NEON VOID SVG asset pack is wired and speed tracks are removed',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
   const html=read('games/run/index.html');
   for(const asset of ['background.svg','platform.svg','moving-platform.svg','spikes.svg','saw.svg','laser.svg','swing-laser.svg','crusher.svg','exit.svg','stopwatch.svg','skull.svg']){
@@ -92,7 +92,7 @@ test('THE LABORATORY SVG asset pack is wired and speed tracks are removed',()=>{
   assert.match(scene,/this\.add\.image\(x,top,'nv-exit'\)/);
   assert.doesNotMatch(scene,/speed streaks/);
   assert.doesNotMatch(scene,/const tail=18\+speed/);
-  assert.match(html,/20261001-lab2/);
+  assert.match(html,/20261001-runfix3/);
 });
 
 
@@ -131,7 +131,7 @@ test('spike artwork and platform edge share the exact physical surface',()=>{
 
 test('moving platforms use stable sinusoidal dynamic physics and the runner idles while riding',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/const visualOffsetY=18-h\/2/);
+  assert.match(scene,/const visualOffsetY=3/);
   assert.match(scene,/r\.body\.setAllowGravity\(false\)/);
   assert.match(scene,/r\.body\.setImmovable\(true\)/);
   assert.match(scene,/const idealSpeed=cosine\*/);
@@ -226,9 +226,7 @@ test('level selector unlocks completed levels and preserves per-level PBs',()=>{
   assert.match(scene,/RUN_LEVEL_BESTS_KEY/);
   assert.match(scene,/Math\.max\(current,Math\.floor\(Number\(level\)\|\|1\)\)/);
   assert.match(scene,/body:JSON\.stringify\(\{level:requested\}\)/);
-  assert.match(css,/background-image:url\('\/games\/run\/assets\/neon-void\/background\.svg\?v=20261001-lab2'\)/);
-  assert.match(css,/background-position:center center/);
-  assert.match(css,/background-size:cover/);
+  assert.match(css,/background-position:center center,center clamp\(72px,10vh,118px\)/);
   assert.match(server,/url\.pathname==='\/api\/run\/levels'/);
   assert.match(service,/CREATE TABLE IF NOT EXISTS run_level_bests/);
   assert.match(service,/async function levelStatus/);
@@ -244,13 +242,19 @@ test('replaying an older RUN level does not replace highest overall progress',()
 });
 
 
-test('The Laboratory background is full-height modular and gameplay-safe',()=>{
+test('detailed Neon Void background fills the full RUN playfield',()=>{
   const bg=read('games/run/assets/neon-void/background.svg');
   const css=read('games/run/run.css');
-  for(const id of ['lab-far','lab-atrium','lab-glass','lab-pods','lab-walkways','lab-emblem','lab-foreground'])assert.match(bg,new RegExp('id="'+id+'"'));
-  assert.match(bg,/linearGradient id="glass"/);
-  assert.match(bg,/filter id="cyanGlow"/);
-  assert.match(css,/background:[\s\S]*background\.svg\?v=20261001-lab2[\s\S]*center center \/ cover no-repeat/);
+  assert.match(bg,/id="far-city"/);
+  assert.match(bg,/id="mid-city"/);
+  assert.match(bg,/id="foreground"/);
+  assert.match(bg,/M0 1080V430/);
+  assert.match(bg,/M1840 1080V868/);
+  assert.match(bg,/M0 728H1920M0 824H1920M0 930H1920M0 1028H1920/);
+  assert.match(bg,/radialGradient id="planet"/);
+  assert.match(bg,/filter id="glowBlue"/);
+  assert.match(bg,/filter id="glowRed"/);
+  assert.match(css,/background\.svg\?v=20261001-bgdetail2/);
 });
 
 
@@ -280,10 +284,10 @@ test('RUN shell matches the EIXO site visual language',()=>{
   const html=read('games/run/index.html');
   const css=read('games/run/run.css');
   assert.match(html,/class="run-site-brand"[\s\S]*eixo-logo\.svg/);
-  assert.match(html,/THE LABORATORY \/\/ RUN/);
+  assert.match(html,/01 \/ ARCADE/);
   assert.match(html,/100 níveis hardcore/);
-  assert.match(css,/\.run-start-card\{[\s\S]*border-radius:10px/);
-  assert.match(css,/linear-gradient\(135deg,rgba\(9,19,29,.97\),rgba\(15,28,39,.96\)/);
+  assert.match(css,/\.run-start-card\{[\s\S]*border-radius:28px/);
+  assert.match(css,/linear-gradient\(135deg,#172338f5,#111c2df2/);
   assert.match(css,/\.run-site-nav\{[\s\S]*background:rgba\(9,15,26,.96\)/);
   assert.doesNotMatch(html,/>HOME<|>PULSE<|EIXO HOME/);
 });
@@ -341,21 +345,4 @@ test('RUN header mirrors the main EIXO navigation and account controls',()=>{
   assert.match(css,/background:rgba\(9,15,26,.96\)/);
   assert.match(shell,/eixo_player/);
   assert.match(shell,/eixo_audio_settings/);
-});
-
-
-test('laboratory modular SVG production pack is present and wired',()=>{
-  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  const dir=path.join(ROOT,'games/run/assets/neon-void');
-  for(const asset of ['glass-rail.svg','support-bracket.svg','wall-01.svg','movement-sign.svg'])assert.ok(fs.existsSync(path.join(dir,asset)),asset+' missing');
-  assert.match(scene,/lab-rail/);assert.match(scene,/lab-bracket/);assert.match(scene,/lab-wall-01/);assert.match(scene,/lab-sign/);
-  assert.match(scene,/THE LABORATORY/);
-});
-
-test('laboratory runner keeps invisible physics and uses white charcoal cyan visual rig',()=>{
-  const scene=read('games/run/src/scenes/HardcoreRunScene.js');
-  assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
-  assert.match(scene,/g\.fillStyle\(0x111a22,1\)/);
-  assert.match(scene,/g\.lineStyle\(2,C\.cyan,1\)/);
-  assert.match(scene,/g\.fillStyle\(C\.player,1\)\.fillCircle/);
 });

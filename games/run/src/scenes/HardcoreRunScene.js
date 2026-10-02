@@ -1,5 +1,5 @@
-import { RUN_PHYSICS } from '../run-config.js?v=20261001-lab2';
-import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-lab2';
+import { RUN_PHYSICS } from '../run-config.js?v=20261001-runfix3';
+import { RUN_LEVEL_COUNT, getRunLevel } from '../run-levels.js?v=20261001-runfix3';
 
 const RUN_PROGRESS_KEY='eixo.run.progress.v1';
 const RUN_LEVEL_BESTS_KEY='eixo.run.level-bests.v1';
@@ -87,19 +87,15 @@ export class HardcoreRunScene extends Phaser.Scene {
 
   preload(){
     const base='/games/run/assets/neon-void/';
-    this.load.svg('nv-bg',base+'background.svg?v=20261001-lab2');
-    this.load.svg('nv-platform',base+'platform.svg?v=20261001-lab2');
-    this.load.svg('nv-moving',base+'moving-platform.svg?v=20261001-lab2');
-    this.load.svg('nv-spikes',base+'spikes.svg?v=20261001-lab2');
-    this.load.svg('nv-saw',base+'saw.svg?v=20261001-lab2');
-    this.load.svg('nv-laser',base+'laser.svg?v=20261001-lab2');
-    this.load.svg('nv-swing-laser',base+'swing-laser.svg?v=20261001-lab2');
-    this.load.svg('nv-crusher',base+'crusher.svg?v=20261001-lab2');
-    this.load.svg('nv-exit',base+'exit.svg?v=20261001-lab2');
-    this.load.svg('lab-rail',base+'glass-rail.svg?v=20261001-lab2');
-    this.load.svg('lab-bracket',base+'support-bracket.svg?v=20261001-lab2');
-    this.load.svg('lab-wall-01',base+'wall-01.svg?v=20261001-lab2');
-    this.load.svg('lab-sign',base+'movement-sign.svg?v=20261001-lab2');
+    this.load.svg('nv-bg',base+'background.svg');
+    this.load.svg('nv-platform',base+'platform.svg');
+    this.load.svg('nv-moving',base+'moving-platform.svg');
+    this.load.svg('nv-spikes',base+'spikes.svg?v=20261001-spikeflush1');
+    this.load.svg('nv-saw',base+'saw.svg');
+    this.load.svg('nv-laser',base+'laser.svg');
+    this.load.svg('nv-swing-laser',base+'swing-laser.svg');
+    this.load.svg('nv-crusher',base+'crusher.svg');
+    this.load.svg('nv-exit',base+'exit.svg');
     this.load.svg('nv-stopwatch',base+'stopwatch.svg');
     this.load.svg('nv-skull',base+'skull.svg');
   }
@@ -428,8 +424,7 @@ export class HardcoreRunScene extends Phaser.Scene {
     this.createPlayer(L.spawn[0],L.spawn[1]);
 
     this.levelText.setText('LEVEL '+String(this.levelIndex+1).padStart(3,'0')+' / '+String(RUN_LEVEL_COUNT).padStart(3,'0'));
-    const sector=String.fromCharCode(65+Math.min(9,Math.floor(this.levelIndex/10)));
-    this.nameText.setText('THE LABORATORY  ·  SECTOR '+sector);
+    this.nameText.setText(L.name+'  ·  NEON VOID');
     this.setProgress((this.levelIndex+1)/RUN_LEVEL_COUNT);
     this.updateLevelPbHud();
     this.cameras.main.startFollow(this.player,true,.11,.08,-Math.min(260,this.uiWidth()*.18),20);
@@ -442,8 +437,8 @@ export class HardcoreRunScene extends Phaser.Scene {
   drawGrid(width){
     const vw=this.uiWidth();
     const vignette=this.add.graphics().setScrollFactor(0).setDepth(-60);
-    vignette.fillStyle(0x0b1a26,.035).fillRect(0,82,vw,638);
-    vignette.fillStyle(0xffffff,.025).fillRect(0,520,vw,200);
+    vignette.fillStyle(0x02050a,.12).fillRect(0,82,vw,638);
+    vignette.fillStyle(0x163451,.045).fillRect(0,520,vw,200);
     this.levelObjects.push(vignette);
   }
 
@@ -519,9 +514,8 @@ export class HardcoreRunScene extends Phaser.Scene {
     if(r.body.setFriction)r.body.setFriction(1,1);
     r.body.reset(startX,startY);
 
-    const visualH=48;
-    const visualOffsetY=18-h/2;
-    const visual=this.add.image(startX,startY+visualOffsetY,'nv-moving').setDepth(9).setDisplaySize(Math.max(104,w+20),visualH);
+    const visualOffsetY=3;
+    const visual=this.add.image(startX,startY+visualOffsetY,'nv-moving').setDepth(9).setDisplaySize(Math.max(92,w+18),46);
 
     r.baseX=x;r.baseY=y;r.axis=axis;r.range=range;r.period=period;r.phase=phase;
     r.visual=visual;r.visualYOffset=visualOffsetY;
@@ -725,23 +719,21 @@ export class HardcoreRunScene extends Phaser.Scene {
     }
 
     const drawLimb=(a,k,f,alpha=1)=>{
-      g.lineStyle(8,0x17222b,.72*alpha);g.lineBetween(a.x,a.y,k.x,k.y);g.lineBetween(k.x,k.y,f.x,f.y);
+      halo.lineStyle(8,C.cyan,.07*alpha);halo.lineBetween(a.x,a.y,k.x,k.y);halo.lineBetween(k.x,k.y,f.x,f.y);
       g.lineStyle(5,C.player,alpha);g.lineBetween(a.x,a.y,k.x,k.y);g.lineBetween(k.x,k.y,f.x,f.y);
-      g.fillStyle(C.player,alpha).fillCircle(k.x,k.y,2.6);
+      g.fillStyle(C.player,alpha).fillCircle(k.x,k.y,2.5);
     };
 
-    drawLimb({x:hip.x-2,y:hip.y},rk,rf,.62);
-    drawLimb({x:shoulder.x-2,y:shoulder.y},re,rh,.62);
-    g.fillStyle(0x111a22,1);
-    g.fillTriangle(shoulder.x-6,shoulder.y-2,shoulder.x+6,shoulder.y-2,hip.x+5,hip.y+5);
-    g.fillTriangle(shoulder.x-6,shoulder.y-2,hip.x-5,hip.y+5,hip.x+5,hip.y+5);
-    g.lineStyle(2,0xf8fdff,.92);g.lineBetween(shoulder.x-5,shoulder.y,hip.x-4,hip.y+4);
-    g.lineStyle(2,C.cyan,1);g.lineBetween(shoulder.x+3,shoulder.y,hip.x-1,hip.y+3);
+    drawLimb({x:hip.x-2,y:hip.y},rk,rf,.58);
+    drawLimb({x:shoulder.x-2,y:shoulder.y},re,rh,.58);
+    halo.lineStyle(10,C.cyan,.07);halo.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
+    g.lineStyle(7,C.player,1);g.lineBetween(hip.x,hip.y,shoulder.x,shoulder.y);
     drawLimb({x:hip.x+2,y:hip.y},lk,lf,1);
     drawLimb({x:shoulder.x+2,y:shoulder.y},le,lh,1);
-    g.fillStyle(0x17222b,1).fillCircle(shoulder.x+2,shoulder.y-9,7);
-    g.fillStyle(C.player,1).fillCircle(shoulder.x+2,shoulder.y-9,5.5);
-    g.lineStyle(1,0x526b79,.9).strokeCircle(shoulder.x+2,shoulder.y-9,5.5);
+    halo.fillStyle(C.cyan,.08).fillCircle(shoulder.x+2,shoulder.y-9,7);
+    g.fillStyle(C.player,1).fillCircle(shoulder.x+2,shoulder.y-9,5);
+    g.lineStyle(1,0x9df0ff,.7).strokeCircle(shoulder.x+2,shoulder.y-9,5);
+    g.fillStyle(C.cyan,.9).fillCircle(shoulder.x+1,shoulder.y+2,1.5);
   }
 
   createNoticeOverlay(){
