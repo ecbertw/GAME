@@ -86,7 +86,8 @@ test('THE LABORATORY production art atlas is wired and speed tracks are removed'
     assert.ok(fs.existsSync(path.join(ROOT,'games/run/assets/final',asset)),asset+' missing');
   }
   assert.match(scene,/this\.load\.atlas\('lab-art'/);
-  assert.match(scene,/'lab-art','platform'/);
+  assert.match(scene,/const frame=w<190\?'platform-short':'platform'/);
+  assert.match(scene,/this\.add\.image\(x,top,'lab-art',frame\)/);
   assert.match(scene,/'lab-art','moving'/);
   assert.match(scene,/'lab-art','saw'/);
   assert.match(scene,/'lab-art','crusher'/);
@@ -164,7 +165,7 @@ test('RUN start overlay and HUD are DOM-centered and the initial runner is resto
   assert.match(html,/id="run-game-hud"/);
   assert.match(html,/id="run-hud-deaths"/);
   assert.match(scene,/c\.glowGraphics=glow/);
-  assert.match(scene,/g\.fillStyle\(C\.player,1\)\.fillCircle/);
+  assert.match(scene,/g\.fillStyle\(C\.player,alpha\)\.fillCircle/);
 });
 
 
@@ -223,7 +224,7 @@ test('level selector unlocks completed levels and preserves per-level PBs',()=>{
   assert.match(scene,/RUN_LEVEL_BESTS_KEY/);
   assert.match(scene,/Math\.max\(current,Math\.floor\(Number\(level\)\|\|1\)\)/);
   assert.match(scene,/body:JSON\.stringify\(\{level:requested\}\)/);
-  assert.match(css,/background-image:url\('\/games\/run\/assets\/neon-void\/background\.webp\?v=20261002-prod1'\)/);
+  assert.match(css,/background-image:url\('\/games\/run\/assets\/final\/background\.webp\?v=20261002-prod1'\)/);
   assert.match(css,/background-position:center center/);
   assert.match(css,/background-size:cover/);
   assert.match(server,/url\.pathname==='\/api\/run\/levels'/);
@@ -280,7 +281,7 @@ test('RUN shell matches the EIXO site visual language',()=>{
   assert.match(html,/THE LABORATORY \/\/ RUN/);
   assert.match(html,/100 níveis hardcore/);
   assert.match(css,/\.run-start-card\{[\s\S]*border-radius:10px/);
-  assert.match(css,/linear-gradient\(135deg,rgba\(9,19,29,.97\),rgba\(15,28,39,.96\)/);
+  assert.match(css,/linear-gradient\(90deg,rgba\(7,16,26,.97\) 0%,rgba\(9,19,30,.94\) 48%/);
   assert.match(css,/\.run-site-nav\{[\s\S]*background:rgba\(9,15,26,.96\)/);
   assert.doesNotMatch(html,/>HOME<|>PULSE<|EIXO HOME/);
 });
@@ -343,11 +344,13 @@ test('RUN header mirrors the main EIXO navigation and account controls',()=>{
 
 test('laboratory modular production pack is present and wired',()=>{
   const scene=read('games/run/src/scenes/HardcoreRunScene.js');
+  const atlas=JSON.parse(read('games/run/assets/final/lab-atlas.json'));
   const dir=path.join(ROOT,'games/run/assets/final');
   for(const asset of ['lab-atlas.webp','lab-atlas.json','background.webp'])assert.ok(fs.existsSync(path.join(dir,asset)),asset+' missing');
   for(const frame of ['platform','platform-short','moving','spikes-floor','spikes-ceiling','saw','laser','crusher','exit','support','glass']){
-    assert.match(scene,new RegExp("'lab-art','"+frame+"'"));
+    assert.ok(atlas.frames&&atlas.frames[frame],frame+' frame missing');
   }
+  assert.match(scene,/this\.load\.atlas\('lab-art'/);
   assert.match(scene,/THE LABORATORY/);
 });
 
@@ -356,7 +359,7 @@ test('laboratory runner keeps invisible physics and uses white charcoal cyan vis
   assert.match(scene,/this\.player=this\.add\.rectangle\(x,y,24,38,0xffffff,0\)/);
   assert.match(scene,/g\.fillStyle\(0x111a22,1\)/);
   assert.match(scene,/g\.lineStyle\(2,C\.cyan,1\)/);
-  assert.match(scene,/g\.fillStyle\(C\.player,1\)\.fillCircle/);
+  assert.match(scene,/g\.fillStyle\(C\.player,alpha\)\.fillCircle/);
 });
 
 
