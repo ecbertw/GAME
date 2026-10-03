@@ -25,4 +25,4 @@ const config = {
   scene: [HardcoreRunScene],
 };
 
-new Phaser.Game(config);
+window.EixoRunGame=new Phaser.Game(config);
