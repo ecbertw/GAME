@@ -42,7 +42,7 @@ test('one earned achievement can be featured between rank and VIP tags everywher
  assert.match(passport,/featured=data\.featuredBadge/);
  assert.match(passport,/rx-achievement\.is-featured|classList\.toggle\('is-featured'/);
  assert.match(passport,/passportRanks\+passportAchievementTag\(featured\)\+passportVipTag/);
- assert.match(rank,/tags\}\$\{achievementTag\(p\.featuredBadge\)\}\$\{vipTag/);
+ assert.match(rank,/return s\+achievementTag\(p\.featuredBadge\)\+vip\(p\.vipLevel\)/);
  assert.match(full,/achievementTag\(x\.featuredBadge\)/);
  assert.match(jump,/achievementTag\(p\.featuredBadge\)/);
  assert.match(chat,/achievementTag\(m\.featuredBadge\)\+vip/);
