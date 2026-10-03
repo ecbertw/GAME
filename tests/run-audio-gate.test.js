@@ -10,8 +10,9 @@ test('RUN jump sound follows physical launch instead of repeated keydown',()=>{
   assert.match(fix,/audio\.__physicalJumpGate/);
   assert.match(fix,/vy<-300&&lastVy>-240/);
   assert.match(fix,/audio\?\.confirmJump\?\.\(\)/);
+  assert.match(fix,/requestAnimationFrame\(frame\)/);
   assert.match(main,/window\.EixoRunGame=new Phaser\.Game\(config\)/);
-  assert.match(shell,/window\.addEventListener\('keydown'/);
+  assert.doesNotMatch(shell,/addEventListener\('keydown',[\s\S]{0,260}audio\.jump/);
   assert.ok(html.indexOf('run-audio-fix.js')>html.indexOf('run-shell.js'));
 });
 
